@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "camr"
+version = "0.1.0"
+description = "CAMR (Capability-Adaptive Memory Retrieval): a lightweight external memory engine for frozen on-device language models, with its evaluation harness."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Ibrahim Sudheysi Ali" }]
+dependencies = [
+  "numpy>=1.24",
+  "pyyaml>=6.0",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+# sqlite-vec provides in-database vector search (IR-04); without it the store
+# falls back to exact brute-force search over the same BLOB column.
+vec = ["sqlite-vec>=0.1.6"]
+# BGE embeddings (section 3.6.4).
+embed = ["sentence-transformers>=3.0"]
+# Hosted reference model for the ceiling condition (section 3.6.3).
+cloud = ["anthropic>=0.60"]
+# Read-only inspection interface (FR-17) and figures.
+inspect = ["streamlit>=1.35", "pandas>=2.0", "matplotlib>=3.8"]
+dev = ["pytest>=8.0"]
+all = ["camr[vec,embed,cloud,inspect,dev]"]
+
+[project.scripts]
+camr = "camr.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["camr*"]
+
+[tool.setuptools.package-data]
+camr = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
