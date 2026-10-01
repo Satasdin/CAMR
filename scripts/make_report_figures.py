@@ -301,6 +301,34 @@ def fig_timeline(out: Path) -> Path:
     return save(fig, out, "timeline.png")
 
 
+def fig_app_latency(out: Path) -> Path | None:
+    """What a CAMR Personal user waits for: time to the first word, cold vs after warm-up vs a typical answer."""
+    src = ROOT / "docs" / "results" / "app_latency.json"
+    if not src.exists():
+        return None
+    d = json.loads(src.read_text())
+    models = list(d["models"])
+    series = [("First answer after a reboot (weights read from disk)", lambda m: m["cold_disk"]["first_token_ms"], ORANGE),
+              ("First answer, model not loaded (weights in OS cache)", lambda m: m["cold"]["first_token_ms"], GREY),
+              ("First answer after warm-up (app default)", lambda m: m["after_warm"]["first_token_ms"], BLUE),
+              ("Typical answer, median (384-token budget)", lambda m: m["budgets"]["384"]["median_first_token_ms"], GREEN)]
+    fig, ax = plt.subplots(figsize=(7.6, 4.4), facecolor=SURF)
+    h = 0.2
+    for i, (label, get, col) in enumerate(series):
+        ys = [j + (i - 1.5) * h for j in range(len(models))]
+        vals = [get(d["models"][m]) / 1000 for m in models]
+        ax.barh(ys, vals, height=h - 0.04, color=col, label=label, edgecolor=SURF, linewidth=1)
+        for y, v in zip(ys, vals):
+            ax.text(v * 1.08, y, f"{v:.1f} s", va="center", fontsize=7.5, color=INK2)
+    ax.set_yticks(range(len(models)), models)
+    ax.invert_yaxis()
+    ax.set_xscale("log")
+    style(ax, xlabel="seconds until the first word appears (log scale; 4-core CPU, no GPU)")
+    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    ax.set_title("CAMR Personal: time to first word, cold vs warmed", loc="left")
+    return save(fig, out, "app_latency.png")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="docs/figures/report")
@@ -308,5 +336,5 @@ if __name__ == "__main__":
     out.mkdir(parents=True, exist_ok=True)
     for f in (lambda: fig_rank(out, False), lambda: fig_rank(out, True), lambda: fig_gain(out), lambda: fig_speed_accuracy(out),
               lambda: fig_hotpot200(out), lambda: fig_budget(out), lambda: fig_funnel(out), lambda: fig_residual(out),
-              lambda: fig_gating(out), lambda: fig_timeline(out)):
+              lambda: fig_gating(out), lambda: fig_timeline(out), lambda: fig_app_latency(out)):
         f()

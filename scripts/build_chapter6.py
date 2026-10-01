@@ -86,21 +86,23 @@ def build(template: Path, out: Path) -> Path:
         "sampled once. They do not yet extend to real users' personal data, to phones, or to sessioned "
         "conversations where recency matters. Table 6.1 summarises the alignment from objectives to conclusions.")
     c.table("Alignment from objectives to evidence and conclusions",
-            ["Objective (section 1.3.2)", "Implementation", "Evidence (Chapter 5)", "Conclusion"],
-            [["i. Investigate capability gaps and memory techniques", "Literature review; engine built with every "
-              "proposed technique switchable", "5.8.1 retrieval study; 5.8.2 residual gap", "Similarity + gating + "
-              "bridging transfer; Eq. 4.1 does not; the gap is mostly knowledge and reading"],
-             ["ii. Design a lightweight memory engine", "Write path, screener, single-file store, adaptive read "
-              "path, budgeter (5.4)", "5.5 test cases TC-01–TC-22; defects D-01–D-09", "Design implemented and "
-              "verified; deviations justified"],
-             ["iii. Develop it on a consumer laptop without a GPU", "SQLite + sqlite-vec, BGE on CPU, Ollama", "5.2; "
-              "5.8.10 device profile", "Runs in under 3 GB; NFR-02 not met for 0.5B (contention)"],
-             ["iv. Evaluate gap closed by task type, with tokens and latency", "Floor/treatment/ceiling/ceiling_rag "
-              "harness; 19-model sweep; n = 200", "5.8.2, 5.8.7, 5.8.8", "Facts: fully closed; multi-hop: half, and "
-              "matched by 3B; reasoning: not closed"],
-             ["v. Determine the best token budget", "Budget sweep; learned policy", "5.8.5, 5.8.9", "128 tokens (facts), "
-              "512 (multi-hop) for 0.5B; learned routing matches the cloud with 71% on-device"]],
-            [3.6, 4.0, 3.6, 4.7], size=9)
+            ["Objective (section 1.3.2)", "Evidence (Chapter 5)", "Conclusion", "Status"],
+            [["i. Investigate capability gaps and memory techniques", "Literature review; every proposed technique "
+              "built switchable and measured (5.8.1, 5.8.2)", "Similarity + gating + bridging transfer; Eq. 4.1 does "
+              "not; the gap is mostly knowledge and reading", "Met"],
+             ["ii. Design a lightweight memory engine (write policy, ranking, token budget)", "Write path, screener, "
+              "single-file store, adaptive read path, budgeter (5.4); TC-01–TC-36; D-01–D-10",
+              "Implemented and verified; ranking changed on evidence; distilled notes not evaluated at scale",
+              "Met, with two recorded deviations (5.8.12)"],
+             ["iii. Develop it on a consumer laptop without a GPU, with an embedded store", "SQLite + sqlite-vec, "
+              "CPU-only (5.2); device profile (5.8.10); app latency (5.8.11)", "Runs in under 3 GB on 4 cores; NFR-02 "
+              "not met for 0.5B (contention)", "Met on laptop-class containers, not one physical laptop (5.8.12)"],
+             ["iv. Evaluate gap closed by task type, with tokens and latency", "Four-condition harness; 19-model "
+              "sweep; n = 200 (5.8.2, 5.8.7, 5.8.8)", "Facts: fully closed; multi-hop: half, matched by 3B; "
+              "reasoning: not closed", "Met"],
+             ["v. Determine the best token budget", "Budget sweep; learned policy (5.8.5, 5.8.9)", "128 tokens (facts), "
+              "512 (multi-hop) for 0.5B; learned routing matches the cloud with 71% on-device", "Met"]],
+            [3.8, 4.4, 4.9, 2.8], size=9)
 
     # ------------------------------------------------------------ 6.3
     c.h2("Recommendations")
@@ -128,20 +130,26 @@ def build(template: Path, out: Path) -> Path:
              ["7", "Researchers evaluating memory for small models", "Report the residual gap against a model reading "
               "the same notes, use a frontier ceiling, and use at least 200 questions for headline claims",
               "5.8.2 (gap closed exceeds 1 against a weak ceiling); 5.8.8 (pilot vs n = 200)"],
-             ["8", "The student and supervisor", "Obtain ethics approval and a consent statement before collecting "
+             ["8", "Developers of local assistant apps", "Load the model before the first question and keep it "
+              "resident; stream answers and report time to the first word; keep memory budgets small for small "
+              "models; partition CPU cores", "5.8.11: warm-up removes the model load from the first answer; "
+              "5.8.5: smaller budgets are also more accurate for 0.5B"],
+             ["9", "The student and supervisor", "Obtain ethics approval and a consent statement before collecting "
               "feedback from real users of CAMR Personal", "5.5.3: no user study yet; feedback export is designed "
               "to be metrics-only by default"]],
             [0.8, 3.4, 5.6, 6.1], size=9)
 
     # ------------------------------------------------------------ 6.4
     c.h2("Future Works")
-    c.p("The directions below extend the research. They do not repair promised work: everything in the approved "
-        "scope was implemented and evaluated. They are ordered by expected value, and each follows from a "
-        "limitation or open question in section 5.8.")
+    c.p("The directions below extend the research. Every objective of the approved proposal was addressed; the "
+        "points where the work departed from it (verbatim rather than distilled notes in the experiments, and "
+        "laptop-class containers rather than one physical laptop) are recorded in section 5.8.12 and appear "
+        "below where they leave a question open. The directions are ordered by expected value, and each follows "
+        "from a limitation or open question in section 5.8.")
     c.table("Prioritised future works",
             ["Priority", "Direction and rationale", "What changes / resources", "How to evaluate"],
             [["1", "**Longitudinal user study of CAMR Personal.** Whether the assistant gets more useful as a "
-              "person's own memory grows is the application's central claim, and no user has tested it yet (5.8.12).",
+              "person's own memory grows is the application's central claim, and no user has tested it yet (5.8.13).",
               "Real users and their own notes over 4–8 weeks; ethics approval; the existing opt-in metrics export",
               "Weekly share of answers drawn from memory, 👍 rate, and accuracy on each user's repeated questions "
               "(day 1 vs week 4)"],
@@ -151,15 +159,23 @@ def build(template: Path, out: Path) -> Path:
              ["3", "**Closing the reading gap.** 76% of multi-hop misses had the answer in context (5.8.3).",
               "Structured notes, answer-extraction prompts, or a small reader-tuned model, keeping the engine fixed",
               "Correct-when-in-context on HotpotQA and 2Wiki, n ≥ 200"],
-             ["4", "**CAMR on phones.** The Android prototype compiles and passes its unit tests but has not run on "
-              "a device (5.8.11).", "Two to three mid-range Android phones; on-device model files; gating calibration "
-              "for the phone embedder", "Retrieval share of latency (NFR-02), peak memory, battery per 100 answers, "
-              "and accuracy against the desktop results"],
-             ["5", "**Stronger evaluation basis.** Single-hop and reasoning results rest on pilot samples, and the "
-              "cloud reference was sampled once (5.8.12).", "n ≥ 200 per task; repeated cloud samples or a "
+             ["4", "**CAMR on phones.** Porting to phones was delimited out of this study (1.7.2), but it is the "
+              "natural home of an assistant that grows with its user. A starting point exists: an Android "
+              "prototype (Kotlin port of the read and write paths, MediaPipe embedder, Compose interface, 57 MB "
+              "arm64 package) compiles and passes 6 unit tests, including token counting identical to the Python "
+              "engine. It has never run on a device.", "Two to three mid-range Android phones; on-device model "
+              "files; gating calibration for the phone embedder", "Retrieval share of latency (NFR-02), peak memory, "
+              "battery per 100 answers, and accuracy against the desktop results"],
+             ["5", "**A physical-laptop replication and distilled notes.** Latency was measured on laptop-class "
+              "containers, and only verbatim notes were evaluated end to end (5.8.12).", "One or two consumer "
+              "laptops (with and without an NPU/GPU); the structured write policy already implemented",
+              "`scripts/app_latency.py` and the pilot on each laptop; gap closed and tokens with distilled vs "
+              "verbatim notes"],
+             ["6", "**Stronger evaluation basis.** Single-hop and reasoning results rest on pilot samples, and the "
+              "cloud reference was sampled once (5.8.13).", "n ≥ 200 per task; repeated cloud samples or a "
               "deterministic open frontier model; non-English data", "Confidence intervals that exclude the pilot's "
               "uncertainty; variance across repeats"],
-             ["6", "**Better routing signals.** The learned router reached 61–65% against an oracle of 79% (5.8.9).",
+             ["7", "**Better routing signals.** The learned router reached 61–65% against an oracle of 79% (5.8.9).",
               "The small model's own confidence and the grounding signal as router features", "Held-out accuracy "
               "and cloud share against the same oracle"]],
             [1.6, 5.4, 4.4, 4.5], size=9)

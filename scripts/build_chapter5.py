@@ -255,6 +255,11 @@ def hotpot200() -> dict | None:
     return {"rows": rows, "text": text}
 
 
+def app_latency() -> dict | None:
+    p = ROOT / "docs" / "results" / "app_latency.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
 def sweep_latency() -> dict[str, float]:
     """Mean seconds per PopQA answer with CAMR, per swept model (latest completed run)."""
     import sqlite3
@@ -647,7 +652,7 @@ camr app                                                # opens http://127.0.0.1
     # ================================================================ 5.4 Testing
     c.h2("Testing and Evaluation")
     c.h3("Test Strategy and Acceptance Criteria")
-    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 102 tests, fully "
+    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 105 tests, fully "
         "offline) verify each requirement with deterministic test doubles: dry-run models and a hashing embedder. "
         "**System tests** run the real pipeline end to end on real data with real models. **Measurements** "
         "(device profile, latency, memory) verify the non-functional requirements against their thresholds. Each "
@@ -659,7 +664,7 @@ camr app                                                # opens http://127.0.0.1
              "holdout guard (DR-04), byte-identical prompts (NFR-05) and the bootstrap (FR-15)", 15.5)
 
     c.h3("Test Cases, Defects and Retesting")
-    c.table("Test cases and results (unit tests: `pytest`, 102 passed; measurements: `camr profile`)",
+    c.table("Test cases and results (unit tests: `pytest`, 105 passed; measurements: `camr profile`)",
             ["Test ID", "Traceability", "Scenario and data", "Expected result", "Actual result and verdict"],
             [["TC-01", "FR-01", "Verbatim and structured policies on fixture passages", "Notes produced; title kept", "As expected. Pass"],
              ["TC-02", "FR-02/03, DR-06", "Empty, duplicate, over-length, injection-like notes", "Rejected with logged reason; provenance on all notes", "As expected. Pass"],
@@ -711,7 +716,11 @@ camr app                                                # opens http://127.0.0.1
               "(affects prefill reuse only)", "No further kills. Pass"],
              ["D-09", "CAMR Personal: the shared store connection failed when the web UI called it from another "
               "thread, and the UI's file watcher crashed while crawling the PyTorch modules", "App browser test",
-              "Store opened for cross-thread use behind a lock; file watcher disabled", "App tests and browser test. Pass"]],
+              "Store opened for cross-thread use behind a lock; file watcher disabled", "App tests and browser test. Pass"],
+             ["D-10", "CAMR Personal: the new warm-up loaded the model with the default context size, so Ollama "
+              "loaded it a second time for the first question (1.8 s to the first word instead of a fraction of a "
+              "second)", "App latency benchmark", "Warm-up sends the same options as a chat request",
+              "Regression test; latency re-measured (⟦applat⟧). Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
     c.h3("Application Testing (CAMR Personal)")
@@ -737,9 +746,15 @@ camr app                                                # opens http://127.0.0.1
              ["TC-31", "Request with a foreign Host header, or a cross-site POST", "Refused (403)", "403 (test). Pass"],
              ["TC-32", "Path traversal (/../../etc/passwd)", "No file outside the app is served", "Index page served (test). Pass"],
              ["TC-33", "Downloadable build on six platforms", "Builds, launches, serves the UI and API",
-              "All six green in CI (⟦ci⟧). Pass"]],
+              "All six green in CI (⟦ci⟧). Pass"],
+             ["TC-34", "Time to first word recorded for every answer", "Measured from prompt sent to first streamed "
+              "word; never larger than the answer time", "Recorded and shown under the answer (test). Pass"],
+             ["TC-35", "App starts, or the user switches model", "Chat model loaded in the background before the "
+              "first question", "Empty-prompt load request sent (test); first answer faster (⟦applat⟧). Pass"],
+             ["TC-36", "Same question asked twice", "Second lookup reuses the question's embedding; documents never "
+              "served from the cache", "One embedding call for two lookups (test). Pass"]],
             [1.6, 5.0, 4.6, 4.7], size=9)
-    c.figure(FIG / "setup" / "terminal_tests_app.png", "Application test run: 14 tests for the assistant core and the "
+    c.figure(FIG / "setup" / "terminal_tests_app.png", "Application test run: tests for the assistant core and the "
              "web server (captured output)", 15.5)
     if (FIG / "app" / "dark_0_setup_ollama_down.png").exists():
         c.figure(FIG / "app" / "dark_0_setup_ollama_down.png", "TC-30: with Ollama not running, the app shows what is "
@@ -813,7 +828,7 @@ camr app                                                # opens http://127.0.0.1
         "where it fell short; most importantly, the student required that this chapter report only experiments "
         "that had actually been run and benchmarked with real models, and an earlier draft written before the "
         "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
-        "test suite (102 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "test suite (105 tests), the per-query logs, the read-only inspector, and the findings log, which names "
         "the results file behind every reported number, so that each claim can be traced and re-run. The "
         "student made the final decisions and takes full responsibility for the submitted work.")
 
@@ -1045,29 +1060,81 @@ camr app                                                # opens http://127.0.0.1
         "as its memory-mapped weights were evicted. On a 16 GB device, a small model with external memory is the "
         "practical design, not merely the cheaper one.")
 
-    c.h3("From Desktop Assistant to Mobile: Progress")
-    c.p("The deployment work progressed in three steps. (1) The engine was first exposed as a command (`camr ask`) "
-        "over a user's own notes (⟦askempty⟧ and ⟦ask⟧). (2) It then became **CAMR Personal**, a desktop "
-        "application released for six platforms (⟦ci⟧). (3) A **mobile prototype** for "
-        "Android was then started, following the application case in `docs/ANDROID_ASSISTANT.md`: the same idea "
-        "on the device people carry, a phone assistant that grows with its user.")
-    c.table("Android prototype: what exists and what has been verified",
-            ["Component", "Implementation", "Status"],
-            [["Memory engine", "Kotlin port of the read and write paths: SQLite store with float32 vectors, exact "
-              "cosine search, gating, entity bridging, greedy token budget, chat as memory, 👍 learning",
-              "Compiles; 6 JVM unit tests pass, including token counting identical to the Python engine"],
-             ["Embedder", "MediaPipe Text Embedder (Universal Sentence Encoder, 6 MB) bundled in the app", "Builds; gating "
-              "threshold for this embedder not yet calibrated"],
-             ["Language model", "On-device MediaPipe/LiteRT model file chosen by the user (e.g. Gemma 3 1B, Qwen2.5 "
-              "1.5B), or Ollama on the user's computer over Wi-Fi", "Builds; not run"],
-             ["Interface", "Jetpack Compose, same design language as the desktop app; chat, recall card, memory and "
-              "settings screens; 'Share to CAMR' from any app", "Builds; not run"],
-             ["Package", "Release APK, arm64-v8a, 57 MB (Android 8.0+)", "Built; not installed on a device"]],
-            [2.8, 7.6, 5.5], size=9)
-    c.p("The prototype has **not** been run on a phone or emulator: the build environment had no virtualisation "
-        "support. Its accuracy, speed, memory use and battery cost on real handsets are therefore unmeasured, "
-        "and development was paused to concentrate on the desktop application. Measuring them is set out as future "
-        "work in Chapter 6.")
+    c.h3("Responsiveness of the Application")
+    lat = app_latency()
+    if lat:
+        ms = lat["models"]
+        c.p("The benchmark profile above measured the engine. A user of CAMR Personal waits for something else: the "
+            "first word of the answer. Three changes were made to shorten that wait, and each was measured with real "
+            "models through Ollama on the same 4-core CPU class (`scripts/app_latency.py`, results in "
+            "`docs/results/app_latency.json`). (1) **Warm-up.** Ollama loads a model on first use, which dominated "
+            "the first answer. The app now loads the chosen model in the background when it starts and when the "
+            "user switches model, while the user is still typing. (2) **Time to first word** is recorded for every "
+            "answer and shown under it, because streaming makes this, not the total time, the wait a user notices. "
+            "(3) **Query-embedding cache.** A repeated question reuses its embedding instead of calling the embedding "
+            f"model again. The memory held {lat['notes_small']} notes: the five demonstration notes and the PopQA "
+            "documents, with six questions per setting.")
+        rows = []
+        for m, r in ms.items():
+            b = r["budgets"]["384"]
+            rows.append([m, f"{r['cold']['first_token_ms'] / 1000:.1f} s", f"{r['after_warm']['first_token_ms'] / 1000:.1f} s",
+                         f"{r['warm_up_ms'] / 1000:.1f} s", f"{b['median_first_token_ms'] / 1000:.2f} s",
+                         f"{b['median_generation_ms'] / 1000:.1f} s", f"{b['median_retrieval_ms']:.0f} ms"])
+        c.table("Time a CAMR Personal user waits, per model (budget 384 tokens; medians over six questions)",
+                ["Model", "First word, cold", "First word, after warm-up", "Warm-up (in background)",
+                 "First word, typical", "Whole answer, typical", "Memory lookup"],
+                rows, [2.6, 2.0, 2.3, 2.3, 2.1, 2.3, 2.3], size=9, key="applat")
+        c.figure(REPORT / "app_latency.png", "Time to the first word: cold start, after the app's warm-up, and a "
+                 "typical answer", 14.0)
+        brow = []
+        for m, r in ms.items():
+            for bud in ("128", "384", "768"):
+                b = r["budgets"][bud]
+                brow.append([m, bud, f"{b['median_prompt_tokens']:.0f}", f"{b['median_first_token_ms'] / 1000:.2f} s",
+                             f"{b['median_generation_ms'] / 1000:.1f} s"])
+        c.table("Effect of the memory budget on waiting time (medians)", ["Model", "Budget (tokens)", "Prompt tokens",
+                "First word", "Whole answer"], brow, [3.4, 2.6, 2.8, 3.0, 3.0], size=9)
+        qc, sz = lat["query_cache"], lat["memory_size"]
+        c.p(APP_LATENCY_TEXT(lat))
+        c.table("Memory lookup time as memory grows (nomic-embed-text through Ollama)",
+                ["Memory", "Notes", "Lookup (median)", "of which embedding", "of which vector search"],
+                [["Demonstration + PopQA", f"{sz['small']['notes']:,}", f"{sz['small']['median_retrieval_ms']:.0f} ms",
+                  f"{sz['small']['median_embed_ms']:.0f} ms", f"{sz['small']['median_search_ms']:.1f} ms"],
+                 ["+ HotpotQA paragraphs", f"{sz['large']['notes']:,}", f"{sz['large']['median_retrieval_ms']:.0f} ms",
+                  f"{sz['large']['median_embed_ms']:.0f} ms", f"{sz['large']['median_search_ms']:.1f} ms"],
+                 ["Repeated question (cache)", "—", f"{qc['repeat_ms']:.1f} ms", "0 (cached)", "—"]],
+                [4.2, 2.4, 3.0, 3.2, 3.2], size=9)
+
+    c.h3("Alignment with the Proposal (Chapter 1)")
+    c.p("Each objective and research question of Chapter 1 was checked against what was built and measured. All "
+        "five research questions are answered (section 6.2). Where the work departed from the proposal, the "
+        f"departure, its reason and its effect on the findings are recorded in {c.next_tab()}, so that no deviation "
+        "is hidden in the results.")
+    c.table("Deviations from the approved proposal and their effect",
+            ["Proposal (Chapter 1)", "What was done", "Reason", "Effect on the findings"],
+            [["Obj. ii: a write policy that *distils* interactions into compact notes",
+              "Distilling (structured) policy implemented and unit-tested; experiments used verbatim notes",
+              "Benchmark documents are already compact; distilling would add a model call per note and a "
+              "confound to the retrieval study", "Results describe verbatim memory; distillation is untested at scale"],
+             ["Obj. ii: rank notes by similarity, recency *and* importance (Eq. 4.1)",
+              "Eq. 4.1 implemented and evaluated; the default became similarity + gating + bridging",
+              "Eq. 4.1 lowered full-support recall by 1.2–5.4 points (5.8.1)",
+              "A measured improvement on the proposal; recency is untested on sessioned data"],
+             ["Obj. iii and scope: one physical consumer laptop as the device",
+              "CPU-only cloud containers of laptop class (4 vCPU, 16 GB, no GPU), fully specified",
+              "Several identical machines were needed to run the 19-model sweep in time",
+              "Accuracy transfers (greedy, deterministic engine); latency is indicative, as limitation 1 expected"],
+             ["Scope: small models of 1–3B parameters", "All 1–3B models tested, plus 0.5B and 7–14.8B",
+              "To find where the useful size range starts and ends", "An extension: confirms 1.5–4B as the range that "
+              "suits the engine (5.8.7)"],
+             ["Scope: a read-only inspector, not an end-user application",
+              "Inspector delivered as scoped; CAMR Personal added after the experiments", "To put the findings in "
+              "users' hands and collect feedback", "An extension; it adds no claim to the research results"],
+             ["Delimitation: no port to mobile phones", "No mobile results are reported; an unrun Android "
+              "prototype is described as future work (6.4)", "Kept within the delimitation", "None"],
+             ["NFR-02: retrieval ≤ 10% of answer time", "Measured and reported as not met for 0.5B; diagnosed",
+              "A 0.5B model answers in about 180 ms", "Met only for models of about 1.5B and above (5.8.10)"]],
+            [3.6, 4.0, 4.0, 4.3], size=8.5)
 
     c.h3("Limitations")
     c.items(["**Sample size.** Pilot samples were 30/30/12 questions per benchmark. One question is 3.3 points, "
@@ -1087,7 +1154,7 @@ camr app                                                # opens http://127.0.0.1
              "**Hardware.** All measurements are from CPU cloud containers of laptop class, not from a physical "
              "laptop or phone. Decode speeds differ between machines.",
              "**No user study yet.** The application was tested for correct and safe behaviour, not for usefulness or "
-             "usability with real users, and the Android prototype has not run on a device.",
+             "usability with real users.",
              "**Policy learning.** The learned policy was trained on 144 questions with costs set by the researcher. "
              "Its advantage over always-Kimi is 1.4 points, which is within sampling noise; the robust result is "
              "equal accuracy at 71% on-device use and lower latency."])

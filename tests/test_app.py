@@ -35,6 +35,7 @@ class FakeOllama:
 
     def __init__(self):
         self.prompts: list[str] = []
+        self.bodies: list[dict] = []
         self.headers: dict = {}
 
     def get(self, url, timeout=None):
@@ -43,6 +44,9 @@ class FakeOllama:
     def post(self, url, json=None, stream=False, timeout=None):
         prompt = json["prompt"]
         self.prompts.append(prompt)
+        self.bodies.append(json)
+        if not prompt:  # a warm-up request only loads the model
+            return _Resp(body={"done": True})
         notes = prompt.split("### Notes from memory\n", 1)[1].split("\n\n###", 1)[0]
         answer = "I don't know." if notes.startswith("(no relevant notes)") else notes.splitlines()[0]
         words = answer.split(" ")
@@ -127,3 +131,39 @@ def test_grounded_share():
     assert grounded_share("Walter West", "The film was directed by Walter West.") == 1.0
     assert grounded_share("John Sturges", "The film was directed by Walter West.") == 0.0
     assert grounded_share("the", "anything") is None
+
+
+def test_turn_records_time_to_first_word(assistant):
+    assistant.teach("The gym opens at 06:00 on weekdays.", title="Gym")
+    turn = assistant.ask("When does the gym open on weekdays?")
+    assert turn.first_token_ms is not None and 0 <= turn.first_token_ms <= turn.generation_ms
+
+
+def test_warm_loads_the_model_with_an_empty_prompt(assistant):
+    fake = assistant._http
+    assert assistant.warm() is True
+    assert fake.prompts[-1] == ""
+    # same context size as a chat request, or Ollama would load the model a second time
+    assert fake.bodies[-1]["options"]["num_ctx"] == 4096
+
+
+class _CountingEmbedSession:
+    def __init__(self):
+        self.calls = 0
+
+    def post(self, url, json=None, timeout=None):
+        self.calls += 1
+        return _Resp(body={"embeddings": [[float(len(t)), 1.0] for t in json["input"]]})
+
+
+def test_ollama_embedder_caches_repeated_questions():
+    from camr.memory.embedder import OllamaEmbedder
+
+    http = _CountingEmbedSession()
+    emb = OllamaEmbedder("nomic-embed-text", session=http)
+    base = http.calls  # the dimension probe
+    first = emb.encode(["when is the dentist?"], is_query=True)
+    again = emb.encode(["when is the dentist?"], is_query=True)
+    assert http.calls == base + 1 and (first == again).all()
+    emb.encode(["when is the dentist?"])  # documents are never served from the query cache
+    assert http.calls == base + 2

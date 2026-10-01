@@ -26,7 +26,6 @@ import mimetypes
 import re
 import threading
 import webbrowser
-from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -68,6 +67,7 @@ class App:
                     chat = [m for m in models if not m["embedding"]]
                     if chat:
                         self.assistant.save_settings(model=chat[0]["name"])
+                threading.Thread(target=self.assistant.warm, daemon=True).start()
             return self.assistant
 
     def start_pull(self, name: str = DEFAULT_EMBED_MODEL) -> None:
@@ -224,8 +224,11 @@ def make_handler(app: App):
                     n = a.teach(data.get("text", ""), title=data.get("title", ""))
                 return self._json({"notes": n})
             if path == "/api/settings":
+                changed = "model" in data and data["model"] != a.model
                 a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat")
                                    if k in data})
+                if changed:  # load the newly chosen model now, not on the next question
+                    threading.Thread(target=a.warm, daemon=True).start()
                 return self._json(a.settings())
             if path == "/api/chat":
                 return self._chat(a, data)

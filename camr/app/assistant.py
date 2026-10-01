@@ -125,6 +125,7 @@ class Turn:
     grounded: float | None = None  # share of the answer's content words found in the notes it read
     retrieval_ms: float = 0.0
     generation_ms: float = 0.0
+    first_token_ms: float | None = None  # time from sending the prompt to the first streamed word
     prompt_tokens: int | None = None
     saved_to_memory: bool = False
     conversation_id: int | None = None
@@ -227,6 +228,23 @@ class Assistant:
         return {"model": self.model, "token_budget": self.token_budget, "history_turns": self.history_turns,
                 "remember_chat": self.remember_chat, "embed_model": self.embed_model,
                 "min_similarity": self.engine.min_similarity}
+
+    def warm(self, keep_alive: str = "30m") -> bool:
+        """Load the chat model into memory ahead of the first question.
+
+        Ollama loads a model on first use, which dominates the first answer's wait
+        (seconds, not milliseconds). An empty prompt loads it without generating.
+        """
+        if not self.model:
+            return False
+        # Same options as a chat request: Ollama reloads a model whose context size differs (defect D-10).
+        body = self._runner().payload("")
+        body["keep_alive"] = keep_alive
+        try:
+            self._http.post(f"{self.host}/api/generate", json=body, timeout=600)
+            return True
+        except Exception:  # warming is best-effort; the first question loads the model anyway
+            return False
 
     def save_settings(self, **changes) -> None:
         allowed = {"model", "token_budget", "history_turns", "remember_chat"}
@@ -331,12 +349,14 @@ class Assistant:
                        title=meta.get(c.note.source_id, ("", ""))[1], text=c.note.text,
                        similarity=round(c.similarity, 3), via_bridge=c.via is not None) for c in admitted]
 
+    def _runner(self) -> OllamaRunner:
+        return OllamaRunner(LocalModelConfig(name=self.model, host=self.host, max_tokens=768, num_ctx=4096),
+                            session=self._http)
+
     def _stream_generate(self, prompt: str) -> Iterator[tuple[str, dict]]:
         if not self.model:
             raise RuntimeError("choose a model first")
-        runner = OllamaRunner(LocalModelConfig(name=self.model, host=self.host, max_tokens=768, num_ctx=4096),
-                              session=self._http)
-        body = runner.payload(prompt)
+        body = self._runner().payload(prompt)
         body["stream"] = True
         with self._http.post(f"{self.host}/api/generate", json=body, stream=True, timeout=600) as resp:
             resp.raise_for_status()
@@ -381,16 +401,18 @@ class Assistant:
                "retrieval_ms": round(recall.retrieval_ms, 1), "conversation_id": conversation_id}
         prompt = CHAT_PROMPT.format(notes=recall.context or "(no relevant notes)",
                                     history=self._history(conversation_id), question=question)
-        t0, parts, last = time.perf_counter(), [], {}
+        t0, parts, last, first = time.perf_counter(), [], {}, None
         for piece, chunk in self._stream_generate(prompt):
             parts.append(piece)
             last = chunk
             if piece:
+                if first is None:
+                    first = round((time.perf_counter() - t0) * 1000, 1)
                 yield {"type": "token", "text": piece}
         answer = "".join(parts).strip()
         turn = Turn(turn_id=None, question=question, answer=answer, sources=sources, abstained=recall.abstained,
                     grounded=grounded_share(answer, recall.context), retrieval_ms=round(recall.retrieval_ms, 1),
-                    generation_ms=round((time.perf_counter() - t0) * 1000, 1),
+                    generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
                     prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id)
         turn.turn_id = self._log(turn)
         if self.remember_chat:

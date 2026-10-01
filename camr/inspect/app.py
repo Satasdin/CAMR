@@ -117,7 +117,7 @@ elif page == "Ablations":
     if variants:
         st.subheader(f"Ablation table (deltas against '{variants[0]}')")
         st.dataframe(analyzer.ablation_table(variants, control=variants[0]), use_container_width=True)
-    sweep = sorted(l for l in labels if l.startswith("budget-"))
+    sweep = sorted(lab for lab in labels if lab.startswith("budget-"))
     if sweep:
         rows, optimum = analyzer.budget_sweep(sweep)
         st.subheader("Budget sweep")
