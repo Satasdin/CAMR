@@ -192,18 +192,32 @@ def fig_model_sweep(pilot: Path, out: Path, meta_path: Path) -> Path | None:
     fig, axes = plt.subplots(1, len(benches), figsize=(4.4 * len(benches), 4.1), sharey=True, facecolor=SURF, squeeze=False)
     for ax, b in zip(axes[0], benches):
         rs = sorted((r for r in rows if r["benchmark"] == b and r["model"] in params), key=lambda r: params[r["model"]])
+        # Models of near-equal size are nudged apart (multiplicatively, so log spacing stays honest).
+        xs, last = {}, None
         for r in rs:
             x = params[r["model"]]
+            if last is not None and x / last < 1.12:
+                x = last * 1.12
+            xs[r["model"]] = last = x
+        for r in rs:
+            x = xs[r["model"]]
             f, m = r["floor"] * 100, r["with_memory"] * 100
-            ax.annotate("", xy=(x, m), xytext=(x, f),
-                        arrowprops=dict(arrowstyle="-|>", color=BLUE if m >= f else ORANGE, lw=1.4, shrinkA=3, shrinkB=3))
-            ax.scatter([x], [f], s=22, color=INK2, zorder=3)
-            ax.scatter([x], [m], s=30, color=BLUE if m >= f else ORANGE, zorder=4)
-        for lab, ls, name in (("ceiling_20b", "--", "gpt-oss-20b"), ("ceiling_kimi", ":", "Kimi K3")):
-            v = next((r[lab] for r in rs if r.get(lab) is not None), None)
-            if v is not None:
-                ax.axhline(v * 100, color=INK2, linestyle=ls, linewidth=1.1)
-                ax.text(16.5, v * 100, name, va="center", fontsize=7.5, color=INK2)
+            col = BLUE if m > f else ORANGE if m < f else INK2
+            if m != f:
+                ax.annotate("", xy=(x, m), xytext=(x, f),
+                            arrowprops=dict(arrowstyle="-|>", color=col, lw=1.4, shrinkA=3, shrinkB=3))
+                ax.scatter([x], [f], s=22, color=INK2, zorder=3)
+            ax.scatter([x], [m], s=30, color=col, zorder=4, edgecolors=SURF if m == f else "none", linewidths=1)
+        refs = [(name, ls, next((r[lab] for r in rs if r.get(lab) is not None), None))
+                for lab, ls, name in (("ceiling_20b", "--", "gpt-oss-20b"), ("ceiling_kimi", ":", "Kimi K3"))]
+        refs = [x for x in refs if x[2] is not None]
+        for name, ls, v in refs:
+            ax.axhline(v * 100, color=INK2, linestyle=ls, linewidth=1.1)
+        if len(refs) == 2 and abs(refs[0][2] - refs[1][2]) < 0.06:
+            ax.text(16.5, refs[0][2] * 100 - 4, "20B & Kimi K3", va="center", fontsize=7.5, color=INK2)
+        else:
+            for name, ls, v in refs:
+                ax.text(16.5, v * 100 + 2.5, name, va="center", fontsize=7.5, color=INK2)
         ax.set_xscale("log")
         ax.set_xticks([0.5, 1, 2, 4, 8, 15])
         ax.set_xticklabels(["0.5B", "1B", "2B", "4B", "8B", "15B"])
@@ -211,10 +225,10 @@ def fig_model_sweep(pilot: Path, out: Path, meta_path: Path) -> Path | None:
         ax.set_ylim(0, 105)
         ax.set_xlabel("parameters (log scale)", color=INK2, fontsize=9)
         ax.set_title(NAME[b], fontsize=10, color=INK, loc="left")
-        style(ax, "accuracy (%)  grey = alone, coloured = with CAMR" if ax is axes[0][0] else "")
+        style(ax, "accuracy (%)" if ax is axes[0][0] else "")
     fig.suptitle("Where the engine helps: accuracy without (grey) and with CAMR memory, by model size",
                  fontsize=11.5, color=INK, x=0.01, ha="left")
-    fig.text(0.01, 0.005, "Each arrow is one model (blue = memory helps, orange = memory hurts). Parameter counts from the Ollama "
+    fig.text(0.01, 0.005, "Each arrow is one model: grey dot = alone, arrow head = with CAMR (blue helps, orange hurts, grey no change). Parameter counts from the Ollama "
              "registry; 30 / 30 / 12 questions; same store and questions for every model.", fontsize=7.5, color=INK2)
     fig.tight_layout(rect=(0, 0.03, 1, 0.94))
     p = out / "fig_model_sweep.png"

@@ -229,6 +229,31 @@ Source: `results/pilot/camr.sqlite` (labels `main`, `kimi`, `kimi-k2.6`) and `ta
 
 ---
 
+## F10. Which model sizes suit the engine (model sweep, machine E; more machines pending)
+
+Source: `sweep_results/machine-e.sqlite`, merged into `results/pilot/camr.sqlite`; `results/pilot/tables/model_sweep.json`. Same store, same questions and same ceilings for every model. Parameter counts and quantisation are from the Ollama registry (`docs/model_registry_metadata.json`).
+
+![Accuracy without and with CAMR by model size](figures/fig_model_sweep.png)
+
+| Model (params, quant) | PopQA alone → +CAMR | HotpotQA alone → +CAMR | GSM8K alone → +CAMR | Decode tok/s alone → +CAMR |
+|---|---|---|---|---|
+| qwen2.5:0.5b (0.49B, Q4_K_M) | 6.7 → 66.7% | 10.0 → 30.0% | 25.0 → 16.7% | 50.3 → 48.9 |
+| llama3.2:1b (1.2B, Q8_0) | 10.0 → 63.3% | 16.7 → 40.0% | 58.3 → 33.3% | 36.2 → 33.7 |
+| qwen2.5:1.5b (1.5B, Q4_K_M) | 10.0 → **80.0%** | 16.7 → 50.0% | 58.3 → 41.7% | 21.4 → 19.9 |
+| llama3.2:3b (3.2B, Q4_K_M) | 23.3 → 73.3% | 16.7 → **56.7%** | 75.0 → 75.0% | 11.8 → 10.4 |
+| qwen2.5:3b (3.1B, Q4_K_M) | 6.7 → **80.0%** | 33.3 → 43.3% | 25.0 → 33.3% | 13.3 → 11.0 |
+| gemma3:4b (4.3B, Q4_K_M) | 20.0 → 73.3% | 20.0 → 53.3% | 75.0 → 50.0% | 9.9 → 9.1 |
+| *Kimi K3 (cloud), no memory* | *66.7%* | *53.3%* | *100%* | — |
+
+**Findings**
+1. **From about 1.5B parameters, a small model with CAMR beats Kimi K3 on long-tail facts** (73–80% vs 66.7%). Measured against Kimi, gap closed is 1.14–1.24.
+2. **On multi-hop, about 3B is the threshold.** llama3.2:3b + CAMR reached 56.7% and gemma3:4b + CAMR 53.3%, against Kimi K3's 53.3%. Below 3B the gain is real (+20 to +33 pts) but the models do not reach Kimi.
+3. **Knowledge gains are large at every size** (+50 to +73 pts on PopQA), but the 0.5B model is the weakest *reader*. It gains least on multi-hop (+20) and is most hurt by extra notes (F8 budget sweep).
+4. **Worked-example (exemplar) memory for maths hurts four of six models.** It is neutral for llama3.2:3b and helps only qwen2.5:3b (+8.3). The effect depends on the model family, not just its size, so reasoning routing must be learned per model.
+5. **Decode speed slows 3–17% with memory** (e.g. qwen2.5:3b 13.3 → 11.0 tokens/s). The weights are untouched; the slowdown comes from attending over a longer prompt. This corrects the "decode speed unaffected" reading of F2: there is a measurable, bounded per-token cost.
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |
@@ -236,6 +261,7 @@ Source: `results/pilot/camr.sqlite` (labels `main`, `kimi`, `kimi-k2.6`) and `ta
 | `figures/fig_growth_accuracy.png` | F2 accuracy vs store size, with both ceilings |
 | `figures/fig_decode_speed.png` | F2 decode speed vs store size |
 | `figures/fig_retrieval_hotpotqa.png` | F1 recall change and token cost vs baseline |
+| `figures/fig_model_sweep.png` | F10 accuracy without and with CAMR by model size |
 | `figures/inspector/grow-100_1_run_dashboard.png` | Inspector dashboard at 100% memory |
 | `figures/inspector/grow-100_3_query_trace.png` | Per-question trace (F3) |
 | `figures/inspector/grow-100_4_memory_store.png` | Store browser: notes, provenance, never-retrieved share |
