@@ -229,7 +229,7 @@ Source: `results/pilot/camr.sqlite` (labels `main`, `kimi`, `kimi-k2.6`) and `ta
 
 ---
 
-## F10. Which model sizes suit the engine (model sweep, machine E; more machines pending)
+## F10. Which model sizes suit the engine (model sweep, machines E and C; B and D pending)
 
 Source: `sweep_results/machine-e.sqlite`, merged into `results/pilot/camr.sqlite`; `results/pilot/tables/model_sweep.json`. Same store, same questions and same ceilings for every model. Parameter counts and quantisation are from the Ollama registry (`docs/model_registry_metadata.json`).
 
@@ -243,13 +243,21 @@ Source: `sweep_results/machine-e.sqlite`, merged into `results/pilot/camr.sqlite
 | llama3.2:3b (3.2B, Q4_K_M) | 23.3 → 73.3% | 16.7 → **56.7%** | 75.0 → 75.0% | 11.8 → 10.4 |
 | qwen2.5:3b (3.1B, Q4_K_M) | 6.7 → **80.0%** | 33.3 → 43.3% | 25.0 → 33.3% | 13.3 → 11.0 |
 | gemma3:4b (4.3B, Q4_K_M) | 20.0 → 73.3% | 20.0 → 53.3% | 75.0 → 50.0% | 9.9 → 9.1 |
+| gemma3:1b (1.0B, Q4_K_M) ᶜ | 6.7 → 66.7% | 16.7 → 40.0% | 33.3 → 16.7% | 24.9 → 23.9 |
+| smollm2:1.7b (1.7B, Q8_0) ᶜ | 20.0 → 73.3% | 13.3 → 36.7% | 33.3 → 41.7% | 15.2 → 13.8 |
+| granite3.3:2b (2.5B, Q4_K_M) ᶜ | 16.7 → 76.7% | 26.7 → 43.3% | 58.3 → 58.3% | 14.2 → 12.2 |
+| falcon3:3b (3.2B, Q4_K_M) ᶜ | 10.0 → 70.0% | 13.3 → 50.0% | 33.3 → **66.7%** | 14.2 → 14.5 |
+| phi4-mini:3.8b (3.8B, Q4_K_M) ᶜ | 13.3 → **80.0%** | 10.0 → 40.0% | 83.3 → **91.7%** | 12.6 → 10.7 |
 | *Kimi K3 (cloud), no memory* | *66.7%* | *53.3%* | *100%* | — |
+
+ᶜ Machine C (Intel Xeon @ 2.80 GHz; the others @ 2.10 GHz): accuracies are comparable across machines, decode speeds are not.
 
 **Findings**
 1. **From about 1.5B parameters, a small model with CAMR beats Kimi K3 on long-tail facts** (73–80% vs 66.7%). Measured against Kimi, gap closed is 1.14–1.24.
 2. **On multi-hop, about 3B is the threshold.** llama3.2:3b + CAMR reached 56.7% and gemma3:4b + CAMR 53.3%, against Kimi K3's 53.3%. Below 3B the gain is real (+20 to +33 pts) but the models do not reach Kimi.
 3. **Knowledge gains are large at every size** (+50 to +73 pts on PopQA), but the 0.5B model is the weakest *reader*. It gains least on multi-hop (+20) and is most hurt by extra notes (F8 budget sweep).
-4. **Worked-example (exemplar) memory for maths hurts four of six models.** It is neutral for llama3.2:3b and helps only qwen2.5:3b (+8.3). The effect depends on the model family, not just its size, so reasoning routing must be learned per model.
+4. **Worked-example (exemplar) memory for maths depends on the model family, not its size.** Across 11 models it **helps 4**: falcon3:3b +33.3, phi4-mini +8.3, smollm2 +8.3, qwen2.5:3b +8.3. It is **neutral for 2** (llama3.2:3b, granite3.3:2b) and **hurts 5** (qwen2.5 0.5B/1.5B, llama3.2:1b, gemma3 1B/4B). With exemplars, phi4-mini (3.8B) reaches 91.7% on GSM8K. Reasoning routing must therefore be learned *per model*, which is exactly what the learned policy (F11) does.
+6. **Every one of the 11 models gains on knowledge tasks** (+50 to +73 pts on PopQA, +20 to +40 on HotpotQA). Eight of 11 reach or beat Kimi K3 on long-tail facts with CAMR.
 5. **Decode speed slows 3–17% with memory** (e.g. qwen2.5:3b 13.3 → 11.0 tokens/s). The weights are untouched; the slowdown comes from attending over a longer prompt. This corrects the "decode speed unaffected" reading of F2: there is a measurable, bounded per-token cost.
 
 ---
