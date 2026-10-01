@@ -1,0 +1,17 @@
+machine: D
+nproc: 4
+MemTotal:       16480972 kB
+cpu: Intel(R) Xeon(R) Processor @ 2.10GHz
+ollama --version: ollama version is 0.35.0 
+models: mistral:7b, olmo2:7b, granite3.3:8b, gemma3:12b
+skipped models: none (all four loaded and completed all 6 runs)
+total wall time (install -> sweep end): 186 min
+sweep-models wall time: 172 min  (ingest ~7.3 min, 436 s)
+failed queries (Ollama returned HTTP 500 after llama-server EOF; logged status=failed, runs still completed; not retried):
+  run 10 m:olmo2:7b treatment hotpotqa: 1 failed
+  run 11 m:olmo2:7b floor gsm8k: 1 failed
+  run 18 m:granite3.3:8b treatment gsm8k: 1 failed
+  run 20 m:gemma3:12b treatment popqa: 1 failed
+  run 22 m:gemma3:12b treatment hotpotqa: 3 failed
+  run 24 m:gemma3:12b treatment gsm8k: 2 failed
+note: accuracy for runs with failed queries is over the successfully answered queries only.
