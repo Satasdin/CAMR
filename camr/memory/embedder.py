@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import re
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 
 import numpy as np
 
@@ -110,6 +111,8 @@ class OllamaEmbedder(Embedder):
         "mxbai-embed-large": ("Represent this sentence for searching relevant passages: ", ""),
     }
 
+    QUERY_CACHE_SIZE = 256
+
     def __init__(self, name: str = "nomic-embed-text", host: str = "http://127.0.0.1:11434", session=None,
                  timeout_s: float = 120.0):
         import requests
@@ -119,6 +122,7 @@ class OllamaEmbedder(Embedder):
         self._http = session or requests.Session()
         base = name.split(":")[0]
         self.query_prefix, self.doc_prefix = self.PREFIXES.get(base, ("", ""))
+        self._query_cache: OrderedDict[str, np.ndarray] = OrderedDict()  # repeated questions skip the model call
         self.dim = int(self._raw(["dimension probe"]).shape[1])
 
     def _raw(self, texts: list[str]) -> np.ndarray:
@@ -131,6 +135,16 @@ class OllamaEmbedder(Embedder):
 
     def encode(self, texts: list[str], *, is_query: bool = False) -> np.ndarray:
         prefix = self.query_prefix if is_query else self.doc_prefix
+        if is_query and len(texts) == 1:
+            hit = self._query_cache.get(texts[0])
+            if hit is not None:
+                self._query_cache.move_to_end(texts[0])
+                return hit[None, :]
+            vec = self._raw([prefix + texts[0]])
+            self._query_cache[texts[0]] = vec[0]
+            if len(self._query_cache) > self.QUERY_CACHE_SIZE:
+                self._query_cache.popitem(last=False)
+            return vec
         out = [self._raw([prefix + t for t in texts[i:i + 32]]) for i in range(0, len(texts), 32)]
         return np.vstack(out) if out else np.zeros((0, self.dim), dtype=np.float32)
 

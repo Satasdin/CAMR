@@ -89,3 +89,10 @@ def test_refuses_foreign_hosts_and_cross_site_posts(server):
 def test_path_traversal_falls_back_to_index(server):
     status, body = call(server, "GET", "/../../etc/passwd")
     assert status == 200 and "CAMR" in body
+
+
+def test_empty_message_is_rejected_without_calling_the_model(server):
+    status, stream = call(server, "POST", "/api/chat", {"message": "   "})
+    events = [json.loads(line[6:]) for line in stream.split("\n\n") if line.startswith("data: ")]
+    assert [e["type"] for e in events] == ["error"] and "empty message" in events[0]["error"]
+    assert json.loads(call(server, "GET", "/api/conversations")[1]) == []  # no chat created
