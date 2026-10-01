@@ -213,13 +213,19 @@ def hotpot200() -> dict | None:
         a, b = data.get(label, {}).get(base, {}), data.get(label, {}).get(mem, {})
         ids = sorted(set(a) & set(b))
         if len(ids) < 150:
+            if label == "kimi" and len(a) >= 150:  # Kimi with the same notes still running: report closed-book only
+                fa = sum(v[0] for v in a.values()) / len(a)
+                sa = sum(v[1] for v in a.values()) / len(a) / 1000
+                res["Kimi K3 (cloud)"] = (fa, None, sa, len(a), sa)
+                rows.append(["Kimi K3 (cloud)", pct(fa), "–", "–", "–"])
             continue
         diffs = [b[i][0] - a[i][0] for i in ids]
         boots = sorted(sum(rng.choice(diffs) for _ in diffs) / len(diffs) for _ in range(2000))
         fa, fb = sum(a[i][0] for i in ids) / len(ids), sum(b[i][0] for i in ids) / len(ids)
         sec = sum(b[i][1] for i in ids) / len(ids) / 1000
+        sec_alone = sum(a[i][1] for i in ids) / len(ids) / 1000
         name = "Kimi K3 (cloud)" if label == "kimi" else label[2:]
-        res[name] = (fa, fb, sec, len(ids))
+        res[name] = (fa, fb, sec, len(ids), sec_alone)
         rows.append([name, pct(fa), f"**{pct(fb)}**", f"{100 * (fb - fa):+.1f} pts ({100 * boots[50]:+.1f} to {100 * boots[1949]:+.1f})", f"{sec:.1f}"])
     if not rows:
         return None
@@ -478,26 +484,35 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
     c.figure(FIG / "setup" / "terminal_ask_empty.png", "Assistant scenario with empty memory: the frozen model guesses", 15.0)
     c.figure(FIG / "setup" / "terminal_ask.png", "Assistant scenario with memory: answers grounded in the user's notes", 12.5)
     c.h3("CAMR Personal: the Engine as an Application")
-    c.p("To move from benchmarks to real use, the engine was packaged as **CAMR Personal** (`camr app`), a local "
-        "web application that gives any model the user already has in Ollama a long-term memory. The user teaches "
-        "it notes and files (.txt, .md, .pdf), states facts with *remember that …*, and approves good answers with "
-        "a thumbs-up, which stores them as memory. What the user says in chat is also stored, so a fact mentioned "
-        "weeks earlier is recalled even after it has left the model's context window. Each answer reads only the "
-        "notes it needs, using the measured best read path (similarity, gating and bridging, about 384 tokens), and "
-        "shows the notes it used, how grounded the answer is, and the lookup and generation times. The model's "
-        "weights never change: the application adapts to its user through storage rather than through compute or "
-        "a longer context window. Everything stays in one SQLite file under `~/.camr`. Feedback for the project is "
-        "an explicit, metrics-only export. One-line installers for macOS, Linux and Windows and a user guide "
-        f"(`docs/APP.md`) are provided. {c.next_fig()} and {c.next_fig(2)} show the application running with "
-        "qwen2.5:1.5b.")
-    if (FIG / "app" / "1_chat.png").exists():
-        c.figure(FIG / "app" / "1_chat.png", "CAMR Personal: answers cite the notes they used; 'remember that' stores a fact instantly")
-        c.figure(FIG / "app" / "4_growth.png", "CAMR Personal: memory growth and the share of answers drawn from memory")
+    c.p("To move from benchmarks to real use, the engine was packaged as **CAMR Personal**, a desktop application "
+        "that gives any model the user already has in Ollama a long-term memory. The user teaches it notes and files "
+        "(.txt, .md, .pdf), dropped anywhere on the window; states facts with *remember that …*; and approves good "
+        "answers with a thumbs-up, which stores them as memory. What the user says in chat is also stored, so a fact "
+        "mentioned weeks earlier is recalled even after it has left the model's context window. Each answer reads only "
+        "the notes it needs, using the measured best read path (similarity, gating and bridging). A *Recalled N "
+        "memories* card appears before the answer streams, and the answer shows how grounded it is in those notes. The "
+        "model's weights never change: the application adapts to its user through storage, not through compute or a "
+        "longer context window.")
+    c.p("The interface was designed after studying the conventions of ChatGPT (a minimal composer and chat history), "
+        "Ollama's desktop app (the model picker inside the composer, file drop) and Kimi (sources shown before the "
+        "answer), with memory made the visible centre: a ring that fills as memory grows, and a panel showing what "
+        "was read, everything stored, and how memory has grown. It is a standard-library Python server with a "
+        "single-page front end, bound to 127.0.0.1, refusing foreign hosts and cross-site writes. Embeddings come from "
+        "a small Ollama model (nomic-embed-text), so the download needs no PyTorch. Its abstain threshold (0.55) was "
+        "calibrated on HotpotQA with the same rule that places BGE's benchmark threshold (0.50): the 90th percentile "
+        "of off-topic similarity. Self-contained downloads are built by continuous integration for Windows (x64, "
+        "ARM64), macOS (Apple Silicon, Intel) and Linux (x64, ARM64). "
+        f"{c.next_fig()} and {c.next_fig(2)} show the application running with qwen2.5:1.5b on the demonstration notes.")
+    if (FIG / "app" / "dark_3_panel_recall.png").exists():
+        c.figure(FIG / "app" / "dark_3_panel_recall.png", "CAMR Personal: a remembered fact, an answer with its recalled "
+                 "memory and grounding, and an abstention, with the memory panel open")
+        c.figure(FIG / "app" / "dark_4_panel_growth.png", "CAMR Personal: the growth panel (memories, share of answers "
+                 "drawn from memory, lookup time, sources of knowledge)")
 
     # ================================================================ 5.4 Testing
     c.h2("Testing and Evaluation")
     c.h3("Test Strategy and Acceptance Criteria")
-    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 96 tests, fully "
+    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 101 tests, fully "
         "offline) verify each requirement with deterministic test doubles: dry-run models and a hashing embedder. "
         "**System tests** run the real pipeline end to end on real data with real models. **Measurements** "
         "(device profile, latency, memory) verify the non-functional requirements against their thresholds. Each "
@@ -505,7 +520,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "passes when the observed behaviour equals the expected behaviour; NFR-02 passes when retrieval is ≤ 10% of "
         "median end-to-end latency; NFR-05 passes when two runs produce byte-identical prompts.")
     c.h3("Test Cases, Defects and Retesting")
-    c.table("Test cases and results (unit tests: `pytest`, 96 passed; measurements: `camr profile`)",
+    c.table("Test cases and results (unit tests: `pytest`, 101 passed; measurements: `camr profile`)",
             ["Test ID", "Traceability", "Scenario and data", "Expected result", "Actual result and verdict"],
             [["TC-01", "FR-01", "Verbatim and structured policies on fixture passages", "Notes produced; title kept", "As expected. Pass"],
              ["TC-02", "FR-02/03, DR-06", "Empty, duplicate, over-length, injection-like notes", "Rejected with logged reason; provenance on all notes", "As expected. Pass"],
@@ -530,7 +545,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
              ["TC-20", "NFR-06", "Block sockets; run floor and treatment", "No external connection", "As expected. Pass"],
              ["TC-21", "DR-03/04", "Corpus containing an evaluation question", "Ingestion refused", "As expected. Pass"],
              ["TC-22", "IR-07", "Local runtime down mid-run", "Failures logged; run continues; store intact", "As expected. Pass"],
-             ["TC-23", "Deployment (4.2.1)", "CAMR Personal: teach, ask, remember, 👍, forget, settings, export", "Answers cite notes; chat recalled beyond the window; export hides text", "8 tests. Pass"]],
+             ["TC-23", "Deployment (4.2.1)", "CAMR Personal: teach, ask, remember, 👍, forget, settings, export; server API, streaming, host/origin checks", "Answers cite notes; chat recalled beyond the window; export hides text; foreign hosts refused", "13 tests and a browser test with a real model. Pass"]],
             [1.6, 2.7, 4.0, 3.6, 4.0], size=9)
     c.p("The defects below were found during the real runs. Each was fixed and retested, or is reported as an "
         "open limitation. Failed results were kept in the record, not deleted.")
@@ -599,7 +614,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "where it fell short; most importantly, the student required that this chapter report only experiments "
         "that had actually been run and benchmarked with real models, and an earlier draft written before the "
         "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
-        "test suite (96 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "test suite (101 tests), the per-query logs, the read-only inspector, and the findings log, which names "
         "the results file behind every reported number, so that each claim can be traced and re-run. The "
         "student made the final decisions and takes full responsibility for the submitted work.")
 
@@ -772,7 +787,8 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
     c.h3("Limitations")
     c.items(["**Sample size.** Pilot samples were 30/30/12 questions per benchmark. One question is 3.3 points, "
              "so differences of one or two questions are within noise. Confidence intervals are reported for "
-             "gap closed, and the larger retrieval study (500 questions) supports the retrieval conclusions.",
+             "gap closed. The multi-hop results were confirmed on 200 questions (section 5.8.6), and the retrieval "
+             "study used 500 questions per benchmark; the single-hop and reasoning results rest on the pilot sample.",
              "**Stochastic cloud ceiling.** Kimi accepts only temperature 1, so its scores are single samples. "
              "Small-model floors also varied between repeats (20/30 identical answers), so floors are best read as "
              "a range.",
@@ -788,14 +804,34 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
              "**Policy learning.** The learned policy was trained on 144 questions with costs set by the researcher. "
              "Its advantage over always-Kimi is 1.4 points, which is within sampling noise; the robust result is "
              "equal accuracy at 71% on-device use and lower latency."])
-    c.p("Conclusions, recommendations and future work, including the Android personal-assistant application, are "
-        "presented in Chapter 6.")
+    c.p("Conclusions, recommendations and future work, including feedback from real users of CAMR Personal and a "
+        "phone version of the assistant, are presented in Chapter 6.")
 
     return c.save(out)
 
 
 # Interpretation of the 200-question study; written once its results are in (results/hotpot200).
-H200_TEXT = None
+def H200_TEXT(res: dict) -> str:  # noqa: N802 - kept as a named hook for the chapter text
+    k = res.get("Kimi K3 (cloud)")
+    l3, q15, q05 = res.get("llama3.2:3b"), res.get("qwen2.5:1.5b"), res.get("qwen2.5:0.5b")
+    parts = ["The larger sample confirmed the pilot. Every small model gained substantially, and every 95% interval "
+             "excludes zero."]
+    if l3 and k:
+        parts.append(f"With CAMR, llama3.2:3b reached {pct(l3[1])} exact match against Kimi K3's closed-book "
+                     f"{pct(k[0])} (n = {k[3]}), and answered in {l3[2]:.1f} s against {k[4]:.1f} s. On multi-hop questions, a 3B "
+                     "model on a laptop CPU with memory therefore matches a frontier cloud model at about a third of "
+                     "the answer time.")
+    if q15 and q05:
+        parts.append(f"qwen2.5:1.5b reached {pct(q15[1])} and qwen2.5:0.5b {pct(q05[1])}. The ordering by size is the "
+                     "pilot's finding that multi-hop gains depend on how well the model reads the evidence.")
+    if k and k[1] is not None:
+        parts.append(f"With the same notes, Kimi K3 rose from {pct(k[0])} to {pct(k[1])}. The residual gap between "
+                     "the best small model and the frontier model reading the same evidence is the share of multi-hop "
+                     "performance that memory cannot buy.")
+    parts.append("Compared with the pilot (30 questions: 30.0%, 50.0% and 56.7% for the three models with memory), "
+                 "the estimates moved by at most 9 points, within the pilot's uncertainty. Accuracy was identical "
+                 "when the 0.5B run was repeated for clean timings (26.5% both times).")
+    return " ".join(parts)
 
 # Filled in after the B/D machines are merged; kept as data so the text matches the table.
 SWEEP_DISCUSSION = (

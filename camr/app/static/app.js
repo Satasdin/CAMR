@@ -190,13 +190,14 @@ function finish(el, t) {
   const a = $(".answer", el); a.classList.remove("cursor"); a.innerHTML = md(t.answer);
   const g = t.grounded;
   const gcol = g == null ? "" : g >= 0.6 ? "var(--good)" : g >= 0.3 ? "#e3b341" : "var(--warn)";
-  $(".actions", el).innerHTML = (t.turn_id ? `
+  const stored = t.saved_to_memory && !(t.sources || []).length && !t.abstained;  // a "remember that" turn
+  $(".actions", el).innerHTML = (t.turn_id && stored ? `<button class="act copy" title="Copy">⧉ Copy</button>` : t.turn_id ? `
     <button class="act copy" title="Copy">⧉ Copy</button>
     <button class="act up ${t.feedback === 1 ? "on" : ""}" title="Good answer: save it to memory">👍 ${t.feedback === 1 ? "Learned" : "Teach this"}</button>
     <button class="act down ${t.feedback === -1 ? "on" : ""}" title="Not helpful">👎</button>` : "")
     + (g != null ? `<span class="ground" title="Share of the answer's words found in the memories it read"><span class="meter"><i style="width:${Math.round(100 * g)}%;background:${gcol}"></i></span>grounded ${Math.round(100 * g)}%</span>` : "")
     + (t.generation_ms ? `<span class="timing">${Math.round(t.retrieval_ms)} ms memory · ${(t.generation_ms / 1000).toFixed(1)} s answer</span>` : "");
-  if (t.saved_to_memory && t.sources?.length === 0 && !t.abstained) a.insertAdjacentHTML("beforeend", `<div class="saved-note">✦ Stored in memory</div>`);
+  if (stored) a.insertAdjacentHTML("beforeend", `<div class="saved-note">✦ Stored in memory</div>`);
   const up = $(".up", el), down = $(".down", el), copy = $(".copy", el);
   if (copy) copy.onclick = () => { navigator.clipboard?.writeText(t.answer); toast("Copied"); };
   if (up) up.onclick = async () => { await api("/api/feedback", { method: "POST", body: { turn_id: t.turn_id, helpful: true } });
@@ -249,7 +250,7 @@ $("#composer").onsubmit = (e) => { e.preventDefault(); if (S.streaming) { S.stre
 $("#remember-toggle").onclick = () => {
   S.rememberMode = !S.rememberMode; $("#remember-toggle").classList.toggle("on", S.rememberMode);
   $(".composer-box").classList.toggle("remember", S.rememberMode);
-  input.placeholder = S.rememberMode ? "Type a fact to store in memory…" : "Ask anything, or start with “remember that …”"; input.focus();
+  input.placeholder = S.rememberMode ? "Type a fact to store in memory…" : (matchMedia("(max-width: 600px)").matches ? "Ask, or “remember that …”" : "Ask anything, or start with “remember that …”"); input.focus();
 };
 $$("#suggestions [data-fill]").forEach((b) => b.onclick = () => { input.value = b.dataset.fill; autosize(); input.focus(); });
 $("#suggestions [data-action=teach]").onclick = () => openTeach();
@@ -352,6 +353,9 @@ const mobile = () => matchMedia("(max-width: 900px)").matches;
 $("#toggle-side").onclick = () => mobile() ? app.classList.toggle("side-mobile") : app.classList.toggle("side-closed");
 $("#close-side").onclick = closeMobile;
 function closeMobile() { app.classList.remove("side-mobile"); }
+
+// short placeholder on phones
+if (matchMedia("(max-width: 600px)").matches) input.placeholder = "Ask, or “remember that …”";
 
 // ---------- boot ----------
 async function boot() { await refresh(); if (!S.state.ready) return; await loadChats(); newChat(); renderRecallPanel(); }

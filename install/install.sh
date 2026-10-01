@@ -27,12 +27,7 @@ say "Using $($PY --version)"
 mkdir -p "$HOME_DIR" "$BIN_DIR"
 "$PY" -m venv "$HOME_DIR/venv"
 "$HOME_DIR/venv/bin/python" -m pip install --quiet --upgrade pip
-if [ "$(uname -s)" = "Linux" ] && [ "${CAMR_TORCH:-cpu}" = "cpu" ]; then
-  # The embedder runs on CPU; the CPU build of PyTorch is ~200 MB instead of several GB of CUDA libraries.
-  say "Installing CPU PyTorch (set CAMR_TORCH=cuda to skip)"
-  "$HOME_DIR/venv/bin/python" -m pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
-fi
-say "Installing CAMR ($REF). The first install downloads the embedder's libraries; this can take a few minutes."
+say "Installing CAMR ($REF)."
 "$HOME_DIR/venv/bin/python" -m pip install --quiet "camr[app] @ ${SRC}"
 ln -sf "$HOME_DIR/venv/bin/camr" "$BIN_DIR/camr"
 say "Installed: $BIN_DIR/camr"
