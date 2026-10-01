@@ -191,6 +191,42 @@ def git_history() -> list[list[str]]:
     return [line.split("|", 3) for line in out.strip().splitlines()]
 
 
+def hotpot200() -> dict | None:
+    """Floor / CAMR exact match on the 200-question HotpotQA study, with paired bootstrap CIs on the gain."""
+    import random
+    import sqlite3
+
+    db = ROOT / "results" / "hotpot200" / "camr.sqlite"
+    if not db.exists():
+        return None
+    c = sqlite3.connect(db)
+    q = ("SELECT r.label, r.condition, q.question_id, s.value, q.e2e_latency_ms FROM run r JOIN query_log q USING(run_id) "
+         "JOIN score s USING(query_id) WHERE s.metric='em' AND q.status='ok' AND r.status='completed' AND r.run_id IN "
+         "(SELECT MAX(run_id) FROM run WHERE status='completed' GROUP BY label, condition, benchmark)")
+    data: dict = {}
+    for label, cond, qid, v, ms in c.execute(q):
+        data.setdefault(label, {}).setdefault(cond, {})[qid] = (v, ms)
+    order = [("m:qwen2.5:0.5b", "floor", "treatment"), ("m:qwen2.5:1.5b", "floor", "treatment"),
+             ("m:llama3.2:3b", "floor", "treatment"), ("kimi", "ceiling", "ceiling_rag")]
+    rows, res, rng = [], {}, random.Random(13)
+    for label, base, mem in order:
+        a, b = data.get(label, {}).get(base, {}), data.get(label, {}).get(mem, {})
+        ids = sorted(set(a) & set(b))
+        if len(ids) < 150:
+            continue
+        diffs = [b[i][0] - a[i][0] for i in ids]
+        boots = sorted(sum(rng.choice(diffs) for _ in diffs) / len(diffs) for _ in range(2000))
+        fa, fb = sum(a[i][0] for i in ids) / len(ids), sum(b[i][0] for i in ids) / len(ids)
+        sec = sum(b[i][1] for i in ids) / len(ids) / 1000
+        name = "Kimi K3 (cloud)" if label == "kimi" else label[2:]
+        res[name] = (fa, fb, sec, len(ids))
+        rows.append([name, pct(fa), f"**{pct(fb)}**", f"{100 * (fb - fa):+.1f} pts ({100 * boots[50]:+.1f} to {100 * boots[1949]:+.1f})", f"{sec:.1f}"])
+    if not rows:
+        return None
+    text = H200_TEXT(res) if callable(H200_TEXT) else ""
+    return {"rows": rows, "text": text}
+
+
 def sweep_latency() -> dict[str, float]:
     """Mean seconds per PopQA answer with CAMR, per swept model (latest completed run)."""
     import sqlite3
@@ -441,11 +477,27 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "escalation policy.")
     c.figure(FIG / "setup" / "terminal_ask_empty.png", "Assistant scenario with empty memory: the frozen model guesses", 15.0)
     c.figure(FIG / "setup" / "terminal_ask.png", "Assistant scenario with memory: answers grounded in the user's notes", 12.5)
+    c.h3("CAMR Personal: the Engine as an Application")
+    c.p("To move from benchmarks to real use, the engine was packaged as **CAMR Personal** (`camr app`), a local "
+        "web application that gives any model the user already has in Ollama a long-term memory. The user teaches "
+        "it notes and files (.txt, .md, .pdf), states facts with *remember that …*, and approves good answers with "
+        "a thumbs-up, which stores them as memory. What the user says in chat is also stored, so a fact mentioned "
+        "weeks earlier is recalled even after it has left the model's context window. Each answer reads only the "
+        "notes it needs, using the measured best read path (similarity, gating and bridging, about 384 tokens), and "
+        "shows the notes it used, how grounded the answer is, and the lookup and generation times. The model's "
+        "weights never change: the application adapts to its user through storage rather than through compute or "
+        "a longer context window. Everything stays in one SQLite file under `~/.camr`. Feedback for the project is "
+        "an explicit, metrics-only export. One-line installers for macOS, Linux and Windows and a user guide "
+        f"(`docs/APP.md`) are provided. {c.next_fig()} and {c.next_fig(2)} show the application running with "
+        "qwen2.5:1.5b.")
+    if (FIG / "app" / "1_chat.png").exists():
+        c.figure(FIG / "app" / "1_chat.png", "CAMR Personal: answers cite the notes they used; 'remember that' stores a fact instantly")
+        c.figure(FIG / "app" / "4_growth.png", "CAMR Personal: memory growth and the share of answers drawn from memory")
 
     # ================================================================ 5.4 Testing
     c.h2("Testing and Evaluation")
     c.h3("Test Strategy and Acceptance Criteria")
-    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 88 tests, fully "
+    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 96 tests, fully "
         "offline) verify each requirement with deterministic test doubles: dry-run models and a hashing embedder. "
         "**System tests** run the real pipeline end to end on real data with real models. **Measurements** "
         "(device profile, latency, memory) verify the non-functional requirements against their thresholds. Each "
@@ -453,7 +505,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "passes when the observed behaviour equals the expected behaviour; NFR-02 passes when retrieval is ≤ 10% of "
         "median end-to-end latency; NFR-05 passes when two runs produce byte-identical prompts.")
     c.h3("Test Cases, Defects and Retesting")
-    c.table("Test cases and results (unit tests: `pytest`, 88 passed; measurements: `camr profile`)",
+    c.table("Test cases and results (unit tests: `pytest`, 96 passed; measurements: `camr profile`)",
             ["Test ID", "Traceability", "Scenario and data", "Expected result", "Actual result and verdict"],
             [["TC-01", "FR-01", "Verbatim and structured policies on fixture passages", "Notes produced; title kept", "As expected. Pass"],
              ["TC-02", "FR-02/03, DR-06", "Empty, duplicate, over-length, injection-like notes", "Rejected with logged reason; provenance on all notes", "As expected. Pass"],
@@ -477,7 +529,8 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
              ["TC-18", "NFR-04, IR-05", "`camr reproduce` end to end (dry-run and real)", "All tables and figures regenerated", "As expected. Pass"],
              ["TC-20", "NFR-06", "Block sockets; run floor and treatment", "No external connection", "As expected. Pass"],
              ["TC-21", "DR-03/04", "Corpus containing an evaluation question", "Ingestion refused", "As expected. Pass"],
-             ["TC-22", "IR-07", "Local runtime down mid-run", "Failures logged; run continues; store intact", "As expected. Pass"]],
+             ["TC-22", "IR-07", "Local runtime down mid-run", "Failures logged; run continues; store intact", "As expected. Pass"],
+             ["TC-23", "Deployment (4.2.1)", "CAMR Personal: teach, ask, remember, 👍, forget, settings, export", "Answers cite notes; chat recalled beyond the window; export hides text", "8 tests. Pass"]],
             [1.6, 2.7, 4.0, 3.6, 4.0], size=9)
     c.p("The defects below were found during the real runs. Each was fixed and retested, or is reported as an "
         "open limitation. Failed results were kept in the record, not deleted.")
@@ -495,13 +548,16 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
              ["D-05", "Retrieval took 56% of answer time (NFR-02)", "TC-17", "Diagnosed as CPU contention; "
               "thread partitioning settings added", "Engine alone 29 ms; p90 157→50 ms. Still above 10% for 0.5B"],
              ["D-06", "Composite score (Eq. 4.1) lowered full-support recall by 4.6 points", "Retrieval evaluation",
-              "Similarity + gating + bridging as the best read path", "Recall 72.6% at 12% fewer tokens"],
+              "Similarity + gating + bridging as the best read path", "2Wiki recall 35.8%→78.4%; HotpotQA equal at 11% fewer tokens"],
              ["D-07", "When the model server stopped mid-sweep, failed queries were logged (IR-07) but the run was "
               "still marked completed, so resume skipped it", "Machine B sweep", "Resume re-runs any run with "
               "failed queries; the failed run is kept", "Regression test added. Pass; 19 runs re-run clean"],
              ["D-08", "gemma2:9b was killed for running out of memory three times at 13.4 GB (runtime prompt cache "
               "growing on top of the weights)", "Machine B sweep", "Runtime prompt cache capped at 1 GiB "
-              "(affects prefill reuse only)", "No further kills. Pass"]],
+              "(affects prefill reuse only)", "No further kills. Pass"],
+             ["D-09", "CAMR Personal: the shared store connection failed when the web UI called it from another "
+              "thread, and the UI's file watcher crashed while crawling the PyTorch modules", "App browser test",
+              "Store opened for cross-thread use behind a lock; file watcher disabled", "App tests and browser test. Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
     # ---------------------------------------------------------------- evaluation design
@@ -543,7 +599,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "where it fell short; most importantly, the student required that this chapter report only experiments "
         "that had actually been run and benchmarked with real models, and an earlier draft written before the "
         "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
-        "test suite (88 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "test suite (96 tests), the per-query logs, the read-only inspector, and the findings log, which names "
         "the results file behind every reported number, so that each claim can be traced and re-run. The "
         "student made the final decisions and takes full responsibility for the submitted work.")
 
@@ -553,22 +609,38 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "reproduced in `docs/FINDINGS.md`.")
 
     c.h3("Retrieval Quality (Objective ii)")
-    c.p("Before any language model was involved, the read path was evaluated on 500 HotpotQA questions against "
-        "a store of 24,475 notes. The measure was whether *both* gold supporting paragraphs reached the context.")
-    c.table("Retrieval on 500 HotpotQA questions (`results/retrieval_eval/tables/retrieval_eval.json`)",
-            ["Read path (budget 512 unless noted)", "Both gold paragraphs", "At least one", "Tokens supplied"],
-            [["Similarity only (baseline)", "72.0%", "98.8%", "468"],
-             ["+ recency and importance (Eq. 4.1)", "67.4%", "98.6%", "467"],
-             ["+ gating", "65.4%", "98.6%", "376"],
-             ["**Similarity + gating + bridging**", "**72.6%**", "97.2%", "**411**"],
-             ["Baseline @ 1,024", "81.0%", "99.4%", "979"],
-             ["Similarity + gating + bridging @ 1,024", "**83.6%**", "99.4%", "**702**"]],
-            [6.6, 3.2, 2.8, 3.2])
-    c.figure(FIG / "fig_retrieval_hotpotqa.png", "Change in full-support recall and tokens supplied relative to the baseline")
-    c.p("The composite score of Equation 4.1 lowered full-support recall by 4.6 points. On independent benchmark "
-        "questions, recency and importance carry no signal about the current question, which confirms the risk "
-        "anticipated in section 4.4.7. Gating combined with entity bridging gave the best recall per token: at a "
-        "1,024-token ceiling it raised recall by 2.6 points while sending 28% fewer tokens.")
+    rv = json.loads((ROOT / "results" / "retrieval_eval" / "tables" / "retrieval_eval.json").read_text())
+    rr = {(r["benchmark"], r["label"]): r for r in rv["rows"]}
+
+    def cell(bench: str, label: str, bold: bool = False) -> list[str]:
+        r = rr[(bench, label)]
+        v = [pct(r["support_all"]), f"{r['mean_context_tokens']:.0f}"]
+        return [f"**{x}**" for x in v] if bold else v
+
+    c.p("Before any language model was involved, the read path was evaluated on 500 HotpotQA and 500 "
+        f"2WikiMultiHopQA questions against one store of {rv['store']['notes']:,} notes built from "
+        f"{rv['store']['sources']:,} real paragraphs ({rv['store']['file_bytes'] / 1e6:.0f} MB). The measure was "
+        "whether *both* gold supporting paragraphs reached the context, because a multi-hop question cannot be "
+        "answered from one of them.")
+    paths = [("Similarity only (baseline)", "control", False), ("+ recency and importance (Eq. 4.1)", "composite", False),
+             ("+ gating", "gated", False), ("+ entity bridging, no gating", "bridged-ungated", False),
+             ("**Similarity + gating + bridging**", "bridged-sim", True), ("Baseline @ 1,024 tokens", "control@1024", False),
+             ("Similarity + gating + bridging @ 1,024", "bridged-sim@1024", True)]
+    c.table("Full-support recall and tokens supplied, 500 questions each (`results/retrieval_eval/tables/retrieval_eval.json`)",
+            ["Read path (512 tokens unless noted)", "2Wiki: both gold", "Tokens", "HotpotQA: both gold", "Tokens"],
+            [[name, *cell("2wikimultihopqa", lab, b), *cell("hotpotqa", lab, b)] for name, lab, b in paths],
+            [5.6, 2.6, 1.9, 3.0, 1.9])
+    c.figure(FIG / "fig_retrieval_hotpotqa.png", "HotpotQA: change in full-support recall and tokens supplied relative to the baseline")
+    w0, w1 = rr[("2wikimultihopqa", "control")], rr[("2wikimultihopqa", "bridged-sim")]
+    c.p(f"Entity bridging was the decisive mechanism on 2WikiMultiHopQA: full-support recall rose from "
+        f"{pct(w0['support_all'])} to {pct(w1['support_all'])} at the same budget, with "
+        f"{100 * (1 - w1['mean_context_tokens'] / w0['mean_context_tokens']):.0f}% fewer tokens. Its questions are "
+        "compositional (for example, *who is the father of the director of film X?*). The second paragraph shares "
+        "almost no words with the question, so similarity search cannot find it, but the first paragraph names it, "
+        "and that is the hop bridging follows. On HotpotQA the gain depended on the budget: none at 512 tokens, with "
+        "11% fewer tokens, and +3.2 points at 1,024 tokens, with 26% fewer tokens. On both benchmarks the composite "
+        "score of Equation 4.1 lowered recall. On independent questions, recency and importance carry no signal "
+        "about the current question, which confirms the risk anticipated in section 4.4.7.")
 
     c.h3("Gap Closed and the Residual Gap (Objective iv)")
     c.table("Accuracy by condition, pilot sample (`results/pilot/tables/summary.json`, `gap_vs_kimi.md`)",
@@ -635,6 +707,18 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
             rows, [4.5, 2.3, 2.3, 2.3, 2.3, 2.2], size=9)
     c.figure(FIG / "fig_model_sweep.png", "Accuracy without and with CAMR by model size, against the Kimi K3 ceiling")
     c.p(SWEEP_DISCUSSION)
+
+    h200 = hotpot200()
+    if h200:
+        c.h3("Confirmation at Larger Scale: 200 HotpotQA Questions")
+        c.p("To test whether the pilot's multi-hop results held beyond 30 questions, the study was repeated on 200 "
+            "HotpotQA questions with the read path fixed in advance (similarity, gating and bridging, 512 tokens). "
+            "Nothing was tuned on these questions. Three small models and Kimi K3 were run with and without the "
+            "same notes. 95% confidence intervals come from 2,000 bootstrap resamples of the questions.")
+        c.table("HotpotQA, n = 200: exact match, alone and with CAMR (`results/hotpot200`)",
+                ["Model", "Alone", "With CAMR", "Gain (95% CI)", "s / answer with CAMR"], h200["rows"],
+                [3.6, 2.4, 2.6, 4.4, 2.9])
+        c.p(h200["text"])
 
     c.h3("Learning When to Use Memory and When to Escalate")
     fixed = {k: v for k, v in rl["fixed"].items()}
@@ -710,14 +794,23 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
     return c.save(out)
 
 
+# Interpretation of the 200-question study; written once its results are in (results/hotpot200).
+H200_TEXT = None
+
 # Filled in after the B/D machines are merged; kept as data so the text matches the table.
 SWEEP_DISCUSSION = (
-    "Every model gained on knowledge tasks. From about 1.5B parameters, a small model with CAMR beat Kimi K3 on "
-    "long-tail facts (73–80% vs 66.7%). On multi-hop questions about 3B was the threshold: llama3.2:3b with CAMR "
-    "reached 56.7% and gemma3:4b 53.3%, against Kimi K3's 53.3%. The 0.5B model was the weakest reader. It gained "
-    "least on multi-hop and was most hurt by extra notes. Worked-example memory for maths depended on the model "
-    "family rather than size. It helped falcon3:3b (+33.3 points) and phi4-mini (+8.3, reaching 91.7%), and hurt "
-    "the qwen2.5 0.5B/1.5B, llama3.2:1b and gemma3 models. Reasoning routing must therefore be learned per model.")
+    "All 19 models gained on knowledge tasks: +43 to +73 points on PopQA and +10 to +40 on HotpotQA. With CAMR, 18 "
+    "of 19 reached or beat Kimi K3 on long-tail facts; only llama3.2:1b (63.3%) fell short. Parametric knowledge "
+    "barely grew with size: even the 12–15B models alone knew 13–33% of the long-tail facts, while every model "
+    "from 1.5B upward reached 70–80% with memory. Multi-hop questions depended on the model as a reader. Seven of 19 "
+    "reached Kimi K3's 53.3%: llama3.2:3b, gemma3:4b and five of the eight 7–15B models, with the best at 63% "
+    "(qwen2.5:14b, gemma3:12b). Family mattered as much as size, since mistral:7b reached only 43.3%. Speed set the "
+    "upper bound. On the 4-core CPU, every model of 7B or more with memory answered more slowly than Kimi K3 "
+    "(8–24 s against 7.7 s on PopQA), so **1.5–4B is the range that suits the engine on this class of device**: "
+    "faster than the cloud model, at or above it on facts, and at it on multi-hop from about 3B. Worked-example "
+    "memory for maths helped 8 models, was neutral for 4 and hurt 7, depending on family rather than size, so "
+    "reasoning routing must be learned per model. A few runs on machine D had one to three queries fail with a "
+    "runtime error; their accuracy is over the answered questions.")
 
 
 def to_pdf(docx_path: Path) -> Path:
