@@ -42,6 +42,7 @@ class Chapter:
         self._start_at_chapter(5)
         self.fig_n = 0
         self.tab_n = 0
+        self.labels: dict[str, str] = {}  # key -> "Table 5.n" / "Figure 5.n", resolved in text as ⟦key⟧
 
     # ------------------------------------------------------------ template
 
@@ -127,9 +128,11 @@ class Chapter:
         self.doc.add_paragraph(style="Normal").paragraph_format.space_after = Pt(0)
 
     def table(self, caption: str, header: list[str], rows: list[list], widths: list[float] | None = None,
-              size: float = 10) -> str:
+              size: float = 10, key: str | None = None) -> str:
         self.tab_n += 1
         label = f"Table 5.{self.tab_n}"
+        if key:
+            self.labels[key] = label
         self.doc.add_paragraph(f"{label}: {caption.replace('`', '')}", style="TabCaption")
         t = self.doc.add_table(rows=1, cols=len(header))
         t.style = self.doc.styles["Table Grid"]
@@ -155,9 +158,11 @@ class Chapter:
         self.doc.add_paragraph(style="Normal").paragraph_format.space_after = Pt(0)
         return label
 
-    def figure(self, path: Path, caption: str, width_cm: float = TEXT_WIDTH_CM) -> str:
+    def figure(self, path: Path, caption: str, width_cm: float = TEXT_WIDTH_CM, key: str | None = None) -> str:
         self.fig_n += 1
         label = f"Figure 5.{self.fig_n}"
+        if key:
+            self.labels[key] = label
         para = self.doc.add_paragraph(style="Normal")
         para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         para.paragraph_format.keep_with_next = True
@@ -171,7 +176,21 @@ class Chapter:
     def next_tab(self, k: int = 1) -> str:
         return f"Table 5.{self.tab_n + k}"
 
+    def resolve(self) -> None:
+        """Replace ⟦key⟧ cross-references with the final table/figure numbers."""
+        def fix(paragraphs):
+            for para in paragraphs:
+                for run in para.runs:
+                    if "⟦" in run.text:
+                        run.text = re.sub(r"⟦(\w+)⟧", lambda m: self.labels[m.group(1)], run.text)
+        fix(self.doc.paragraphs)
+        for t in self.doc.tables:
+            for row in t.rows:
+                for cell in row.cells:
+                    fix(cell.paragraphs)
+
     def save(self, out: Path) -> Path:
+        self.resolve()
         out.parent.mkdir(parents=True, exist_ok=True)
         path = out.with_suffix(".docx")
         self.doc.save(str(path))
@@ -311,7 +330,12 @@ def build(template: Path, out: Path, declaration: str | None) -> Path:
               "Local large-model ceiling; loads in 16 GB only with mmap (first attempt was killed at 13.3 GB)",
               "FINDINGS F6"],
              ["Cloud ceiling", "Moonshot Kimi K3 and Kimi K2.6 via an OpenAI-compatible HTTPS API", "Frontier "
-              "reference model (ceiling condition only; NFR-06)", "`configs/pilot_kimi.yaml`"]],
+              "reference model (ceiling condition only; NFR-06)", "`configs/pilot_kimi.yaml`"],
+             ["End-user device (CAMR Personal)", "Windows 10/11 (x64, ARM64), macOS (Apple Silicon, Intel), Linux "
+              "(x64, ARM64); Ollama installed; ≥ 4 GB RAM for a 1.5B model", "The application tested by real users; "
+              "talks only to Ollama on the same machine", "CI build and launch test on all six (⟦ci⟧)"],
+             ["Specialised hardware", "None: no GPU, NPU or accelerator was used anywhere", "The study targets "
+              "CPU-only consumer devices; every timing is a CPU timing", "Profiles and CI runner labels"]],
             [3.0, 4.6, 4.8, 3.5])
     c.h3("Software, Services and Configuration")
     c.table("Software and services used",
@@ -330,7 +354,9 @@ def build(template: Path, out: Path, declaration: str | None) -> Path:
     c.p("Configuration is a single YAML file per experiment (NFR-07). It is loaded into typed dataclasses that "
         "reject unknown keys, so a misspelt ablation parameter fails loudly instead of silently running the "
         "default. Each run records the hash of its full configuration. A completed run with the same label and "
-        "hash is skipped, which makes every command resumable after an interruption.")
+        "hash is skipped, which makes every command resumable after an interruption. Containers (Docker) were "
+        "not part of the solution: the experiments ran directly on the hosts above, and the application ships "
+        "as a single self-contained executable per platform.")
     c.h3("Deployment and Reproducibility")
     c.p("The engine installs as a Python package and is driven by one command-line program, `camr` (IR-05). The "
         "complete pipeline for one configuration is reproduced with a single command (NFR-04):")
@@ -390,6 +416,23 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "e.g. *The Loudwater Mystery (film): The Loudwater Mystery is a 1921 British silent…*. The structured "
         "(distilled) write policy is implemented and tested, but it was not used for the reported runs, because "
         "distilling every paragraph with the 0.5B model exceeded the pilot's time budget.")
+    c.p(f"{c.next_tab()} follows one real record from the raw files to what the model finally reads.")
+    c.table("One PopQA record before and after preparation",
+            ["Stage", "Content"],
+            [["Raw question (test.tsv)", "id 5939255 · subject *The Loudwater Mystery* · property *director* · "
+              "question *Who was the director of The Loudwater Mystery?* · answers [\"Walter West\", \"Walter "
+              "Alabaster West\"]"],
+             ["Raw document (corpus)", "{\"title\": \"The Loudwater Mystery (film)\", \"text\": \"The Loudwater "
+              "Mystery is a 1921 British silent crime film directed by Walter West and starring Gregory Scott, "
+              "Pauline Peters and Clive Brook. It was based on the 1920 novel …\"}"],
+             ["Stored note (#4863)", "*The Loudwater Mystery (film): The Loudwater Mystery is a 1921 British silent "
+              "crime film directed by Walter West …* (47 tokens; 384-d BGE vector; provenance: dataset popqa, document "
+              "id, ingestion time)"],
+             ["Read at question time", "Similarity 0.77 → admitted; next candidate 0.62 → outside the 0.15 margin. "
+              "The prompt's notes section contains this single note (47 tokens instead of a 512-token budget)."],
+             ["Answer and score", "0.5B alone: *John Sturges* (wrong). 0.5B + CAMR: *Walter West*: contains = 1, "
+              "EM = 1"]],
+            [3.4, 12.5], size=9.5)
 
     # ---------------------------------------------------------------- implementation
     c.h2("System Implementation")
@@ -460,6 +503,19 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
               "text, length); escalation thresholds swept over 0–1.01"],
              ["Cloud-cost sweep", "0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.8, 1.2 (Pareto table)"]],
             [4.3, 11.6])
+    c.h3("Model Selection and the Validation–Test Protocol")
+    c.p("Because no weights were trained, *selection* meant choosing which frozen model and which engine "
+        "configuration to recommend, and that choice was made on evidence kept apart from the final test. The "
+        "**baseline** was each small model answering alone (the floor condition). The **candidates** were 19 "
+        "quantised models from 0.5B to 14.8B parameters across ten families (⟦sweep⟧), each run with the same "
+        "store, questions and prompt templates (seed 13, greedy decoding, temperature 0). The pilot sample (30/30/12 "
+        "questions) and the 500-question retrieval study served as the **validation** evidence: they fixed the "
+        "read path (similarity ranking, gating at 0.50 with a 0.15 margin, entity bridging) and the budgets "
+        "(128 tokens for single facts, 512 for multi-hop). The 200-question HotpotQA study (reported in section 5.8) then "
+        "served as a **held-out test**: its configuration was written to `configs/hotpot200.yaml` before it ran "
+        "and was not changed afterwards. Every run's configuration, hash, model digest and per-question records "
+        "are saved in its results database and in `records/*.jsonl`, so each reported number can be regenerated.")
+
     c.h3("Inspection Interface and Integration Workflow")
     c.p("The inspector implements the four wireframes of Figures 4.10–4.13 and opens the results database "
         "read-only (`mode=ro`), so it cannot write (FR-17, IR-06). The screenshots below were captured "
@@ -481,8 +537,8 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "note used, 26 context tokens, 27 ms retrieval and 1.7 s generation. For an off-topic question the engine "
         "abstained (0 notes admitted) and the model answered wrongly from its weights. This failure mode motivates the "
         "escalation policy.")
-    c.figure(FIG / "setup" / "terminal_ask_empty.png", "Assistant scenario with empty memory: the frozen model guesses", 15.0)
-    c.figure(FIG / "setup" / "terminal_ask.png", "Assistant scenario with memory: answers grounded in the user's notes", 12.5)
+    c.figure(FIG / "setup" / "terminal_ask_empty.png", "Assistant scenario with empty memory: the frozen model guesses", 15.0, key="askempty")
+    c.figure(FIG / "setup" / "terminal_ask.png", "Assistant scenario with memory: answers grounded in the user's notes", 12.5, key="ask")
     c.h3("CAMR Personal: the Engine as an Application")
     c.p("To move from benchmarks to real use, the engine was packaged as **CAMR Personal**, a desktop application "
         "that gives any model the user already has in Ollama a long-term memory. The user teaches it notes and files "
@@ -512,7 +568,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
     # ================================================================ 5.4 Testing
     c.h2("Testing and Evaluation")
     c.h3("Test Strategy and Acceptance Criteria")
-    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 101 tests, fully "
+    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 102 tests, fully "
         "offline) verify each requirement with deterministic test doubles: dry-run models and a hashing embedder. "
         "**System tests** run the real pipeline end to end on real data with real models. **Measurements** "
         "(device profile, latency, memory) verify the non-functional requirements against their thresholds. Each "
@@ -520,7 +576,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "passes when the observed behaviour equals the expected behaviour; NFR-02 passes when retrieval is ≤ 10% of "
         "median end-to-end latency; NFR-05 passes when two runs produce byte-identical prompts.")
     c.h3("Test Cases, Defects and Retesting")
-    c.table("Test cases and results (unit tests: `pytest`, 101 passed; measurements: `camr profile`)",
+    c.table("Test cases and results (unit tests: `pytest`, 102 passed; measurements: `camr profile`)",
             ["Test ID", "Traceability", "Scenario and data", "Expected result", "Actual result and verdict"],
             [["TC-01", "FR-01", "Verbatim and structured policies on fixture passages", "Notes produced; title kept", "As expected. Pass"],
              ["TC-02", "FR-02/03, DR-06", "Empty, duplicate, over-length, injection-like notes", "Rejected with logged reason; provenance on all notes", "As expected. Pass"],
@@ -545,7 +601,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
              ["TC-20", "NFR-06", "Block sockets; run floor and treatment", "No external connection", "As expected. Pass"],
              ["TC-21", "DR-03/04", "Corpus containing an evaluation question", "Ingestion refused", "As expected. Pass"],
              ["TC-22", "IR-07", "Local runtime down mid-run", "Failures logged; run continues; store intact", "As expected. Pass"],
-             ["TC-23", "Deployment (4.2.1)", "CAMR Personal: teach, ask, remember, 👍, forget, settings, export; server API, streaming, host/origin checks", "Answers cite notes; chat recalled beyond the window; export hides text; foreign hosts refused", "13 tests and a browser test with a real model. Pass"]],
+             ["TC-23", "Deployment (4.2.1)", "CAMR Personal: teach, ask, remember, 👍, forget, settings, export; server API, streaming, host/origin checks", "Answers cite notes; chat recalled beyond the window; export hides text; foreign hosts refused", "14 tests and a browser test with a real model. Pass"]],
             [1.6, 2.7, 4.0, 3.6, 4.0], size=9)
     c.p("The defects below were found during the real runs. Each was fixed and retested, or is reported as an "
         "open limitation. Failed results were kept in the record, not deleted.")
@@ -575,6 +631,35 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
               "Store opened for cross-thread use behind a lock; file watcher disabled", "App tests and browser test. Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
+    c.h3("Application Testing (CAMR Personal)")
+    c.p("The application was tested as a user would meet it, with valid, empty, out-of-scope and unsupported "
+        "input and with the runtime missing. The live checks used qwen2.5:1.5b and nomic-embed-text through "
+        "Ollama in a browser driven by Playwright. The automated checks are in `tests/test_app*.py` and in the "
+        "continuous-integration smoke test.")
+    c.table("Application test cases and results",
+            ["Test ID", "Scenario", "Expected result", "Actual result and verdict"],
+            [["TC-24", "Empty message (spaces only)", "Rejected; no model call; no chat created", "Error event, no chat (test). Pass"],
+             ["TC-25", "Out-of-scope question (\"What's the capital of Kenya?\") with only personal notes stored",
+              "Gating abstains; the answer is labelled as coming from the model alone", "0 memories admitted; labelled; answered \"Nairobi\". Pass"],
+             ["TC-26", "\"remember that my bike lock code is 4471\"", "Stored without a model call; duplicate reported",
+              "Stored; second time \"already in memory\" (test and browser). Pass"],
+             ["TC-27", "Question answered by a note", "Recalled memory shown before the answer; grounded answer",
+              "1 memory, 71 ms; correct answer, grounded 86%, 4.8 s (1.5B, CPU). Pass"],
+             ["TC-28", "Fact said in chat, then asked after it left the context window", "Recalled from memory",
+              "Recalled as \"something you said\" (test). Pass"],
+             ["TC-29", "Teach a Markdown file and a PDF", "Chunked and stored as memory", "Stored (test; PDF via pypdf). Pass"],
+             ["TC-30", "Ollama not running / memory model missing", "Setup screen with the missing step and a "
+              "download button", "Setup screen; download with progress; then chat (browser; CI checks the not-running "
+              "state). Pass"],
+             ["TC-31", "Request with a foreign Host header, or a cross-site POST", "Refused (403)", "403 (test). Pass"],
+             ["TC-32", "Path traversal (/../../etc/passwd)", "No file outside the app is served", "Index page served (test). Pass"],
+             ["TC-33", "Downloadable build on six platforms", "Builds, launches, serves the UI and API",
+              "All six green in CI (⟦ci⟧). Pass"]],
+            [1.6, 5.0, 4.6, 4.7], size=9)
+    c.p("These tests show that the application behaves correctly and fails safely. They do not show that people "
+        "find it useful or easy to use. That requires a user study, which had not been run when this chapter "
+        "was written (see Limitations, section 5.8).")
+
     # ---------------------------------------------------------------- evaluation design
     c.h3("Evaluation Design")
     c.p("The primary measure is the fraction of the capability gap closed (Equation 3.1) per task type, together "
@@ -599,6 +684,24 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "separate machines on result branches, whose databases were merged with `camr merge`.")
     c.table("Commit history (`git log`)", ["Commit", "Date", "Author", "Change"],
             [[h, d, a, s] for h, d, a, s in hist], [1.6, 3.0, 2.0, 9.3], size=9)
+    c.p("The work followed GitHub flow. Each round of work was developed on one branch and merged through a pull "
+        "request whose description summarises the change and its test plan: Satasdin/CAMR#2 (engine, harness, "
+        "findings) and Satasdin/CAMR#3 (CAMR Personal 0.2). Machines B–E pushed their results to their own branches, "
+        "which were merged into the results database rather than into the code. Feedback from users is collected "
+        "through a GitHub issue form (`.github/ISSUE_TEMPLATE/feedback.yml`). The code is released under the MIT "
+        "licence. Continuous integration (`.github/workflows/release-app.yml`) runs the application tests and builds "
+        "and launch-tests the downloadable application on six platforms for every change to the application. "
+        f"{c.next_tab()} shows the run for the merged version. A published release (v0.2.0) attaches the six "
+        "downloads.")
+    c.table("Continuous-integration evidence: build and launch test per platform (GitHub Actions run 36870197366)",
+            ["Target", "Runner", "Tests", "Build", "Launch test", "Result"],
+            [["Windows x64", "windows-2025", "pass", "pass", "pass", "success"],
+             ["Windows ARM64", "windows-11-arm", "pass", "pass", "pass", "success"],
+             ["macOS Apple Silicon", "macos-15", "pass", "pass", "pass", "success"],
+             ["macOS Intel", "macos-15-intel", "pass", "pass", "pass", "success"],
+             ["Linux x64", "ubuntu-24.04", "pass", "pass", "pass", "success"],
+             ["Linux ARM64", "ubuntu-24.04-arm", "pass", "pass", "pass", "success"]],
+            [3.4, 3.2, 2.0, 2.0, 2.4, 2.9], size=9.5, key="ci")
 
     # ================================================================ 5.6 AI declaration
     c.h2("Author Oversight and Use of AI-Assisted Tools")
@@ -614,7 +717,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "where it fell short; most importantly, the student required that this chapter report only experiments "
         "that had actually been run and benchmarked with real models, and an earlier draft written before the "
         "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
-        "test suite (101 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "test suite (102 tests), the per-query logs, the read-only inspector, and the findings log, which names "
         "the results file behind every reported number, so that each claim can be traced and re-run. The "
         "student made the final decisions and takes full responsibility for the submitted work.")
 
@@ -672,8 +775,38 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "question iii. Memory helps knowledge-bound tasks and does not help reasoning-bound ones. The same notes "
         "also lifted the frontier model (Kimi K3 rose from 66.7% to 83.3% on PopQA), so the engine helps beside any "
         "model.")
-    c.p("Of the 0.5B model's 21 HotpotQA misses, 16 (76%) had the gold answer in the context. Most of the "
-        "remaining multi-hop gap is therefore a reading gap, not a retrieval gap.")
+    c.h3("Error Analysis: Where Answers Are Lost")
+    c.p(f"{c.next_tab()} follows each question through the pipeline (from `tables/coverage.md`): is the gold "
+        "answer in the store, among the retrieved candidates, in the context actually sent, and was the answer "
+        "correct? The last column is accuracy *given* that the answer was in the context.")
+    c.table("Failure decomposition for the 0.5B model with the full engine (pilot)",
+            ["Benchmark (n)", "Answer in store", "In candidates", "In context", "Correct", "Correct when in context"],
+            [["PopQA (30)", "93.3%", "93.3%", "90.0%", "66.7%", "74.1%"],
+             ["PopQA, 128-token budget (30)", "93.3%", "93.3%", "86.7%", "76.7%", "84.6%"],
+             ["HotpotQA (30)", "96.7%", "93.3%", "83.3%", "30.0%", "36.0%"]],
+            [4.4, 2.3, 2.3, 2.1, 2.0, 2.8], size=9.5)
+    c.p("Retrieval was rarely the problem. On HotpotQA the answer reached the context for 83% of questions, but "
+        "the 0.5B model used it correctly only 36% of the time. Of its 21 misses, 16 (76%) had the gold answer in "
+        "front of it. On PopQA a smaller budget raised correct-when-in-context from 74% to 85%: fewer notes, less "
+        "distraction. Errors therefore fall into three groups, illustrated in "
+        f"{c.next_tab(2)}: **correct** answers read from the note; **incomplete** answers that pick a related "
+        "entity from the right evidence; and **unsupported** answers, where the model ignored or lacked the "
+        "evidence and fell back on its own (wrong) knowledge.")
+    c.table("Examples of correct, incomplete and unsupported answers (from the query logs)",
+            ["Type", "Question (abridged)", "Gold", "Answer given"],
+            [["Correct", "Who was the screenwriter for *The Graduate*?", "Calder Willingham, Buck Henry",
+              "0.5B + CAMR: Buck Henry (alone: Linda Wachowski)"],
+             ["Correct", "McLaren MP4/11 was driven by which Finnish driver?", "Mika Häkkinen",
+              "0.5B + CAMR: Mika Häkkinen (gpt-oss-20b alone: Kimi Räikkönen)"],
+             ["Incomplete", "City with the Nusretiye Clock Tower and …?", "Istanbul, Turkey",
+              "Beyoğlu (a district of Istanbul; evidence was in context)"],
+             ["Incomplete", "Event where Tyson Gay and Rodney Martin both represented the US?", "4 × 100 m relay",
+              "100 m sprint (evidence in context)"],
+             ["Unsupported", "Who was the director of *The Loudwater Mystery*? (no memory)", "Walter West",
+              "0.5B alone: John Sturges (invented)"],
+             ["Unsupported", "When is my dentist appointment? (empty memory)", "Thursday 9 October 14:30",
+              "next Monday (invented); with the note: correct"]],
+            [2.5, 5.3, 3.1, 5.0], size=9)
 
     c.h3("Knowledge Growth with Frozen Weights")
     c.p("The knowledge corpus was fed into one store in three stages, and the same frozen 0.5B model answered "
@@ -719,7 +852,7 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
     c.table("Model-size sweep: alone → with CAMR (`results/pilot/tables/model_sweep.json`)",
             ["Model (parameters, quantisation)", "PopQA (%)", "HotpotQA (%)", "GSM8K (%)", "Decode tok/s (PopQA)",
              "s / answer with CAMR (PopQA)"],
-            rows, [4.5, 2.3, 2.3, 2.3, 2.3, 2.2], size=9)
+            rows, [4.5, 2.3, 2.3, 2.3, 2.3, 2.2], size=9, key="sweep")
     c.figure(FIG / "fig_model_sweep.png", "Accuracy without and with CAMR by model size, against the Kimi K3 ceiling")
     c.p(SWEEP_DISCUSSION)
 
@@ -784,10 +917,34 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
         "as its memory-mapped weights were evicted. On a 16 GB device, a small model with external memory is the "
         "practical design, not merely the cheaper one.")
 
+    c.h3("From Desktop Assistant to Mobile: Progress")
+    c.p("The deployment work progressed in three steps. (1) The engine was first exposed as a command (`camr ask`) "
+        "over a user's own notes (⟦askempty⟧ and ⟦ask⟧). (2) It then became **CAMR Personal**, a desktop "
+        "application released for six platforms (⟦ci⟧). (3) A **mobile prototype** for "
+        "Android was then started, following the application case in `docs/ANDROID_ASSISTANT.md`: the same idea "
+        "on the device people carry, a phone assistant that grows with its user.")
+    c.table("Android prototype: what exists and what has been verified",
+            ["Component", "Implementation", "Status"],
+            [["Memory engine", "Kotlin port of the read and write paths: SQLite store with float32 vectors, exact "
+              "cosine search, gating, entity bridging, greedy token budget, chat as memory, 👍 learning",
+              "Compiles; 6 JVM unit tests pass, including token counting identical to the Python engine"],
+             ["Embedder", "MediaPipe Text Embedder (Universal Sentence Encoder, 6 MB) bundled in the app", "Builds; gating "
+              "threshold for this embedder not yet calibrated"],
+             ["Language model", "On-device MediaPipe/LiteRT model file chosen by the user (e.g. Gemma 3 1B, Qwen2.5 "
+              "1.5B), or Ollama on the user's computer over Wi-Fi", "Builds; not run"],
+             ["Interface", "Jetpack Compose, same design language as the desktop app; chat, recall card, memory and "
+              "settings screens; 'Share to CAMR' from any app", "Builds; not run"],
+             ["Package", "Release APK, arm64-v8a, 57 MB (Android 8.0+)", "Built; not installed on a device"]],
+            [2.8, 7.6, 5.5], size=9)
+    c.p("The prototype has **not** been run on a phone or emulator: the build environment had no virtualisation "
+        "support. Its accuracy, speed, memory use and battery cost on real handsets are therefore unmeasured, "
+        "and development was paused to concentrate on the desktop application. Measuring them is set out as future "
+        "work in Chapter 6.")
+
     c.h3("Limitations")
     c.items(["**Sample size.** Pilot samples were 30/30/12 questions per benchmark. One question is 3.3 points, "
              "so differences of one or two questions are within noise. Confidence intervals are reported for "
-             "gap closed. The multi-hop results were confirmed on 200 questions (section 5.8.6), and the retrieval "
+             "gap closed. The multi-hop results were confirmed on 200 questions, and the retrieval "
              "study used 500 questions per benchmark; the single-hop and reasoning results rest on the pilot sample.",
              "**Stochastic cloud ceiling.** Kimi accepts only temperature 1, so its scores are single samples. "
              "Small-model floors also varied between repeats (20/30 identical answers), so floors are best read as "
@@ -801,6 +958,8 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
              "implemented and tested but was not run at scale.",
              "**Hardware.** All measurements are from CPU cloud containers of laptop class, not from a physical "
              "laptop or phone. Decode speeds differ between machines.",
+             "**No user study yet.** The application was tested for correct and safe behaviour, not for usefulness or "
+             "usability with real users, and the Android prototype has not run on a device.",
              "**Policy learning.** The learned policy was trained on 144 questions with costs set by the researcher. "
              "Its advantage over always-Kimi is 1.4 points, which is within sampling noise; the robust result is "
              "equal accuracy at 71% on-device use and lower latency."])
