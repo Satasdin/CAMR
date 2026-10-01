@@ -365,3 +365,11 @@ def test_cli_reports_config_errors(tmp_path):
     p = tmp_path / "bad.yaml"
     p.write_text("memory: {wieghts: {}}\n")
     assert cli_main(["run", "--config", str(p), "--condition", "floor", "--benchmark", "popqa"]) == 2
+
+
+def test_ceiling_proxy_backend_is_a_loopback_ollama_runner():
+    from camr.models.runner import build_ceiling_runner
+    r = build_ceiling_runner(CeilingModelConfig(backend="ollama", name="qwen2.5:7b", host="http://127.0.0.1:9"))
+    assert isinstance(r, OllamaRunner) and r.model_name == "qwen2.5:7b" and r.payload("x")["options"]["temperature"] == 0
+    with pytest.raises(ConfigError):
+        build_ceiling_runner(CeilingModelConfig(backend="ollama", host="http://10.1.2.3:11434"))

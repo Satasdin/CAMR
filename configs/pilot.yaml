@@ -1,0 +1,36 @@
+# Pilot benchmark on CPU: real small model, real embedder, real datasets.
+# The cloud ceiling is replaced by a larger model of the SAME family run locally
+# (qwen2.5:7b), because no API key was available: results measure the gap
+# between 0.5B and 7B parameters, labelled "ceiling (7B proxy)" everywhere.
+seed: 13
+run_dir: ../results/pilot
+extra_conditions: [ceiling_rag]
+local_model: {backend: ollama, name: "qwen2.5:0.5b", max_tokens: 256, num_ctx: 4096}
+ceiling_model: {backend: ollama, name: "qwen2.5:7b", max_tokens: 256}
+embedder: {backend: bge, name: BAAI/bge-small-en-v1.5, dim: 384}
+memory:
+  write_policy: verbatim      # structured distillation of every paragraph with the 0.5B model is out of the pilot's time budget
+  retrieval_policy: composite
+  k: 20
+  token_budget: 512
+  min_similarity: 0.50
+  similarity_margin: 0.15
+  expansion: entity
+  reasoning_memory: exemplars
+benchmarks:
+  popqa: {path: ../data/popqa/test.tsv, corpus: ../data/popqa/corpus_pilot.jsonl, n: 30}
+  hotpotqa: {path: ../data/hotpotqa/hotpot_dev_distractor_v1.json, n: 30, extra_corpus_questions: 100}
+  gsm8k: {path: ../data/gsm8k/test.jsonl, exemplars: ../data/gsm8k/train.jsonl, n: 12}
+analysis: {bootstrap: 2000, ci: 0.95, min_denominator: 0.05}
+profile: {repeats: 3, n: 10, benchmark: hotpotqa, warmup: 2}
+ablation:
+  variants:
+    - label: control          # similarity only, fixed budget, no bridging, facts for reasoning
+      overrides: {memory: {retrieval_policy: similarity_only,
+                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0},
+                           min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
+    - label: full
+      overrides: {}
+  budget_sweep: [0, 128, 512, 1024]
+  sweep_base: full

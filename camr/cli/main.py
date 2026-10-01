@@ -64,6 +64,8 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("question")
     s.add_argument("--task-type", default="single_hop", choices=["single_hop", "multi_hop", "reasoning"])
 
+    with_config(sub.add_parser("retrieval-eval", help="model-free retrieval evaluation on labelled multi-hop sets"))
+
     s = sub.add_parser("inspect", help="launch the read-only inspection interface")
     s.add_argument("--run-dir", required=True)
     return p
@@ -98,6 +100,8 @@ def main(argv: list[str] | None = None) -> int:
             out = c.cmd_profile(cfg, args.out, args.repeats, args.n)
         elif args.cmd == "reproduce":
             out = {"run_dir": str(c.cmd_reproduce(cfg, args.out, args.skip_profile))}
+        elif args.cmd == "retrieval-eval":
+            out = c.cmd_retrieval_eval(cfg, args.out)
         elif args.cmd == "ask":
             out = c.cmd_ask(cfg, args.out, args.question, args.task_type)
         else:  # pragma: no cover - argparse enforces choices

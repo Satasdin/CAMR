@@ -84,12 +84,27 @@ if page == "Run Dashboard":
                + json.dumps(cfg.primary_metric))
     for r in results:
         gap_track(r)
+    st.subheader("Accuracy by condition and task type")
+    st.caption("ceiling_rag = the large model given the same notes; residual gap = ceiling_rag − treatment "
+               "(what model scale still buys when both models have the same knowledge)")
+    st.dataframe([{
+        "task type": r["group"], "n": r["n"], "floor": r["floor"], "treatment": r["treatment"], "ceiling": r["ceiling"],
+        "ceiling_rag": r["ceiling_rag"],
+        "gap closed": r["gap_closed"],
+        "95% CI": None if r["ci_low"] is None else f"[{r['ci_low']:.2f}, {r['ci_high']:.2f}]",
+        "residual gap": r["residual_gap"],
+        "abstain rate": r["abstain_rate"], "context tokens": round(r["mean_context_tokens"]),
+    } for r in results], use_container_width=True, hide_index=True)
     left, right = st.columns(2)
-    left.subheader("Tokens per query by condition")
-    left.bar_chart({s["condition"] + "/" + s["benchmark"]: s["mean_prompt_tokens"] or 0 for s in summary})
-    right.subheader("Latency: retrieval vs generation (treatment)")
-    right.bar_chart({"retrieval": sum(s["mean_retrieval_ms"] or 0 for s in treat) / max(1, len(treat)),
-                     "generation": sum(s["mean_generation_ms"] or 0 for s in treat) / max(1, len(treat))})
+    left.subheader("Prompt tokens per query by condition")
+    by_cond: dict = {}
+    for s_ in summary:
+        by_cond.setdefault(s_["condition"], []).append(s_["mean_prompt_tokens"] or 0)
+    left.bar_chart({c: sum(v) / len(v) for c, v in by_cond.items()}, horizontal=True)
+    right.subheader("Treatment latency: retrieval vs generation (ms)")
+    right.bar_chart({"retrieval": sum(s_["mean_retrieval_ms"] or 0 for s_ in treat) / max(1, len(treat)),
+                     "generation": sum(s_["mean_generation_ms"] or 0 for s_ in treat) / max(1, len(treat))},
+                    horizontal=True)
 
 elif page == "Ablations":
     st.header("Ablation and Budget Sweep")
@@ -121,8 +136,9 @@ elif page == "Query Trace":
     t = Q.query_trace(conn, q["dataset"], q["question_id"], label)
     st.markdown(f"**Question:** {q['question']}")
     for a in t["answers"]:
+        sc = ", ".join(f"{k} {v:.2f}" for k, v in a["scores"].items())
         st.markdown(f"- **{a['condition']}** ({a['model_name']}): `{(a['answer_text'] or a['error'] or '').strip()[:200]}` "
-                    f"· scores {a['scores']}")
+                    f"· {sc}")
     st.subheader("Retrieval record")
     admitted = [r for r in t["trace"] if r["admitted"]]
     excluded = [r for r in t["trace"] if not r["admitted"]]

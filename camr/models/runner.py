@@ -273,7 +273,15 @@ def build_local_runner(cfg: LocalModelConfig, seed: int) -> ModelRunner:
     return DryRunRunner(f"dry-run:{cfg.name}")
 
 
-def build_ceiling_runner(cfg: CeilingModelConfig) -> ModelRunner:
+def build_ceiling_runner(cfg: CeilingModelConfig, seed: int = 0) -> ModelRunner:
     if cfg.backend == "anthropic":
         return CloudRunner(cfg)
+    if cfg.backend == "ollama":
+        # A larger local model standing in for the cloud ceiling (pilot runs without
+        # API access).  Same greedy decoding as the small model; labelled by its name.
+        local = LocalModelConfig(backend="ollama", name=cfg.name, host=cfg.host, timeout_s=max(cfg.timeout_s, 900.0),
+                                 max_tokens=min(cfg.max_tokens, 512))
+        runner = OllamaRunner(local, seed=seed)
+        runner.describe()
+        return runner
     return DryRunRunner(f"dry-run:{cfg.name}")

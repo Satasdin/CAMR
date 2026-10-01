@@ -80,7 +80,7 @@ def test_structured_policy_failure_becomes_logged_rejection(store, embedder, tok
     ],
 )
 def test_screener_rejects_with_reason(tokenizer, text, reason):
-    v = NoteScreener(tokenizer, max_tokens=160).screen(CandidateNote(text, "verbatim"))
+    v = NoteScreener(tokenizer, max_tokens=160, model_generated=True).screen(CandidateNote(text, "structured"))
     assert (v.accepted, v.reason) == (False, reason)
 
 
@@ -291,3 +291,10 @@ def test_recall_is_deterministic_after_reset(engine, store):
         return out
 
     assert run() == run()
+
+
+def test_refusal_check_spares_source_text(tokenizer):
+    """Regression for D-07: a real HotpotQA paragraph about a 1969 single was rejected as a refusal."""
+    text = "I Can't Get Next to You: \"I Can't Get Next to You\" is a 1969 number-one single recorded by The Temptations."
+    assert NoteScreener(tokenizer).screen(CandidateNote(text, "verbatim")).accepted
+    assert not NoteScreener(tokenizer, model_generated=True).screen(CandidateNote("I cannot help with that request today.", "structured")).accepted

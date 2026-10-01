@@ -177,3 +177,22 @@ def cmd_ask(cfg: Config, out: str | None, question: str, task_type: str = "singl
         }
     finally:
         ws.close()
+
+
+def cmd_retrieval_eval(cfg: Config, out: str | None) -> list[dict]:
+    """Model-free retrieval evaluation on labelled multi-hop benchmarks (verbatim notes)."""
+    from camr.harness.retrieval_eval import run_all
+
+    cfg = cfg.with_overrides({"memory": {"write_policy": "verbatim"}})
+    ws = Workspace(cfg, out)
+    try:
+        benches = [b for b in cfg.benchmarks if b in ("hotpotqa", "2wikimultihopqa")]
+        summaries = [s.as_dict() for s in ingest(ws, cfg, benches)]
+        write_json(summaries, ws.run_dir / "tables" / "ingest_verbatim.json")
+        rows = run_all(ws, cfg, benches)
+        stats = ws.store.stats("verbatim")
+        write_table(rows, ws.run_dir / "tables" / "retrieval_eval", "Retrieval-level evaluation (verbatim notes)")
+        write_json({"rows": rows, "store": stats, "ingest": summaries}, ws.run_dir / "tables" / "retrieval_eval.json")
+        return rows
+    finally:
+        ws.close()

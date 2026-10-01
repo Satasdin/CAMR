@@ -48,6 +48,7 @@ class NoteScreener:
         enabled: bool = True,
         min_alpha_ratio: float = 0.5,
         min_unique_ratio: float = 0.3,
+        model_generated: bool = False,
     ):
         self.tokenizer = tokenizer
         self.min_tokens = min_tokens
@@ -55,6 +56,9 @@ class NoteScreener:
         self.enabled = enabled
         self.min_alpha_ratio = min_alpha_ratio
         self.min_unique_ratio = min_unique_ratio
+        # Refusal phrasing only signals a failure in text a model wrote; in source
+        # text it is ordinary language (e.g. the song "I Can't Get Next to You").
+        self.model_generated = model_generated
 
     def screen(self, cand: CandidateNote, seen: set[str] | frozenset[str] = frozenset()) -> Verdict:
         """Return a verdict; ``seen`` holds checksums already in the store or batch."""
@@ -82,7 +86,7 @@ class NoteScreener:
         words = [str(t).casefold() for t in tokens if str(t).isalnum()]
         if len(words) >= 10 and len(set(words)) / len(words) < self.min_unique_ratio:
             return Verdict(False, "repetitive", csum, n)
-        if _REFUSAL_RE.search(text):
+        if self.model_generated and _REFUSAL_RE.search(text):
             return Verdict(False, "refusal_output", csum, n)
         if _INSTRUCTION_RE.search(text):
             return Verdict(False, "instruction_like", csum, n)

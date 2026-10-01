@@ -44,6 +44,7 @@ class Question:
     question: str
     answers: list[str]
     context: list[tuple[str, str]] | None = None  # (title, paragraph) for multi-hop sets
+    support: list[str] | None = None  # titles of the gold supporting paragraphs (multi-hop sets)
 
 
 # ---------------------------------------------------------------- readers
@@ -72,6 +73,14 @@ def _paragraphs(context: Any) -> list[tuple[str, str]]:
     return out
 
 
+def _support(facts: Any) -> list[str] | None:
+    """Gold supporting-paragraph titles, from [[title, sent_id], ...] or {"title": [...]}."""
+    if not facts:
+        return None
+    titles = facts["title"] if isinstance(facts, dict) else [f[0] for f in facts]
+    return list(dict.fromkeys(str(t) for t in titles))
+
+
 def _as_list(v: Any) -> list[str]:
     if isinstance(v, list):
         return [str(x) for x in v]
@@ -94,7 +103,8 @@ def load_questions(name: str, path: str | Path) -> list[Question]:
     for i, rec in enumerate(_read_records(path)):
         if name in ("hotpotqa", "2wikimultihopqa"):
             qid = str(rec.get("_id") or rec.get("id"))
-            out.append(Question(qid, name, task_type, rec["question"], [str(rec["answer"])], _paragraphs(rec["context"])))
+            out.append(Question(qid, name, task_type, rec["question"], [str(rec["answer"])],
+                                _paragraphs(rec["context"]), _support(rec.get("supporting_facts"))))
         elif name == "popqa":
             qid = str(rec.get("id", i))
             out.append(Question(qid, name, task_type, rec["question"], _as_list(rec["possible_answers"])))

@@ -129,7 +129,8 @@ class MemoryEngine:
             embedder=embedder,
             write_policy=wp,
             screener=NoteScreener(
-                tokenizer, min_tokens=m.min_note_tokens, max_tokens=m.max_note_tokens, enabled=m.screening
+                tokenizer, min_tokens=m.min_note_tokens, max_tokens=m.max_note_tokens, enabled=m.screening,
+                model_generated=m.write_policy == "structured",
             ),
             importance=imp,
             retrieval_policy=build_policy(m),

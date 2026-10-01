@@ -100,7 +100,7 @@ class Workspace:
     @property
     def ceiling_runner(self) -> ModelRunner:
         if self._ceiling_runner is None:
-            self._ceiling_runner = build_ceiling_runner(self.cfg.ceiling_model)
+            self._ceiling_runner = build_ceiling_runner(self.cfg.ceiling_model, self.cfg.seed)
         return self._ceiling_runner
 
     def sample(self, benchmark: str, n: int | None = None) -> list[Question]:
