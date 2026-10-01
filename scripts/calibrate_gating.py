@@ -30,6 +30,7 @@ def main() -> None:
     ap.add_argument("--embedder", default="bge")
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--data", default="data/hotpotqa/hotpot_dev_distractor_v1.json")
+    ap.add_argument("--dump", help="also write the raw relevant/irrelevant similarities to this JSON file")
     a = ap.parse_args()
     if a.embedder == "bge":
         emb = BGEEmbedder(EmbedderConfig())
@@ -59,6 +60,9 @@ def main() -> None:
     out["relevant_kept"] = round(float((rel >= thr).mean()), 3)
     out["irrelevant_rejected"] = round(float((irr < thr).mean()), 3)
     print(json.dumps(out, indent=2))
+    if a.dump:
+        with open(a.dump, "w") as fh:
+            json.dump({**out, "relevant_values": rel.round(4).tolist(), "irrelevant_values": irr.round(4).tolist()}, fh)
 
 
 if __name__ == "__main__":
