@@ -26,6 +26,8 @@ per task type, with token and latency accounting.
 - **Inspector** (`camr.inspect`): a read-only Streamlit UI with Run Dashboard,
   Ablations, Query Trace and Memory Store screens.
 
+**New here?** Follow [`docs/SETUP.md`](docs/SETUP.md), a step-by-step walkthrough with annotated screenshots. Measured results are in [`docs/FINDINGS.md`](docs/FINDINGS.md). The Android personal-assistant application is in [`docs/ANDROID_ASSISTANT.md`](docs/ANDROID_ASSISTANT.md).
+
 See [`docs/BRIDGING_THE_GAP.md`](docs/BRIDGING_THE_GAP.md) for what "bridging
 the gap" can and cannot mean, the four capability-adaptive mechanisms, and six
 falsifiable predictions. See [`docs/DESIGN_NOTES.md`](docs/DESIGN_NOTES.md) for a
