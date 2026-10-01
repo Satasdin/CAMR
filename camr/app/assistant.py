@@ -351,6 +351,8 @@ class Assistant:
     def events(self, question: str, conversation_id: int | None = None) -> Iterator[dict]:
         """The answer as a stream of events: recall (what memory was read), token…, done (the Turn)."""
         question = question.strip()
+        if not question:
+            raise ValueError("empty message: type a question, or start with 'remember that'")
         if conversation_id is None:
             conversation_id = self.new_conversation(question[:60] or "New chat")
         else:
