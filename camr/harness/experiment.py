@@ -286,6 +286,7 @@ class ExperimentRunner:
         self.ws.logger.log_query(
             run_id, status="ok", prompt_tokens=gen.prompt_tokens, generated_tokens=gen.generated_tokens,
             generation_ms=gen.latency_ms, e2e_ms=e2e_ms, answer=gen.text,
+            prefill_ms=gen.meta.get("prompt_eval_ms"), decode_ms=gen.meta.get("eval_ms"),
             served_model=gen.meta.get("served_model", gen.model_version),
             scores=score(q.task_type, gen.text, q.answers), **common,
         )

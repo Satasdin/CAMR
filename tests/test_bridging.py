@@ -195,3 +195,22 @@ def test_escalation_curve_endpoints_and_router_ordering():
 def test_abstention_detection():
     assert abstention_like("Unknown.") and abstention_like("") and abstention_like("I don't know")
     assert not abstention_like("Kenya") and not abstention_like("Known for jazz")
+
+
+# ------------------------------------------------------ memory growth over time
+def test_growth_accumulates_knowledge_with_a_frozen_model(tmp_path):
+    from camr.harness.growth import run_growth
+    cfg = fixture_config(tmp_path).with_overrides({"benchmarks": {
+        "popqa": {"path": str(FIXTURES / "popqa.jsonl"), "corpus": str(FIXTURES / "popqa_corpus.jsonl"), "n": 4}}})
+    cfg.benchmarks = {"popqa": cfg.benchmarks["popqa"]}
+    def reader(p):  # answers only when a note about the subject is in context
+        notes = p.split("Notes:", 1)[1].split("Question:", 1)[0] if "Notes:" in p else ""
+        return next((a for s, a in POPQA.items() if s in _q(p) and s in notes), "unknown")
+    ws = _ws(cfg, ScriptedRunner("local", respond=reader), ScriptedRunner("cloud", respond=lambda p: next(
+        (a for s, a in POPQA.items() if s in _q(p)), "unknown"), remote=True))
+    rows = run_growth(ws, cfg, [0.25, 0.5, 1.0])
+    notes = [r["notes_in_population"] for r in rows]
+    acc = [r["accuracy"] for r in rows]
+    assert notes == sorted(notes) and notes[0] < notes[-1]       # the store grows stage by stage
+    assert acc == sorted(acc) and acc[-1] == 1.0                   # knowledge accrues: accuracy never falls
+    assert [r["stage"] for r in rows] == ["grow-025", "grow-050", "grow-100"]

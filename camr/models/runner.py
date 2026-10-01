@@ -67,15 +67,19 @@ class OllamaRunner(ModelRunner):
     prompts produce identical answers (NFR-05).
     """
 
-    def __init__(self, cfg: LocalModelConfig, seed: int = 0, session: requests.Session | None = None):
+    def __init__(self, cfg: LocalModelConfig, seed: int = 0, session: requests.Session | None = None,
+                 *, allow_remote: bool = False, api_key: str | None = None):
         host = urlparse(cfg.host).hostname or ""
-        if not _is_loopback(host):
+        self.is_remote = not _is_loopback(host)
+        if self.is_remote and not allow_remote:
             # NFR-06: nothing but the ceiling condition may open a non-local connection.
             raise ConfigError(f"local_model.host must be a loopback address, got {cfg.host!r}")
         self.cfg = cfg
         self.seed = seed
         self.model_name = cfg.name
         self._http = session or requests.Session()
+        if api_key:
+            self._http.headers["Authorization"] = f"Bearer {api_key}"
         self.model_version = None
 
     def describe(self) -> str | None:
@@ -91,7 +95,7 @@ class OllamaRunner(ModelRunner):
         return self.model_version
 
     def payload(self, prompt: str) -> dict[str, Any]:
-        return {
+        body = {
             "model": self.cfg.name,
             "prompt": prompt,
             "stream": False,
@@ -103,8 +107,14 @@ class OllamaRunner(ModelRunner):
                 "seed": self.seed,
                 "num_predict": self.cfg.max_tokens,
                 "num_ctx": self.cfg.num_ctx,
+                # Memory-map weights so they are reclaimable page cache rather than
+                # anonymous RAM: lets a 20B model fit a 16 GB device (measured).
+                "use_mmap": True,
             },
         }
+        if self.cfg.think:
+            body["think"] = self.cfg.think
+        return body
 
     def generate(self, prompt: str) -> Generation:
         t0 = time.perf_counter()
@@ -127,6 +137,7 @@ class OllamaRunner(ModelRunner):
             model=self.cfg.name,
             model_version=self.model_version,
             meta={
+                "thinking_chars": len(body.get("thinking") or ""),
                 "load_ms": (body.get("load_duration") or 0) / 1e6,
                 "prompt_eval_ms": (body.get("prompt_eval_duration") or 0) / 1e6,
                 "eval_ms": (body.get("eval_duration") or 0) / 1e6,
@@ -277,11 +288,18 @@ def build_ceiling_runner(cfg: CeilingModelConfig, seed: int = 0) -> ModelRunner:
     if cfg.backend == "anthropic":
         return CloudRunner(cfg)
     if cfg.backend == "ollama":
-        # A larger local model standing in for the cloud ceiling (pilot runs without
-        # API access).  Same greedy decoding as the small model; labelled by its name.
+        # A larger model through the Ollama API: local (loopback), or an Ollama Cloud
+        # model such as gpt-oss:120b-cloud when host is https://ollama.com.  Same
+        # greedy decoding as the small model; reasoning models get a `think` level.
+        import os
+
         local = LocalModelConfig(backend="ollama", name=cfg.name, host=cfg.host, timeout_s=max(cfg.timeout_s, 900.0),
-                                 max_tokens=min(cfg.max_tokens, 512))
-        runner = OllamaRunner(local, seed=seed)
+                                 max_tokens=cfg.max_tokens, think=cfg.think)
+        remote = not _is_loopback(urlparse(cfg.host).hostname or "")
+        key = os.environ.get(cfg.api_key_env) if remote else None
+        if remote and not key:
+            raise ConfigError(f"ceiling_model.host is remote; set {cfg.api_key_env}")
+        runner = OllamaRunner(local, seed=seed, allow_remote=remote, api_key=key)
         runner.describe()
         return runner
     return DryRunRunner(f"dry-run:{cfg.name}")

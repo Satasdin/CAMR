@@ -33,13 +33,16 @@ class LocalModelConfig:
     timeout_s: float = 300.0
     keep_alive: str = "30m"
     num_ctx: int = 4096
+    think: str | None = None  # reasoning models (e.g. gpt-oss): low | medium | high
 
 
 @dataclass
 class CeilingModelConfig:
     backend: str = "anthropic"  # anthropic | ollama (local larger-model proxy, pilots only) | dry-run
     name: str = "claude-opus-5-5"  # pinned for the whole study (NFR-09)
-    host: str = "http://127.0.0.1:11434"  # ollama backend only
+    host: str = "http://127.0.0.1:11434"  # ollama backend: local, or https://ollama.com for cloud models
+    api_key_env: str = "OLLAMA_API_KEY"  # read only when host is not loopback (Ollama Cloud)
+    think: str | None = None  # reasoning effort for reasoning models (gpt-oss: low | medium | high)
     max_tokens: int = 16000
     effort: str | None = "medium"
     timeout_s: float = 120.0

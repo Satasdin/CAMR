@@ -196,3 +196,17 @@ def cmd_retrieval_eval(cfg: Config, out: str | None) -> list[dict]:
         return rows
     finally:
         ws.close()
+
+
+def cmd_grow(cfg: Config, out: str | None, stages: list[float]) -> list[dict]:
+    """Memory growth over time: same frozen model, knowledge fed in stages."""
+    from camr.harness.growth import run_growth
+
+    ws = Workspace(cfg, out)
+    try:
+        rows = run_growth(ws, cfg, stages)
+        write_table(rows, ws.run_dir / "tables" / "growth", "Memory growth: same frozen model, more knowledge")
+        write_json(rows, ws.run_dir / "tables" / "growth.json")
+        return rows
+    finally:
+        ws.close()

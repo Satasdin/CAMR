@@ -64,6 +64,9 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("question")
     s.add_argument("--task-type", default="single_hop", choices=["single_hop", "multi_hop", "reasoning"])
 
+    s = with_config(sub.add_parser("grow", help="memory growth over time: same frozen model, knowledge fed in stages"))
+    s.add_argument("--stages", default="0.25,0.5,1.0", help="comma-separated corpus shares")
+
     with_config(sub.add_parser("retrieval-eval", help="model-free retrieval evaluation on labelled multi-hop sets"))
 
     s = sub.add_parser("inspect", help="launch the read-only inspection interface")
@@ -100,6 +103,8 @@ def main(argv: list[str] | None = None) -> int:
             out = c.cmd_profile(cfg, args.out, args.repeats, args.n)
         elif args.cmd == "reproduce":
             out = {"run_dir": str(c.cmd_reproduce(cfg, args.out, args.skip_profile))}
+        elif args.cmd == "grow":
+            out = c.cmd_grow(cfg, args.out, [float(x) for x in args.stages.split(",")])
         elif args.cmd == "retrieval-eval":
             out = c.cmd_retrieval_eval(cfg, args.out)
         elif args.cmd == "ask":
