@@ -14,7 +14,7 @@ New-Item -ItemType Directory -Force -Path $HomeDir | Out-Null
 & $Python @PyArgs -m venv (Join-Path $HomeDir "venv")
 $VenvPy = Join-Path $HomeDir "venv\Scripts\python.exe"
 & $VenvPy -m pip install --quiet --upgrade pip
-Write-Host "==> Installing CAMR ($Ref). The first install downloads PyTorch; this can take a few minutes."
+Write-Host "==> Installing CAMR ($Ref)."
 & $VenvPy -m pip install --quiet "camr[app] @ git+https://github.com/Satasdin/CAMR.git@$Ref"
 
 $Scripts = Join-Path $HomeDir "venv\Scripts"

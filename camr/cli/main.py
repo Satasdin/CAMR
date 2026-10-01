@@ -88,6 +88,8 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--home", default=None, help="where your memory is kept (default ~/.camr)")
     s.add_argument("--host", default="http://127.0.0.1:11434", help="Ollama address (must be on this machine)")
     s.add_argument("--port", type=int, default=8502)
+    s.add_argument("--no-browser", action="store_true")
+    s.add_argument("--window", action="store_true", help="native window instead of a browser tab (needs pywebview)")
     return p
 
 
@@ -119,8 +121,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "inspect":
             return _streamlit(Path(__file__).resolve().parent.parent / "inspect" / "app.py", ["--run-dir", args.run_dir])
         if args.cmd == "app":
-            extra = ["--host", args.host] + (["--home", args.home] if args.home else [])
-            return _streamlit(Path(__file__).resolve().parent.parent / "app" / "ui.py", extra, args.port)
+            from camr.app.assistant import DEFAULT_HOME
+            from camr.app.server import serve
+
+            serve(Path(args.home) if args.home else DEFAULT_HOME, args.host, args.port, not args.no_browser, args.window)
+            return 0
         cfg = Config.load(args.config)
         if args.cmd == "ingest":
             out = c.cmd_ingest(cfg, args.out, args.corpus, args.write_policy, args.dataset)

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CAMR</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ============ sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-top">
+      <div class="brand">
+        <svg class="ring" id="ring" viewBox="0 0 36 36" aria-hidden="true">
+          <defs><linearGradient id="aurora" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--good)"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="14" class="ring-track"/>
+          <circle cx="18" cy="18" r="14" class="ring-fill" id="ring-fill" stroke="url(#aurora)"/>
+          <circle cx="18" cy="18" r="5" fill="url(#aurora)"/>
+        </svg>
+        <div><div class="brand-name">CAMR</div><div class="brand-sub" id="brand-sub">memory that grows</div></div>
+      </div>
+      <button class="icon-btn only-mobile" id="close-side" aria-label="Close sidebar">✕</button>
+    </div>
+    <button class="new-chat" id="new-chat"><span>＋</span> New chat <kbd>⌘K</kbd></button>
+    <div class="search"><input id="chat-search" placeholder="Search chats" aria-label="Search chats"></div>
+    <nav class="chats" id="chats" aria-label="Chats"></nav>
+    <div class="side-bottom">
+      <button class="nav-item" data-panel="memory"><span class="glyph">✦</span> Memory <span class="badge" id="mem-badge">0</span></button>
+      <button class="nav-item" id="open-teach"><span class="glyph">＋</span> Teach a note or file</button>
+      <button class="nav-item" id="open-settings"><span class="glyph">⚙</span> Settings</button>
+    </div>
+  </aside>
+
+  <!-- ============ main ============ -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="toggle-side" aria-label="Toggle sidebar">☰</button>
+      <div class="title" id="chat-title" contenteditable="false" spellcheck="false"></div>
+      <div class="top-actions">
+        <button class="icon-btn" id="theme-btn" aria-label="Toggle theme" title="Theme">◐</button>
+        <button class="icon-btn" id="panel-btn" aria-label="Memory panel" title="Memory panel">✦</button>
+      </div>
+    </header>
+
+    <section class="setup hidden" id="setup"></section>
+
+    <section class="thread" id="thread" aria-live="polite"></section>
+
+    <section class="hero hidden" id="hero">
+      <div class="hero-ring"></div>
+      <h1 id="hero-title">What should I remember?</h1>
+      <p class="hero-sub" id="hero-sub">Your model stays the same. What it knows grows with you.</p>
+    </section>
+
+    <form class="composer" id="composer" autocomplete="off">
+      <div class="composer-box">
+        <textarea id="input" rows="1" placeholder="Ask anything, or start with “remember that …”" aria-label="Message"></textarea>
+        <div class="composer-row">
+          <div class="left">
+            <label class="chip-btn" title="Teach a file (.txt, .md, .pdf)">＋<input type="file" id="file-input" accept=".txt,.md,.pdf" multiple hidden></label>
+            <button type="button" class="chip-btn toggle" id="remember-toggle" title="Store this message in memory instead of asking">✦ Remember</button>
+          </div>
+          <div class="right">
+            <div class="model-pick" id="model-pick">
+              <button type="button" class="chip-btn" id="model-btn"><span class="dot"></span><span id="model-name">model</span> ▾</button>
+              <div class="menu hidden" id="model-menu" role="listbox"></div>
+            </div>
+            <button class="send" id="send" aria-label="Send">↑</button>
+          </div>
+        </div>
+      </div>
+      <div class="suggestions" id="suggestions">
+        <button type="button" data-fill="remember that ">✦ Remember that…</button>
+        <button type="button" data-action="teach">＋ Teach a file</button>
+        <button type="button" data-fill="What do you know about me?">What do you know about me?</button>
+        <button type="button" data-fill="Summarise my notes on ">Summarise my notes on…</button>
+      </div>
+      <div class="fine">Runs on your computer. Answers cite the memories they used.</div>
+    </form>
+  </main>
+
+  <!-- ============ memory panel ============ -->
+  <aside class="panel" id="panel" aria-label="Memory panel">
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab active" data-tab="recall">This answer</button>
+        <button class="tab" data-tab="memory">All memory</button>
+        <button class="tab" data-tab="growth">Growth</button>
+      </div>
+      <button class="icon-btn" id="close-panel" aria-label="Close panel">✕</button>
+    </div>
+    <div class="panel-body" id="panel-recall"><p class="muted">Ask something and the memories it read appear here.</p></div>
+    <div class="panel-body hidden" id="panel-memory">
+      <div class="mem-tools">
+        <input id="mem-search" placeholder="Search memory">
+        <select id="mem-kind"><option value="">All</option><option value="note">Notes</option><option value="file">Files</option><option value="chat">Said in chat</option><option value="learned">Approved answers</option></select>
+      </div>
+      <div id="mem-list"></div>
+    </div>
+    <div class="panel-body hidden" id="panel-growth"></div>
+  </aside>
+</div>
+
+<!-- ============ dialogs ============ -->
+<dialog id="teach-dlg">
+  <form method="dialog" class="dlg">
+    <h2>Teach CAMR</h2>
+    <p class="muted">Notes and files become memory on this computer. Nothing is uploaded.</p>
+    <input id="teach-title" placeholder="Title (optional), e.g. Car, Project X, Mum's birthday">
+    <textarea id="teach-text" rows="7" placeholder="Paste anything: facts, meeting notes, recipes, docs…"></textarea>
+    <div class="drop" id="drop-zone">Drop .txt, .md or .pdf files here, or <label class="link">browse<input type="file" id="teach-files" accept=".txt,.md,.pdf" multiple hidden></label></div>
+    <div class="dlg-actions"><button value="cancel" class="ghost">Cancel</button><button id="teach-save" value="default" class="primary">Save to memory</button></div>
+  </form>
+</dialog>
+
+<dialog id="settings-dlg">
+  <form method="dialog" class="dlg">
+    <h2>Settings</h2>
+    <label class="field">Memory read per question <span id="budget-val"></span>
+      <input type="range" id="set-budget" min="64" max="1024" step="64">
+      <small>Measured: about 128 tokens is best for single facts on tiny models, about 512 for multi-step questions.</small></label>
+    <label class="field">Recent turns kept word-for-word <span id="turns-val"></span>
+      <input type="range" id="set-turns" min="0" max="12" step="1">
+      <small>Older turns are not lost: what you say is stored as memory and recalled when it matters.</small></label>
+    <label class="switch"><input type="checkbox" id="set-chat"> Remember what I say in chat</label>
+    <hr>
+    <h3>Share feedback (optional)</h3>
+    <p class="muted">The file contains numbers only (counts, timings, 👍/👎) unless you tick the box.</p>
+    <label class="switch"><input type="checkbox" id="export-text"> Include my questions and answers</label>
+    <div class="dlg-actions">
+      <a class="ghost btn" id="export-link" href="/api/export" download>Download feedback file</a>
+      <a class="ghost btn" href="https://github.com/Satasdin/CAMR/issues/new?template=feedback.yml" target="_blank" rel="noopener">Open feedback form</a>
+    </div>
+    <hr>
+    <p class="muted small" id="about"></p>
+    <div class="dlg-actions"><button value="cancel" class="ghost">Close</button><button id="settings-save" value="default" class="primary">Save</button></div>
+  </form>
+</dialog>
+
+<div class="dropping hidden" id="dropping"><div>✦ Drop to teach CAMR</div></div>
+<div class="toast hidden" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

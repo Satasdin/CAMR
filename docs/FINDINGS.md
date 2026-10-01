@@ -370,6 +370,26 @@ The engine's own retrieval cost is about 29 ms. The 210 ms seen in the pilot pro
 
 ---
 
+## F13. Confirmation at n = 200 (HotpotQA, multi-hop)
+
+Source: `results/hotpot200/camr.sqlite` (`configs/hotpot200.yaml`). The read path was fixed **before** this run: similarity ranking, gating and bridging at 512 tokens. Nothing was tuned on these questions. The 95% CIs are paired bootstrap intervals over questions (2,000 resamples).
+
+| Model | Alone (EM) | With CAMR | Gain (95% CI) | s / answer with CAMR |
+|---|---|---|---|---|
+| qwen2.5:0.5b | 3.5% | **26.5%** | +23.0 (+17.0 to +29.0) | 2.4 |
+| qwen2.5:1.5b | 10.5% | **41.0%** | +30.5 (+23.0 to +38.0) | 2.8 |
+| llama3.2:3b | 19.5% | **54.0%** | +34.5 (+27.0 to +42.0) | 5.8 |
+| Kimi K3 (cloud) | 51.8% | 66.3% | +14.6 (+9.0 to +20.6) | 9.5 (closed-book 18.4) |
+
+**Findings**
+1. **The pilot holds at 6.7× the sample.** With CAMR, llama3.2:3b (54.0%) matches Kimi K3 closed-book (51.8%) on multi-hop questions, at **5.8 s vs 18.4 s** per answer, on a 4-core CPU.
+2. Gains grow with the reader: +23, +30.5 and +34.5 points for 0.5B, 1.5B and 3B. Every interval excludes zero.
+3. Kimi K3 with the same notes reaches 66.3%. The 12-point residual between it and the 3B model is the reading and reasoning share that memory cannot buy, consistent with F8.
+4. Pilot vs n = 200 with memory: 30.0 → 26.5%, 50.0 → 41.0%, 56.7 → 54.0%. All three moved within the pilot's uncertainty (one pilot question = 3.3 points).
+5. Run hygiene: the first 0.5B with-memory run overlapped an app test that loaded another model in Ollama. It is kept as `superseded` and was re-run for clean timings. Accuracy was identical (26.5% both times; greedy decoding).
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |
@@ -391,6 +411,6 @@ Regenerate: `python scripts/make_figures.py` and `python scripts/screenshot_insp
 
 ---
 
-## Still running (this log is updated when they finish)
+## Still running
 
-- HotpotQA at n = 200 (qwen2.5:0.5b, qwen2.5:1.5b, llama3.2:3b, Kimi K3 with and without memory): `configs/hotpot200.yaml`.
+Nothing. All runs reported above are complete.

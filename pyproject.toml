@@ -28,17 +28,20 @@ cloud = ["anthropic>=0.60"]
 inspect = ["streamlit>=1.35", "pandas>=2.0", "matplotlib>=3.8"]
 dev = ["pytest>=8.0"]
 # CAMR Personal (`camr app`): the downloadable assistant. Ollama is installed separately.
-app = ["sqlite-vec>=0.1.6", "sentence-transformers>=3.0", "streamlit>=1.35", "pandas>=2.0", "pypdf>=4.0"]
+app = ["sqlite-vec>=0.1.6", "pypdf>=4.0"]
+# Optional native window for `camr app --window`.
+window = ["pywebview>=5.0"]
 all = ["camr[vec,embed,cloud,inspect,dev,app]"]
 
 [project.scripts]
 camr = "camr.cli.main:main"
+camr-app = "camr.app.server:main"
 
 [tool.setuptools.packages.find]
 include = ["camr*"]
 
 [tool.setuptools.package-data]
-camr = ["py.typed"]
+camr = ["py.typed", "app/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
