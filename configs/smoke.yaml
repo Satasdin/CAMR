@@ -1,0 +1,28 @@
+# Offline smoke test: dry-run models, hashing embedder, tiny fixture datasets.
+# Exercises every stage of `camr reproduce`; the numbers it produces mean nothing.
+seed: 7
+run_dir: ../results/smoke
+local_model: {backend: dry-run, name: qwen2.5:3b}
+ceiling_model: {backend: dry-run, name: claude-opus-5-5}
+embedder: {backend: hashing, name: hashing, dim: 256}
+extra_conditions: [ceiling_rag]
+memory: {write_policy: structured, expansion: entity, similarity_margin: 0.3, reasoning_memory: exemplars}
+benchmarks:
+  popqa: {path: ../tests/fixtures/popqa.jsonl, corpus: ../tests/fixtures/popqa_corpus.jsonl, n: 4}
+  hotpotqa: {path: ../tests/fixtures/hotpotqa.json, n: 3}
+  2wikimultihopqa: {path: ../tests/fixtures/2wikimultihopqa.json, n: 2}
+  gsm8k: {path: ../tests/fixtures/gsm8k.jsonl, exemplars: ../tests/fixtures/gsm8k_train.jsonl, n: 3}
+analysis: {bootstrap: 200}
+profile: {repeats: 2, n: 2, benchmark: hotpotqa, warmup: 1}
+ablation:
+  variants:
+    - label: control
+      overrides: {memory: {write_policy: verbatim, retrieval_policy: similarity_only,
+                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0},
+                           similarity_margin: null, expansion: none, reasoning_memory: facts}}
+    - label: full
+      overrides: {}
+    - label: no-screening
+      overrides: {memory: {screening: false}}
+  budget_sweep: [0, 64, 256]
+  sweep_base: full

@@ -1,0 +1,109 @@
+# CAMR default configuration (Table 4.6).  Every switchable component is set here.
+seed: 13
+run_dir: null            # null -> results/YYYY-MM-DD
+
+# ceiling_rag gives the cloud model the same notes as the treatment, so the residual
+# gap (what scale buys when knowledge is equal) can be measured.  It sends public
+# benchmark text, not just questions, to the cloud: remove it to keep NFR-06 strict.
+extra_conditions: [ceiling_rag]
+
+local_model:
+  backend: ollama
+  name: qwen2.5:3b       # also: llama3.2:3b, phi3:mini, qwen2.5:1.5b
+  host: http://127.0.0.1:11434
+  max_tokens: 256
+  num_ctx: 4096
+
+ceiling_model:
+  backend: anthropic
+  name: claude-opus-5-5  # pinned for the whole study (NFR-09)
+  max_tokens: 16000
+  effort: medium
+  max_retries: 4
+  backoff_base_s: 2.0
+
+embedder:
+  backend: bge
+  name: BAAI/bge-small-en-v1.5
+  dim: 384
+
+tokenizer:
+  backend: regex
+
+memory:
+  write_policy: structured
+  screening: true
+  importance: heuristic
+  retrieval_policy: composite
+  weights: {similarity: 0.60, recency: 0.15, importance: 0.25}
+  recency_decay: 0.99
+  normalise_similarity: true
+  k: 20
+  token_budget: 512
+  packing: greedy_stop
+  clock_step_hours: 1.0
+  # Capability-adaptive gating (docs/BRIDGING_THE_GAP.md 3.1).  Calibrate
+  # min_similarity for the embedder on a held-out slice, never the eval sample.
+  min_similarity: 0.50
+  similarity_margin: 0.15
+  # Entity-bridge expansion for multi-hop (3.2).
+  expansion: entity
+  expansion_seeds: 3
+  expansion_per_seed: 2
+  # Procedural memory for reasoning (3.3).
+  reasoning_memory: exemplars
+
+benchmarks:
+  popqa:
+    path: ../data/popqa/test.tsv
+    corpus: ../data/popqa/corpus.jsonl
+    n: 400
+  hotpotqa:
+    path: ../data/hotpotqa/hotpot_dev_distractor_v1.json
+    n: 400
+  2wikimultihopqa:
+    path: ../data/2wikimultihopqa/dev.json
+    n: 400
+  gsm8k:
+    path: ../data/gsm8k/test.jsonl
+    exemplars: ../data/gsm8k/train.jsonl   # procedural memory; train split only
+    n: 400
+
+primary_metric: {popqa: contains, hotpotqa: em, 2wikimultihopqa: em, gsm8k: accuracy}
+
+analysis: {bootstrap: 2000, ci: 0.95, min_denominator: 0.05}
+
+profile: {repeats: 5, n: 20, benchmark: hotpotqa, warmup: 2}
+
+# Table 4.7, extended: each variant adds one mechanism to the one before it.
+ablation:
+  variants:
+    - label: control            # verbatim, similarity only, fixed budget, no bridging, facts for reasoning
+      overrides: {memory: {write_policy: verbatim, retrieval_policy: similarity_only,
+                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0},
+                           min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
+    - label: structured         # + structured distilled notes
+      overrides: {memory: {retrieval_policy: similarity_only,
+                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0},
+                           min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
+    - label: composite          # + recency and importance (the proposal's engine)
+      overrides: {memory: {min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
+    - label: gated              # + capability-adaptive gating (P4)
+      overrides: {memory: {expansion: none, reasoning_memory: facts}}
+    - label: bridged            # + entity-bridge expansion (P3)
+      overrides: {memory: {reasoning_memory: facts}}
+    - label: full               # + exemplar memory for reasoning (P5): the default engine
+      overrides: {}
+    - label: no-screening
+      overrides: {memory: {screening: false}}
+    - label: k10
+      overrides: {memory: {k: 10}}
+    - label: k50
+      overrides: {memory: {k: 50}}
+    - label: greedy-skip
+      overrides: {memory: {packing: greedy_skip}}
+  budget_sweep: [0, 128, 256, 512, 1024, 2048]
+  sweep_base: full

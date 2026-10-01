@@ -1,0 +1,23 @@
+# Model-free retrieval evaluation (camr retrieval-eval): real HotpotQA dev data,
+# real BGE embedder, verbatim notes.  Needs no local or cloud language model.
+seed: 13
+run_dir: ../results/retrieval_eval
+local_model: {backend: dry-run}
+ceiling_model: {backend: dry-run}
+embedder: {backend: bge, name: BAAI/bge-small-en-v1.5, dim: 384}
+memory:
+  write_policy: verbatim
+  k: 20
+  token_budget: 512
+  min_similarity: 0.50
+  similarity_margin: 0.15
+  expansion: entity
+benchmarks:
+  hotpotqa:
+    path: ../data/hotpotqa/hotpot_dev_distractor_v1.json
+    n: 500
+    extra_corpus_questions: 1000   # distractor paragraphs from unsampled questions grow the store
+  2wikimultihopqa:
+    path: ../data/2wikimultihopqa/dev.json
+    n: 500
+    extra_corpus_questions: 1000

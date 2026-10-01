@@ -1,0 +1,40 @@
+# Same pilot, with Kimi K3 (Moonshot cloud API) as the frontier ceiling.  Run with label kimi:
+#   camr run --config configs/pilot_kimi.yaml --out results/pilot --condition ceiling --benchmark popqa --label kimi
+# The key is read from MOONSHOT_API_KEY; Kimi accepts only temperature 1 (not greedy).
+# Pilot benchmark on CPU: real small model, real embedder, real datasets.
+# Small on-device model: qwen2.5:0.5b.  Large comparison model: gpt-oss:20b
+# (21B total / 3.6B active parameters, MoE), run locally because no cloud key was
+# available.  With OLLAMA_API_KEY set, point ceiling_model at Ollama Cloud instead:
+#   ceiling_model: {backend: ollama, host: https://ollama.com, name: "gpt-oss:120b", think: low}
+seed: 13
+run_dir: ../results/pilot
+extra_conditions: [ceiling_rag]
+local_model: {backend: ollama, name: "qwen2.5:0.5b", max_tokens: 256, num_ctx: 4096}
+ceiling_model: {backend: openai_compat, name: "kimi-k3", base_url: "https://api.moonshot.ai/v1", api_key_env: MOONSHOT_API_KEY, max_tokens: 4096, timeout_s: 300}
+embedder: {backend: bge, name: BAAI/bge-small-en-v1.5, dim: 384}
+memory:
+  write_policy: verbatim      # structured distillation of every paragraph with the 0.5B model is out of the pilot's time budget
+  retrieval_policy: composite
+  k: 20
+  token_budget: 512
+  min_similarity: 0.50
+  similarity_margin: 0.15
+  expansion: entity
+  reasoning_memory: exemplars
+benchmarks:
+  popqa: {path: ../data/popqa/test.tsv, corpus: ../data/popqa/corpus_pilot.jsonl, n: 30}
+  hotpotqa: {path: ../data/hotpotqa/hotpot_dev_distractor_v1.json, n: 30, extra_corpus_questions: 100}
+  gsm8k: {path: ../data/gsm8k/test.jsonl, exemplars: ../data/gsm8k/train.jsonl, n: 12}
+analysis: {bootstrap: 2000, ci: 0.95, min_denominator: 0.05}
+profile: {repeats: 3, n: 10, benchmark: hotpotqa, warmup: 2}
+ablation:
+  variants:
+    - label: control          # similarity only, fixed budget, no bridging, facts for reasoning
+      overrides: {memory: {retrieval_policy: similarity_only,
+                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0},
+                           min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
+    - label: full
+      overrides: {}
+  budget_sweep: [0, 128, 512, 1024]
+  sweep_base: full

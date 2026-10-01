@@ -1,0 +1,17 @@
+# Personal-assistant demo: your own notes, one frozen on-device model, fully local.
+# Read path = the best one measured in docs/FINDINGS.md (similarity + gating, 128 tokens for facts).
+seed: 13
+run_dir: ../results/assistant
+local_model: {backend: ollama, name: "qwen2.5:0.5b", max_tokens: 128, num_ctx: 2048}
+ceiling_model: {backend: dry-run, name: none}
+embedder: {backend: bge, name: BAAI/bge-small-en-v1.5, dim: 384}
+memory:
+  write_policy: verbatim
+  retrieval_policy: similarity_only
+  weights: {similarity: 1.0, recency: 0.0, importance: 0.0}
+  k: 10
+  token_budget: 128
+  min_similarity: 0.50
+  similarity_margin: 0.15
+  expansion: none
+benchmarks: {}
