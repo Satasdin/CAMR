@@ -1077,13 +1077,13 @@ camr app                                                # opens http://127.0.0.1
         rows = []
         for m, r in ms.items():
             b = r["budgets"]["384"]
-            rows.append([m, f"{r['cold']['first_token_ms'] / 1000:.1f} s", f"{r['after_warm']['first_token_ms'] / 1000:.1f} s",
+            rows.append([m, f"{r['cold_disk']['first_token_ms'] / 1000:.1f} s", f"{r['cold']['first_token_ms'] / 1000:.1f} s", f"{r['after_warm']['first_token_ms'] / 1000:.1f} s",
                          f"{r['warm_up_ms'] / 1000:.1f} s", f"{b['median_first_token_ms'] / 1000:.2f} s",
                          f"{b['median_generation_ms'] / 1000:.1f} s", f"{b['median_retrieval_ms']:.0f} ms"])
         c.table("Time a CAMR Personal user waits, per model (budget 384 tokens; medians over six questions)",
-                ["Model", "First word, cold", "First word, after warm-up", "Warm-up (in background)",
-                 "First word, typical", "Whole answer, typical", "Memory lookup"],
-                rows, [2.6, 2.0, 2.3, 2.3, 2.1, 2.3, 2.3], size=9, key="applat")
+                ["Model", "First word after reboot", "First word, cold (cached file)", "First word after warm-up",
+                 "Warm-up (in background)", "First word, typical", "Whole answer, typical", "Memory lookup"],
+                rows, [2.4, 1.9, 1.9, 1.9, 1.9, 1.9, 2.0, 1.9], size=8.5, key="applat")
         c.figure(REPORT / "app_latency.png", "Time to the first word: cold start, after the app's warm-up, and a "
                  "typical answer", 14.0)
         brow = []
@@ -1186,6 +1186,39 @@ def H200_TEXT(res: dict) -> str:  # noqa: N802 - kept as a named hook for the ch
                  "the estimates moved by at most 9 points, within the pilot's uncertainty. Accuracy was identical "
                  "when the 0.5B run was repeated for clean timings (26.5% both times).")
     return " ".join(parts)
+
+# Interpretation of the application latency benchmark (docs/results/app_latency.json).
+def APP_LATENCY_TEXT(lat: dict) -> str:  # noqa: N802 - named hook, like H200_TEXT
+    ms = lat["models"]
+    names = list(ms)
+    big = names[-1]
+    qc, sz = lat["query_cache"], lat["memory_size"]
+    warm = ", ".join(f"{ms[m]['cold']['first_token_ms'] / 1000:.1f} → {ms[m]['after_warm']['first_token_ms'] / 1000:.1f} s"
+                     for m in names)
+    return (
+        f"**Warm-up.** With the model unloaded but its file in the operating system's cache, the first word took "
+        f"{warm} for {', '.join(names)} once the app had warmed the model, which it does while the user types. "
+        f"After a reboot, when the weights must be read from disk, the cold first answer took "
+        f"{ms[big]['cold_disk']['first_token_ms'] / 1000:.0f} s for {big} on this container's disk; warm-up moves "
+        "that load out of the conversation, but cannot hide it if the user asks before it finishes. The first warmed "
+        "answer is still slower than a typical one because nothing of the prompt has been processed yet. "
+        "**Budget.** The budget made no measurable difference here: on personal notes, gating admitted only the one "
+        f"or two notes that matched, so every budget sent the same prompt (about "
+        f"{ms[names[0]]['budgets']['384']['median_prompt_tokens']:.0f} tokens) and the budget never bound. It "
+        "matters when many notes are relevant, as in the benchmarks (section 5.8.5). "
+        f"**Lookup.** Inside a conversation the memory lookup took a median of "
+        f"{min(ms[m]['budgets']['384']['median_retrieval_ms'] for m in names):.0f}–"
+        f"{max(ms[m]['budgets']['384']['median_retrieval_ms'] for m in names):.0f} ms, against "
+        f"{sz['small']['median_retrieval_ms']:.0f} ms with nothing else running: the embedding model and the chat "
+        "model share the same four cores, the contention already diagnosed in section 5.8.10. A repeated question "
+        f"skipped the embedding and took {qc['repeat_ms']:.1f} ms instead of {qc['first_ms']:.0f} ms. Growing memory "
+        f"{sz['large']['notes'] / sz['small']['notes']:.0f}-fold, from {sz['small']['notes']:,} to "
+        f"{sz['large']['notes']:,} notes, raised the lookup only from {sz['small']['median_retrieval_ms']:.0f} to "
+        f"{sz['large']['median_retrieval_ms']:.0f} ms (vector search {sz['small']['median_search_ms']:.0f} → "
+        f"{sz['large']['median_search_ms']:.0f} ms), so memory can keep growing well beyond the model's context "
+        "window without the assistant becoming noticeably slower. In every case the user sees the first word in "
+        f"under {max(ms[m]['after_warm']['first_token_ms'] for m in names) / 1000:.0f} s once the model is loaded.")
+
 
 # Filled in after the B/D machines are merged; kept as data so the text matches the table.
 SWEEP_DISCUSSION = (

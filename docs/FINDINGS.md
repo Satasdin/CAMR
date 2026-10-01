@@ -390,6 +390,24 @@ Source: `results/hotpot200/camr.sqlite` (`configs/hotpot200.yaml`). The read pat
 
 ---
 
+## F14. CAMR Personal: what a user waits for (time to first word)
+
+Source: `docs/results/app_latency.json` (`python scripts/app_latency.py`). Real models through Ollama 0.35.0, nomic-embed-text embedder, 4-core CPU, no GPU; 282 notes (demo notes + PopQA documents); medians over six questions.
+
+| Model | First word after reboot (disk) | Cold (file cached) | **After warm-up** | Typical answer: first word / whole |
+|---|---|---|---|---|
+| qwen2.5:0.5b | 2.4 s | 1.9 s | **0.6 s** | 0.44 s / 0.8 s |
+| qwen2.5:1.5b | 16.8 s | 2.4 s | **0.9 s** | 0.55 s / 1.7 s |
+| llama3.2:3b | 172.7 s | 5.0 s | **1.7 s** | 0.85 s / 2.6 s |
+
+**Findings**
+1. **Warm-up** (the app loads the chosen model at launch and on a model switch) cuts the first answer's wait by 2.7–3.4×. It initially loaded the model with a different context size, so Ollama loaded it twice (**defect D-10**, fixed: warm-up now sends the chat request's options).
+2. **Budget did not bind on personal notes**: gating admitted only the matching one or two notes, so 128/384/768 sent the same ~160–168-token prompt.
+3. **Lookup in a conversation was 212–263 ms against 48 ms in isolation**: the embedder and chat model share four cores (as F12). The **query cache** makes a repeated question's lookup 2.8 ms instead of 189 ms.
+4. **Memory size barely matters**: 282 → 5,976 notes (21×) moved the lookup from 48 to 57 ms (vector search 2 → 11 ms).
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |

@@ -324,7 +324,7 @@ def fig_app_latency(out: Path) -> Path | None:
     ax.invert_yaxis()
     ax.set_xscale("log")
     style(ax, xlabel="seconds until the first word appears (log scale; 4-core CPU, no GPU)")
-    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    ax.legend(frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.45, -0.16), ncol=2)
     ax.set_title("CAMR Personal: time to first word, cold vs warmed", loc="left")
     return save(fig, out, "app_latency.png")
 

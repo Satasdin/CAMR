@@ -63,7 +63,7 @@ The retrieval core is RAG, and that is deliberate: the study measures how far me
 Fine-tuning needs compute that users do not have. It has to be redone whenever knowledge changes, and it risks forgetting (Chapter 1, Problem Statement). CAMR adapts through storage instead. A fact is usable the moment it is written, can be removed with "Forget", and leaves the weights unchanged (delimitation: no training or fine-tuning). The learned router is a ridge/LinUCB model over 11 features, not a language model.
 
 **B3. Is there a context-window limit?**
-The model only ever reads the notes selected within the budget (128–1,024 tokens), so the store can grow far beyond the context window. Retrieval stayed at a median of 54–64 ms over 38,054 notes (F1b), and the memory-size test in Chapter 5 shows the same in the app. The limit is how many relevant notes fit in the budget, not how many exist.
+The model only ever reads the notes selected within the budget (128–1,024 tokens), so the store can grow far beyond the context window. Retrieval stayed at a median of 54–64 ms over 38,054 notes (F1b), and the memory-size test in Chapter 5 shows the same in the app. In the app, memory growing 21-fold (282 → 5,976 notes) moved the lookup from 48 to 57 ms. The limit is how many relevant notes fit in the budget, not how many exist.
 
 ---
 
@@ -148,6 +148,8 @@ Three changes, measured in Chapter 5, "Responsiveness of the Application":
 1. **Warm-up.** The app loads the chat model when it starts and when the user switches model, so the first answer does not wait for the model to load.
 2. **Time to first word.** Answers stream, and the app now measures and shows how long the first word took. This is what users perceive.
 3. **Query-embedding cache.** A repeated question skips the embedding call.
+
+Measured (Chapter 5, `docs/results/app_latency.json`): the first word after warm-up arrived in 0.6 / 0.9 / 1.7 s for 0.5B / 1.5B / 3B, against 1.9 / 2.4 / 5.0 s cold, and 2.4 / 16.8 / 173 s straight after a reboot (weights read from disk, which warm-up moves into the background). A repeated question's lookup fell from 189 ms to 2.8 ms. Measuring also exposed defect D-10: the first warm-up used a different context size, so Ollama loaded the model twice.
 
 Earlier engine-level gains were gating (fewer tokens: 1.7–3.4× faster per answer than the baseline, F8) and thread partitioning (F12).
 

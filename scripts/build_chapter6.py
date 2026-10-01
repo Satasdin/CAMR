@@ -74,7 +74,10 @@ def build(template: Path, out: Path) -> Path:
         "answers in about 180 ms. The overhead was diagnosed as CPU contention rather than engine cost: about 29 ms "
         "in isolation. Decode speed fell by 3–17% with memory, the cost of reading a longer prompt. On this class "
         "of device, models of 7B parameters or more with memory answered more slowly than the cloud model, which "
-        "makes **1.5–4B the model size that suits the engine** on a CPU-only laptop.")
+        "makes **1.5–4B the model size that suits the engine** on a CPU-only laptop. In the released application, "
+        "loading the model in the background before the first question brought the first word to 0.6–1.7 s for "
+        "0.5–3B models, and a 21-fold larger memory (282 to 5,976 notes) added only about 10 ms to the lookup "
+        "(section 5.8.11).")
     c.h3("Contribution and the Boundaries of the Findings")
     c.p("The study contributes four things: (1) a working, open-source memory engine and evaluation harness; "
         "(2) measured evidence that external memory lets small on-device models match a frontier cloud model on "

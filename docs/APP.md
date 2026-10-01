@@ -79,6 +79,8 @@ Measured on a 4-core laptop-class CPU with no GPU (`docs/FINDINGS.md`, F10 and F
 | 8–16 GB | `llama3.2:3b` | 73% / 54–57% (matches a frontier cloud model) | ~4–6 s |
 | 16 GB+ | `qwen2.5:14b`, `gemma3:12b` | 73–79% / 63% | ~16–24 s on CPU; much faster on a GPU or Apple Silicon |
 
+**Speed.** The app loads your model in the background when it starts and when you switch models, so the first answer does not wait for it: first word in about 0.6 s (0.5B), 0.9 s (1.5B) and 1.7 s (3B) on a 4-core CPU. Each answer shows its time to the first word. Memory size hardly matters: about 6,000 notes are looked up in under 60 ms.
+
 ## Privacy
 
 - **Local only.** Everything lives in `~/.camr/`. The app listens only on 127.0.0.1, talks only to the Ollama
