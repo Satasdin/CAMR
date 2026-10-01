@@ -8,6 +8,7 @@
     camr reproduce --config C
     camr ask       --config C "question"          (deployment scenario, not part of the study)
     camr inspect   --run-dir DIR                   (read-only Streamlit interface)
+    camr app                                       (CAMR Personal: your model + a growing memory)
 """
 
 from __future__ import annotations
@@ -82,7 +83,21 @@ def _parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("inspect", help="launch the read-only inspection interface")
     s.add_argument("--run-dir", required=True)
+
+    s = sub.add_parser("app", help="CAMR Personal: chat with any local Ollama model plus a memory that grows")
+    s.add_argument("--home", default=None, help="where your memory is kept (default ~/.camr)")
+    s.add_argument("--host", default="http://127.0.0.1:11434", help="Ollama address (must be on this machine)")
+    s.add_argument("--port", type=int, default=8502)
     return p
+
+
+def _streamlit(script: Path, extra: list[str], port: int | None = None) -> int:
+    from camr.ui_theme import STREAMLIT_FLAGS
+
+    cmd = [sys.executable, "-m", "streamlit", "run", str(script), *STREAMLIT_FLAGS]
+    if port:
+        cmd += ["--server.port", str(port)]
+    return subprocess.call(cmd + ["--", *extra])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -102,9 +117,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(c.cmd_merge(args.run_dir, args.source)))
             return 0
         if args.cmd == "inspect":
-            app = Path(__file__).resolve().parent.parent / "inspect" / "app.py"
-            return subprocess.call([sys.executable, "-m", "streamlit", "run", str(app), "--", "--run-dir",
-                                    args.run_dir])
+            return _streamlit(Path(__file__).resolve().parent.parent / "inspect" / "app.py", ["--run-dir", args.run_dir])
+        if args.cmd == "app":
+            extra = ["--host", args.host] + (["--home", args.home] if args.home else [])
+            return _streamlit(Path(__file__).resolve().parent.parent / "app" / "ui.py", extra, args.port)
         cfg = Config.load(args.config)
         if args.cmd == "ingest":
             out = c.cmd_ingest(cfg, args.out, args.corpus, args.write_policy, args.dataset)

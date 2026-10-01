@@ -17,6 +17,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from camr import ui_theme
 from camr.config import Config
 from camr.eval.analysis import GapAnalyzer
 from camr.inspect import queries as Q
@@ -29,7 +30,8 @@ def _args() -> Path:
 
 
 RUN_DIR = _args()
-st.set_page_config(page_title="CAMR Inspector", layout="wide")
+st.set_page_config(page_title="CAMR Inspector", page_icon="◉", layout="wide")
+ui_theme.apply(st)
 
 
 @st.cache_resource
@@ -43,8 +45,9 @@ def _cfg() -> Config:
 
 
 conn, cfg = _conn(), _cfg()
-st.sidebar.title("CAMR Inspector")
-st.sidebar.caption(f"read-only · {RUN_DIR / 'camr.sqlite'}")
+with st.sidebar:
+    ui_theme.brand(st, "Inspector · read-only")
+    st.caption(f"{RUN_DIR / 'camr.sqlite'}")
 page = st.sidebar.radio("Screen", ["Run Dashboard", "Ablations", "Query Trace", "Memory Store"])
 runs = Q.runs(conn)
 labels = sorted({r["label"] for r in runs if r["condition"] == "treatment" and not r["label"].startswith("profile")})

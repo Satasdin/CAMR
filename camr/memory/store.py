@@ -108,6 +108,7 @@ class SQLiteVectorStore(MemoryStore):
         embedder_name: str,
         use_vec: bool | None = None,
         readonly: bool = False,
+        check_same_thread: bool = True,
     ):
         self.path = Path(path)
         self.dim = dim
@@ -116,7 +117,8 @@ class SQLiteVectorStore(MemoryStore):
             self.conn = sqlite3.connect(f"file:{self.path}?mode=ro", uri=True)
         else:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.conn = sqlite3.connect(self.path)
+            # Interactive front ends (Streamlit) call from several threads; they serialise access themselves.
+            self.conn = sqlite3.connect(self.path, check_same_thread=check_same_thread)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.use_vec = _vec_available() if use_vec is None else use_vec
@@ -247,6 +249,18 @@ class SQLiteVectorStore(MemoryStore):
                 "INSERT INTO note_vec(rowid, note_type, embedding) VALUES (?, ?, ?)", (note_id, note_type, blob)
             )
         return note_id
+
+    def delete_source(self, source_id: int) -> int:
+        """Forget a source: its notes, their vectors and its rejection log. Returns notes removed."""
+        with self.transaction() as c:
+            ids = [r[0] for r in c.execute("SELECT note_id FROM note WHERE source_id=?", (source_id,))]
+            if self.use_vec and ids:
+                c.executemany("DELETE FROM note_vec WHERE rowid=?", ((i,) for i in ids))
+            c.executemany("DELETE FROM note_embedding WHERE note_id=?", ((i,) for i in ids))
+            c.execute("DELETE FROM note WHERE source_id=?", (source_id,))
+            c.execute("DELETE FROM rejection WHERE source_id=?", (source_id,))
+            c.execute("DELETE FROM source WHERE source_id=?", (source_id,))
+        return len(ids)
 
     def log_rejection(self, source_id: int | None, note_type: str, reason: str, text: str, at: str) -> None:
         self.conn.execute(

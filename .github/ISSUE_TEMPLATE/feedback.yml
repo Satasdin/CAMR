@@ -1,0 +1,36 @@
+name: CAMR Personal feedback
+description: Tell us how CAMR Personal worked for you (no personal data needed)
+title: "[feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying CAMR Personal! Please don't paste private notes or messages.
+        In the app, **Settings → Download feedback file** exports usage metrics only (counts, timings, 👍/👎); you can attach it here.
+  - type: input
+    id: model
+    attributes: {label: "Model you used (from Ollama)", placeholder: "e.g. qwen2.5:1.5b"}
+    validations: {required: true}
+  - type: input
+    id: machine
+    attributes: {label: "Computer", placeholder: "e.g. MacBook Air M2 16 GB / Windows laptop i5 8 GB"}
+  - type: dropdown
+    id: days
+    attributes:
+      label: How long have you used it?
+      options: ["one session", "a few days", "a week or more"]
+  - type: dropdown
+    id: better
+    attributes:
+      label: Did answers get better as you taught it more?
+      options: ["yes, clearly", "a little", "no difference", "worse", "not sure"]
+  - type: textarea
+    id: worked
+    attributes: {label: "What worked well?"}
+  - type: textarea
+    id: failed
+    attributes: {label: "Where did it fail? (wrong answers, missed notes, slow, crashes)"}
+  - type: textarea
+    id: file
+    attributes: {label: "Feedback file (optional)", description: "Drag camr-feedback.json here"}

@@ -26,6 +26,8 @@ per task type, with token and latency accounting.
 - **Inspector** (`camr.inspect`): a read-only Streamlit UI with Run Dashboard,
   Ablations, Query Trace and Memory Store screens.
 
+**Want to use it?** [`docs/APP.md`](docs/APP.md): install CAMR Personal and give any Ollama model a memory that grows (`camr app`).
+
 **New here?** Follow [`docs/SETUP.md`](docs/SETUP.md), a step-by-step walkthrough with annotated screenshots. Measured results are in [`docs/FINDINGS.md`](docs/FINDINGS.md). The Android personal-assistant application is in [`docs/ANDROID_ASSISTANT.md`](docs/ANDROID_ASSISTANT.md).
 
 See [`docs/BRIDGING_THE_GAP.md`](docs/BRIDGING_THE_GAP.md) for what "bridging

@@ -26,7 +26,9 @@ cloud = ["anthropic>=0.60"]
 # Read-only inspection interface (FR-17) and figures.
 inspect = ["streamlit>=1.35", "pandas>=2.0", "matplotlib>=3.8"]
 dev = ["pytest>=8.0"]
-all = ["camr[vec,embed,cloud,inspect,dev]"]
+# CAMR Personal (`camr app`): the downloadable assistant. Ollama is installed separately.
+app = ["sqlite-vec>=0.1.6", "sentence-transformers>=3.0", "streamlit>=1.35", "pandas>=2.0", "pypdf>=4.0"]
+all = ["camr[vec,embed,cloud,inspect,dev,app]"]
 
 [project.scripts]
 camr = "camr.cli.main:main"
