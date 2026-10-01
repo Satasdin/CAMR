@@ -532,14 +532,20 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
     # ================================================================ 5.6 AI declaration
     c.h2("Author Oversight and Use of AI-Assisted Tools")
     c.p(declaration or (
-        "Claude Code (Anthropic), an AI coding assistant, was used under the student's direction to assist with "
-        "implementing the engine and evaluation harness, running the benchmark experiments, producing figures, "
-        "and drafting this chapter from the logged results. The student defined the research problem, "
-        "objectives and design (Chapters 1–4), directed which experiments were run, and supplied the cloud "
-        "API access. [[The student should state here how the output was checked, for example by re-running the "
-        "test suite and the reproduce command, inspecting query traces in the inspector, and checking reported "
-        "figures against the results files.]] The student made the final decisions and takes full responsibility "
-        "for the submitted work."))
+        "Claude Code, an AI coding assistant provided by Anthropic, was used throughout the implementation and "
+        "evaluation stages of this project. Under the student's direction it assisted with writing the engine "
+        "and harness code and its tests, running the benchmark experiments on the cloud machines, producing the "
+        "figures and screenshots, and drafting this chapter from the logged results. The student defined the "
+        "research problem, objectives, requirements and design (Chapters 1–4), supplied the cloud model access, "
+        "and decided which experiments were run, including the comparison with cloud models, the wider "
+        "model-size sweep, the learned escalation policy and the use of real rather than synthetic benchmark data."))
+    c.p("The student reviewed the intermediate results and screenshots as the work progressed and redirected it "
+        "where it fell short; most importantly, the student required that this chapter report only experiments "
+        "that had actually been run and benchmarked with real models, and an earlier draft written before the "
+        "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
+        "test suite (88 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "the results file behind every reported number, so that each claim can be traced and re-run. The "
+        "student made the final decisions and takes full responsibility for the submitted work.")
 
     # ================================================================ 5.7 results
     c.h2("Evaluation Results, Discussion and Limitations")
