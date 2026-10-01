@@ -234,6 +234,74 @@ class CloudRunner(ModelRunner):
         )
 
 
+# ---------------------------------------------------------- openai-compatible
+
+
+class OpenAICompatRunner(ModelRunner):
+    """Hosted model behind an OpenAI-style ``/chat/completions`` API (e.g. Kimi on
+    Moonshot).  Same contract as the other runners: bounded retries with
+    exponential backoff (IR-02), the served model id logged per query (NFR-09),
+    reasoning text excluded from the scored answer.  The API key is read from the
+    environment only and never logged.
+    """
+
+    is_remote = True
+
+    def __init__(self, cfg: CeilingModelConfig, session: requests.Session | None = None,
+                 sleep: Callable[[float], None] = time.sleep):
+        import os
+
+        key = os.environ.get(cfg.api_key_env)
+        if not key:
+            raise ConfigError(f"ceiling_model.backend=openai_compat needs {cfg.api_key_env} in the environment")
+        self.cfg = cfg
+        self.model_name = cfg.name
+        self.model_version = cfg.name
+        self._http = session or requests.Session()
+        self._http.headers.update({"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        self._sleep = sleep
+
+    def payload(self, prompt: str) -> dict[str, Any]:
+        body: dict[str, Any] = {"model": self.cfg.name, "messages": [{"role": "user", "content": prompt}],
+                                "max_tokens": self.cfg.max_tokens}
+        if self.cfg.temperature is not None:
+            body["temperature"] = self.cfg.temperature
+        return body
+
+    def generate(self, prompt: str) -> Generation:
+        url = self.cfg.base_url.rstrip("/") + "/chat/completions"
+        t0 = time.perf_counter()
+        for attempt in range(self.cfg.max_retries + 1):
+            try:
+                r = self._http.post(url, json=self.payload(prompt), timeout=self.cfg.timeout_s)
+            except requests.RequestException as exc:
+                err, retry = f"connection error: {exc}", True
+            else:
+                if r.status_code == 200:
+                    break
+                err = f"HTTP {r.status_code}: {r.text[:200]}"
+                retry = r.status_code in (408, 409, 429) or r.status_code >= 500
+            if not retry or attempt == self.cfg.max_retries:
+                raise GenerationError(f"cloud error after {attempt + 1} attempt(s): {err}")
+            self._sleep(self.cfg.backoff_base_s * (2 ** attempt))
+        d = r.json()
+        choice = (d.get("choices") or [{}])[0]
+        msg = choice.get("message") or {}
+        if choice.get("finish_reason") == "content_filter":
+            raise GenerationError("cloud model refused the request")
+        usage = d.get("usage") or {}
+        return Generation(
+            text=msg.get("content") or "",
+            prompt_tokens=usage.get("prompt_tokens"),
+            generated_tokens=usage.get("completion_tokens"),
+            latency_ms=(time.perf_counter() - t0) * 1000,
+            model=self.cfg.name,
+            model_version=d.get("model", self.cfg.name),
+            meta={"served_model": d.get("model"), "finish_reason": choice.get("finish_reason"),
+                  "reasoning_tokens": (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")},
+        )
+
+
 # -------------------------------------------------------------------- dry run
 
 
@@ -287,6 +355,8 @@ def build_local_runner(cfg: LocalModelConfig, seed: int) -> ModelRunner:
 def build_ceiling_runner(cfg: CeilingModelConfig, seed: int = 0) -> ModelRunner:
     if cfg.backend == "anthropic":
         return CloudRunner(cfg)
+    if cfg.backend == "openai_compat":
+        return OpenAICompatRunner(cfg)
     if cfg.backend == "ollama":
         # A larger model through the Ollama API: local (loopback), or an Ollama Cloud
         # model such as gpt-oss:120b-cloud when host is https://ollama.com.  Same

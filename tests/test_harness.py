@@ -373,3 +373,29 @@ def test_ceiling_proxy_backend_is_a_loopback_ollama_runner():
     assert isinstance(r, OllamaRunner) and r.model_name == "qwen2.5:7b" and r.payload("x")["options"]["temperature"] == 0
     with pytest.raises(ConfigError):
         build_ceiling_runner(CeilingModelConfig(backend="ollama", host="http://10.1.2.3:11434"))
+
+
+def test_openai_compat_runner_retries_and_parses(monkeypatch):
+    from camr.models.runner import OpenAICompatRunner
+    monkeypatch.setenv("TEST_KEY", "k")
+    calls = []
+
+    class Sess:
+        headers: dict = {}
+
+        def post(self, url, json, timeout):
+            calls.append(json)
+            if len(calls) == 1:
+                return SimpleNamespace(status_code=429, text="slow down")
+            return SimpleNamespace(status_code=200, json=lambda: {
+                "model": "kimi-k3", "choices": [{"finish_reason": "stop", "message": {
+                    "content": "Calder Willingham and Buck Henry", "reasoning_content": "thinking..."}}],
+                "usage": {"prompt_tokens": 30, "completion_tokens": 80, "completion_tokens_details": {"reasoning_tokens": 60}}})
+    sleeps = []
+    cfg = CeilingModelConfig(backend="openai_compat", name="kimi-k3", api_key_env="TEST_KEY", backoff_base_s=2.0)
+    g = OpenAICompatRunner(cfg, session=Sess(), sleep=sleeps.append).generate("q")
+    assert g.text == "Calder Willingham and Buck Henry" and g.model_version == "kimi-k3" and sleeps == [2.0]
+    assert "temperature" not in calls[0] and g.meta["reasoning_tokens"] == 60
+    monkeypatch.delenv("TEST_KEY")
+    with pytest.raises(ConfigError):
+        OpenAICompatRunner(cfg)

@@ -64,6 +64,8 @@ def sweep_report(conn, primary_metric: dict[str, str]) -> list[dict[str, Any]]:
             metric = primary_metric.get(bench, "em")
             sf, st = _acc(conn, f, metric), _acc(conn, t, metric)
             sc = _acc(conn, c, metric) if c else None
+            k = latest.get(("kimi", "ceiling", bench))
+            sk = _acc(conn, k, metric) if k else None
             denom = None if sc is None else sc - sf
             df, dt = _decode(conn, f), _decode(conn, t)
             out.append({
@@ -71,6 +73,8 @@ def sweep_report(conn, primary_metric: dict[str, str]) -> list[dict[str, Any]]:
                 "floor": sf, "with_memory": st, "ceiling_20b": sc, "gain": st - sf,
                 "gap_closed": (st - sf) / denom if denom and abs(denom) >= 0.05 else None,
                 "beats_ceiling": None if sc is None else st > sc,
+                "ceiling_kimi": sk,
+                "gap_closed_vs_kimi": (st - sf) / (sk - sf) if sk is not None and sk - sf >= 0.05 else None,
                 "decode_tok_s_floor": df, "decode_tok_s_memory": dt,
                 "decode_change_pct": (dt / df - 1) * 100 if df and dt else None,
                 "prompt_tokens_floor": _prompt_tokens(conn, f), "prompt_tokens_memory": _prompt_tokens(conn, t),

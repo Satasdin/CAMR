@@ -131,6 +131,7 @@ class GapAnalyzer:
         min_denominator: float = 0.05,
         seed: int = 13,
         baseline_label: str = "main",
+        ceiling_label: str | None = None,
     ):
         self.conn = conn
         self.primary_metric = primary_metric
@@ -139,6 +140,7 @@ class GapAnalyzer:
         self.min_denominator = min_denominator
         self.seed = seed
         self.baseline_label = baseline_label
+        self.ceiling_label = ceiling_label or baseline_label  # whose ceiling runs anchor the gap
         self.runs = _latest_runs(conn)
 
     def treatment_labels(self) -> list[str]:
@@ -152,14 +154,15 @@ class GapAnalyzer:
         benches = sorted({b for (lab, cond, b) in self.runs if lab == label and cond == "treatment"})
         for bench in benches:
             f_id = self.runs.get((self.baseline_label, "floor", bench))
-            c_id = self.runs.get((self.baseline_label, "ceiling", bench))
+            c_id = self.runs.get((self.ceiling_label, "ceiling", bench))
             t_id = self.runs[(label, "treatment", bench)]
             if f_id is None or c_id is None:
                 continue
             F = _queries(self.conn, f_id, self.primary_metric)
             C = _queries(self.conn, c_id, self.primary_metric)
             T = _queries(self.conn, t_id, self.primary_metric)
-            cr_id = self.runs.get((label, "ceiling_rag", bench)) or self.runs.get((self.baseline_label, "ceiling_rag", bench))
+            cr_id = (self.runs.get((self.ceiling_label, "ceiling_rag", bench)) if self.ceiling_label != self.baseline_label
+                     else None) or self.runs.get((label, "ceiling_rag", bench)) or self.runs.get((self.baseline_label, "ceiling_rag", bench))
             CR = _queries(self.conn, cr_id, self.primary_metric) if cr_id else {}
             for key in sorted(set(F) & set(C) & set(T)):
                 f, c, t = F[key], C[key], T[key]

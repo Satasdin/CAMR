@@ -92,6 +92,14 @@ def cmd_analyse(run_dir: str | Path, by: str = "task_type", bootstrap: int | Non
         summary: dict = {"primary_metric": cfg.primary_metric, "by": by}
 
         main = [r.as_dict() for r in an.compute("main", by)]
+        # Same treatment, measured against a second, frontier ceiling when one was run (label "kimi").
+        if any(lab == "kimi" for (lab, _c, _b) in an.runs):
+            kimi = GapAnalyzer(conn, cfg.primary_metric, bootstrap=bootstrap or cfg.analysis.bootstrap,
+                               ci=cfg.analysis.ci, min_denominator=cfg.analysis.min_denominator, seed=cfg.seed,
+                               ceiling_label="kimi")
+            vs_kimi = [r.as_dict() for r in kimi.compute("main", by)]
+            write_table(vs_kimi, tables / "gap_vs_kimi", "Gap closed against the Kimi (cloud) ceiling")
+            summary["vs_kimi"] = vs_kimi
         write_table(main, tables / "gap_main", "Fraction of capability gap closed (default configuration)")
         gap_figure(main, figures / "gap_main.png")
         summary["main"] = main

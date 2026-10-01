@@ -43,6 +43,8 @@ class CeilingModelConfig:
     host: str = "http://127.0.0.1:11434"  # ollama backend: local, or https://ollama.com for cloud models
     api_key_env: str = "OLLAMA_API_KEY"  # read only when host is not loopback (Ollama Cloud)
     think: str | None = None  # reasoning effort for reasoning models (gpt-oss: low | medium | high)
+    base_url: str = "https://api.moonshot.ai/v1"  # openai_compat backend (e.g. Kimi on Moonshot)
+    temperature: float | None = None  # openai_compat: None = provider default (Kimi accepts only 1)
     max_tokens: int = 16000
     effort: str | None = "medium"
     timeout_s: float = 120.0
@@ -251,7 +253,7 @@ class Config:
         for c in self.extra_conditions:
             _choice("extra_conditions[]", c, {"ceiling_rag"})
         _choice("local_model.backend", self.local_model.backend, {"ollama", "dry-run"})
-        _choice("ceiling_model.backend", self.ceiling_model.backend, {"anthropic", "ollama", "dry-run"})
+        _choice("ceiling_model.backend", self.ceiling_model.backend, {"anthropic", "ollama", "openai_compat", "dry-run"})
         _choice("embedder.backend", self.embedder.backend, {"bge", "hashing"})
         _choice("tokenizer.backend", self.tokenizer.backend, {"regex", "hf"})
         if m.chunk_overlap >= m.chunk_tokens:
