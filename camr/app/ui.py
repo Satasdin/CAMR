@@ -217,7 +217,7 @@ else:
     st.divider()
     st.markdown("### Share feedback with the CAMR project")
     st.caption("Optional and manual. The export contains usage metrics only (counts, timings, 👍/👎), never your "
-               "notes or messages unless you tick the box. Post it in the Discord feedback channel or attach it to "
+               "notes or messages unless you tick the box. Attach it to "
                "a GitHub issue.")
     with_text = st.checkbox("Include my questions and answers (only if you are comfortable sharing them)")
     st.download_button("Download feedback file", json.dumps(A.export_feedback(with_text), indent=2),

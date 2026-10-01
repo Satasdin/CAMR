@@ -95,6 +95,5 @@ slower than asking a cloud model. With a GPU or Apple Silicon, they are much fas
 
 ## Feedback
 
-Please tell us how it went: open a [feedback issue](https://github.com/Satasdin/CAMR/issues/new?template=feedback.yml)
-or post in the Discord feedback channel. We especially want to know:
+Please tell us how it went: open a [feedback issue](https://github.com/Satasdin/CAMR/issues/new?template=feedback.yml). We especially want to know:
 did answers get better as you taught it more, what did it get wrong, and how fast was it on your machine?
