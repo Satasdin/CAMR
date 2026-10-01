@@ -279,6 +279,18 @@ Setup: per question the engine chooses one action: **0.5B alone**, **0.5B + memo
 4. **Learning over runs.** LinUCB, which only sees the outcome of the action it chose, went from 13.9% to 54% held-out accuracy within 40 training questions and plateaued at 55–64%.
 5. **Headroom.** The oracle's 79.2% shows the features are the bottleneck, mostly on multi-hop (36.7% learned vs 63.3% oracle). Next: add the small model's own confidence (e.g. an abstention-like first answer) as a feature, i.e. answer locally first and escalate if unsure.
 
+### F11b. Answer locally first, escalate only when the answer is not grounded (cascade)
+
+Source: `results/learn/tables/rl_cascade.md`. Stage 1 is the learned router above (cloud cost 0.3: maths goes straight to Kimi). Stage 2: the small model answers with memory, and the engine escalates when a model trained on the answer's own signals predicts it is wrong. Those signals are whether the answer's words occur in the notes it was given (**grounded**), whether it is abstention-like, and its length. Escalated questions pay for both answers.
+
+| Policy (held-out, n = 72) | Accuracy | Sent to cloud | Mean s / answer | Single-hop | Multi-hop | Maths |
+|---|---|---|---|---|---|---|
+| always Kimi K3 | 63.9% | 100% | 13.2 | 63.3% | 50.0% | 100% |
+| learned router only | 61.1% | 16.7% | 2.2 | 70.0% | 36.7% | 100% |
+| **router + grounding cascade (threshold 0.2)** | **65.3%** | **29.2%** | **3.1** | **70.0%** | **46.7%** | **100%** |
+
+**The hybrid now beats always-Kimi (65.3% vs 63.9%) while 71% of questions are answered on-device, 4.2× faster on average.** The grounding check is the confidence signal the pre-answer router lacked: it lifts multi-hop from 36.7% to 46.7% at the cost of escalating 9 of the 30 multi-hop answers.
+
 ## F12. Retrieval latency is contention, not engine cost (NFR-02 diagnosis)
 
 Source: in-process timing on the pilot store (30 HotpotQA questions, BGE-small, 4 cores).

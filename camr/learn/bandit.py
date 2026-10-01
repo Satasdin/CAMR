@@ -96,15 +96,32 @@ def dataset(ws: Workspace, cfg: Config, split: str, feats: dict[str, dict[str, f
             if rid is None:
                 continue
             metric = cfg.primary_metric.get(bench, "em")
-            for qid, status, ptok, e2e, val in conn.execute(
-                "SELECT q.question_id, q.status, q.prompt_tokens, q.e2e_latency_ms, s.value FROM query_log q"
-                " LEFT JOIN score s ON s.query_id=q.query_id AND s.metric=? WHERE q.run_id=?", (metric, rid)):
+            for qid, status, ptok, e2e, val, answer, prompt in conn.execute(
+                "SELECT q.question_id, q.status, q.prompt_tokens, q.e2e_latency_ms, s.value, q.answer_text, q.prompt"
+                " FROM query_log q LEFT JOIN score s ON s.query_id=q.query_id AND s.metric=? WHERE q.run_id=?",
+                (metric, rid)):
                 key = f"{bench}/{qid}"
                 if key in rows:
                     rows[key]["arms"][arm] = {"correct": float(val or 0.0) if status == "ok" else 0.0,
                                               "prompt_tokens": ptok or 0, "latency_ms": e2e or 0.0,
-                                              "ok": status == "ok"}
+                                              "ok": status == "ok", **answer_signals(answer or "", prompt or "")}
     return [r for r in rows.values() if all(a in r["arms"] for a in ARM_NAMES)]
+
+
+def answer_signals(answer: str, prompt: str) -> dict[str, float]:
+    """Cheap confidence signals from the small model's OWN answer (no extra model call).
+
+    grounded: the short answer's content words all occur in the notes the model was given;
+    abstain: the answer is empty or abstention-like; length: words in the first line.
+    """
+    from camr.eval.escalation import abstention_like
+    from camr.eval.scoring import extract_answer, normalize_answer
+
+    short = normalize_answer(extract_answer(answer))
+    notes = normalize_answer(prompt.split("Notes:", 1)[1].split("Question:", 1)[0]) if "Notes:" in prompt else ""
+    words = [w for w in short.split() if len(w) > 2]
+    grounded = float(bool(notes) and bool(words) and all(w in notes for w in words))
+    return {"grounded": grounded, "abstain": float(abstention_like(answer)), "ans_words": float(len(short.split()))}
 
 
 # ------------------------------------------------------------------ learning
@@ -232,3 +249,56 @@ def report(train: list[dict[str, Any]], test: list[dict[str, Any]], costs: Costs
 
 def save(obj: Any, path) -> None:
     path.write_text(json.dumps(obj, indent=2, default=float))
+
+
+# ------------------------------------------------------------------ cascade
+
+
+def cascade_features(row: dict[str, Any], arm: str) -> np.ndarray:
+    a = row["arms"][arm]
+    t = [1.0 if row["task"] == k else 0.0 for k in TASKS]
+    return np.array([1.0, *t, a["grounded"], a["abstain"], min(a["ans_words"], 20) / 20, row["top_sim"],
+                     *(ti * a["grounded"] for ti in t)], dtype=float)
+
+
+def fit_cascade(train: list[dict[str, Any]], first: LinearPolicy, ridge: float = 1.0) -> np.ndarray:
+    """Learn P(local answer is correct | signals from that answer) for the arm the first stage picks."""
+    X = np.vstack([cascade_features(r, first.act(r)) for r in train])
+    y = np.array([r["arms"][first.act(r)]["correct"] for r in train])
+    return np.linalg.solve(X.T @ X + ridge * np.eye(X.shape[1]), X.T @ y)
+
+
+def evaluate_cascade(test: list[dict[str, Any]], first: LinearPolicy, w: np.ndarray, threshold: float) -> dict[str, Any]:
+    """Answer locally with the first-stage arm; escalate to the cloud when predicted correctness < threshold.
+    Latency of an escalated question = local attempt + cloud answer."""
+    corr, lat, cloud, by_task = [], [], 0, {}
+    for r in test:
+        arm = first.act(r)
+        if arm == "cloud":
+            o, t, esc = r["arms"]["cloud"], r["arms"]["cloud"]["latency_ms"], True
+        else:
+            esc = float(cascade_features(r, arm) @ w) < threshold
+            o = r["arms"]["cloud"] if esc else r["arms"][arm]
+            t = r["arms"][arm]["latency_ms"] + (r["arms"]["cloud"]["latency_ms"] if esc else 0.0)
+        cloud += esc
+        corr.append(o["correct"])
+        lat.append(t)
+        by_task.setdefault(r["task"], []).append(o["correct"])
+    return {"threshold": threshold, "n": len(test), "accuracy": statistics.mean(corr), "cloud_share": cloud / len(test),
+            "mean_latency_s": statistics.mean(lat) / 1000,
+            "accuracy_by_task": {k: statistics.mean(v) for k, v in sorted(by_task.items())}}
+
+
+def cascade_report(train: list[dict[str, Any]], test: list[dict[str, Any]],
+                   first_costs: tuple[float, ...] = (1.2, 0.3),
+                   thresholds: tuple[float, ...] = (0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 1.01)) -> list[dict[str, Any]]:
+    """Two-stage policy.  Stage 1 is the learned router at a given cloud cost (1.2: never routes to the
+    cloud up front; 0.3: routes what it has learned the small model cannot do, e.g. maths).  Stage 2
+    answers locally and escalates when the answer's own signals (grounding in the notes, abstention,
+    length) predict it is wrong."""
+    out = []
+    for fc in first_costs:
+        first = fit_offline(train, Costs(cloud=fc))
+        w = fit_cascade(train, first)
+        out += [{"stage1_cloud_cost": fc, **evaluate_cascade(test, first, w, th)} for th in thresholds]
+    return out

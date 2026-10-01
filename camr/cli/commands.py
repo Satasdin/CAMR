@@ -282,6 +282,11 @@ def cmd_learn(cfg: Config, out: str | None, phase: str, train_n: dict[str, int])
             write_table(rows, tables / "rl_policies", "Engine policies on the held-out evaluation split")
             write_table([{k: v for k, v in p.items() if k not in ("choices", "accuracy_by_task")} for p in result["pareto"]],
                         tables / "rl_pareto", "Learned policy vs cost of a cloud call")
+            casc = bandit.cascade_report(data["train"], data["eval"])
+            result["cascade"] = casc
+            bandit.save(result, tables / "rl_report.json")
+            write_table([{**{k: v for k, v in c.items() if k != "accuracy_by_task"}, **c["accuracy_by_task"]} for c in casc],
+                        tables / "rl_cascade", "Answer locally first, escalate when the answer is not grounded")
         return result
     finally:
         ws.close()
