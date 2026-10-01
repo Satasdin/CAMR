@@ -256,7 +256,7 @@ class Config:
             _choice("extra_conditions[]", c, {"ceiling_rag"})
         _choice("local_model.backend", self.local_model.backend, {"ollama", "dry-run"})
         _choice("ceiling_model.backend", self.ceiling_model.backend, {"anthropic", "ollama", "openai_compat", "dry-run"})
-        _choice("embedder.backend", self.embedder.backend, {"bge", "hashing"})
+        _choice("embedder.backend", self.embedder.backend, {"bge", "hashing", "ollama"})
         _choice("tokenizer.backend", self.tokenizer.backend, {"regex", "hf"})
         if m.chunk_overlap >= m.chunk_tokens:
             raise ConfigError("memory.chunk_overlap must be smaller than memory.chunk_tokens")

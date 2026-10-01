@@ -95,7 +95,49 @@ class HashingEmbedder(Embedder):
         return out
 
 
+class OllamaEmbedder(Embedder):
+    """Embeddings from a local Ollama embedding model (used by CAMR Personal).
+
+    It removes PyTorch from the app entirely: the user already runs Ollama, so the
+    embedder is one more small model there. Query and document prefixes follow
+    each model's card; vectors are L2-normalised here.
+    """
+
+    # model name prefix -> (query prefix, document prefix)
+    PREFIXES = {
+        "nomic-embed-text": ("search_query: ", "search_document: "),
+        "snowflake-arctic-embed": ("Represent this sentence for searching relevant passages: ", ""),
+        "mxbai-embed-large": ("Represent this sentence for searching relevant passages: ", ""),
+    }
+
+    def __init__(self, name: str = "nomic-embed-text", host: str = "http://127.0.0.1:11434", session=None,
+                 timeout_s: float = 120.0):
+        import requests
+
+        self.name = f"ollama:{name}"
+        self.model, self.host, self.timeout_s = name, host.rstrip("/"), timeout_s
+        self._http = session or requests.Session()
+        base = name.split(":")[0]
+        self.query_prefix, self.doc_prefix = self.PREFIXES.get(base, ("", ""))
+        self.dim = int(self._raw(["dimension probe"]).shape[1])
+
+    def _raw(self, texts: list[str]) -> np.ndarray:
+        resp = self._http.post(f"{self.host}/api/embed", json={"model": self.model, "input": texts},
+                               timeout=self.timeout_s)
+        resp.raise_for_status()
+        vecs = np.asarray(resp.json()["embeddings"], dtype=np.float32)
+        norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+        return vecs / np.where(norms == 0, 1.0, norms)
+
+    def encode(self, texts: list[str], *, is_query: bool = False) -> np.ndarray:
+        prefix = self.query_prefix if is_query else self.doc_prefix
+        out = [self._raw([prefix + t for t in texts[i:i + 32]]) for i in range(0, len(texts), 32)]
+        return np.vstack(out) if out else np.zeros((0, self.dim), dtype=np.float32)
+
+
 def build_embedder(cfg: EmbedderConfig) -> Embedder:
     if cfg.backend == "bge":
         return BGEEmbedder(cfg)
+    if cfg.backend == "ollama":
+        return OllamaEmbedder(cfg.name)
     return HashingEmbedder(cfg.dim)

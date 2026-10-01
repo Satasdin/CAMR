@@ -1,0 +1,67 @@
+name: CAMR Personal downloads
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["**"]
+    paths: ["camr/app/**", "camr/memory/**", "packaging/**", ".github/workflows/release-app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: windows-x64,   os: windows-2025}
+          - {target: windows-arm64, os: windows-11-arm}
+          - {target: macos-arm64,   os: macos-15}
+          - {target: macos-x64,     os: macos-15-intel}
+          - {target: linux-x64,     os: ubuntu-24.04}
+          - {target: linux-arm64,   os: ubuntu-24.04-arm}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller numpy requests pyyaml pypdf
+          python -m pip install sqlite-vec || echo "no sqlite-vec wheel here: exact NumPy search will be used"
+          python -m pip install --no-deps -e .
+      - name: Test the app core
+        shell: bash
+        run: python -m pip install pytest && python -m pytest -q tests/test_app.py tests/test_app_server.py
+      - name: Build
+        shell: bash
+        run: python packaging/build.py
+      - name: Smoke test the executable
+        shell: bash
+        run: |
+          EXE=dist/camr-personal; [ -f dist/camr-personal.exe ] && EXE=dist/camr-personal.exe
+          "$EXE" --no-browser --port 8599 --home ./smoke-home &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8599/api/state && break; sleep 2; done
+          curl -sf http://127.0.0.1:8599/ | grep -q "CAMR"
+          curl -sf http://127.0.0.1:8599/api/state | grep -q '"ollama": false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: camr-personal-${{ matrix.target }}
+          path: dist/camr-personal-${{ matrix.target }}.*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with: {path: dist, merge-multiple: true}
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
