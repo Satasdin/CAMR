@@ -259,6 +259,11 @@ def test_runtime_down_logs_failures_and_continues(cfg):
                            " WHERE q.status='failed'").fetchone()[0] == 0
     assert ws.store.count("verbatim") == n_notes
     assert ws.conn.execute("SELECT status FROM run WHERE run_id=?", (run_id,)).fetchone()[0] == "completed"
+    # D-07: a run with failed queries is not skipped on resume; the re-run becomes the run analysis uses.
+    ws._local_runner = ScriptedRunner("local")  # runtime back up
+    rerun = ExperimentRunner(ws).run("treatment", "hotpotqa")
+    assert rerun != run_id
+    assert ExperimentRunner(ws).run("treatment", "hotpotqa") == rerun
 
 
 def test_real_ollama_unreachable_raises_generation_error():

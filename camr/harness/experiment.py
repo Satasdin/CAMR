@@ -190,8 +190,11 @@ class ExperimentRunner:
     def existing_run(self, label: str, condition: str, benchmark: str, config_hash: str) -> int | None:
         self.ws.logger  # ensure the harness schema exists
         row = self.ws.conn.execute(
-            "SELECT MAX(run_id) FROM run WHERE label=? AND condition=? AND benchmark=? AND config_hash=?"
-            " AND status='completed'",
+            "SELECT MAX(run_id) FROM run r WHERE label=? AND condition=? AND benchmark=? AND config_hash=?"
+            " AND status='completed'"
+            # A run whose queries failed (e.g. the runtime went down, IR-07) is kept for the record but is
+            # not a reason to skip: resuming re-runs it, and analysis then uses the newer run.
+            " AND NOT EXISTS (SELECT 1 FROM query_log q WHERE q.run_id=r.run_id AND q.status='failed')",
             (label, condition, benchmark, config_hash),
         ).fetchone()
         return int(row[0]) if row and row[0] is not None else None
@@ -252,6 +255,11 @@ class ExperimentRunner:
         finally:
             version = ",".join(sorted(served_versions)) or None
             logger.finish_run(run_id, status, model_version=version)
+            failed = self.ws.conn.execute("SELECT COUNT(*) FROM query_log WHERE run_id=? AND status='failed'",
+                                          (run_id,)).fetchone()[0]
+            if failed:
+                log.warning("run %d: %d of %d queries failed; it will be re-run on resume", run_id, failed,
+                            len(questions))
         return run_id
 
     def _one(self, run_id, q: Question, template, bare, runner: ModelRunner, engine: MemoryEngine | None,
