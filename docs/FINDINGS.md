@@ -152,6 +152,61 @@ All 10 flips were between two *wrong* answers ("Steven Spielberg" vs "Martin Sco
 | 6 | Tiny-model answers vary across repeats | F5 | Repeat runs; report mean ± range |
 | 7 | Screener rejected real text ("I Can't Get Next to You") as a model refusal | Defect D-07 in retrieval run 1 | Fixed: refusal check applies only to model-generated notes; regression test added |
 | 8 | Changing config fields mid-study changes the config hash, so resume re-runs | Pilot re-ran floor/ceiling after Kimi fields were added | Freeze the config schema before a final run; it also yielded F5 for free |
+| 9 | Retrieval dominates latency for a 0.5B model (NFR-02 fails) | F8 profile: 56% | Cache query embeddings; smaller query encoder; overlap retrieval with model load |
+| 10 | Too much memory distracts a tiny model | F8 budget sweep: 128 tokens beats 512 on single-hop | Make the budget task- and model-adaptive; this is what the learned policy (F9) does |
+| 11 | Large local models collapse under memory pressure | F8: 6.3 → 0.4 tokens/s | Evidence for the small-model + memory design on 16 GB devices |
+
+---
+
+## F8. Full pilot: the residual gap, the ablation and the budget sweep
+
+Source: `results/pilot/tables/summary.json`, `profile.json` (`camr reproduce --config configs/pilot.yaml`; 9,178 s including the growth stages).
+
+### The residual gap: what model size still buys when both models read the same notes
+
+| Task | 0.5B alone | 0.5B + CAMR | gpt-oss-20b alone | gpt-oss-20b + same notes | **Residual gap** |
+|---|---|---|---|---|---|
+| Single-hop facts (PopQA) | 10.0% | 66.7% | 23.3% | 76.7% | **10.0 pts** |
+| Multi-hop (HotpotQA) | 6.7% | 30.0% | 30.0% | 53.3% | **23.3 pts** |
+| Maths reasoning (GSM8K) | 33.3% | 16.7% | 100% | 100% | **83.3 pts** |
+
+**Memory closes almost all of the knowledge gap but none of the reasoning gap.** The residual grows with how much reading and reasoning a task needs. With the notes, the 20B model reaches Kimi K3's closed-book multi-hop score (53.3%) and exceeds it on single-hop facts (76.7% vs 66.7%).
+
+### Ablation: the full engine vs the plain baseline (end to end, 0.5B)
+
+| Variant | Single-hop acc. | Tokens | Answer time | Multi-hop acc. | Tokens | Answer time |
+|---|---|---|---|---|---|---|
+| control (verbatim, similarity only, fixed budget) | 56.7% | 464 | 2,343 ms | 26.7% | 472 | 2,469 ms |
+| **full** (+ gating + bridging + composite) | **66.7%** | **267** | **688 ms** | **30.0%** | **380** | **1,480 ms** |
+
+The full engine is **more accurate and 1.7–3.4× faster per answer**, because gating sends fewer tokens and the model writes shorter answers.
+
+### Budget sweep (objective v)
+
+| Budget | Single-hop acc. (tokens used) | Multi-hop acc. (tokens) | Maths acc. |
+|---|---|---|---|
+| 0 | 10.0% (0) | 3.3% (0) | 16.7% |
+| **128** | **76.7% (82)** | 30.0% (86) | 16.7% |
+| 512 | 66.7% (267) | **33.3% (380)** | 20.8% |
+| 1024 | 66.7% (434) | 26.7% (557) | 16.7% |
+
+**Answer for objective v.** For a 0.5B model, about **128 tokens** of memory is optimal for single-hop facts. More notes *lower* accuracy, because the small model gets distracted. Multi-hop peaks at 512. Maths never benefits.
+
+### Device profile (`profile.json`, 3 repeats × 10 questions)
+
+| | 0.5B alone | 0.5B + CAMR |
+|---|---|---|
+| Median end-to-end | 188 ms | 375 ms |
+| Median generation | 188 ms | 180 ms |
+| Median prompt tokens | 62.5 | 599 |
+| Median retrieval | — | 210 ms |
+
+- **NFR-02 is not met.** Retrieval took 56% of answer time (target ≤ 10%). The 0.5B model is so fast that embedding the question on the CPU dominates. The added latency is still only 187 ms. Tweak: cache query embeddings or use a smaller query encoder.
+- **Footprint.** Peak memory was 712 MB for the engine process and 1,987 MB for the model runtime. The store is 47.8 MB.
+
+### Memory pressure: why on-device favours small models
+
+gpt-oss-20b's decode speed fell from 6.3 to **0.4–0.9 tokens/s** when one 0.7 GB process ran beside it under the 14.3 GB memory cap: its memory-mapped weights were evicted and re-read from disk. Speed recovered to 5.1 tokens/s once that process stopped. On a 16 GB device a 20B model leaves no headroom; the 0.5B model plus CAMR fits in under 3 GB.
 
 ---
 
@@ -166,6 +221,9 @@ All 10 flips were between two *wrong* answers ("Steven Spielberg" vs "Martin Sco
 | `figures/inspector/grow-100_3_query_trace.png` | Per-question trace (F3) |
 | `figures/inspector/grow-100_4_memory_store.png` | Store browser: notes, provenance, never-retrieved share |
 | `figures/inspector/grow-025_*.png` | The same screens at 25% memory |
+| `figures/inspector/main_*.png` | Final pilot: dashboard with `ceiling_rag` and residual gap, ablation and budget sweep, traces, store |
+| `figures/inspector/control_*.png` | The baseline engine, for comparison |
+| `figures/inspector/budget-0128_*.png` | The 128-token configuration (best on single-hop) |
 
 Regenerate: `python scripts/make_figures.py` and `python scripts/screenshot_inspector.py --run-dir results/pilot --out docs/figures/inspector --label grow-100`.
 
@@ -173,8 +231,9 @@ Regenerate: `python scripts/make_figures.py` and `python scripts/screenshot_insp
 
 ## Still running (this log is updated when they finish)
 
-- Full pilot (`camr reproduce`): `ceiling_rag` with gpt-oss-20b, ablation (`control` vs `full`), budget sweep 0/128/512/1024, device profile.
-- Kimi K3 `ceiling_rag`: the frontier model reading the same notes, to measure the residual gap.
+- Kimi K3 `ceiling_rag`: the frontier model reading the same notes.
+- Learned engine policy (`camr learn`): local / memory 128-512-1024 / escalate-to-Kimi, trained on a disjoint training split (60/60/24 questions) and scored on the evaluation split.
+- Kimi K2.6 closed-book ceiling: done (72 questions); to be added to the tables.
 - Model sweep A (this machine): qwen2.5:0.5b, llama3.2:1b, qwen2.5:1.5b, llama3.2:3b, qwen2.5:3b, gemma3:4b.
 - Model sweep B (second machine): qwen2.5:7b, llama3.1:8b, gemma2:9b, qwen2.5:14b.
 - 2WikiMultiHopQA retrieval evaluation (500 questions).
