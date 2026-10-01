@@ -14,6 +14,9 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from camr.ui_theme import STREAMLIT_FLAGS  # noqa: E402
+
 SCREENS = ["Run Dashboard", "Ablations", "Query Trace", "Memory Store"]
 
 
@@ -34,8 +37,8 @@ def main() -> None:
     port = free_port()
     app = Path(__file__).resolve().parent.parent / "camr" / "inspect" / "app.py"
     proc = subprocess.Popen(
-        [sys.executable, "-m", "streamlit", "run", str(app), "--server.headless", "true", "--server.port", str(port),
-         "--server.address", "127.0.0.1", "--browser.gatherUsageStats", "false", "--", "--run-dir", args.run_dir],
+        [sys.executable, "-m", "streamlit", "run", str(app), *STREAMLIT_FLAGS, "--server.headless", "true",
+         "--server.port", str(port), "--server.address", "127.0.0.1", "--", "--run-dir", args.run_dir],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
         with sync_playwright() as p:
@@ -48,7 +51,7 @@ def main() -> None:
                     break
                 except Exception:  # server still starting
                     time.sleep(1)
-            page.wait_for_selector("text=CAMR Inspector", timeout=60000)
+            page.wait_for_selector("text=Inspector · read-only", timeout=60000)
             page.wait_for_timeout(2000)
             for i, screen in enumerate(SCREENS, start=1):
                 page.get_by_text(screen, exact=True).first.click()

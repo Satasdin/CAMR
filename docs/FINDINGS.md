@@ -50,6 +50,27 @@ Setup: 500 HotpotQA dev questions; a store of **24,475 notes** from **14,567 rea
 4. **Recall per token peaks at a 256-token budget** (2.52 per 1k tokens). That is objective v's answer at the retrieval level; saturation is near 1,024.
 5. Retrieval latency had a median of 40–46 ms (p95 52–68 ms) on 4 shared CPU cores. Isolated p95 spikes of 440–760 ms coincided with a 20B model loading on the same CPUs.
 
+
+### F1b. 2WikiMultiHopQA: entity bridging more than doubles full-support recall
+
+Source: `results/retrieval_eval/tables/retrieval_eval.json` (re-run with both benchmarks in **one** store of **38,054 notes** from 23,524 paragraphs, 170 MB; 500 questions each).
+
+| Read path (512 tokens unless noted) | 2Wiki: both gold paragraphs | Tokens | HotpotQA: both gold | Tokens |
+|---|---|---|---|---|
+| Similarity only (baseline) | 35.8% | 471 | 70.8% | 470 |
+| + recency & importance (Eq. 4.1) | 34.6% | 470 | 65.4% | 467 |
+| + gating | 33.4% | 408 | 64.6% | 384 |
+| + entity bridging (no gating) | 75.2% | 472 | 70.0% | 470 |
+| **Similarity + gating + bridging** | **78.4%** | **439** | 70.8% | 420 |
+| Baseline @ 1,024 | 41.4% | 980 | 79.8% | 978 |
+| Similarity + gating + bridging @ 1,024 | **84.0%** | 821 | **83.0%** | 728 |
+
+**Findings**
+1. **On 2WikiMultiHopQA, bridging lifts full-support recall from 35.8% to 78.4% (+42.6 points) at the same budget, with 7% fewer tokens.** 2Wiki questions are compositional ("Who is the father of the director of film X?"): the second paragraph shares almost no words with the question, so similarity search alone cannot find it, but the first paragraph *names* it, which is exactly the hop bridging takes. This is the strongest single result for the capability-adaptive read path.
+2. **On HotpotQA the gain is budget-dependent**: equal at 512 tokens (70.8% vs 70.8%, with 11% fewer tokens) and +3.2 points at 1,024 (83.0% vs 79.8%, with 26% fewer tokens). The earlier +0.6 at 512 (F1, smaller store) was within noise.
+3. **Eq. 4.1 (recency + importance) lowers recall on both benchmarks** (−1.2 and −5.4 points), confirming F1 on a second dataset.
+4. Retrieval latency over 38k notes: median 54–64 ms (p95 mostly 70–110 ms; isolated p95 spikes up to 0.7 s when a local app session shared the CPU).
+
 ---
 
 ## F2. Memory growth: same frozen model, more knowledge over time
@@ -229,9 +250,9 @@ Source: `results/pilot/camr.sqlite` (labels `main`, `kimi`, `kimi-k2.6`) and `ta
 
 ---
 
-## F10. Which model sizes suit the engine (model sweep, machines E, C and B; D pending)
+## F10. Which model sizes suit the engine (19 models, machines E, C, B and D)
 
-Source: `sweep_results/machine-{e,c,b}.sqlite`, merged into `results/pilot/camr.sqlite`; `results/pilot/tables/model_sweep.json`. Same store, same questions and same ceilings for every model. Parameter counts and quantisation are from the Ollama registry (`docs/model_registry_metadata.json`).
+Source: `sweep_results/machine-{e,c,b,d}.sqlite`, merged into `results/pilot/camr.sqlite`; `results/pilot/tables/model_sweep.json`. Same store, same questions and same ceilings for every model. Parameter counts and quantisation are from the Ollama registry (`docs/model_registry_metadata.json`).
 
 ![Accuracy without and with CAMR by model size](figures/fig_model_sweep.png)
 
@@ -252,20 +273,24 @@ Source: `sweep_results/machine-{e,c,b}.sqlite`, merged into `results/pilot/camr.
 | llama3.1:8b (8.0B, Q4_K_M) ᵇ | 20.0 → 73.3% | 36.7 → 56.7% | 83.3 → 58.3% | 5.7 → 5.4 |
 | gemma2:9b (9.2B, Q4_0) ᵇ | 33.3 → 76.7% | 33.3 → 50.0% | 75.0 → 66.7% | 6.7 → 6.5 |
 | qwen2.5:14b (14.8B, Q4_K_M) ᵇ | 13.3 → 73.3% | 46.7 → **63.3%** | 66.7 → **91.7%** | 3.2 → 3.0 |
+| mistral:7b (7.2B, Q4_K_M) ᵈ | 30.0 → 76.7% | 13.3 → 43.3% | 33.3 → 50.0% | 5.4 → 5.1 |
+| olmo2:7b (7.3B, Q4_K_M) ᵈ | 23.3 → 76.7% | 36.7 → 58.6%* | 63.6* → **83.3%** | 5.8 → 5.3 |
+| granite3.3:8b (8.2B, Q4_K_M) ᵈ | 16.7 → **80.0%** | 33.3 → 50.0% | 58.3 → 72.7%* | 5.0 → 4.6 |
+| gemma3:12b (12.2B, Q4_K_M) ᵈ | 33.3 → **79.3%*** | 30.0 → **63.0%*** | 91.7 → 90.0%* | 3.9 → 3.7 |
 | *Kimi K3 (cloud), no memory* | *66.7%* | *53.3%* | *100%* | — |
 
-ᶜ Machine C (Intel Xeon @ 2.80 GHz; the others @ 2.10 GHz): accuracies are comparable across machines, decode speeds are not. ᵇ Machine B (4 vCPU @ 2.10 GHz, 16 GB; see `sweep_results/machine-b.txt` for two runtime incidents and the clean re-runs).
+ᶜ Machine C (Intel Xeon @ 2.80 GHz; the others @ 2.10 GHz): accuracies are comparable across machines, decode speeds are not. ᵇ Machine B (4 vCPU @ 2.10 GHz, 16 GB; see `sweep_results/machine-b.txt` for two runtime incidents and the clean re-runs). ᵈ Machine D (same class). \* One to three queries of that run failed with a runtime error (HTTP 500 after the llama-server process exited) and were not retried; accuracy is over the answered questions (e.g. 23/29). Logged in `sweep_results/machine-d.txt`; D-07 now makes resume re-run such runs.
 
 **Findings**
 1. **From about 1.5B parameters, a small model with CAMR beats Kimi K3 on long-tail facts** (73–80% vs 66.7%). Measured against Kimi, gap closed is 1.14–1.24.
 2. **On multi-hop, about 3B is the threshold.** llama3.2:3b + CAMR reached 56.7% and gemma3:4b + CAMR 53.3%, against Kimi K3's 53.3%. Below 3B the gain is real (+20 to +33 pts) but the models do not reach Kimi.
 3. **Knowledge gains are large at every size** (+50 to +73 pts on PopQA), but the 0.5B model is the weakest *reader*. It gains least on multi-hop (+20) and is most hurt by extra notes (F8 budget sweep).
-4. **Worked-example (exemplar) memory for maths depends on the model family, not its size.** Across the 11 models of machines E and C it **helps 4**: falcon3:3b +33.3, phi4-mini +8.3, smollm2 +8.3, qwen2.5:3b +8.3. It is **neutral for 2** (llama3.2:3b, granite3.3:2b) and **hurts 5** (qwen2.5 0.5B/1.5B, llama3.2:1b, gemma3 1B/4B). With exemplars, phi4-mini (3.8B) reaches 91.7% on GSM8K. Reasoning routing must therefore be learned *per model*, which is exactly what the learned policy (F11) does.
-6. **Every one of the 11 models of machines E and C gains on knowledge tasks** (+50 to +73 pts on PopQA, +20 to +40 on HotpotQA). Ten of 11 reach or beat Kimi K3 (66.7%) on long-tail facts with CAMR; only llama3.2:1b (63.3%) falls short.
+4. **Worked-example (exemplar) memory for maths depends on the model family, not its size.** Across all 19 models it **helps 8, is neutral for 4 and hurts 7** (F10b). Across the 11 models of machines E and C it **helps 4**: falcon3:3b +33.3, phi4-mini +8.3, smollm2 +8.3, qwen2.5:3b +8.3. It is **neutral for 2** (llama3.2:3b, granite3.3:2b) and **hurts 5** (qwen2.5 0.5B/1.5B, llama3.2:1b, gemma3 1B/4B). With exemplars, phi4-mini (3.8B) reaches 91.7% on GSM8K. Reasoning routing must therefore be learned *per model*, which is exactly what the learned policy (F11) does.
+6. **Every one of the 19 models gains on knowledge tasks** (+43 to +73 pts on PopQA, +10 to +40 on HotpotQA). **18 of 19 reach or beat Kimi K3 (66.7%) on long-tail facts with CAMR**; only llama3.2:1b (63.3%) falls short. On multi-hop, **7 of 19 reach Kimi K3 (53.3%)**: llama3.2:3b, gemma3:4b and five of the eight 7–14B models.
 5. **Decode speed slows 3–17% with memory** (e.g. qwen2.5:3b 13.3 → 11.0 tokens/s). The weights are untouched; the slowdown comes from attending over a longer prompt. This corrects the "decode speed unaffected" reading of F2: there is a measurable, bounded per-token cost.
 
 
-### F10b. Large small models (7–14B, machine B): more reading, less speed
+### F10b. Larger small models (7–14B, machines B and D): more reading, less speed
 
 Mean seconds per answer **with CAMR** (same 4-core CPU class; Kimi K3 is 7.7 s on PopQA and 18.8 s on HotpotQA):
 
@@ -277,13 +302,17 @@ Mean seconds per answer **with CAMR** (same 4-core CPU class; Kimi K3 is 7.7 s o
 | qwen2.5:7b | 8.3 | 11.4 | 60.0% |
 | llama3.1:8b | 9.3 | 12.4 | 56.7% |
 | gemma2:9b | 16.5 | 21.7 | 50.0% |
+| olmo2:7b | 8.9 | 12.2 | 58.6% |
+| mistral:7b | 10.8 | 14.7 | 43.3% |
+| granite3.3:8b | 13.1 | 18.2 | 50.0% |
+| gemma3:12b | 16.2 | 22.4 | 63.0% |
 | qwen2.5:14b | 17.7 | 23.9 | **63.3%** |
 
 **Findings**
-1. **Parametric knowledge barely grows with size; memory does.** Even qwen2.5:14b alone knows only 13.3% of the long-tail facts (the best floor, gemma2:9b, 33.3%), but every 7–14B model reaches 70–77% with CAMR, above Kimi K3's 66.7%. On long-tail facts a 1.5B model with CAMR (80.0%) is as good as any 7–14B model with it.
-2. **Multi-hop improves with size.** qwen2.5:14b + CAMR scored 63.3%, equal to *Kimi K3 with the same notes* and 10 points above Kimi K3 closed-book; qwen2.5:7b reached 60.0%. This is the reading gap of F4 shrinking as the reader grows.
-3. **On a 4-core CPU, 7B+ models with memory are slower than the cloud** (8–24 s vs 7.7–18.8 s), and gemma2:9b was OOM-killed three times at ~13.4 GB until the runtime's prompt cache was capped. **The engine's sweet spot on this hardware is 1.5–4B**: faster than Kimi, at or above Kimi on facts, and at Kimi on multi-hop from ~3B.
-4. **Exemplar memory for maths still depends on the family**: qwen2.5:14b +25 points (66.7 → 91.7%), qwen2.5:7b ±0, gemma2:9b −8.3, llama3.1:8b −25.
+1. **Parametric knowledge barely grows with size; memory does.** Even qwen2.5:14b alone knows only 13.3% of the long-tail facts (the best floors, gemma2:9b and gemma3:12b, 33.3%), but every 7–14B model reaches 70–80% with CAMR, above Kimi K3's 66.7%. On long-tail facts a 1.5B model with CAMR (80.0%) is as good as any 7–14B model with it.
+2. **Multi-hop improves with size, but family matters as much.** qwen2.5:14b + CAMR scored 63.3% and gemma3:12b 63.0%, equal to *Kimi K3 with the same notes* and 10 points above Kimi K3 closed-book; qwen2.5:7b reached 60.0% and olmo2:7b 58.6%, while mistral:7b reached only 43.3% (below the 3B llama). This is the reading gap of F4 shrinking as the reader grows.
+3. **On a 4-core CPU, 7B+ models with memory are slower than the cloud** (8–24 s vs 7.7–18.8 s on PopQA/HotpotQA), and gemma2:9b was OOM-killed three times at ~13.4 GB until the runtime's prompt cache was capped. **The engine's sweet spot on this hardware is 1.5–4B**: faster than Kimi, at or above Kimi on facts, and at Kimi on multi-hop from ~3B.
+4. **Exemplar memory for maths still depends on the family**: qwen2.5:14b +25 points (66.7 → 91.7%), olmo2:7b +20, mistral:7b +16.7, granite3.3:8b +14, qwen2.5:7b ±0, gemma3:12b ≈ ±0 (91.7 → 90.0%), gemma2:9b −8.3, llama3.1:8b −25. Over all 19 models: helps 8, neutral 4, hurts 7.
 
 ### Defect D-07 (found on machine B, fixed)
 When the Ollama server stopped mid-sweep, every query failed with a logged error (IR-07 behaved as designed), but the run was still marked `completed`, so `resume` skipped it. Fix: resume now re-runs any run that has failed queries; the failed run is kept for the record and analysis uses the newer run (`tests/test_harness.py::test_runtime_down_logs_failures_and_continues`).
@@ -364,5 +393,4 @@ Regenerate: `python scripts/make_figures.py` and `python scripts/screenshot_insp
 
 ## Still running (this log is updated when they finish)
 
-- Model sweep D (separate machine): mistral:7b, olmo2:7b, granite3.3:8b, gemma3:12b.
-- Not run: 2WikiMultiHopQA retrieval evaluation (data and config are in place: `configs/retrieval_eval.yaml`).
+- HotpotQA at n = 200 (qwen2.5:0.5b, qwen2.5:1.5b, llama3.2:3b, Kimi K3 with and without memory): `configs/hotpot200.yaml`.
