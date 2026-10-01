@@ -66,6 +66,14 @@ MATH_MEMORY = PromptTemplate(
     "Problem: {question}\n",
 )
 
+MATH_EXEMPLAR = PromptTemplate(
+    "math_exemplar",
+    "Here are solved examples of similar problems:\n\n{context}\n"
+    "Now solve the new problem. Show brief working, then give the final numeric answer "
+    "on the last line in the form '#### <number>'.\n\n"
+    "Problem: {question}\n",
+)
+
 # Write-path templates (structured write policy and model-rated importance).
 DISTIL = PromptTemplate(
     "distil",
@@ -85,10 +93,12 @@ RATE_IMPORTANCE = PromptTemplate(
     "Rating:",
 )
 
-ALL_TEMPLATES = [QA_BARE, QA_MEMORY, MATH_BARE, MATH_MEMORY, DISTIL, RATE_IMPORTANCE]
+ALL_TEMPLATES = [QA_BARE, QA_MEMORY, MATH_BARE, MATH_MEMORY, MATH_EXEMPLAR, DISTIL, RATE_IMPORTANCE]
 
 
-def answer_template(task_type: str, with_memory: bool) -> PromptTemplate:
+def answer_template(task_type: str, with_memory: bool, exemplars: bool = False) -> PromptTemplate:
     if task_type == "reasoning":
+        if with_memory and exemplars:
+            return MATH_EXEMPLAR
         return MATH_MEMORY if with_memory else MATH_BARE
     return QA_MEMORY if with_memory else QA_BARE

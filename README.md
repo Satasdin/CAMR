@@ -26,8 +26,20 @@ per task type, with token and latency accounting.
 - **Inspector** (`camr.inspect`): a read-only Streamlit UI with Run Dashboard,
   Ablations, Query Trace and Memory Store screens.
 
-See [`docs/DESIGN_NOTES.md`](docs/DESIGN_NOTES.md) for a critique of the
-proposal and every place the implementation deliberately departs from it.
+See [`docs/BRIDGING_THE_GAP.md`](docs/BRIDGING_THE_GAP.md) for what "bridging
+the gap" can and cannot mean, the four capability-adaptive mechanisms, and six
+falsifiable predictions. See [`docs/DESIGN_NOTES.md`](docs/DESIGN_NOTES.md) for a
+critique of the proposal and every place the implementation departs from it.
+
+## What makes it capability-adaptive
+
+| Mechanism | Gap it targets | Config |
+|---|---|---|
+| **Gating**: abstain when the best note is weak; admit only notes near the best one | Reading (distraction) and cost | `min_similarity`, `similarity_margin` |
+| **Entity-bridge expansion**: a note's mention of another entity pulls in that entity's notes, with no model call | Multi-hop knowledge | `expansion: entity` |
+| **Procedural memory**: worked solutions from the train split for reasoning tasks | Reasoning | `reasoning_memory: exemplars` |
+| **Escalation curve**: gap closed vs share of queries sent to the cloud | The residual | `tables/escalation.md` |
+| **`ceiling_rag` condition**: the cloud model with the same notes | Measures the *residual* gap | `extra_conditions: [ceiling_rag]` |
 
 ## Install
 
@@ -52,7 +64,7 @@ Download the official distributions into `data/`. Paths are set in
 | PopQA | `data/popqa/test.tsv` **plus** `data/popqa/corpus.jsonl` (`{doc_id,title,text}`, e.g. Wikipedia pages of `s_wiki_title`) | single-hop |
 | HotpotQA | `data/hotpotqa/hotpot_dev_distractor_v1.json` | multi-hop |
 | 2WikiMultiHopQA | `data/2wikimultihopqa/dev.json` | multi-hop |
-| GSM8K | `data/gsm8k/test.jsonl` | reasoning (control) |
+| GSM8K | `data/gsm8k/test.jsonl` **plus** `data/gsm8k/train.jsonl` (exemplars) | reasoning |
 
 PopQA ships no documents, so you have to supply its corpus (see design note
 A4). Memory is built only from supporting and distractor paragraphs. The
@@ -69,6 +81,7 @@ camr ingest    --config configs/default.yaml
 camr run       --config configs/default.yaml --condition floor     --benchmark popqa
 camr run       --config configs/default.yaml --condition ceiling   --benchmark popqa
 camr run       --config configs/default.yaml --condition treatment --benchmark popqa --budget 512
+camr run       --config configs/default.yaml --condition ceiling_rag --benchmark popqa
 camr ablate    --config configs/default.yaml
 camr analyse   --run-dir results/2026-09-29
 camr profile   --config configs/default.yaml --repeats 5
@@ -96,10 +109,11 @@ results/YYYY-MM-DD/
   camr.sqlite          notes, embeddings, provenance, rejections, runs, query logs, scores, retrieval traces
   records/*.jsonl      one structured record per query
   samples/*.json       the fixed paired sample per benchmark (seed + source hash)
-  tables/gap_main.md   floor / ceiling / treatment, gap closed + 95% CI, per task type
+  tables/gap_main.md   floor / ceiling / treatment / ceiling_rag, gap closed + 95% CI, residual gap, abstain rate
   tables/ablation.md   Δ gap closed, Δ tokens/query, Δ latency vs control (Table 4.7)
   tables/budget_sweep.md, budget_optimum.json   objective v: best budget per token, saturation point
   tables/coverage.md   where answers are lost: store → candidates → context → correct
+  tables/escalation.md gap closed vs escalation rate, with random and oracle routers
   tables/profile.json  hardware spec, median latencies, retrieval share (NFR-02), peak RSS (engine + model runtime)
   tables/templates.md  every prompt template, verbatim (DR-09)
   figures/*.png        (when matplotlib is installed)
@@ -120,11 +134,14 @@ results/YYYY-MM-DD/
 | `memory.normalise_similarity` | `true` | `false` |
 | `memory.packing` | `greedy_stop` | `greedy_skip` |
 | `memory.importance` | `heuristic` | `model` |
+| `memory.min_similarity` / `similarity_margin` | 0.50 / 0.15 | 0 / off in `control` … `composite` |
+| `memory.expansion` | `entity` | `none` |
+| `memory.reasoning_memory` | `exemplars` | `facts`, `none` |
 
 ## Tests and traceability
 
 ```bash
-pytest            # 67 tests, fully offline
+pytest            # 81 tests, fully offline
 ```
 
 | Test case | Requirement | Test |
@@ -148,6 +165,7 @@ pytest            # 67 tests, fully offline
 | TC-20 | NFR-06 | `test_only_ceiling_touches_the_cloud_runner` |
 | TC-21 | DR-03/04 | `test_holdout_guard`, `test_popqa_requires_a_corpus` |
 | TC-22 | IR-07 | `test_runtime_down_logs_failures_and_continues` |
+| P2–P6 | Bridging mechanisms | `tests/test_bridging.py` |
 
 TC-14 and TC-17 (device memory, NFR-02 retrieval share) are measurements.
 `camr profile` produces them on the target laptop.

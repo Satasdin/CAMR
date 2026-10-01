@@ -266,7 +266,7 @@ def test_recall_respects_budget_and_times_itself(engine):
     engine.budgeter.budget = 20
     r = engine.recall("capital of Germany")
     assert r.context_tokens <= 20 and r.retrieval_ms > 0
-    assert set(r.timings) == {"embed_ms", "search_ms", "rank_ms", "pack_ms", "touch_ms"}
+    assert set(r.timings) == {"embed_ms", "search_ms", "rank_ms", "expand_ms", "pack_ms", "touch_ms"}
     assert "Berlin" in r.context
 
 

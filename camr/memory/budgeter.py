@@ -37,7 +37,7 @@ class TokenBudgeter:
             line = render_note(cand.note.text)
             cand.tokens = self.tokenizer.count(line)
             cand.admitted = False
-            if stopped:
+            if stopped or not cand.eligible:
                 continue
             if used + cand.tokens > self.budget:
                 if self.mode == "greedy_stop":

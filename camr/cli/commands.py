@@ -10,11 +10,12 @@ from pathlib import Path
 
 from camr.config import Config
 from camr.eval.analysis import GapAnalyzer
+from camr.eval.escalation import escalation_curve
 from camr.eval.report import budget_figure, gap_figure, write_json, write_table
 from camr.harness.ablation import AblationRunner, load_sweep
 from camr.harness.benchmarks import _read_records, load_sample
 from camr.harness.diagnostics import coverage
-from camr.harness.experiment import CONDITIONS, ExperimentRunner, Workspace, ingest
+from camr.harness.experiment import ExperimentRunner, Workspace, ingest
 from camr.harness.profile import DeviceProfiler
 from camr.memory.note import Document
 from camr.models.prompt import ALL_TEMPLATES, answer_template
@@ -111,6 +112,11 @@ def cmd_analyse(run_dir: str | Path, by: str = "task_type", bootstrap: int | Non
             summary["budget_sweep"] = rows
             summary["budget_optimum"] = optimum
 
+        # The practical bridge: local + memory, escalating only the least-confident queries.
+        esc = escalation_curve(conn, cfg.primary_metric, by=by)
+        write_table(esc, tables / "escalation", "Gap closed vs share of queries escalated to the cloud")
+        summary["escalation"] = esc
+
         # Where knowledge-bound answers are lost: write path, retrieval, budget, or reading.
         samples = {}
         for name, bcfg in cfg.benchmarks.items():
@@ -140,7 +146,7 @@ def cmd_reproduce(cfg: Config, out: str | None, skip_profile: bool = False) -> P
             log.info("ingest: %s", json.dumps(s.as_dict()))
         runner = ExperimentRunner(ws)
         for name in cfg.benchmarks:
-            for cond in CONDITIONS:
+            for cond in ("floor", "ceiling", "treatment", *cfg.extra_conditions):
                 runner.run(cond, name, label="main")
         if cfg.ablation.variants or cfg.ablation.budget_sweep:
             AblationRunner(ws).run(cfg.ablation)

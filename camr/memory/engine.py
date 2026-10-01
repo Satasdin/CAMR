@@ -7,6 +7,7 @@ path serves both control and treatment (Figure 4.3).
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import Counter
 from dataclasses import dataclass, field
@@ -72,6 +73,11 @@ class MemoryEngine:
         clock: Clock | None = None,
         k: int = 20,
         batch_size: int = 32,
+        min_similarity: float = 0.0,
+        similarity_margin: float | None = None,
+        expansion: str = "none",
+        expansion_seeds: int = 3,
+        expansion_per_seed: int = 2,
     ):
         self.store = store
         self.embedder = embedder
@@ -83,6 +89,11 @@ class MemoryEngine:
         self.clock = clock or WallClock()
         self.k = k
         self.batch_size = batch_size
+        self.min_similarity = min_similarity
+        self.similarity_margin = similarity_margin
+        self.expansion = expansion
+        self.expansion_seeds = expansion_seeds
+        self.expansion_per_seed = expansion_per_seed
 
     @property
     def note_type(self) -> str:
@@ -125,6 +136,11 @@ class MemoryEngine:
             budgeter=TokenBudgeter(tokenizer, m.token_budget, m.packing),
             clock=clock,
             k=m.k,
+            min_similarity=m.min_similarity,
+            similarity_margin=m.similarity_margin,
+            expansion=m.expansion,
+            expansion_seeds=m.expansion_seeds,
+            expansion_per_seed=m.expansion_per_seed,
         )
 
     # --------------------------------------------------------- write path
@@ -181,7 +197,8 @@ class MemoryEngine:
         for doc, accepted, rejected in plans:
             at = to_iso(self.clock.now())
             with self.store.transaction():
-                source_id, _ = self.store.get_or_create_source(doc.dataset, doc.doc_id, self.note_type, at)
+                source_id, _ = self.store.get_or_create_source(
+                    doc.dataset, doc.doc_id, self.note_type, at, title=doc.title)
                 for cand, verdict, importance, created, idx in accepted:
                     self.store.insert_note(
                         source_id=source_id,
@@ -209,33 +226,132 @@ class MemoryEngine:
         return self.ingest([Document(dataset=dataset, doc_id=doc_id, text=f"{question.strip()} {answer.strip()}")])
 
     # ---------------------------------------------------------- read path
-    def recall(self, question: str, *, touch: bool = True) -> RecallResult:
-        """Embed -> kNN -> rank -> pack (Figure 4.5).  ``retrieval_ms`` spans all four."""
+    def recall(self, question: str, *, touch: bool = True, note_type: str | None = None) -> RecallResult:
+        """Embed -> kNN -> rank -> gate -> expand -> pack.  ``retrieval_ms`` spans all of it.
+
+        ``note_type`` selects another population (e.g. ``exemplar`` for reasoning).
+        """
+        nt = note_type or self.note_type
         t0 = time.perf_counter()
         qvec = self.embedder.encode_one(question, is_query=True)
         t1 = time.perf_counter()
-        hits = self.store.knn(qvec, self.k, self.note_type)
+        hits = self.store.knn(qvec, self.k, nt)
         notes = self.store.get_notes(i for i, _ in hits)
         t2 = time.perf_counter()
         candidates = [ScoredNote(note=notes[i], similarity=s) for i, s in hits if i in notes]
         ranked = self.retrieval_policy.rank(candidates, self.clock.now())
+        top_sim = max((c.similarity for c in ranked), default=None)
+        abstained = self._gate(ranked, top_sim)
         t3 = time.perf_counter()
-        context, used = self.budgeter.pack(ranked)
+        if self.expansion == "entity" and not abstained:
+            ranked = self._expand(ranked, qvec, nt)
         t4 = time.perf_counter()
+        context, used = self.budgeter.pack(ranked)
+        t5 = time.perf_counter()
         if touch:
             self.store.touch((c.note.note_id for c in ranked if c.admitted), self.clock.now())
-        t5 = time.perf_counter()
+        t6 = time.perf_counter()
         return RecallResult(
             context=context,
             candidates=ranked,
             context_tokens=used,
             budget=self.budgeter.budget,
-            retrieval_ms=(t4 - t0) * 1000,
+            retrieval_ms=(t5 - t0) * 1000,
             timings={
                 "embed_ms": (t1 - t0) * 1000,
                 "search_ms": (t2 - t1) * 1000,
                 "rank_ms": (t3 - t2) * 1000,
-                "pack_ms": (t4 - t3) * 1000,
-                "touch_ms": (t5 - t4) * 1000,
+                "expand_ms": (t4 - t3) * 1000,
+                "pack_ms": (t5 - t4) * 1000,
+                "touch_ms": (t6 - t5) * 1000,
             },
+            abstained=abstained,
+            top_similarity=top_sim,
         )
+
+    def _gate(self, ranked: list[ScoredNote], top_sim: float | None) -> bool:
+        """Capability-adaptive gating.  Returns True when memory is withheld entirely.
+
+        * abstain: the best note is too weak to be worth the prefill cost and the
+          distraction risk, so the model answers exactly as it would without memory;
+        * margin: only notes close to the best one are eligible, so the budget is
+          a ceiling rather than a target.
+        """
+        if top_sim is None or top_sim < self.min_similarity:
+            for c in ranked:
+                c.eligible = False
+            return True
+        if self.similarity_margin is not None:
+            floor = top_sim - self.similarity_margin
+            for c in ranked:
+                c.eligible = c.similarity >= floor
+        return False
+
+    def _expand(self, ranked: list[ScoredNote], qvec, note_type: str) -> list[ScoredNote]:
+        """Entity-bridge expansion: one step of spreading activation over titles.
+
+        For the top eligible seed notes, every mention of another entity's title
+        pulls in the notes about that entity, inserted directly after the seed so
+        the budgeter admits them next.  No model call; a dictionary lookup over
+        the seed's word n-grams.
+        """
+        index, longest = self.store.title_index(note_type)
+        if not index:
+            return ranked
+        seeds = [c for c in ranked if c.eligible][: self.expansion_seeds]
+        own = self.store.note_titles(c.note.note_id for c in seeds)
+        present = {c.note.note_id for c in ranked}
+        bridged: dict[int, list[int]] = {}
+        for seed in seeds:
+            own_title = " ".join((own.get(seed.note.note_id) or "").split())
+            found: list[int] = []
+            for title in _mentions(seed.note.text, index, longest):
+                if title == own_title or own_title.startswith(title + " ("):
+                    continue
+                for nid in index[title]:
+                    if nid not in present:
+                        found.append(nid)
+                        present.add(nid)
+                if len(found) >= self.expansion_per_seed:
+                    break
+            bridged[seed.note.note_id] = found[: self.expansion_per_seed]
+        new_ids = [i for ids in bridged.values() for i in ids]
+        if not new_ids:
+            return ranked
+        notes = self.store.get_notes(new_ids)
+        sims = self.store.similarities(qvec, new_ids)
+        out: list[ScoredNote] = []
+        for c in ranked:
+            out.append(c)
+            for nid in bridged.get(c.note.note_id, []):
+                if nid in notes:
+                    out.append(ScoredNote(note=notes[nid], similarity=sims.get(nid, 0.0), composite=c.composite,
+                                          via=c.note.note_id))
+        for i, c in enumerate(out, start=1):
+            c.rank = i
+        return out
+
+
+_WORD_SPAN = re.compile(r"[\w'’.&-]+", re.UNICODE)
+
+
+def _mentions(text: str, index: dict[str, list[int]], longest: int) -> list[str]:
+    """Titles from ``index`` that occur in ``text`` on word boundaries, in text order,
+    preferring the longest match at each position."""
+    spans = [m.span() for m in _WORD_SPAN.finditer(text)]
+    found: list[str] = []
+    i = 0
+    while i < len(spans):
+        hit = None
+        for n in range(min(longest, len(spans) - i), 0, -1):
+            cand = " ".join(text[spans[i][0]: spans[i + n - 1][1]].split()).rstrip(".")
+            if cand in index:
+                hit = (cand, n)
+                break
+        if hit:
+            if hit[0] not in found:
+                found.append(hit[0])
+            i += hit[1]
+        else:
+            i += 1
+    return found

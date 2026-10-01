@@ -22,10 +22,12 @@ from camr.config import Config
 from camr.eval.analysis import TASK_TYPES
 from camr.eval.logger import RunLogger
 from camr.eval.scoring import score
-from camr.harness.benchmarks import Question, build_corpus, check_holdout, load_sample
+from camr.harness.benchmarks import Question, build_corpus, build_exemplars, check_holdout, load_sample
 from camr.memory.clock import LogicalClock
 from camr.memory.embedder import Embedder, build_embedder
 from camr.memory.engine import IngestSummary, MemoryEngine
+from camr.memory.screener import NoteScreener
+from camr.memory.write_policy import VerbatimWritePolicy
 from camr.memory.store import SQLiteVectorStore
 from camr.models.prompt import answer_template
 from camr.models.runner import GenerationError, ModelRunner, build_ceiling_runner, build_local_runner
@@ -33,7 +35,8 @@ from camr.models.tokenizer import Tokenizer, build_tokenizer
 
 log = logging.getLogger(__name__)
 
-CONDITIONS = ("floor", "ceiling", "treatment")
+CONDITIONS = ("floor", "ceiling", "treatment", "ceiling_rag")
+EXEMPLAR = "exemplar"
 
 
 class Workspace:
@@ -124,6 +127,14 @@ class Workspace:
             clock=clock,
         )
 
+    def exemplar_engine(self, cfg: Config) -> MemoryEngine:
+        """Writes whole solved problems, unchunked, into the ``exemplar`` population."""
+        engine = self.engine(cfg.with_overrides({"memory": {"write_policy": "verbatim"}}))
+        engine.write_policy = VerbatimWritePolicy(self.tokenizer, note_type=EXEMPLAR, chunk_tokens=100_000, overlap=0)
+        engine.screener = NoteScreener(self.tokenizer, min_tokens=cfg.memory.min_note_tokens,
+                                       max_tokens=cfg.memory.exemplar_max_tokens, enabled=cfg.memory.screening)
+        return engine
+
     def close(self) -> None:
         if "store" in self.__dict__:
             self.store.close()
@@ -155,6 +166,13 @@ def ingest(ws: Workspace, cfg: Config | None = None, benchmarks: list[str] | Non
             continue
         log.info("ingesting %d %s documents as %s notes", len(docs), name, engine.note_type)
         summaries.append(engine.ingest(docs, progress=True))
+    # Procedural memory for reasoning tasks (train split only).
+    for name in names:
+        exemplars = build_exemplars(cfg.benchmarks[name])
+        if exemplars:
+            check_holdout(exemplars, all_questions)
+            log.info("ingesting %d %s exemplars", len(exemplars), name)
+            summaries.append(ws.exemplar_engine(cfg).ingest(exemplars, progress=True))
     return summaries
 
 
@@ -187,13 +205,21 @@ class ExperimentRunner:
                 return prior
         questions = self.ws.sample(benchmark, n)
         task_type = TASK_TYPES[benchmark]
-        with_memory = condition == "treatment"
-        template = answer_template(task_type, with_memory)
-        runner = self.ws.ceiling_runner if condition == "ceiling" else self.ws.local_runner
+        with_memory = condition in ("treatment", "ceiling_rag")
+        note_type = cfg.memory.note_type
+        exemplars = False
+        if with_memory and task_type == "reasoning":
+            mode = cfg.memory.reasoning_memory
+            if mode == "none":
+                with_memory = False  # memory is routed away from reasoning: identical to the floor
+            elif mode == "exemplars":
+                note_type, exemplars = EXEMPLAR, True
+        template = answer_template(task_type, with_memory, exemplars)
+        bare = answer_template(task_type, False)
+        runner = self.ws.ceiling_runner if condition in ("ceiling", "ceiling_rag") else self.ws.local_runner
 
         engine = clock = None
         if with_memory:
-            note_type = cfg.memory.note_type
             if self.ws.store.count(note_type) == 0:
                 raise RuntimeError(f"memory population {note_type!r} is empty; run `camr ingest` first")
             self.ws.store.reset_access_state(note_type)
@@ -213,7 +239,7 @@ class ExperimentRunner:
         status = "completed"
         try:
             for q in questions:
-                self._one(run_id, q, template, runner, engine, cfg, served_versions)
+                self._one(run_id, q, template, bare, runner, engine, cfg, served_versions, note_type)
                 if clock:
                     clock.tick()
         except KeyboardInterrupt:
@@ -224,13 +250,14 @@ class ExperimentRunner:
             logger.finish_run(run_id, status, model_version=version)
         return run_id
 
-    def _one(self, run_id, q: Question, template, runner: ModelRunner, engine: MemoryEngine | None,
-             cfg: Config, served: set[str]) -> None:
+    def _one(self, run_id, q: Question, template, bare, runner: ModelRunner, engine: MemoryEngine | None,
+             cfg: Config, served: set[str], note_type: str) -> None:
         t0 = time.perf_counter()
         recall = None
         if engine is not None:
-            recall = engine.recall(q.question)
-            prompt = template.render(q.question, recall.context)
+            recall = engine.recall(q.question, note_type=note_type)
+            # Abstention means the model answers exactly as it would without memory.
+            prompt = bare.render(q.question) if recall.abstained else template.render(q.question, recall.context)
         else:
             prompt = template.render(q.question)
         common = dict(
@@ -238,9 +265,12 @@ class ExperimentRunner:
             context_tokens=recall.context_tokens if recall else 0,
             retrieval_ms=recall.retrieval_ms if recall else None,
             budget=cfg.memory.token_budget if recall else None,
+            abstained=recall.abstained if recall else None,
+            top_similarity=recall.top_similarity if recall else None,
             retrieved=[{
                 "note_id": c.note.note_id, "rank": c.rank, "similarity": c.similarity, "recency": c.recency,
                 "importance": c.importance, "composite": c.composite, "tokens": c.tokens, "admitted": c.admitted,
+                "via": c.via,
             } for c in recall.candidates] if recall else None,
         )
         try:

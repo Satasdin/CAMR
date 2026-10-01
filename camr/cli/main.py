@@ -38,7 +38,7 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--write-policy", choices=["verbatim", "structured"])
 
     s = with_config(sub.add_parser("run", help="run one condition over one benchmark"))
-    s.add_argument("--condition", required=True, choices=["floor", "ceiling", "treatment"])
+    s.add_argument("--condition", required=True, choices=["floor", "ceiling", "treatment", "ceiling_rag"])
     s.add_argument("--benchmark", required=True)
     s.add_argument("--n", type=int)
     s.add_argument("--budget", type=int)

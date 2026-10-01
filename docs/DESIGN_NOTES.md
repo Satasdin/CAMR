@@ -209,9 +209,11 @@ drops it.
 
 ## G. Scope kept deliberately out
 
-- **Graph associative layer (FR-18, "Could").** The retrieval policy registry
-  (`register_policy`) is the extension point. Setting `graph_layer: true` fails
-  loudly rather than silently running without it.
+- **Graph associative layer (FR-18, "Could").** Superseded by entity-bridge
+  expansion (`memory.expansion: entity`; see `BRIDGING_THE_GAP.md` §3.2), a
+  one-step spreading activation over entity titles that needs no graph
+  construction and no model call. A full PPR graph can still be added through
+  the retrieval-policy registry. `graph_layer: true` fails loudly.
 - **Write-back during evaluation** is off. It would change the store between
   paired questions. `MemoryEngine.write_back` exists for the deployment scenario
   (`camr ask`).

@@ -205,6 +205,22 @@ def build_corpus(name: str, bcfg: BenchmarkConfig, sample: list[Question], seed:
     return sorted(docs.values(), key=lambda d: d.doc_id)
 
 
+def build_exemplars(bcfg: BenchmarkConfig) -> list[Document]:
+    """Procedural memory for reasoning: worked solutions from the GSM8K *train* split.
+
+    Each document is one solved problem.  The holdout guard is run against the
+    evaluation sample before these are ingested, so a test problem can never be
+    its own exemplar.
+    """
+    if not bcfg.exemplars:
+        return []
+    docs = []
+    for i, rec in enumerate(_read_records(bcfg.exemplars)):
+        text = f"Problem: {rec['question'].strip()}\nSolution: {rec['answer'].strip()}"
+        docs.append(Document(dataset="gsm8k-train", doc_id=str(rec.get("id", f"train-{i:05d}")), text=text))
+    return docs
+
+
 def check_holdout(docs: Iterable[Document], questions: Iterable[Question], min_words: int = 5) -> None:
     """Refuse to build memory that contains an evaluation question verbatim (DR-04, TC-21).
 

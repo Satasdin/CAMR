@@ -54,6 +54,13 @@ class GapResult:
     gain_per_1k_tokens: float | None
     accuracy_per_s: float | None
     budget: int | None
+    # Residual gap: large model and small model given the *same* notes (ceiling_rag).
+    n_ceiling_rag: int = 0
+    ceiling_rag: float | None = None
+    residual_gap: float | None = None
+    residual_ci_low: float | None = None
+    residual_ci_high: float | None = None
+    abstain_rate: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -71,8 +78,8 @@ def _latest_runs(conn: sqlite3.Connection) -> dict[tuple[str, str, str], int]:
 def _queries(conn: sqlite3.Connection, run_id: int, metric_by_dataset: dict[str, str]) -> dict[str, dict]:
     rows = conn.execute(
         "SELECT q.query_id, q.question_id, q.dataset, q.task_type, q.status, q.context_tokens, q.prompt_tokens,"
-        " q.retrieval_latency_ms, q.generation_latency_ms, q.e2e_latency_ms, q.budget"
-        " FROM query_log q WHERE q.run_id=?",
+        " q.retrieval_latency_ms, q.generation_latency_ms, q.e2e_latency_ms, q.budget, q.abstained,"
+        " q.top_similarity, q.answer_text FROM query_log q WHERE q.run_id=?",
         (run_id,),
     ).fetchall()
     scores: dict[int, dict[str, float]] = defaultdict(dict)
@@ -83,7 +90,8 @@ def _queries(conn: sqlite3.Connection, run_id: int, metric_by_dataset: dict[str,
         scores[qid][metric] = value
     out = {}
     for r in rows:
-        (qid, question_id, dataset, task_type, status, ctx, ptok, ret_ms, gen_ms, e2e_ms, budget) = r
+        (qid, question_id, dataset, task_type, status, ctx, ptok, ret_ms, gen_ms, e2e_ms, budget,
+         abstained, top_sim, answer) = r
         metric = metric_by_dataset.get(dataset, "em")
         out[f"{dataset}/{question_id}"] = {
             "task_type": task_type,
@@ -95,6 +103,9 @@ def _queries(conn: sqlite3.Connection, run_id: int, metric_by_dataset: dict[str,
             "generation_ms": gen_ms,
             "e2e_ms": e2e_ms,
             "budget": budget,
+            "abstained": abstained,
+            "top_similarity": top_sim,
+            "answer": answer,
         }
     return out
 
@@ -148,17 +159,22 @@ class GapAnalyzer:
             F = _queries(self.conn, f_id, self.primary_metric)
             C = _queries(self.conn, c_id, self.primary_metric)
             T = _queries(self.conn, t_id, self.primary_metric)
+            cr_id = self.runs.get((label, "ceiling_rag", bench)) or self.runs.get((self.baseline_label, "ceiling_rag", bench))
+            CR = _queries(self.conn, cr_id, self.primary_metric) if cr_id else {}
             for key in sorted(set(F) & set(C) & set(T)):
                 f, c, t = F[key], C[key], T[key]
                 group = t["task_type"] if by == "task_type" else key.split("/", 1)[0]
                 if "failed" in (f["status"], c["status"], t["status"]) or None in (f["score"], c["score"], t["score"]):
                     failed[group] += 1
                     continue
-                grouped[group].append((f["score"], c["score"], t["score"], f, t))
+                cr = CR.get(key)
+                cr_score = cr["score"] if cr and cr["status"] == "ok" else None
+                grouped[group].append((f["score"], c["score"], t["score"], f, t, cr_score))
         return [self._result(label, g, rows, failed[g]) for g, rows in sorted(grouped.items())]
 
     def _result(self, label: str, group: str, rows: list, n_failed: int) -> GapResult:
-        arr = np.array([(f, c, t) for f, c, t, _, _ in rows], dtype=float)
+        arr = np.array([(f, c, t) for f, c, t, *_ in rows], dtype=float)
+        cr_pairs = np.array([(t, cr) for _, _, t, _, _, cr in rows if cr is not None], dtype=float).reshape(-1, 2)
         n = len(arr)
         mf, mc, mt = arr.mean(axis=0)
         denom = mc - mf
@@ -174,8 +190,18 @@ class GapAnalyzer:
         alpha = (1 - self.ci) / 2
         lo, hi = (float(np.quantile(gaps, alpha)), float(np.quantile(gaps, 1 - alpha))) if gaps else (None, None)
 
-        tq = [t for *_, t in rows]
-        fq = [f for *_, f, _ in rows]
+        tq = [r[4] for r in rows]
+        fq = [r[3] for r in rows]
+        residual = res_lo = res_hi = cr_mean = None
+        if len(cr_pairs):
+            cr_mean = float(cr_pairs[:, 1].mean())
+            residual = float(cr_pairs[:, 1].mean() - cr_pairs[:, 0].mean())
+            rng2 = np.random.default_rng(self.seed + 1)
+            m = len(cr_pairs)
+            boots = [float(np.diff(cr_pairs[rng2.integers(0, m, m)].mean(axis=0))[0]) for _ in range(self.bootstrap)]
+            if boots:
+                res_lo, res_hi = float(np.quantile(boots, alpha)), float(np.quantile(boots, 1 - alpha))
+        abst = [t["abstained"] for t in tq if t["abstained"] is not None]
         ctx = _mean([t["context_tokens"] for t in tq]) or 0.0
         ret = _median([t["retrieval_ms"] for t in tq])
         e2e = _median([t["e2e_ms"] for t in tq])
@@ -206,6 +232,12 @@ class GapAnalyzer:
             gain_per_1k_tokens=((mt - mf) / ctx * 1000) if ctx > 0 else None,
             accuracy_per_s=(mt / (e2e / 1000)) if e2e else None,
             budget=budgets.pop() if len(budgets) == 1 else None,
+            n_ceiling_rag=len(cr_pairs),
+            ceiling_rag=cr_mean,
+            residual_gap=residual,
+            residual_ci_low=res_lo,
+            residual_ci_high=res_hi,
+            abstain_rate=(sum(abst) / len(abst)) if abst else None,
         )
 
     # ---------------------------------------------------------- tables

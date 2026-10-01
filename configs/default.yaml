@@ -2,6 +2,11 @@
 seed: 13
 run_dir: null            # null -> results/YYYY-MM-DD
 
+# ceiling_rag gives the cloud model the same notes as the treatment, so the residual
+# gap (what scale buys when knowledge is equal) can be measured.  It sends public
+# benchmark text, not just questions, to the cloud: remove it to keep NFR-06 strict.
+extra_conditions: [ceiling_rag]
+
 local_model:
   backend: ollama
   name: qwen2.5:3b       # also: llama3.2:3b, phi3:mini, qwen2.5:1.5b
@@ -37,6 +42,16 @@ memory:
   token_budget: 512
   packing: greedy_stop
   clock_step_hours: 1.0
+  # Capability-adaptive gating (docs/BRIDGING_THE_GAP.md 3.1).  Calibrate
+  # min_similarity for the embedder on a held-out slice, never the eval sample.
+  min_similarity: 0.50
+  similarity_margin: 0.15
+  # Entity-bridge expansion for multi-hop (3.2).
+  expansion: entity
+  expansion_seeds: 3
+  expansion_per_seed: 2
+  # Procedural memory for reasoning (3.3).
+  reasoning_memory: exemplars
 
 benchmarks:
   popqa:
@@ -51,6 +66,7 @@ benchmarks:
     n: 400
   gsm8k:
     path: ../data/gsm8k/test.jsonl
+    exemplars: ../data/gsm8k/train.jsonl   # procedural memory; train split only
     n: 400
 
 primary_metric: {popqa: contains, hotpotqa: em, 2wikimultihopqa: em, gsm8k: accuracy}
@@ -59,24 +75,35 @@ analysis: {bootstrap: 2000, ci: 0.95, min_denominator: 0.05}
 
 profile: {repeats: 5, n: 20, benchmark: hotpotqa, warmup: 2}
 
-# Table 4.7: each variant changes one thing relative to the one before it.
+# Table 4.7, extended: each variant adds one mechanism to the one before it.
 ablation:
   variants:
-    - label: control            # verbatim chunks, similarity only
+    - label: control            # verbatim, similarity only, fixed budget, no bridging, facts for reasoning
       overrides: {memory: {write_policy: verbatim, retrieval_policy: similarity_only,
-                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0}}}
+                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0},
+                           min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
     - label: structured         # + structured distilled notes
-      overrides: {memory: {write_policy: structured, retrieval_policy: similarity_only,
-                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0}}}
-    - label: full               # + recency and importance (the default engine)
+      overrides: {memory: {retrieval_policy: similarity_only,
+                           weights: {similarity: 1.0, recency: 0.0, importance: 0.0},
+                           min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
+    - label: composite          # + recency and importance (the proposal's engine)
+      overrides: {memory: {min_similarity: 0.0, similarity_margin: null, expansion: none,
+                           reasoning_memory: facts}}
+    - label: gated              # + capability-adaptive gating (P4)
+      overrides: {memory: {expansion: none, reasoning_memory: facts}}
+    - label: bridged            # + entity-bridge expansion (P3)
+      overrides: {memory: {reasoning_memory: facts}}
+    - label: full               # + exemplar memory for reasoning (P5): the default engine
       overrides: {}
-    - label: no-screening       # screening disabled (FR-02 ablation)
+    - label: no-screening
       overrides: {memory: {screening: false}}
     - label: k10
       overrides: {memory: {k: 10}}
     - label: k50
       overrides: {memory: {k: 50}}
-    - label: greedy-skip        # packing variant (see docs/DESIGN_NOTES.md)
+    - label: greedy-skip
       overrides: {memory: {packing: greedy_skip}}
   budget_sweep: [0, 128, 256, 512, 1024, 2048]
   sweep_base: full

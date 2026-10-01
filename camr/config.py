@@ -88,6 +88,16 @@ class MemoryConfig:
     write_back: bool = False
     graph_layer: bool = False
     clock_step_hours: float = 1.0
+    # Capability-adaptive gating (docs/BRIDGING_THE_GAP.md section 3.1).
+    min_similarity: float = 0.0  # abstain when the best note is weaker than this (raw cosine)
+    similarity_margin: float | None = None  # admit only notes within this of the best one
+    # Entity-bridge expansion (section 3.2).
+    expansion: str = "none"  # none | entity
+    expansion_seeds: int = 3
+    expansion_per_seed: int = 2
+    # Memory used for reasoning tasks (section 3.3).
+    reasoning_memory: str = "facts"  # facts | exemplars | none
+    exemplar_max_tokens: int = 400
 
     @property
     def note_type(self) -> str:
@@ -106,6 +116,7 @@ class BenchmarkConfig:
     corpus: str | None = None  # required for PopQA, which ships no documents
     n: int = 100
     extra_corpus_questions: int = 0  # grow the store with paragraphs of unsampled questions
+    exemplars: str | None = None  # gsm8k only: train split used as procedural memory
 
 
 @dataclass
@@ -149,6 +160,8 @@ DEFAULT_PRIMARY_METRIC = {
 class Config:
     seed: int = 13
     run_dir: str | None = None
+    # Opt-in: ceiling_rag gives the cloud model the same notes (sends public benchmark text).
+    extra_conditions: list[str] = field(default_factory=list)
     local_model: LocalModelConfig = field(default_factory=LocalModelConfig)
     ceiling_model: CeilingModelConfig = field(default_factory=CeilingModelConfig)
     embedder: EmbedderConfig = field(default_factory=EmbedderConfig)
@@ -174,6 +187,8 @@ class Config:
                 b.path = str((base / b.path).resolve())
             if b.corpus and not Path(b.corpus).is_absolute():
                 b.corpus = str((base / b.corpus).resolve())
+            if b.exemplars and not Path(b.exemplars).is_absolute():
+                b.exemplars = str((base / b.exemplars).resolve())
         if cfg.run_dir and not Path(cfg.run_dir).is_absolute():
             cfg.run_dir = str((base / cfg.run_dir).resolve())
         return cfg
@@ -225,6 +240,12 @@ class Config:
         _choice("memory.retrieval_policy", m.retrieval_policy, {"similarity_only", "composite"})
         _choice("memory.packing", m.packing, {"greedy_stop", "greedy_skip"})
         _choice("memory.importance", m.importance, {"heuristic", "model"})
+        _choice("memory.expansion", m.expansion, {"none", "entity"})
+        _choice("memory.reasoning_memory", m.reasoning_memory, {"facts", "exemplars", "none"})
+        if m.similarity_margin is not None and m.similarity_margin < 0:
+            raise ConfigError("memory.similarity_margin must be >= 0")
+        for c in self.extra_conditions:
+            _choice("extra_conditions[]", c, {"ceiling_rag"})
         _choice("local_model.backend", self.local_model.backend, {"ollama", "dry-run"})
         _choice("ceiling_model.backend", self.ceiling_model.backend, {"anthropic", "dry-run"})
         _choice("embedder.backend", self.embedder.backend, {"bge", "hashing"})

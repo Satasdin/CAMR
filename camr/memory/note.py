@@ -96,6 +96,8 @@ class ScoredNote:
     rank: int = 0
     admitted: bool = False
     tokens: int = 0
+    eligible: bool = True  # False when the relevance margin excludes it
+    via: int | None = None  # seed note id when added by entity-bridge expansion
 
 
 @dataclass
@@ -106,6 +108,8 @@ class RecallResult:
     budget: int
     retrieval_ms: float
     timings: dict[str, float] = field(default_factory=dict)
+    abstained: bool = False  # gating decided memory would not help
+    top_similarity: float | None = None
 
     @property
     def admitted(self) -> list[ScoredNote]:

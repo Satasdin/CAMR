@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
+import re
 import sqlite3
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS source (
     dataset          TEXT NOT NULL,
     doc_id           TEXT NOT NULL,
     note_type        TEXT NOT NULL,
+    title            TEXT,
     ingested_at      TIMESTAMP NOT NULL,
     screener_verdict TEXT,
     UNIQUE (dataset, doc_id, note_type)
@@ -122,6 +124,7 @@ class SQLiteVectorStore(MemoryStore):
             self._load_vec()
         if not readonly:
             self.conn.executescript(MEMORY_SCHEMA)
+            self._migrate()
             self._init_meta(embedder_name)
             if self.use_vec:
                 self.conn.execute(
@@ -131,6 +134,7 @@ class SQLiteVectorStore(MemoryStore):
                 self._sync_vec_index()
             self.conn.commit()
         self._matrix_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self._title_cache: dict[str, tuple[dict[str, list[int]], int]] = {}
 
     # -------------------------------------------------------------- setup
     def _load_vec(self) -> None:
@@ -141,6 +145,12 @@ class SQLiteVectorStore(MemoryStore):
             sqlite_vec.load(self.conn)
         finally:
             self.conn.enable_load_extension(False)
+
+    def _migrate(self) -> None:
+        """Add columns introduced after a store file was first created."""
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(source)")}
+        if "title" not in cols:
+            self.conn.execute("ALTER TABLE source ADD COLUMN title TEXT")
 
     def _init_meta(self, embedder_name: str) -> None:
         cur = dict(self.conn.execute("SELECT key, value FROM meta").fetchall())
@@ -182,12 +192,14 @@ class SQLiteVectorStore(MemoryStore):
             raise
         finally:
             self._matrix_cache.clear()
+            self._title_cache.clear()
 
     def close(self) -> None:
         self.conn.close()
 
     # -------------------------------------------------------------- writes
-    def get_or_create_source(self, dataset: str, doc_id: str, note_type: str, ingested_at: str) -> tuple[int, bool]:
+    def get_or_create_source(self, dataset: str, doc_id: str, note_type: str, ingested_at: str,
+                             title: str | None = None) -> tuple[int, bool]:
         row = self.conn.execute(
             "SELECT source_id FROM source WHERE dataset=? AND doc_id=? AND note_type=?",
             (dataset, doc_id, note_type),
@@ -195,8 +207,8 @@ class SQLiteVectorStore(MemoryStore):
         if row:
             return int(row[0]), False
         cur = self.conn.execute(
-            "INSERT INTO source(dataset, doc_id, note_type, ingested_at) VALUES (?, ?, ?, ?)",
-            (dataset, doc_id, note_type, ingested_at),
+            "INSERT INTO source(dataset, doc_id, note_type, title, ingested_at) VALUES (?, ?, ?, ?, ?)",
+            (dataset, doc_id, note_type, title or None, ingested_at),
         )
         return int(cur.lastrowid), True
 
@@ -327,6 +339,45 @@ class SQLiteVectorStore(MemoryStore):
             scored = [(int(ids_arr[j]), float(sims[j])) for j in top]
         scored.sort(key=lambda t: (-round(t[1], 7), t[0]))
         return scored
+
+    def title_index(self, note_type: str, min_len: int = 4) -> tuple[dict[str, list[int]], int]:
+        """Map entity title (and its parenthesis-free alias) -> note ids, plus the
+        longest title in words.  Used by entity-bridge expansion: a mention of a
+        title inside a note links to the notes about that entity."""
+        if note_type not in self._title_cache:
+            index: dict[str, list[int]] = {}
+            for title, note_id in self.conn.execute(
+                "SELECT s.title, n.note_id FROM note n JOIN source s USING(source_id)"
+                " WHERE n.note_type=? AND s.title IS NOT NULL ORDER BY n.note_id",
+                (note_type,),
+            ):
+                full = " ".join(title.split())
+                alias = re.sub(r"\s*\([^)]*\)$", "", full)  # "Titanic (1997 film)" -> "Titanic"
+                for key in {full, alias}:
+                    if len(key) >= min_len:
+                        index.setdefault(key, []).append(int(note_id))
+            longest = max((len(k.split()) for k in index), default=0)
+            self._title_cache[note_type] = (index, longest)
+        return self._title_cache[note_type]
+
+    def note_titles(self, note_ids: Iterable[int]) -> dict[int, str | None]:
+        ids = list(note_ids)
+        if not ids:
+            return {}
+        marks = ",".join("?" * len(ids))
+        return {int(r[0]): r[1] for r in self.conn.execute(
+            f"SELECT n.note_id, s.title FROM note n JOIN source s USING(source_id) WHERE n.note_id IN ({marks})", ids)}
+
+    def similarities(self, query: np.ndarray, note_ids: Iterable[int]) -> dict[int, float]:
+        ids = list(note_ids)
+        if not ids:
+            return {}
+        q = as_float32(query)
+        marks = ",".join("?" * len(ids))
+        return {
+            int(r[0]): _cosine(q, np.frombuffer(r[1], dtype=np.float32))
+            for r in self.conn.execute(f"SELECT note_id, embedding FROM note_embedding WHERE note_id IN ({marks})", ids)
+        }
 
     def get_notes(self, note_ids: Iterable[int]) -> dict[int, Note]:
         ids = list(note_ids)

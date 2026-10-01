@@ -19,7 +19,7 @@ HARNESS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS run (
     run_id        INTEGER PRIMARY KEY,
     label         TEXT NOT NULL,
-    condition     TEXT NOT NULL CHECK (condition IN ('floor', 'ceiling', 'treatment')),
+    condition     TEXT NOT NULL CHECK (condition IN ('floor', 'ceiling', 'treatment', 'ceiling_rag')),
     benchmark     TEXT NOT NULL,
     task_type     TEXT NOT NULL,
     model_name    TEXT NOT NULL,
@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS query_log (
     generation_latency_ms REAL,
     e2e_latency_ms        REAL,
     budget              INTEGER,
+    abstained           INTEGER,
+    top_similarity      REAL,
     answer_text         TEXT,
     served_model        TEXT,
     logged_at           TIMESTAMP NOT NULL
@@ -69,6 +71,7 @@ CREATE TABLE IF NOT EXISTS retrieved_note (
     composite_score  REAL NOT NULL,
     tokens           INTEGER NOT NULL,
     admitted         INTEGER NOT NULL,
+    via_note_id      INTEGER,
     PRIMARY KEY (query_id, note_id)
 );
 CREATE INDEX IF NOT EXISTS idx_query_run       ON query_log(run_id);
@@ -87,11 +90,19 @@ class RunLogger:
     def __init__(self, conn: sqlite3.Connection, records_dir: str | Path | None = None):
         self.conn = conn
         self.conn.executescript(HARNESS_SCHEMA)
+        self._migrate()
         self.conn.commit()
         self.records_dir = Path(records_dir) if records_dir else None
         if self.records_dir:
             self.records_dir.mkdir(parents=True, exist_ok=True)
         self._fh = None
+
+    def _migrate(self) -> None:
+        """Add columns introduced after a results file was first created."""
+        for table, col, decl in (("query_log", "abstained", "INTEGER"), ("query_log", "top_similarity", "REAL"),
+                                 ("retrieved_note", "via_note_id", "INTEGER")):
+            if col not in {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})")}:
+                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
 
     def start_run(
         self,
@@ -141,6 +152,8 @@ class RunLogger:
         generation_ms: float | None = None,
         e2e_ms: float | None = None,
         budget: int | None = None,
+        abstained: bool | None = None,
+        top_similarity: float | None = None,
         answer: str | None = None,
         served_model: str | None = None,
         scores: dict[str, float] | None = None,
@@ -150,11 +163,11 @@ class RunLogger:
         cur = self.conn.execute(
             "INSERT INTO query_log(run_id, question_id, dataset, task_type, question, status, error, prompt,"
             " context_tokens, prompt_tokens, generated_tokens, retrieval_latency_ms, generation_latency_ms,"
-            " e2e_latency_ms, budget, answer_text, served_model, logged_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " e2e_latency_ms, budget, abstained, top_similarity, answer_text, served_model, logged_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (run_id, question_id, dataset, task_type, question, status, error, prompt, context_tokens,
-             prompt_tokens, generated_tokens, retrieval_ms, generation_ms, e2e_ms, budget, answer,
-             served_model, at),
+             prompt_tokens, generated_tokens, retrieval_ms, generation_ms, e2e_ms, budget,
+             None if abstained is None else int(abstained), top_similarity, answer, served_model, at),
         )
         qid = int(cur.lastrowid)
         if scores and status == "ok":
@@ -165,9 +178,9 @@ class RunLogger:
         if retrieved:
             self.conn.executemany(
                 "INSERT INTO retrieved_note(query_id, note_id, rank, similarity, recency_score,"
-                " importance_score, composite_score, tokens, admitted) VALUES (?,?,?,?,?,?,?,?,?)",
+                " importance_score, composite_score, tokens, admitted, via_note_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 [(qid, r["note_id"], r["rank"], r["similarity"], r["recency"], r["importance"],
-                  r["composite"], r["tokens"], int(r["admitted"])) for r in retrieved],
+                  r["composite"], r["tokens"], int(r["admitted"]), r.get("via")) for r in retrieved],
             )
         self.conn.commit()
         self._write({"type": "query", "query_id": qid, "run_id": run_id, "question_id": question_id,
@@ -175,6 +188,7 @@ class RunLogger:
                      "context_tokens": context_tokens, "prompt_tokens": prompt_tokens,
                      "generated_tokens": generated_tokens, "retrieval_latency_ms": retrieval_ms,
                      "generation_latency_ms": generation_ms, "e2e_latency_ms": e2e_ms, "budget": budget,
+                     "abstained": abstained, "top_similarity": top_similarity,
                      "answer_text": answer, "served_model": served_model, "scores": scores,
                      "retrieved": retrieved, "prompt": prompt, "logged_at": at})
         return qid
