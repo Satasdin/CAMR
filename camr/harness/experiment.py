@@ -54,6 +54,7 @@ class Workspace:
         self._ceiling_runner = ceiling_runner
         self._embedder = embedder
         self._samples: dict[str, list[Question]] = {}
+        self.train_n: dict[str, int] = {}  # size of the training split per benchmark (learned policies)
 
     @property
     def db_path(self) -> Path:
@@ -103,13 +104,15 @@ class Workspace:
             self._ceiling_runner = build_ceiling_runner(self.cfg.ceiling_model, self.cfg.seed)
         return self._ceiling_runner
 
-    def sample(self, benchmark: str, n: int | None = None) -> list[Question]:
+    def sample(self, benchmark: str, n: int | None = None, split: str = "eval") -> list[Question]:
         if benchmark not in self.cfg.benchmarks:
             raise KeyError(f"benchmark {benchmark!r} is not configured")
-        if benchmark not in self._samples:  # parse the dataset file once per workspace
-            self._samples[benchmark] = load_sample(
-                benchmark, self.cfg.benchmarks[benchmark], self.cfg.seed, self.run_dir / "samples")
-        sample = self._samples[benchmark]
+        key = benchmark if split == "eval" else f"{benchmark}:{split}"
+        if key not in self._samples:  # parse the dataset file once per workspace
+            self._samples[key] = load_sample(
+                benchmark, self.cfg.benchmarks[benchmark], self.cfg.seed, self.run_dir / "samples", split=split,
+                train_n=self.train_n.get(benchmark) if split == "train" else None)
+        sample = self._samples[key]
         if n is None:
             return sample
         if n > len(sample):
@@ -145,7 +148,8 @@ class Workspace:
 # ------------------------------------------------------------------ ingest
 
 
-def ingest(ws: Workspace, cfg: Config | None = None, benchmarks: list[str] | None = None) -> list[IngestSummary]:
+def ingest(ws: Workspace, cfg: Config | None = None, benchmarks: list[str] | None = None,
+           splits: tuple[str, ...] = ("eval",)) -> list[IngestSummary]:
     """Populate the store for ``cfg``'s note population from every factual benchmark."""
     cfg = cfg or ws.cfg
     names = benchmarks or list(cfg.benchmarks)
@@ -154,7 +158,7 @@ def ingest(ws: Workspace, cfg: Config | None = None, benchmarks: list[str] | Non
     all_questions: list[Question] = []
     corpora = []
     for name in names:
-        sample = ws.sample(name)
+        sample = [q for sp in splits for q in ws.sample(name, split=sp)]
         all_questions.extend(sample)
         docs = build_corpus(name, cfg.benchmarks[name], sample, cfg.seed)
         corpora.append((name, docs))
@@ -193,7 +197,7 @@ class ExperimentRunner:
         return int(row[0]) if row and row[0] is not None else None
 
     def run(self, condition: str, benchmark: str, *, cfg: Config | None = None, n: int | None = None,
-            label: str = "main", resume: bool = True) -> int:
+            label: str = "main", resume: bool = True, split: str = "eval") -> int:
         if condition not in CONDITIONS:
             raise ValueError(f"condition must be one of {CONDITIONS}")
         cfg = cfg or self.ws.cfg
@@ -203,7 +207,7 @@ class ExperimentRunner:
             if prior is not None:
                 log.info("skipping %s/%s/%s: completed as run %d", label, condition, benchmark, prior)
                 return prior
-        questions = self.ws.sample(benchmark, n)
+        questions = self.ws.sample(benchmark, n, split=split)
         task_type = TASK_TYPES[benchmark]
         with_memory = condition in ("treatment", "ceiling_rag")
         note_type = cfg.memory.note_type

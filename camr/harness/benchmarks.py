@@ -134,7 +134,8 @@ def draw_sample(questions: list[Question], n: int, seed: int, name: str) -> list
     return rng.sample(ordered, min(n, len(ordered)))
 
 
-def load_sample(name: str, bcfg: BenchmarkConfig, seed: int, sample_dir: Path, n: int | None = None) -> list[Question]:
+def load_sample(name: str, bcfg: BenchmarkConfig, seed: int, sample_dir: Path, n: int | None = None,
+                split: str = "eval", train_n: int | None = None) -> list[Question]:
     """Return the persisted sample (drawing and persisting it on first use).
 
     ``n`` smaller than the persisted size returns a prefix, which is itself a
@@ -143,6 +144,21 @@ def load_sample(name: str, bcfg: BenchmarkConfig, seed: int, sample_dir: Path, n
     """
     questions = load_questions(name, bcfg.path)
     by_id = {q.qid: q for q in questions}
+    if split == "train":
+        # A training split for learned policies: drawn from questions NOT in the
+        # evaluation sample, so nothing learned can leak into the evaluation.
+        eval_ids = {q.qid for q in load_sample(name, bcfg, seed, sample_dir)}
+        tfile = sample_dir / f"{name}.train.json"
+        if tfile.exists():
+            meta = json.loads(tfile.read_text())
+            sample = [by_id[q] for q in meta["question_ids"]]
+        else:
+            pool = [q for q in questions if q.qid not in eval_ids]
+            sample = draw_sample(pool, train_n or bcfg.n, seed, f"{name}:train")
+            tfile.write_text(json.dumps({"benchmark": name, "split": "train", "seed": seed, "n": len(sample),
+                                         "question_ids": [q.qid for q in sample]}, indent=2))
+        assert not ({q.qid for q in sample} & eval_ids), "train/eval overlap"
+        return sample if n is None else sample[:n]
     sample_file = sample_dir / f"{name}.json"
     if sample_file.exists():
         meta = json.loads(sample_file.read_text())

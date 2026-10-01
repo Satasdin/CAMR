@@ -74,6 +74,10 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--run-dir", required=True)
     s.add_argument("--from", dest="source", required=True, help="path to the other camr.sqlite")
 
+    s = with_config(sub.add_parser("learn", help="learn the engine's per-question policy from rewards over runs"))
+    s.add_argument("--phase", default="all", choices=["ingest", "cloud", "local", "analyse", "all"])
+    s.add_argument("--train-n", default="popqa=60,hotpotqa=60,gsm8k=24", help="training split size per benchmark")
+
     with_config(sub.add_parser("retrieval-eval", help="model-free retrieval evaluation on labelled multi-hop sets"))
 
     s = sub.add_parser("inspect", help="launch the read-only inspection interface")
@@ -115,6 +119,10 @@ def main(argv: list[str] | None = None) -> int:
             out = {"run_dir": str(c.cmd_reproduce(cfg, args.out, args.skip_profile))}
         elif args.cmd == "sweep-models":
             out = c.cmd_sweep_models(cfg, args.out, [m.strip() for m in args.models.split(",") if m.strip()])
+        elif args.cmd == "learn":
+            tn = {k: int(v) for k, v in (kv.split("=") for kv in args.train_n.split(",") if kv)}
+            out = c.cmd_learn(cfg, args.out, args.phase, tn)
+            out = {k: out[k] for k in ("learned_offline", "oracle") if k in out} or {"phase": args.phase, "done": True}
         elif args.cmd == "grow":
             out = c.cmd_grow(cfg, args.out, [float(x) for x in args.stages.split(",")])
         elif args.cmd == "retrieval-eval":

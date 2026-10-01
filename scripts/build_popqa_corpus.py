@@ -53,18 +53,22 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--distractors", type=int, default=90)
+    ap.add_argument("--split", default="eval", choices=["eval", "train"])
+    ap.add_argument("--train-n", type=int, default=None)
+    ap.add_argument("--run-dir", default=None, help="results directory whose samples/ define the split")
+    ap.add_argument("--out", default=None, help="output JSONL (default: the config's popqa corpus path)")
     args = ap.parse_args()
     cfg = Config.load(args.config)
     b = cfg.benchmarks["popqa"]
-    run_dir = cfg.resolve_run_dir()
-    sample = load_sample("popqa", b, cfg.seed, run_dir / "samples")
+    run_dir = Path(args.run_dir) if args.run_dir else cfg.resolve_run_dir()
+    sample = load_sample("popqa", b, cfg.seed, run_dir / "samples", split=args.split, train_n=args.train_n)
     rows = {r["id"]: r for r in csv.DictReader(open(b.path, newline=""), delimiter="\t")}
     targets = [rows[q.qid]["s_wiki_title"] for q in sample]
-    sampled = {q.qid for q in sample}
+    sampled = {q.qid for q in sample} | {q.qid for q in load_sample("popqa", b, cfg.seed, run_dir / "samples")}
     pool = sorted({r["s_wiki_title"] for i, r in rows.items() if i not in sampled} - set(targets))
     distract = random.Random(f"camr:{cfg.seed}:popqa-distractors").sample(pool, args.distractors)
 
-    out = Path(b.corpus)
+    out = Path(args.out or b.corpus)
     out.parent.mkdir(parents=True, exist_ok=True)
     have: dict[str, dict] = {}
     if out.exists():  # resume: keep pages already fetched

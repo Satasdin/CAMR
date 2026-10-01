@@ -248,3 +248,40 @@ def cmd_merge(run_dir: str, source_db: str) -> dict:
     finally:
         src.close()
         dst.close()
+
+
+def cmd_learn(cfg: Config, out: str | None, phase: str, train_n: dict[str, int]) -> dict:
+    """Learn the engine's per-question policy from rewards (see camr.learn.bandit)."""
+    from camr.learn import bandit
+
+    ws = Workspace(cfg, out)
+    ws.train_n = train_n
+    tables = ws.run_dir / "tables"
+    try:
+        if phase in ("ingest", "all"):
+            write_json([s.as_dict() for s in ingest(ws, cfg, splits=("eval", "train"))], tables / "ingest_learn.json")
+        if phase in ("cloud", "all"):
+            for split in ("train", "eval"):
+                bandit.collect(ws, cfg, split, arms=["cloud"])
+        if phase in ("local", "all"):
+            for split in ("train", "eval"):
+                bandit.collect(ws, cfg, split, arms=[a for a in bandit.ARM_NAMES if a != "cloud"])
+        result: dict = {}
+        if phase in ("analyse", "all"):
+            data = {}
+            for split in ("train", "eval"):
+                feats = bandit.features(ws, cfg, split)
+                data[split] = bandit.dataset(ws, cfg, split, feats)
+            result = bandit.report(data["train"], data["eval"], bandit.Costs())
+            bandit.save(result, tables / "rl_report.json")
+            bandit.save(data, tables / "rl_dataset.json")
+            rows = [{"policy": k, **{m: v[m] for m in ("accuracy", "cloud_share", "mean_reward", "mean_latency_s",
+                                                       "mean_local_prompt_tokens")}, **v["accuracy_by_task"]}
+                    for k, v in [*result["fixed"].items(), ("learned (offline)", result["learned_offline"]),
+                                 ("learned (LinUCB, final)", result["curve"][-1]), ("oracle", result["oracle"])]]
+            write_table(rows, tables / "rl_policies", "Engine policies on the held-out evaluation split")
+            write_table([{k: v for k, v in p.items() if k not in ("choices", "accuracy_by_task")} for p in result["pareto"]],
+                        tables / "rl_pareto", "Learned policy vs cost of a cloud call")
+        return result
+    finally:
+        ws.close()
