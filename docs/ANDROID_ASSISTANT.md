@@ -36,7 +36,7 @@ with retraining.
 | It is much faster than the cloud | 0.5B + CAMR answered in **1.5 s** vs Kimi K3's 7.7 s on the same questions (F9) |
 | The engine itself is cheap | Retrieval took **29 ms** (embed 21.5 ms, search 6.2 ms) on 4 CPU cores (F12); engine and model together peaked at about 2.7 GB of RAM (F8) |
 | It knows when it doesn't know | Gating abstains when no note is relevant; the assistant demo admitted 0 notes for an off-topic question ([`SETUP.md`](SETUP.md) §4) |
-| It learns when to ask the cloud | The learned router plus the grounding cascade reached **65.3%** vs always-Kimi's 63.9%, while **71%** of questions never left the device, with 4.2× lower mean latency (F11b) |
+| It learns when to ask the cloud | The learned router plus the grounding cascade reached **65.3%** vs always-Kimi's 63.9%, while **71%** of questions never left the device, with 4.0× lower mean latency (F11b) |
 | Personal recall works end to end | Demo: "When is my dentist appointment?" gave "next Monday" (invented) without memory and "Thursday 9 October at 14:30" with it ([`SETUP.md`](SETUP.md) §4) |
 
 **What it does not solve (measured):** maths and multi-step reasoning. Memory

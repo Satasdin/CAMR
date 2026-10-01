@@ -293,11 +293,11 @@ Source: `results/learn/tables/rl_cascade.md`. Stage 1 is the learned router abov
 
 | Policy (held-out, n = 72) | Accuracy | Sent to cloud | Mean s / answer | Single-hop | Multi-hop | Maths |
 |---|---|---|---|---|---|---|
-| always Kimi K3 | 63.9% | 100% | 13.2 | 63.3% | 50.0% | 100% |
+| always Kimi K3 | 63.9% | 100% | 12.6 | 63.3% | 50.0% | 100% |
 | learned router only | 61.1% | 16.7% | 2.2 | 70.0% | 36.7% | 100% |
 | **router + grounding cascade (threshold 0.2)** | **65.3%** | **29.2%** | **3.1** | **70.0%** | **46.7%** | **100%** |
 
-**The hybrid now beats always-Kimi (65.3% vs 63.9%) while 71% of questions are answered on-device, 4.2× faster on average.** The grounding check is the confidence signal the pre-answer router lacked: it lifts multi-hop from 36.7% to 46.7% at the cost of escalating 9 of the 30 multi-hop answers.
+**The hybrid now beats always-Kimi (65.3% vs 63.9%) while 71% of questions are answered on-device, 4.0× faster on average** (3.1 s vs 12.6 s; the 13.2 s in `rl_cascade.md` at threshold 1.01 is "answer locally, then escalate everything", not plain always-Kimi). The grounding check is the confidence signal the pre-answer router lacked: it lifts multi-hop from 36.7% to 46.7% at the cost of escalating 9 of the 30 multi-hop answers.
 
 ## F12. Retrieval latency is contention, not engine cost (NFR-02 diagnosis)
 
