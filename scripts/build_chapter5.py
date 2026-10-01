@@ -146,6 +146,9 @@ class Chapter:
         trpr = t.rows[0]._tr.get_or_add_trPr()
         trpr.append(trpr.makeelement(qn("w:tblHeader"), {}))
         if widths:
+            t.autofit = False
+            for col, w in zip(t.columns, widths):  # gridCol widths: what LibreOffice and Word lay out by
+                col.width = Cm(w)
             for row in t.rows:
                 for cell, w in zip(row.cells, widths):
                     cell.width = Cm(w)
@@ -186,6 +189,17 @@ def git_history() -> list[list[str]]:
     out = subprocess.run(["git", "log", "--reverse", "--date=format:%d %b %Y %H:%M", "--format=%h|%ad|%an|%s"],
                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
     return [line.split("|", 3) for line in out.strip().splitlines()]
+
+
+def sweep_latency() -> dict[str, float]:
+    """Mean seconds per PopQA answer with CAMR, per swept model (latest completed run)."""
+    import sqlite3
+    c = sqlite3.connect(ROOT / "results" / "pilot" / "camr.sqlite")
+    q = ("SELECT r.label, AVG(q.e2e_latency_ms) / 1000 FROM run r JOIN query_log q USING(run_id) "
+         "WHERE r.condition='treatment' AND r.benchmark='popqa' AND r.label LIKE 'm:%' AND q.status='ok' "
+         "AND r.run_id IN (SELECT MAX(run_id) FROM run WHERE status='completed' GROUP BY label, condition, benchmark) "
+         "GROUP BY r.label")
+    return {label[2:]: s for label, s in c.execute(q)}
 
 
 def sweep_rows() -> list[dict]:
@@ -481,7 +495,13 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
              ["D-05", "Retrieval took 56% of answer time (NFR-02)", "TC-17", "Diagnosed as CPU contention; "
               "thread partitioning settings added", "Engine alone 29 ms; p90 157→50 ms. Still above 10% for 0.5B"],
              ["D-06", "Composite score (Eq. 4.1) lowered full-support recall by 4.6 points", "Retrieval evaluation",
-              "Similarity + gating + bridging as the best read path", "Recall 72.6% at 12% fewer tokens"]],
+              "Similarity + gating + bridging as the best read path", "Recall 72.6% at 12% fewer tokens"],
+             ["D-07", "When the model server stopped mid-sweep, failed queries were logged (IR-07) but the run was "
+              "still marked completed, so resume skipped it", "Machine B sweep", "Resume re-runs any run with "
+              "failed queries; the failed run is kept", "Regression test added. Pass; 19 runs re-run clean"],
+             ["D-08", "gemma2:9b was killed for running out of memory three times at 13.4 GB (runtime prompt cache "
+              "growing on top of the weights)", "Machine B sweep", "Runtime prompt cache capped at 1 GiB "
+              "(affects prefill reuse only)", "No further kills. Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
     # ---------------------------------------------------------------- evaluation design
@@ -592,18 +612,21 @@ camr inspect --run-dir results/pilot       # read-only web view at localhost:850
     c.p(f"The same store, questions and ceilings were used with {n_models} small models from 0.5B to "
         f"{sweep[-1]['params']} parameters ({c.next_tab()}, {c.next_fig()}). Accuracies are comparable across "
         "machines; decode speeds are comparable only within a machine.")
+    lat = sweep_latency()
     rows = []
     for r in sweep:
         p, h, g = r.get("popqa", {}), r.get("hotpotqa", {}), r.get("gsm8k", {})
         rows.append([f"{r['model']} ({r['params']}, {r['quant']})",
-                     f"{pct(p.get('floor'))} → {pct(p.get('with_memory'))}",
-                     f"{pct(h.get('floor'))} → {pct(h.get('with_memory'))}",
-                     f"{pct(g.get('floor'))} → {pct(g.get('with_memory'))}",
-                     f"{p.get('decode_tok_s_floor', 0):.1f} → {p.get('decode_tok_s_memory', 0):.1f}"])
-    rows.append(["*Kimi K3 (cloud), no memory*", "*66.7%*", "*53.3%*", "*100%*", "–"])
+                     f"{pct(p.get('floor'))[:-1]} → {pct(p.get('with_memory'))[:-1]}",
+                     f"{pct(h.get('floor'))[:-1]} → {pct(h.get('with_memory'))[:-1]}",
+                     f"{pct(g.get('floor'))[:-1]} → {pct(g.get('with_memory'))[:-1]}",
+                     f"{p.get('decode_tok_s_floor', 0):.1f} → {p.get('decode_tok_s_memory', 0):.1f}",
+                     f"{lat.get(r['model'], float('nan')):.1f}"])
+    rows.append(["*Kimi K3 (cloud), no memory*", "*66.7*", "*53.3*", "*100*", "–", "*7.7*"])
     c.table("Model-size sweep: alone → with CAMR (`results/pilot/tables/model_sweep.json`)",
-            ["Model (parameters, quantisation)", "PopQA", "HotpotQA", "GSM8K", "Decode tok/s (PopQA)"],
-            rows, [5.2, 2.7, 2.7, 2.7, 2.6], size=9)
+            ["Model (parameters, quantisation)", "PopQA (%)", "HotpotQA (%)", "GSM8K (%)", "Decode tok/s (PopQA)",
+             "s / answer with CAMR (PopQA)"],
+            rows, [4.5, 2.3, 2.3, 2.3, 2.3, 2.2], size=9)
     c.figure(FIG / "fig_model_sweep.png", "Accuracy without and with CAMR by model size, against the Kimi K3 ceiling")
     c.p(SWEEP_DISCUSSION)
 
