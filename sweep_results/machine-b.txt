@@ -1,0 +1,60 @@
+CAMR model-size sweep -- machine B
+==================================
+
+Hardware / software
+-------------------
+nproc:            4
+MemTotal:         16480972 kB
+CPU model:        Intel(R) Xeon(R) Processor @ 2.10GHz
+ollama --version: ollama version is 0.35.0
+
+Models
+------
+Requested: qwen2.5:7b, llama3.1:8b, gemma2:9b, qwen2.5:14b
+Skipped:   none -- all four models loaded and completed all 6 runs (3 benchmarks x floor/treatment).
+
+Wall time
+---------
+Total (install start -> sweep end):   199 min (08:17:13 -> 11:36:46 UTC, 2026-10-01)
+Sweep only (first run start -> end):  187 min (08:29:10 -> 11:36:46 UTC)
+The sweep wall time includes the two incidents below and the reruns they forced.
+
+Incidents and how they were handled (no code under camr/, tests/ or configs/ was changed)
+-----------------------------------------------------------------------------------
+1. Ollama server stopped mid-sweep (~30 min in) because the background process
+   it ran under hit a session time limit. From then on every request failed with a
+   connection error, but the harness still marked those runs 'completed'
+   (0 ok queries). Affected run_ids 6-24: qwen2.5:7b treatment/gsm8k (1/12 ok) and
+   every llama3.1:8b, gemma2:9b and qwen2.5:14b run (0 ok).
+   Fix: these 19 runs were set to status='failed' in camr.sqlite (rows kept, not
+   deleted), Ollama was restarted, and the sweep was resumed so they re-ran.
+
+2. Out-of-memory kills during gemma2:9b. The llama-server process behind Ollama
+   was killed 3 times by the container's memory limit at ~13.4 GB anon RSS.
+   Its prompt cache (llama.cpp default cap 8192 MiB) grew on top of the model
+   weights. Two runs lost queries: run 35 gemma2:9b treatment/hotpotqa (28/30 ok)
+   and run 37 gemma2:9b treatment/gsm8k (11/12 ok). (A third kill hit between
+   queries and cost no query.) Both runs were set to status='failed' and re-run
+   clean as runs 39 and 40.
+   Fix: Ollama was restarted with LLAMA_ARG_CACHE_RAM=1024, which caps the
+   llama-server prompt cache at 1024 MiB. The server log confirmed it:
+   "prompt cache is enabled, size limit: 1024 MiB".
+   This affects prefill reuse only, not model outputs or decode speed. Runs under
+   each setting:
+     default 8192 MiB cache: all qwen2.5:7b runs (1-5, 25), all llama3.1:8b runs
+                             (26-31), gemma2:9b runs 32-34 and 36
+     1024 MiB cache:         gemma2:9b runs 39-40, all qwen2.5:14b runs (41-46)
+   No OOM kills or failed queries after the change.
+
+   Run 38 (qwen2.5:14b floor/popqa) has status 'interrupted' with 0 queries. It was
+   stopped on purpose during the server restart and was redone as run 41.
+
+Final state of camr.sqlite (label m:*)
+--------------------------------------
+24 completed runs, one per model x benchmark x condition. Every one has 0 failed
+queries (30/30 for popqa and hotpotqa, 12/12 for gsm8k). The 21 'failed' runs and
+1 'interrupted' run are kept for the record. sweep_report uses only
+status='completed' runs.
+
+The ceiling_20b and gap_closed columns are empty because this machine did not run
+the gpt-oss:20b ceiling (label 'main'). They fill in when merged with machine A.
