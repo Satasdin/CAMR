@@ -210,3 +210,33 @@ def cmd_grow(cfg: Config, out: str | None, stages: list[float]) -> list[dict]:
         return rows
     finally:
         ws.close()
+
+
+def cmd_sweep_models(cfg: Config, out: str | None, models: list[str]) -> list[dict]:
+    """Same engine and questions across several small local models."""
+    from camr.harness.model_sweep import run_sweep, sweep_report
+
+    ws = Workspace(cfg, out)
+    try:
+        run_sweep(ws, cfg, models)
+        rows = sweep_report(ws.conn, cfg.primary_metric)
+        write_table(rows, ws.run_dir / "tables" / "model_sweep", "Model-size sweep: same engine, different small models")
+        write_json(rows, ws.run_dir / "tables" / "model_sweep.json")
+        return rows
+    finally:
+        ws.close()
+
+
+def cmd_merge(run_dir: str, source_db: str) -> dict:
+    """Merge completed runs from another machine's results database into this run directory."""
+    from camr.eval.logger import RunLogger
+    from camr.harness.model_sweep import merge_runs
+
+    dst = sqlite3.connect(Path(run_dir) / "camr.sqlite")
+    RunLogger(dst)  # ensure schema and migrations
+    src = sqlite3.connect(f"file:{source_db}?mode=ro", uri=True)
+    try:
+        return {"merged_runs": merge_runs(dst, src)}
+    finally:
+        src.close()
+        dst.close()

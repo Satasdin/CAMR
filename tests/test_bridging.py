@@ -214,3 +214,29 @@ def test_growth_accumulates_knowledge_with_a_frozen_model(tmp_path):
     assert notes == sorted(notes) and notes[0] < notes[-1]       # the store grows stage by stage
     assert acc == sorted(acc) and acc[-1] == 1.0                   # knowledge accrues: accuracy never falls
     assert [r["stage"] for r in rows] == ["grow-025", "grow-050", "grow-100"]
+
+
+# ------------------------------------------------------ model sweep and merge
+def test_model_sweep_and_cross_machine_merge(tmp_path):
+    import sqlite3 as sq
+    from camr.harness.model_sweep import merge_runs, run_sweep, sweep_report
+    cfg = fixture_config(tmp_path)
+    cfg.benchmarks = {"popqa": cfg.benchmarks["popqa"]}
+    ws = _ws(cfg)
+    ingest(ws)
+    ExperimentRunner(ws).run("ceiling", "popqa")
+    run_sweep(ws, cfg, ["tiny-a", "tiny-b"])
+    rows = sweep_report(ws.conn, cfg.primary_metric)
+    assert {r["model"] for r in rows} == {"tiny-a", "tiny-b"}
+    assert all(r["floor"] is not None and r["with_memory"] is not None for r in rows)
+    # A second machine's database merges in without duplicating runs.
+    other = fixture_config(tmp_path / "b").with_overrides({"seed": 7})
+    other.benchmarks = {"popqa": other.benchmarks["popqa"]}
+    ws2 = _ws(other)
+    ingest(ws2)
+    run_sweep(ws2, other, ["tiny-c"])
+    ws2.close()
+    src = sq.connect(ws2.db_path)
+    assert merge_runs(ws.conn, src) == 2
+    assert merge_runs(ws.conn, src) == 0  # idempotent
+    assert {r["model"] for r in sweep_report(ws.conn, cfg.primary_metric)} == {"tiny-a", "tiny-b", "tiny-c"}

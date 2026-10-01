@@ -67,6 +67,13 @@ def _parser() -> argparse.ArgumentParser:
     s = with_config(sub.add_parser("grow", help="memory growth over time: same frozen model, knowledge fed in stages"))
     s.add_argument("--stages", default="0.25,0.5,1.0", help="comma-separated corpus shares")
 
+    s = with_config(sub.add_parser("sweep-models", help="same engine and questions across several small models"))
+    s.add_argument("--models", required=True, help="comma-separated Ollama model names")
+
+    s = sub.add_parser("merge", help="merge completed runs from another machine's results database")
+    s.add_argument("--run-dir", required=True)
+    s.add_argument("--from", dest="source", required=True, help="path to the other camr.sqlite")
+
     with_config(sub.add_parser("retrieval-eval", help="model-free retrieval evaluation on labelled multi-hop sets"))
 
     s = sub.add_parser("inspect", help="launch the read-only inspection interface")
@@ -87,6 +94,9 @@ def main(argv: list[str] | None = None) -> int:
             out = c.cmd_analyse(args.run_dir, args.by, args.bootstrap)
             print(json.dumps(out.get("main", []), indent=2, default=str))
             return 0
+        if args.cmd == "merge":
+            print(json.dumps(c.cmd_merge(args.run_dir, args.source)))
+            return 0
         if args.cmd == "inspect":
             app = Path(__file__).resolve().parent.parent / "inspect" / "app.py"
             return subprocess.call([sys.executable, "-m", "streamlit", "run", str(app), "--", "--run-dir",
@@ -103,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
             out = c.cmd_profile(cfg, args.out, args.repeats, args.n)
         elif args.cmd == "reproduce":
             out = {"run_dir": str(c.cmd_reproduce(cfg, args.out, args.skip_profile))}
+        elif args.cmd == "sweep-models":
+            out = c.cmd_sweep_models(cfg, args.out, [m.strip() for m in args.models.split(",") if m.strip()])
         elif args.cmd == "grow":
             out = c.cmd_grow(cfg, args.out, [float(x) for x in args.stages.split(",")])
         elif args.cmd == "retrieval-eval":
