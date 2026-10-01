@@ -48,7 +48,9 @@ st.sidebar.caption(f"read-only · {RUN_DIR / 'camr.sqlite'}")
 page = st.sidebar.radio("Screen", ["Run Dashboard", "Ablations", "Query Trace", "Memory Store"])
 runs = Q.runs(conn)
 labels = sorted({r["label"] for r in runs if r["condition"] == "treatment" and not r["label"].startswith("profile")})
-label = st.sidebar.selectbox("Treatment label", labels, index=labels.index("main") if "main" in labels else 0) if labels else None
+_want = st.query_params.get("label", "main")  # ?label=grow-100 opens that treatment directly
+label = st.sidebar.selectbox("Treatment label", labels,
+                             index=labels.index(_want) if _want in labels else (labels.index("main") if "main" in labels else 0)) if labels else None
 analyzer = GapAnalyzer(conn, cfg.primary_metric, bootstrap=cfg.analysis.bootstrap, ci=cfg.analysis.ci,
                        min_denominator=cfg.analysis.min_denominator, seed=cfg.seed)
 

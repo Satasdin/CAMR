@@ -41,19 +41,22 @@ def main() -> None:
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path="/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
             page = browser.new_page(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
+            url = f"http://127.0.0.1:{port}" + (f"/?label={args.label}" if args.label else "")
             for _ in range(60):
                 try:
-                    page.goto(f"http://127.0.0.1:{port}", timeout=5000)
+                    page.goto(url, timeout=5000)
                     break
                 except Exception:  # server still starting
                     time.sleep(1)
             page.wait_for_selector("text=CAMR Inspector", timeout=60000)
+            page.wait_for_timeout(2000)
             for i, screen in enumerate(SCREENS, start=1):
                 page.get_by_text(screen, exact=True).first.click()
                 page.wait_for_timeout(2500)
                 page.wait_for_load_state("networkidle")
                 errors = page.locator("[data-testid='stException']").count()
-                path = out / f"{i}_{screen.lower().replace(' ', '_')}.png"
+                tag = f"{args.label.replace(':', '_')}_" if args.label else ""
+                path = out / f"{tag}{i}_{screen.lower().replace(' ', '_')}.png"
                 page.screenshot(path=str(path), full_page=True)
                 print(f"{path} exceptions={errors}")
             browser.close()
