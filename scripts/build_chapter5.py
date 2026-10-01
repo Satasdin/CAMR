@@ -422,7 +422,7 @@ camr run --config configs/hotpot200.yaml  --condition ceiling_rag --benchmark ho
 python scripts/make_figures.py && python scripts/make_report_figures.py && python scripts/make_diagrams.py
 camr inspect --run-dir results/pilot                    # read-only web view at http://localhost:8501
 python scripts/build_chapter5.py --template proposal.docx --out build/Chapter5""")
-    c.p("**The application only** (no experiments): download the file for the platform from the v0.2.0 release "
+    c.p("**The application only** (no experiments): download the file for the platform from the v0.2.1 release "
         "page, or install it with Python:")
     c.code("""pip install "camr[app] @ git+https://github.com/Satasdin/CAMR.git"
 ollama pull qwen2.5:1.5b
@@ -789,22 +789,23 @@ camr app                                                # opens http://127.0.0.1
             [[h, d, a, s] for h, d, a, s in hist], [1.6, 3.0, 2.0, 9.3], size=9)
     c.p("The work followed GitHub flow. Each round of work was developed on one branch and merged through a pull "
         "request whose description summarises the change and its test plan: Satasdin/CAMR#2 (engine, harness, "
-        "findings) and Satasdin/CAMR#3 (CAMR Personal 0.2). Machines B–E pushed their results to their own branches, "
+        "findings), Satasdin/CAMR#3 (CAMR Personal 0.2), Satasdin/CAMR#4 (application speed, latency results and "
+        "report) and Satasdin/CAMR#5 (CAMR Personal 0.2.1). Machines B–E pushed their results to their own branches, "
         "which were merged into the results database rather than into the code. Feedback from users is collected "
         "through a GitHub issue form (`.github/ISSUE_TEMPLATE/feedback.yml`). The code is released under the MIT "
         "licence. Continuous integration (`.github/workflows/release-app.yml`) runs the application tests and builds "
         "and launch-tests the downloadable application on six platforms for every change to the application. "
-        f"{c.next_tab()} shows the run for the merged version. A published release (v0.2.0) attaches the six "
+        f"{c.next_tab()} shows the run for the merged version. Published releases (v0.2.0, then v0.2.1 with the speed changes) attach the six "
         "downloads.")
-    repo_shots = [("1_repository.png", "Project repository on GitHub (README, licence, release)"),
+    repo_shots = [("1_repository.png", "Project repository on GitHub (README, MIT licence, releases, contributors)"),
                   ("2_pull_requests.png", "Pull requests used to merge each round of work"),
                   ("3_actions_run.png", "Continuous-integration run: tests, build and launch test on six platforms"),
-                  ("4_release.png", "Release v0.2.0 with the six downloadable files"),
+                  ("4_release.png", "Release v0.2.1 with the six downloadable files and their checksums"),
                   ("5_commits.png", "Commit history on the main branch")]
     for name, cap in repo_shots:
         if (FIG / "repo" / name).exists():
             c.figure(FIG / "repo" / name, cap + " (screenshot)", 14.5)
-    c.table("Continuous-integration evidence: build and launch test per platform (GitHub Actions run 36870197366)",
+    c.table("Continuous-integration evidence: build and launch test per platform (GitHub Actions run 36899712846, release v0.2.1)",
             ["Target", "Runner", "Tests", "Build", "Launch test", "Result"],
             [["Windows x64", "windows-2025", "pass", "pass", "pass", "success"],
              ["Windows ARM64", "windows-11-arm", "pass", "pass", "pass", "success"],
