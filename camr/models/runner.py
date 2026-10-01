@@ -114,6 +114,8 @@ class OllamaRunner(ModelRunner):
         }
         if self.cfg.think:
             body["think"] = self.cfg.think
+        if self.cfg.num_thread:
+            body["options"]["num_thread"] = self.cfg.num_thread
         return body
 
     def generate(self, prompt: str) -> Generation:

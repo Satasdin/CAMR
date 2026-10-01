@@ -254,6 +254,45 @@ Source: `sweep_results/machine-e.sqlite`, merged into `results/pilot/camr.sqlite
 
 ---
 
+## F11. Learning the engine's policy from rewards over runs (weights frozen)
+
+Source: `results/learn/tables/rl_report.json`, `rl_policies.md`, `rl_pareto.md` (`camr learn --config configs/learn.yaml`).
+Setup: per question the engine chooses one action: **0.5B alone**, **0.5B + memory (128 / 512 / 1,024 tokens)** or **escalate to Kimi K3**. Reward = correct − cloud cost − 0.1 per 1k prompt tokens. The context is computed before any answer: task type, best-note similarity, margin, number of near-best notes, question length. The training split has **144 questions** (60 PopQA, 60 HotpotQA, 24 GSM8K), disjoint from the **72 held-out evaluation questions**; their knowledge was added to the store. Every action was run on every question (720 answers), so policies are scored on real logged outcomes.
+
+![Learned policy](figures/fig_learned_policy.png)
+
+| Policy (held-out, n = 72) | Accuracy | Sent to cloud | Mean s / answer | Single-hop | Multi-hop | Maths |
+|---|---|---|---|---|---|---|
+| always 0.5B alone | 13.9% | 0% | 1.1 | 10.0% | 10.0% | 33.3% |
+| always 0.5B + 128 tokens | 41.7% | 0% | 1.2 | **70.0%** | 23.3% | 16.7% |
+| always 0.5B + 512 tokens | 45.8% | 0% | 2.2 | 66.7% | **40.0%** | 8.3% |
+| always Kimi K3 | 63.9% | 100% | **12.6** | 63.3% | 50.0% | 100% |
+| **learned (offline), cloud cost 0.3** | **61.1%** | **16.7%** | **2.2** | 70.0% | 36.7% | 100% |
+| **learned (offline), cloud cost 0.1** | **68.1%** | 54.2% | 6.8 | — | — | — |
+| learned (LinUCB, bandit feedback only) | 56.9% | 16.7% | 2.2 | 70.0% | 26.7% | 100% |
+| oracle (best action per question, hindsight) | 79.2% | 23.6% | 2.6 | 86.7% | 63.3% | 100% |
+
+**Findings**
+1. **The engine learned on its own to send every maths question to Kimi** (12 of 12, 100% correct) and to answer facts locally. It chose 128 tokens for most single-hop and 512–1,024 for multi-hop.
+2. **With a cloud call costed at 0.3 correct answers, the hybrid reaches 96% of always-Kimi accuracy (61.1% vs 63.9%) while 83% of questions never leave the device, at 5.8× lower mean latency** (2.2 s vs 12.6 s).
+3. **With a cheaper cloud (cost 0.1), the hybrid beats always-Kimi** (68.1% vs 63.9%) using the cloud for 54% of questions, because the small model with memory beats Kimi on long-tail facts (70.0% vs 63.3%).
+4. **Learning over runs.** LinUCB, which only sees the outcome of the action it chose, went from 13.9% to 54% held-out accuracy within 40 training questions and plateaued at 55–64%.
+5. **Headroom.** The oracle's 79.2% shows the features are the bottleneck, mostly on multi-hop (36.7% learned vs 63.3% oracle). Next: add the small model's own confidence (e.g. an abstention-like first answer) as a feature, i.e. answer locally first and escalate if unsure.
+
+## F12. Retrieval latency is contention, not engine cost (NFR-02 diagnosis)
+
+Source: in-process timing on the pilot store (30 HotpotQA questions, BGE-small, 4 cores).
+
+| Condition | Retrieval median | p90 | Breakdown (median) |
+|---|---|---|---|
+| Engine alone | **29.3 ms** | — | embed 21.5 ms · search 6.2 ms · bridging 1.2 ms · pack 0.4 ms |
+| Right after a 0.5B answer, default threads | 51.4 ms | 156.6 ms | — |
+| Right after a 0.5B answer, model 3 threads + embedder 1 thread | 43.8 ms | **49.5 ms** | — |
+
+The engine's own retrieval cost is about 29 ms. The 210 ms seen in the pilot profile came from the model runtime and the embedder competing for the same 4 cores. Partitioning the cores removes the tail. Two new settings do this: `local_model.num_thread` and `embedder.torch_threads`. Against a 0.5B model's ~180 ms generation, retrieval is still about 20% of answer time, so NFR-02 (≤ 10%) is met only for models whose generation takes ≥ 450 ms, i.e. roughly ≥ 1.5B on this CPU (F10 decode speeds).
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |
@@ -262,6 +301,7 @@ Source: `sweep_results/machine-e.sqlite`, merged into `results/pilot/camr.sqlite
 | `figures/fig_decode_speed.png` | F2 decode speed vs store size |
 | `figures/fig_retrieval_hotpotqa.png` | F1 recall change and token cost vs baseline |
 | `figures/fig_model_sweep.png` | F10 accuracy without and with CAMR by model size |
+| `figures/fig_learned_policy.png` | F11 learned routing vs fixed choices; LinUCB learning curve |
 | `figures/inspector/grow-100_1_run_dashboard.png` | Inspector dashboard at 100% memory |
 | `figures/inspector/grow-100_3_query_trace.png` | Per-question trace (F3) |
 | `figures/inspector/grow-100_4_memory_store.png` | Store browser: notes, provenance, never-retrieved share |
@@ -277,7 +317,7 @@ Regenerate: `python scripts/make_figures.py` and `python scripts/screenshot_insp
 ## Still running (this log is updated when they finish)
 
 - Kimi K3 `ceiling_rag`: the frontier model reading the same notes.
-- Learned engine policy (`camr learn`): local / memory 128-512-1024 / escalate-to-Kimi, trained on a disjoint training split (60/60/24 questions) and scored on the evaluation split.
+
 - Kimi K2.6 closed-book ceiling: done (72 questions); to be added to the tables.
 - Model sweep A (this machine): qwen2.5:0.5b, llama3.2:1b, qwen2.5:1.5b, llama3.2:3b, qwen2.5:3b, gemma3:4b.
 - Model sweep B (second machine): qwen2.5:7b, llama3.1:8b, gemma2:9b, qwen2.5:14b.

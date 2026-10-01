@@ -39,6 +39,10 @@ class BGEEmbedder(Embedder):
             raise RuntimeError("embedder.backend=bge requires `pip install camr[embed]`") from exc
         self.cfg = cfg
         self.name = cfg.name
+        if cfg.torch_threads:
+            import torch  # type: ignore
+
+            torch.set_num_threads(cfg.torch_threads)
         self._model = SentenceTransformer(cfg.name, device=cfg.device)
         self.dim = int(self._model.get_sentence_embedding_dimension())
         if cfg.dim and cfg.dim != self.dim:

@@ -61,8 +61,10 @@ def workspace(cfg, local=None, ceiling=None):
 
 # ------------------------------------------------------------------ TC-07
 def test_ollama_runner_is_greedy_and_loopback_only():
+    assert OllamaRunner(LocalModelConfig(num_thread=3)).payload("x")["options"]["num_thread"] == 3
     r = OllamaRunner(LocalModelConfig(host="http://127.0.0.1:11434"), seed=5)
     opts = r.payload("hi")["options"]
+    assert "num_thread" not in opts
     assert opts["temperature"] == 0 and opts["top_k"] == 1 and opts["seed"] == 5
     OllamaRunner(LocalModelConfig(host="http://localhost:11434"))
     with pytest.raises(ConfigError):

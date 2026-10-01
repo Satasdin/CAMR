@@ -34,6 +34,7 @@ class LocalModelConfig:
     keep_alive: str = "30m"
     num_ctx: int = 4096
     think: str | None = None  # reasoning models (e.g. gpt-oss): low | medium | high
+    num_thread: int | None = None  # CPU threads for the model; leave one core for the embedder (measured: removes retrieval tail)
 
 
 @dataclass
@@ -60,6 +61,7 @@ class EmbedderConfig:
     query_instruction: str = "Represent this sentence for searching relevant passages: "
     device: str = "cpu"
     batch_size: int = 32
+    torch_threads: int | None = None  # pin the embedder's CPU threads (e.g. 1 beside a model on 3 cores)
 
 
 @dataclass

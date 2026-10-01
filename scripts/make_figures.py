@@ -237,6 +237,58 @@ def fig_model_sweep(pilot: Path, out: Path, meta_path: Path) -> Path | None:
     return p
 
 
+def fig_policy(learn: Path, out: Path) -> Path | None:
+    """Learned engine policy: accuracy vs mean answer time (held-out split), and the LinUCB learning curve."""
+    jpath = learn / "tables" / "rl_report.json"
+    if not jpath.exists():
+        return None
+    r = json.loads(jpath.read_text())
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.5, 4.3), facecolor=SURF, gridspec_kw={"width_ratios": [1.25, 1]})
+    names = {"always local": "0.5B alone", "always mem128": "0.5B + 128 tok", "always mem512": "0.5B + 512 tok",
+             "always mem1024": "0.5B + 1024 tok", "always cloud": "always Kimi K3"}
+    for k, v in r["fixed"].items():
+        col = INK2 if k != "always cloud" else ORANGE
+        ax1.scatter([v["mean_latency_s"]], [v["accuracy"] * 100], s=40, color=col, zorder=3)
+        ax1.annotate(names[k], (v["mean_latency_s"], v["accuracy"] * 100), textcoords="offset points",
+                     xytext=(6, -3 if k != "always mem512" else 6), fontsize=8, color=INK)
+    par = sorted(r["pareto"], key=lambda p: p["mean_latency_s"])
+    ax1.plot([p["mean_latency_s"] for p in par], [p["accuracy"] * 100 for p in par], color=BLUE, lw=2, marker="o", ms=5, zorder=4)
+    for p_ in par:
+        if p_["cloud_cost"] in (0.1, 0.3, 0.8):
+            ax1.annotate(f"{p_['cloud_share'] * 100:.0f}% to cloud", (p_["mean_latency_s"], p_["accuracy"] * 100),
+                         textcoords="offset points", xytext=(4, 7), fontsize=7.5, color=BLUE)
+    o = r["oracle"]
+    ax1.scatter([o["mean_latency_s"]], [o["accuracy"] * 100], marker="*", s=90, color=AQUA, zorder=5)
+    ax1.annotate("oracle routing", (o["mean_latency_s"], o["accuracy"] * 100), textcoords="offset points", xytext=(6, 2),
+                 fontsize=8, color=INK)
+    ax1.set_xscale("log")
+    ax1.set_xticks([1, 2, 4, 8, 16])
+    ax1.set_xticklabels(["1 s", "2 s", "4 s", "8 s", "16 s"])
+    ax1.set_ylim(0, 90)
+    ax1.set_xlabel("mean seconds per answer (log scale)", color=INK2, fontsize=9)
+    style(ax1, "accuracy on held-out questions (%)")
+    ax1.set_title("Learned routing (blue) vs fixed choices", fontsize=10, color=INK, loc="left")
+    c = r["curve"]
+    ax2.plot([p["episodes"] for p in c], [p["accuracy"] * 100 for p in c], color=BLUE, lw=2)
+    ax2.axhline(r["fixed"]["always cloud"]["accuracy"] * 100, color=ORANGE, ls=":", lw=1.2)
+    ax2.text(c[-1]["episodes"], r["fixed"]["always cloud"]["accuracy"] * 100 + 1.5, "always Kimi K3", ha="right", fontsize=8, color=INK2)
+    ax2.axhline(r["fixed"]["always mem512"]["accuracy"] * 100, color=INK2, ls="--", lw=1)
+    ax2.text(c[-1]["episodes"], r["fixed"]["always mem512"]["accuracy"] * 100 - 4, "best fixed local choice", ha="right", fontsize=8, color=INK2)
+    ax2.set_ylim(0, 90)
+    ax2.set_xlabel(f"training episodes (questions seen; {r['n_train']} per pass)", color=INK2, fontsize=9)
+    style(ax2, "")
+    ax2.set_title("LinUCB learns from its own choices over runs", fontsize=10, color=INK, loc="left")
+    fig.suptitle("The engine learns when to use memory and when to ask the cloud: near-Kimi accuracy, 83% on-device",
+                 fontsize=11.5, color=INK, x=0.01, ha="left")
+    fig.text(0.01, 0.005, f"qwen2.5:0.5b + CAMR vs Kimi K3; {r['n_test']} held-out questions (30 PopQA, 30 HotpotQA, 12 GSM8K); "
+             "reward = correct - cloud cost - 0.1 per 1k tokens.", fontsize=7.5, color=INK2)
+    fig.tight_layout(rect=(0, 0.03, 1, 0.93))
+    p = out / "fig_learned_policy.png"
+    fig.savefig(p, dpi=170, facecolor=SURF)
+    plt.close(fig)
+    return p
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pilot", default="results/pilot")
@@ -246,7 +298,8 @@ def main() -> None:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     for f in (fig_growth(Path(a.pilot), out), fig_speed(Path(a.pilot), out), fig_retrieval(Path(a.retrieval), out),
-              fig_model_sweep(Path(a.pilot), out, Path("docs/model_registry_metadata.json"))):
+              fig_model_sweep(Path(a.pilot), out, Path("docs/model_registry_metadata.json")),
+              fig_policy(Path("results/learn"), out)):
         print(f)
 
 
