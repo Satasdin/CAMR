@@ -35,7 +35,7 @@ import requests
 from camr.app.assistant import DEFAULT_EMBED_MODEL, DEFAULT_HOME, DEFAULT_HOST, Assistant, installed_models
 
 STATIC = Path(__file__).resolve().parent / "static"
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 
 class App:
