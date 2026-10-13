@@ -310,48 +310,85 @@ class WebLookup:
         res.ms = (time.perf_counter() - t0) * 1000
         return res
 
-    def topic_pages(self, topic: str, limit: int = 20) -> Lookup:
-        """Pages about a topic, for harvesting a pack: the topic's own article, the articles related to it, then
-        (snowballing) the articles for the names those pages mention most, until ``limit`` pages are read."""
+    def topic_pages(self, topic: str, limit: int = 20, min_relevance: float = 0.8) -> Lookup:
+        """Pages about a topic, for harvesting a pack: the topic's article (or, for an ambiguous name, the meanings
+        closest to the topic), related articles, then (snowballing) the articles for the names those pages mention
+        most. A page is kept, and snowballed from, only if it is about the topic: its relevance (``rank``, else words
+        shared with the topic) is at least ``min_relevance`` of the best seed's."""
         res = Lookup(question=topic, queries=[topic])
         t0 = time.perf_counter()
-        pages: list[WebPage] = []
-        seen: set[str] = set()
+        twords = set(norm(topic).split())
 
-        def take(title: str) -> None:
-            if len(pages) >= limit or norm(title) in seen:
-                return
+        def relevance(texts: list[str]) -> list[float]:
+            if self.rank is not None:
+                return list(self.rank(topic, texts))
+            return [len(twords & set(norm(t).split())) / max(1, len(twords)) for t in texts]
+
+        seen: set[str] = set()
+        candidates: list[WebPage] = []
+
+        def fetch(title: str) -> WebPage | None:
+            if norm(title) in seen:
+                return None
             seen.add(norm(title))
             p, _ = self.article(title, res)
-            if p and norm(p.title) not in {norm(x.title) for x in pages}:
-                pages.append(p)
-                seen.add(norm(p.title))
+            if p is None or norm(p.title) in {norm(c.title) for c in candidates}:
+                return None
+            seen.add(norm(p.title))
+            candidates.append(p)
+            return p
 
         page, options = self.article(topic, res)
+        seen.add(norm(topic))
         if page:
-            pages.append(page)
-            seen |= {norm(topic), norm(page.title)}
-        for t, _ in options[:limit]:
-            take(t)
+            candidates.append(page)
+            seen.add(norm(page.title))
+        if options:  # ambiguous: the meanings closest to the topic (an exact title first)
+            scores = relevance([f"{t}. {d}" for t, d in options])
+            ranked = sorted(zip(scores, options), key=lambda x: (norm(x[1][0]) != norm(topic), -x[0]))
+            for _, (t, _) in ranked[:3]:
+                fetch(t)
+            if norm(topic) not in {norm(c.title) for c in candidates}:  # the name itself, from Wikipedia
+                s_ = self.summary(topic[:1].upper() + topic[1:], res)
+                if s_:
+                    candidates.insert(0, WebPage(title=s_.get("title", topic), url=_page_url(s_, self.wiki, topic),
+                                                 text=" ".join(s_["extract"].split()), source="wikipedia", query=topic))
         ddg = self.duckduckgo(topic, res)
-        for t in _flatten((ddg or {}).get("RelatedTopics") or []):
+        for t in _flatten((ddg or {}).get("RelatedTopics") or [])[:limit]:
             url = t.get("FirstURL") or ""
             if url.startswith("https://duckduckgo.com/") and "/c/" not in url:
-                take(urllib.parse.unquote(url.rsplit("/", 1)[-1]).replace("_", " "))
+                fetch(urllib.parse.unquote(url.rsplit("/", 1)[-1]).replace("_", " "))
         for t in self.wiki_search(topic, res, limit=min(limit, 20)):
-            take(t)
+            fetch(t)
+        kept: list[WebPage] = []
+        scored: dict[str, float] = {}
+
+        def admit() -> None:
+            new = [c for c in candidates if norm(c.title) not in scored]
+            if not new:
+                return
+            for c, sc in zip(new, relevance([f"{c.title}. {c.text}" for c in new])):
+                scored[norm(c.title)] = sc
+            best = max(scored.values())
+            kept[:] = [c for c in candidates if scored[norm(c.title)] >= min_relevance * best][:limit]
+
+        admit()
         frontier = 0
-        while len(pages) < limit and frontier < len(pages):  # snowball over the names the pages mention
+        while len(kept) < limit and frontier < len(kept):  # snowball over names that on-topic pages mention
             counts: dict[str, int] = {}
-            for p in pages[frontier:]:
+            for p in kept[frontier:]:
                 for m in _CAP_RUN.finditer(p.text):
-                    name = m.group(1).strip(" .,'’")
-                    if len(name) >= 4 and " " in name or len(name) >= 6:
-                        counts[name] = counts.get(name, 0) + 1
-            frontier = len(pages)
+                    run = m.group(1).strip(" .,'’")
+                    for name in [run, *run.split(" and ")] if " and " in run else [run]:  # "Jupiter and Saturn"
+                        if (len(name) >= 4 and " " in name) or len(name) >= 6:
+                            counts[name] = counts.get(name, 0) + 1
+            frontier = len(kept)
             for name, _ in sorted(counts.items(), key=lambda kv: -kv[1])[: 2 * limit]:
-                take(name)
-        res.pages = pages[:limit]
+                if len(kept) >= limit:
+                    break
+                if fetch(name):
+                    admit()
+        res.pages = kept[:limit]
         res.ms = (time.perf_counter() - t0) * 1000
         return res
 

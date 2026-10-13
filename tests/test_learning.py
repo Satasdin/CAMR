@@ -266,3 +266,17 @@ def test_a_whole_sleep_reports_every_step(tmp_path):
 @pytest.mark.parametrize("q", ["Who directed The Other?", "Who was the producer of Kill?"])
 def test_subjects_never_empty_for_a_general_question(q):
     assert subjects(q)
+
+
+def test_harvest_keeps_pages_about_the_topic_and_drops_the_rest():
+    ddg = {"Solar System": {"Type": "A", "AbstractText": "The Solar System is the Sun and the objects that orbit it, "
+                                                         "including Jupiter and Leonor Watling.",
+                            "AbstractURL": "https://en.wikipedia.org/wiki/Solar_System",
+                            "RelatedTopics": [{"Text": "The Solar System (film)", "FirstURL":
+                                               "https://duckduckgo.com/The_Solar_System_(film)"}]},
+           "The Solar System (film)": ddg_article("The Solar System (film)", "A film about the solar system."),
+           "Jupiter": ddg_article("Jupiter", "Jupiter is the largest planet in the Solar System."),
+           "Leonor Watling": ddg_article("Leonor Watling", "Leonor Watling is a Spanish actress and singer.")}
+    r = WebLookup(FakeWeb(ddg), min_interval_s=0).topic_pages("Solar System", limit=10)
+    titles = [p.title for p in r.pages]
+    assert "Solar System" in titles and "Jupiter" in titles and "Leonor Watling" not in titles

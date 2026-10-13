@@ -149,6 +149,10 @@ def installed_packs(engine: MemoryEngine) -> list[dict]:
 def harvest(engine: MemoryEngine, lookup: WebLookup, topic: str, path: str | Path, *, pages: int = 20,
             title: str | None = None) -> tuple[PackManifest, list[WebPage]]:
     """Build a pack about ``topic`` from the web (its article and related articles)."""
+    if lookup.rank is None:  # judge relevance to the topic with the engine's own embedder
+        from camr.memory.fetch import embedding_rank
+
+        lookup.rank = embedding_rank(engine.embedder)
     found = lookup.topic_pages(topic, limit=pages)
     docs = [Document(dataset="web", doc_id=p.url, text=p.text, title=p.title) for p in found.pages]
     man = build_pack(path, engine, name=topic, title=title or topic.title(),
