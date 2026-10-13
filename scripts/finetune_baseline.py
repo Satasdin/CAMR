@@ -174,6 +174,7 @@ def tune(a) -> None:
     out = OUT / "tune"
     out.mkdir(parents=True, exist_ok=True)
     log = json.loads((out / "grid.json").read_text()) if (out / "grid.json").exists() else []
+    log = [r for r in log if r.get("complete", True)]  # an interrupted configuration is re-run from scratch
     done = {(r["fmt"], r["lr"]) for r in log}
     for fmt in a.formats.split(","):
         for lr in map(float, a.lrs.split(",")):
@@ -229,7 +230,10 @@ def tune(a) -> None:
                     rec["adapter_mb"] = round(sum(f.stat().st_size for f in path.iterdir()) / 1e6, 1)
                 run["epochs"].append(rec)
                 print(fmt, lr, rec, flush=True)
+                # save progress after every epoch, so an interrupted run keeps its curve
+                (out / "grid.json").write_text(json.dumps(log + [{**run, "complete": False}], indent=2))
             run["peak_rss_mb"] = round(peak_rss_mb())
+            run["complete"] = True
             log.append(run)
             (out / "grid.json").write_text(json.dumps(log, indent=2))
             del model, base, opt
