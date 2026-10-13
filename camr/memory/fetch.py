@@ -311,29 +311,46 @@ class WebLookup:
         return res
 
     def topic_pages(self, topic: str, limit: int = 20) -> Lookup:
-        """Pages about a topic, for harvesting a pack: the topic's own article plus the articles DuckDuckGo relates
-        to it (and Wikipedia search results when available)."""
+        """Pages about a topic, for harvesting a pack: the topic's own article, the articles related to it, then
+        (snowballing) the articles for the names those pages mention most, until ``limit`` pages are read."""
         res = Lookup(question=topic, queries=[topic])
         t0 = time.perf_counter()
-        page, options = self.article(topic, res)
-        pages = [page] if page else []
-        titles = [t for t, _ in options]
-        ddg = self.duckduckgo(topic, res)
-        for t in _flatten((ddg or {}).get("RelatedTopics") or []):
-            url = t.get("FirstURL") or ""
-            if url.startswith("https://duckduckgo.com/") and "/c/" not in url:
-                titles.append(urllib.parse.unquote(url.rsplit("/", 1)[-1]).replace("_", " "))
-        titles += self.wiki_search(topic, res, limit=min(limit, 20))
-        seen = {norm(p.title) for p in pages}
-        for title in titles:
-            if len(pages) >= limit:
-                break
-            if norm(title) in seen:
-                continue
+        pages: list[WebPage] = []
+        seen: set[str] = set()
+
+        def take(title: str) -> None:
+            if len(pages) >= limit or norm(title) in seen:
+                return
             seen.add(norm(title))
             p, _ = self.article(title, res)
             if p and norm(p.title) not in {norm(x.title) for x in pages}:
                 pages.append(p)
+                seen.add(norm(p.title))
+
+        page, options = self.article(topic, res)
+        if page:
+            pages.append(page)
+            seen |= {norm(topic), norm(page.title)}
+        for t, _ in options[:limit]:
+            take(t)
+        ddg = self.duckduckgo(topic, res)
+        for t in _flatten((ddg or {}).get("RelatedTopics") or []):
+            url = t.get("FirstURL") or ""
+            if url.startswith("https://duckduckgo.com/") and "/c/" not in url:
+                take(urllib.parse.unquote(url.rsplit("/", 1)[-1]).replace("_", " "))
+        for t in self.wiki_search(topic, res, limit=min(limit, 20)):
+            take(t)
+        frontier = 0
+        while len(pages) < limit and frontier < len(pages):  # snowball over the names the pages mention
+            counts: dict[str, int] = {}
+            for p in pages[frontier:]:
+                for m in _CAP_RUN.finditer(p.text):
+                    name = m.group(1).strip(" .,'’")
+                    if len(name) >= 4 and " " in name or len(name) >= 6:
+                        counts[name] = counts.get(name, 0) + 1
+            frontier = len(pages)
+            for name, _ in sorted(counts.items(), key=lambda kv: -kv[1])[: 2 * limit]:
+                take(name)
         res.pages = pages[:limit]
         res.ms = (time.perf_counter() - t0) * 1000
         return res

@@ -133,6 +133,47 @@ subgraph cluster_camr {{ label="CAMR (capability-adaptive memory)"; fontname="He
 }}'''
 
 
+DIAGRAMS["external_weights"] = f'''digraph G {{ rankdir=LR; {BASE} compound=true; ranksep=0.55;
+q [label="Question" shape=ellipse fillcolor="white"];
+subgraph cluster_compute {{ label="Compute: frozen weights"; fontname="Helvetica-Bold"; color="{ORANGE}"; style="rounded"; penwidth=1.4;
+  slm [label="Small model (0.5B–3B)\\nweights never change\\n≈0.4–2 GB in RAM" fillcolor="#fdeee6" color="{ORANGE}"];
+}}
+subgraph cluster_memory {{ label="Memory: external weights that grow (on disk)"; fontname="Helvetica-Bold"; color="{GREEN}"; style="rounded"; penwidth=1.4;
+  vec [label="Note vectors\\nN × d numbers + text + source\\n(read: only what a question needs)" shape=cylinder fillcolor="#e9f1fb" color="{BLUE}"];
+  ivf [label="Learned index\\nC centroids (k-means)\\nprobe a few clusters" fillcolor="#e8f7f0" color="{GREEN}"];
+  ad [label="Query adapter\\n2·d·r numbers (InfoNCE)" fillcolor="#e8f7f0" color="{GREEN}"];
+  rt [label="Router weights\\n(ridge / LinUCB)" fillcolor="#e8f7f0" color="{GREEN}"];
+}}
+subgraph cluster_grow {{ label="How memory grows"; fontname="Helvetica-Bold"; color="{BLUE}"; style="rounded,dashed"; penwidth=1.2;
+  teach [label="Teach: notes, files,\\n'remember that', 👍"];
+  web [label="Eager lookup on a miss\\n(DuckDuckGo → Wikipedia)\\nnever for personal questions" fillcolor="#e6f6f8" color="#0a6670"];
+  pack [label="Knowledge packs\\n(vectors precomputed)"];
+  sleep [label="Sleep (idle): tidy · curiosity ·\\nre-index · train adapter\\n(kept only if recall rises)" fillcolor="#e8f7f0" color="{GREEN}"];
+}}
+q -> rt [lhead=cluster_memory]; rt -> ad -> ivf -> vec;
+vec -> slm [label="admitted notes\\n(gated, ≤ B tokens)"]; q -> slm [style=dashed];
+slm -> ans [label=""]; ans [label="Answer + cited sources" shape=ellipse fillcolor="white"];
+teach -> vec; web -> vec; pack -> vec; sleep -> ivf; sleep -> ad; sleep -> vec [style=dashed];
+}}'''
+
+DIAGRAMS["eager_loop"] = f'''digraph G {{ rankdir=TB; {BASE}
+q [label="Question" shape=ellipse fillcolor="white"];
+recall [label="Recall from memory\\n(gate + entity gate)"];
+d1 [label="Memory has it?" shape=diamond fillcolor="white"];
+d2 [label="About the user?\\n(my, I, we …)" shape=diamond fillcolor="white"];
+d3 [label="Learning online on?" shape=diamond fillcolor="white"];
+look [label="Look up the subject\\nDuckDuckGo → Wikipedia lead\\n(cached, rate-limit aware)" fillcolor="#e6f6f8" color="#0a6670"];
+learn [label="Write path: screen, dedupe,\\nstore with its link" fillcolor="#e8f7f0" color="{GREEN}"];
+recall2 [label="Recall again"];
+ans [label="Answer from notes\\n(cite sources)" fillcolor="#e9f1fb" color="{BLUE}"];
+teachme [label="“I don't know that yet,\\ntell me and I'll remember”\\n+ Teach me button" fillcolor="#fdeee6" color="{ORANGE}"];
+alone [label="Model alone\\n(general knowledge)"];
+q -> recall -> d1; d1 -> ans [label="yes"]; d1 -> d2 [label="no"];
+d2 -> teachme [label="yes"]; d2 -> d3 [label="no"]; d3 -> look [label="yes"]; d3 -> alone [label="no"];
+look -> learn -> recall2 -> ans; look -> alone [label="nothing found" style=dashed];
+}}'''
+
+
 def render(out: Path) -> list[Path]:
     out.mkdir(parents=True, exist_ok=True)
     paths = []

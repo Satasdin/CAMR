@@ -58,8 +58,9 @@ class QueryAdapter:
     # ---------------------------------------------------------------- training
     def fit(self, queries: np.ndarray, positives: np.ndarray, negatives: np.ndarray | None = None, *,
             epochs: int = 30, batch: int = 64, lr: float = 3e-3, temperature: float = 0.05, weight_decay: float = 1e-3,
-            seed: int = 13) -> list[float]:
-        """Adam on the InfoNCE loss. ``negatives`` (optional) is (n, h, d): hard negatives per pair."""
+            seed: int = 13, on_epoch=None) -> list[float]:
+        """Adam on the InfoNCE loss. ``negatives`` (optional) is (n, h, d): hard negatives per pair.
+        ``on_epoch(epoch, adapter)`` is called after every epoch (e.g. to keep the best epoch on validation data)."""
         rng = np.random.default_rng(seed)
         Q, P = _unit(np.asarray(queries, np.float32)), _unit(np.asarray(positives, np.float32))
         H = None if negatives is None else _unit(np.asarray(negatives, np.float32))
@@ -94,6 +95,8 @@ class QueryAdapter:
                     upd = lr * (m[k] / (1 - b1 ** step)) / (np.sqrt(s[k] / (1 - b2 ** step)) + 1e-8)
                     setattr(self, k, (getattr(self, k) - upd).astype(np.float32))
             losses.append(total / len(Q))
+            if on_epoch is not None:
+                on_epoch(len(losses), self)
         return losses
 
 

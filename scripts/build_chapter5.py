@@ -768,6 +768,7 @@ camr app                                                # opens http://127.0.0.1
             c.figure(FIG / "app" / name, cap, w)
 
     interface_design(c)
+    learning_design(c)
 
     # ================================================================ 5.4 Testing
     c.h2("Testing and Evaluation", key="sec_testing")
@@ -1905,6 +1906,109 @@ SCENARIO_NOTES = (
     "question in between was answered from the model's own knowledge with no memory recalled. (5) Without memory, the "
     "model gave a generic rinse time from its own knowledge but could not know the lab technician's name; with the "
     "taught file it answered both parts.")
+
+
+def learning_design(c: Chapter) -> None:
+    """CAMR Personal 0.3: memory that grows by itself (eager lookups, packs, sleep), around a frozen model."""
+    c.h3("Learning Beyond What It Was Taught (CAMR Personal 0.3)", key="sec_learning")
+    c.p("In the engine evaluated so far, memory grows only when the user teaches it. When the gate abstains, the small "
+        "model is on its own, and for a 0.5B model that usually means a guess or *I don't know*. Version 0.3 of the "
+        "application adds three ways for memory to grow by itself, none of which touches the model's weights: it looks "
+        "up what it does not know (**eager learning**), it installs ready-made memory (**knowledge packs**), and it "
+        "reorganises and extends its memory while idle (**sleep**). This section defines them; Sections "
+        "⟦sec_learn_results⟧ to ⟦sec_sleep_results⟧ measure them.")
+    c.p("**External weights.** The design treats the model as *compute* and the memory as *weights that live outside "
+        "it*. Everything the engine can learn without a GPU is counted in one place:")
+    c.eq(r"\left|\Theta_{\text{ext}}(t)\right|=N(t)\,d+2\,d\,r+C\,d,\qquad \theta_{\text{model}}\ \text{fixed}",
+         key="eq_extweights")
+    c.where([(r"N(t)", "the number of notes at time t (each a d-dimensional vector, with its text and source);"),
+             (r"2\,d\,r", "the query adapter that sleep trains (Equation ⟦eq_adapter_n⟧);"),
+             (r"C\,d", "the centroids of the learned index (Equation ⟦eq_ivf_n⟧);"),
+             (r"\theta_{\text{model}}", "the language model's weights, which never change.")])
+    c.p("Only the first term grows with use. Its cost in memory (RAM) is what makes the design viable on a small device: "
+        "the vectors stay on disk and a question reads only the part of memory it needs,")
+    c.eq(r"R(t)\approx R_{\text{model}}+R_{\text{engine}}+\frac{n_{\text{probe}}}{C}\,N(t)\,d\cdot 4\ \text{bytes}",
+         key="eq_ram")
+    c.p("so the resident memory of the whole system is dominated by the fixed model, not by how much it knows. "
+        f"{c.next_fig()} draws this split; Section ⟦sec_sleep_results⟧ measures Equation ⟦eq_ram_n⟧.")
+    c.figure(DIAGRAMS / "external_weights.png", "External weights: a frozen model for compute, and memory that grows "
+             "on disk (note vectors, learned index, query adapter, router) fed by teaching, eager lookups, packs and "
+             "sleep", 16.0)
+    c.p("There are three places a frozen model's knowledge can live, and this project now measures all three on the "
+        f"same 237 documents and 60 held-out questions ({c.next_tab()}). *Inside* the model, by changing weights (LoRA, "
+        "Equation ⟦eq_lora_n⟧, Section ⟦sec_finetune⟧). *Beside* the model, as a token-level memory that the frozen "
+        "model consults at every step: the k-nearest-neighbour language model (kNN-LM; Khandelwal et al., 2020) stores, "
+        "for every position of every document, the model's own hidden state as a key and the next token as a value, "
+        "and mixes the tokens of the nearest keys into the model's prediction,")
+    c.eq(r"p(y\mid x)=\lambda\,p_{\text{kNN}}(y\mid x)+(1-\lambda)\,p_{\text{LM}}(y\mid x),\qquad "
+         r"p_{\text{kNN}}(y\mid x)\propto\sum_{(k_i,v_i)\in N_k(h(x))}\mathbb{1}\left[v_i=y\right]"
+         r"e^{\cos(h(x),k_i)/\tau}", key="eq_knnlm")
+    c.p("which is the most literal form of *external weights used as memory while the model's parameters do the "
+        "compute*. And *in the prompt*, which is CAMR: notes chosen per question and read by the model.")
+    c.table("Three places to keep a frozen model's knowledge, compared on the same documents",
+            ["", "Inside (LoRA)", "Beside (kNN-LM)", "In the prompt (CAMR)"],
+            [["What changes", "8.8 M adapter weights (trained)", "A datastore of hidden states (no training)",
+              "Notes and their vectors (no training)"],
+             ["Cost to add a fact", "Re-train (minutes to hours)", "One forward pass over the text",
+              "One embedding of the text"],
+             ["Can a fact be removed?", "No (retrain without it)", "Yes (delete its entries)", "Yes (Forget)"],
+             ["Can the answer cite a source?", "No", "No", "Yes (every note keeps its source)"],
+             ["Measured", "Section ⟦sec_finetune⟧", "Section ⟦sec_tokenmem⟧", "Sections ⟦sec_finetune⟧, ⟦sec_tokenmem⟧"]],
+            [3.4, 4.0, 4.4, 4.4], size=8.5)
+    c.p("**Eager learning.** When the gate abstains, the 0.3 read path treats it as a gap in memory rather than an "
+        "answer. Writing *L(q)* for the pages a lookup returns and *W* for the write path (screening, deduplication, "
+        "provenance), the action for a question is")
+    c.eq(r"\text{act}(q)=\left\{\begin{array}{ll}\text{read }A(q) & \text{if }A(q)\neq\varnothing\\ "
+         r"\text{ask to be taught} & \text{if }A(q)=\varnothing\text{ and }q\text{ is about the user}\\ "
+         r"\mathcal{M}\leftarrow\mathcal{M}\cup W(L(q)),\ \text{read }A(q) & \text{if }A(q)=\varnothing"
+         r"\text{ and lookups are on}\\ \text{model alone} & \text{otherwise}\end{array}\right.", key="eq_eager")
+    c.p(f"{c.next_fig()} shows the loop. Three design decisions keep it safe and honest:")
+    c.items(["**Privacy.** A question that refers to the user (*my*, *I*, *we*, …) is never sent anywhere; the "
+             "assistant says it does not know that yet and offers a *Teach me* button. For a general question only "
+             "the subject strings are sent (e.g. *Doomwatch*, *director of Doomwatch*), not the conversation.",
+             "**Sources.** Lookups use two keyless public services: DuckDuckGo Instant Answers (which returns the lead "
+             "of the matching Wikipedia article, or the list of meanings of an ambiguous name) and Wikipedia's page "
+             "summaries. What is read is stored as notes through the ordinary write path, so it is screened, "
+             "deduplicated, and keeps its link; the answer cites it like any other memory.",
+             "**Politeness.** One request at a time, at most one a second, every response cached, and rate limits "
+             "honoured (Retry-After; an empty reply is treated as *slow down*, never cached as *nothing known*; "
+             "defect D-18). The cache also makes every experiment replayable offline with exactly the text it read."],
+            numbered=False)
+    c.figure(DIAGRAMS / "eager_loop.png", "The eager read path: memory first; a personal gap asks to be taught; a "
+             "general gap is looked up, learned through the write path, and answered from memory", 9.5)
+    c.p("**Knowledge packs.** A pack is one file holding notes, their sources and, for one embedder, their vectors. "
+        "Installing a pack whose embedder matches the user's copies the vectors into the store: no model runs, so a pack "
+        "plugs in precomputed external weights. With another embedder the notes are re-embedded on install. Notes still "
+        "pass the screener, so a pack cannot inject instruction-like text or duplicates. A pack can be built from the web "
+        "for any topic (*harvest*: the topic's article, related articles, then the articles for the names they mention "
+        "most) and is removed as a unit.")
+    c.p("**Sleep.** After ten idle minutes (or on request) the application consolidates memory in four steps, each of "
+        "which reports what it changed: (1) *tidy*: near-duplicate notes from the web and packs (cosine ≥ 0.97) are "
+        "merged, keeping the oldest, and the user's own notes are never deleted; (2) *curiosity*: names that public notes "
+        "mention repeatedly but that memory has no note about are looked up, so the next multi-step question finds its "
+        "second hop already stored (personal notes are never mined); (3) *index*: once memory is large, a learned index "
+        "is rebuilt; (4) *learn to fetch*: a query adapter is trained on the engine's own experience. The index is an "
+        "inverted file (Jégou et al., 2011): spherical k-means learns C centroids and each note is filed under its "
+        "nearest one, so a question is compared with the centroids and then only with the notes of the n_probe closest "
+        "clusters,")
+    c.eq(r"\text{cost}_{\text{IVF}}\approx C\,d+\frac{n_{\text{probe}}}{C}\,N\,d\ \ll\ N\,d=\text{cost}_{\text{exact}},"
+         r"\qquad C\approx\sqrt{N}", key="eq_ivf")
+    c.p("with the vectors stored by cluster in a memory-mapped file, so unprobed clusters are never read into RAM. Notes "
+        "written after the index was built are searched exactly until the next sleep files them, like a short-term "
+        "buffer that consolidation empties. The query adapter is a low-rank map applied to the question's vector only "
+        "(the stored notes are untouched),")
+    c.eq(r"q'=\frac{q+UV^{\top}q}{\|q+UV^{\top}q\|},\qquad U,V\in\mathbb{R}^{d\times r},\ U_0=0", key="eq_adapter")
+    c.p("so an untrained adapter is the identity. It is trained on pairs (question, note that answered it) taken from "
+        "answers the user approved or that were well grounded, with the contrastive InfoNCE loss (van den Oord et al., "
+        "2018) over the batch and each question's hardest wrongly retrieved notes:")
+    c.eq(r"\mathcal{L}_{\text{NCE}}=-\frac{1}{B}\sum_{b=1}^{B}\log\frac{\exp\left(q'_b\cdot n_b/T\right)}"
+         r"{\sum_{j}\exp\left(q'_b\cdot n_j/T\right)}", key="eq_infonce")
+    c.p("It is written in NumPy (gradients checked against finite differences to 10⁻¹⁰), so it trains inside the "
+        "packaged application without a deep-learning framework. Because learning from a handful of answers can as "
+        "easily hurt as help, sleep keeps a newly trained adapter only if it does better on held-out experience:")
+    c.eq(r"\text{keep }(U,V)\iff R_5^{\text{new}}>R_5^{\text{old}}\ \wedge\ R_1^{\text{new}}\geq R_1^{\text{old}}",
+         key="eq_accept")
+    c.where([(r"R_k", "recall at k on the 20% of experience pairs held out from training.")])
 
 
 def rag_definition(c: Chapter) -> None:
