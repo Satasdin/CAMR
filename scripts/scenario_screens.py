@@ -213,9 +213,9 @@ def main():
     ap.add_argument("--set", default="v2", choices=["v2", "v3"], help="v3: the learning scenarios of CAMR Personal 0.3")
     ap.add_argument("--web-cache", help="a web cache to replay (copied into each fresh home)")
     a = ap.parse_args()
-    out = Path(a.out)
+    out = Path(a.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    log_path = Path(a.log)
+    log_path = Path(a.log).resolve()
     log = json.loads(log_path.read_text()) if log_path.exists() else {}
     log["model"] = a.model
     keys = set(a.only.split(",")) if a.only else None
