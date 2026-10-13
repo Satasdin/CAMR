@@ -133,7 +133,7 @@ subgraph cluster_camr {{ label="CAMR (capability-adaptive memory)"; fontname="He
 }}'''
 
 
-DIAGRAMS["external_weights"] = f'''digraph G {{ rankdir=LR; {BASE} compound=true; ranksep=0.55;
+DIAGRAMS["external_weights"] = f'''digraph G {{ rankdir=TB; {BASE} compound=true; ranksep=0.5;
 q [label="Question" shape=ellipse fillcolor="white"];
 subgraph cluster_compute {{ label="Compute: frozen weights"; fontname="Helvetica-Bold"; color="{ORANGE}"; style="rounded"; penwidth=1.4;
   slm [label="Small model (0.5B–3B)\\nweights never change\\n≈0.4–2 GB in RAM" fillcolor="#fdeee6" color="{ORANGE}"];

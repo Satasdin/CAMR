@@ -937,6 +937,7 @@ camr app                                                # opens http://127.0.0.1
     ui_testing(c)
     scenarios_section(c)
     learning_tests(c)
+    learning_scenarios(c)
 
     # ---------------------------------------------------------------- evaluation design
     c.h3("Evaluation Design")
@@ -1965,17 +1966,18 @@ def learning_design(c: Chapter) -> None:
         f"{c.next_fig()} draws this split; Section ⟦sec_sleep_results⟧ measures Equation ⟦eq_ram_n⟧.")
     c.figure(DIAGRAMS / "external_weights.png", "External weights: a frozen model for compute, and memory that grows "
              "on disk (note vectors, learned index, query adapter, router) fed by teaching, eager lookups, packs and "
-             "sleep", 16.0)
+             "sleep", 13.5)
     c.p("There are three places a frozen model's knowledge can live, and this project now measures all three on the "
         f"same 237 documents and 60 held-out questions ({c.next_tab()}). *Inside* the model, by changing weights (LoRA, "
         "Equation ⟦eq_lora_n⟧, Section ⟦sec_finetune⟧). *Beside* the model, as a token-level memory that the frozen "
         "model consults at every step: the k-nearest-neighbour language model (kNN-LM; Khandelwal et al., 2020) stores, "
         "for every position of every document, the model's own hidden state as a key and the next token as a value, "
         "and mixes the tokens of the nearest keys into the model's prediction,")
-    c.eq(r"p(y\mid x)=\lambda\,p_{\text{kNN}}(y\mid x)+(1-\lambda)\,p_{\text{LM}}(y\mid x),\qquad "
-         r"p_{\text{kNN}}(y\mid x)\propto\sum_{(k_i,v_i)\in N_k(h(x))}\mathbb{1}\left[v_i=y\right]"
-         r"e^{\cos(h(x),k_i)/\tau}", key="eq_knnlm")
-    c.p("which is the most literal form of *external weights used as memory while the model's parameters do the "
+    c.eq(r"p(y\mid x)=\lambda\,p_{\text{kNN}}(y\mid x)+(1-\lambda)\,p_{\text{LM}}(y\mid x)", key="eq_knnlm")
+    c.eq(r"p_{\text{kNN}}(y\mid x)\propto\sum_{(k_i,v_i)\in N_k(h(x))}\mathbb{1}\left[v_i=y\right]"
+         r"\exp\left(\cos(h(x),k_i)/\tau\right)", key="eq_knnlm2")
+    c.p("(Equations ⟦eq_knnlm_n⟧–⟦eq_knnlm2_n⟧), which is the most literal form of *external weights used as memory "
+        "while the model's parameters do the "
         "compute*. And *in the prompt*, which is CAMR: notes chosen per question and read by the model.")
     c.table("Three places to keep a frozen model's knowledge, compared on the same documents",
             ["", "Inside (LoRA)", "Beside (kNN-LM)", "In the prompt (CAMR)"],
@@ -1990,10 +1992,10 @@ def learning_design(c: Chapter) -> None:
     c.p("**Eager learning.** When the gate abstains, the 0.3 read path treats it as a gap in memory rather than an "
         "answer. Writing *L(q)* for the pages a lookup returns and *W* for the write path (screening, deduplication, "
         "provenance), the action for a question is")
-    c.eq(r"\text{act}(q)=\left\{\begin{array}{ll}\text{read }A(q) & \text{if }A(q)\neq\varnothing\\ "
-         r"\text{ask to be taught} & \text{if }A(q)=\varnothing\text{ and }q\text{ is about the user}\\ "
-         r"\mathcal{M}\leftarrow\mathcal{M}\cup W(L(q)),\ \text{read }A(q) & \text{if }A(q)=\varnothing"
-         r"\text{ and lookups are on}\\ \text{model alone} & \text{otherwise}\end{array}\right.", key="eq_eager")
+    c.eq(r"\text{act}(q)=\left\{\begin{array}{ll}\text{read }A(q) & A(q)\neq\varnothing\\ "
+         r"\text{ask to be taught} & A(q)=\varnothing,\ q\text{ personal}\\ "
+         r"\mathcal{M}\leftarrow\mathcal{M}\cup W(L(q));\ \text{read }A(q) & A(q)=\varnothing,\ \text{lookups on}"
+         r"\\ \text{model alone} & \text{otherwise}\end{array}\right.", key="eq_eager")
     c.p(f"{c.next_fig()} shows the loop. Three design decisions keep it safe and honest:")
     c.items(["**Privacy.** A question that refers to the user (*my*, *I*, *we*, …) is never sent anywhere; the "
              "assistant says it does not know that yet and offers a *Teach me* button. For a general question only "
@@ -2092,6 +2094,73 @@ def learning_tests(c: Chapter) -> None:
              ["TC-58", "Browser: Learning tab; install a pack; turn lookups off", "External weights shown; memory count "
               "rises by the pack's notes; the status pill reads *offline*", "Pass"]],
             [1.4, 5.0, 7.0, 1.6], size=9)
+
+
+def learning_scenarios(c: Chapter) -> None:
+    d = _j(ROOT / "docs/results/scenarios_v3.json")
+    if not d:
+        return
+    sc = d["scenarios"]
+    c.h3("Learning in the Application: Live Scenarios", key="sec_learn_scen")
+    c.p(f"The four behaviours of version 0.3 were run in the real application with {d['model']}, through the browser, "
+        "each variant in a fresh home, with the answers logged by the same harness as Section ⟦sec_scenarios⟧ "
+        f"(`scripts/scenario_screens.py --set v3`). {c.next_tab()} lists what the model actually answered.")
+
+    def ans(e, v, k=-1):
+        return e[v]["turns"][k]["answer"].replace("\n", " ")[:150] if v in e else "–"
+
+    rows = []
+    for key, what in (("fetch_new", "Who won the 2026 FIFA World Cup? (after the models' training)"),
+                      ("foreign", "How many hours is a 4-point story? (a made-up unit, *kazoru*)"),
+                      ("teach_me", "What is my passport number? (not stored)"),
+                      ("pack_sleep", "Highest mountain in Kenya (Kenya pack installed), then sleep")):
+        if key in sc:
+            e = sc[key]
+            rows.append([what, ans(e, "without"), ans(e, "with"), "Yes" if e["with"].get("correct") else "No"])
+    c.table("Live learning scenarios: what the model answered without and with the 0.3 behaviour (last turn)",
+            ["Scenario", "Without (learning off / not taught)", "With CAMR 0.3", "Correct"], rows,
+            [3.8, 4.6, 5.6, 1.4], size=8.5)
+    f = sc.get("fetch_new")
+    if f:
+        t1, t2 = f["with"]["turns"][0], f["with"]["turns"][-1]
+        c.p("**Something newer than the model.** With lookups off, the model said it did not know and asked to be told, "
+            "rather than guess a winner its training could not contain. With lookups on, the first question was looked "
+            f"up ({len(t1.get('source_urls') or [])} notes from Wikipedia stored, each with its link), answered from "
+            f"them (*{t1['answer'][:90]}*), and the reworded follow-up was answered **from memory with no lookup** "
+            f"({t2['retrieval_ms']:.0f} ms of retrieval) ({c.next_fig()}).")
+        c.figure(ROOT / f["with"]["screenshot"].replace("_with.png", ".png"), "Something newer than the model: lookups "
+                 "off (left) and on (right); the second question is answered from what the first one taught", 16.0)
+    f = sc.get("foreign")
+    if f:
+        c.p("**Teaching it a new concept.** A unit the model cannot know (*a kazoru is three hours of focused work; one "
+            "story point is half a kazoru*) was taught once as a note. Asked how long a 4-point story takes, the model "
+            f"with the note reasoned through it: *{ans(f, 'with')}* Without the note it asked to be taught, and the "
+            f"question, which says *our sprint*, was never sent to the web ({c.next_fig()}).")
+        c.figure(ROOT / f["with"]["screenshot"].replace("_with.png", ".png"), "A concept taught once and applied: "
+                 "never taught (left) and taught (right)", 16.0)
+    f = sc.get("teach_me")
+    if f:
+        t = f["with"]["turns"]
+        c.p(f"**Asking to be taught.** For a personal fact memory did not hold, the reply was *{t[0]['answer']}* with a "
+            f"*Teach me* button; after *{t[1]['question']}*, the same question was answered: *{t[-1]['answer']}* "
+            f"({c.next_fig()}).")
+        c.figure(ROOT / f["with"]["screenshot"].replace("_with.png", ".png"), "A personal gap answered by asking to be "
+                 "taught, then answered from what the user taught", 10.5)
+    f = sc.get("pack_sleep")
+    if f and f["with"].get("learning"):
+        L = f["with"]["learning"]
+        rep = (L.get("last_sleep") or {}).get("report", {})
+        cur = rep.get("curiosity", {})
+        names = ", ".join(x["title"] for x in cur.get("learned", [])[:5])
+        c.p(f"**A knowledge pack, then sleep.** With the bundled *Kenya* pack installed (its vectors copied, no model "
+            f"run), the question was answered from the pack (*{ans(f, 'with')}*). Sleep then ran its four steps: it "
+            f"removed {rep.get('tidy', {}).get('duplicates_removed', 0)} duplicates, looked up the names the pack's "
+            f"notes mentioned but memory had no note about, and learned {len(cur.get('learned', []))} of them "
+            f"({names}); with only {rep.get('notes_after', '?')} notes it built no index and, with no answered "
+            f"questions yet, trained no adapter, both by design ({c.next_fig()}).")
+        if f["with"].get("panel_screenshot"):
+            c.figure(ROOT / f["with"]["panel_screenshot"], "The Learning tab after installing a pack and sleeping: "
+                     "external weights (frozen model, growing memory), lookups, the sleep report and packs", 7.5)
 
 
 def learning_results(c: Chapter) -> None:
@@ -2222,7 +2291,7 @@ def sleep_results(c: Chapter) -> None:
                 + [[f"Index, n_probe = {k.rsplit('_', 1)[1]}", pct(r[k]["share_of_memory_read"]), f"{r[k]['ms']:.1f}",
                     pct(r[k]["agreement_with_exact"]), pct(r[k]["full_support_recall"])] for k in probes],
                 [3.6, 3.0, 2.4, 3.2, 3.2], size=9)
-        if idx.get("scale"):
+        if idx.get("scale") and (FIGS / "index_scaling.png").exists():
             c.p(SCALE_TEXT(idx))
             c.figure(FIGS / "index_scaling.png", "Search time and resident memory as memory grows: exact search "
                      "against the learned index (distractor notes added to the real store)", 15.5)
