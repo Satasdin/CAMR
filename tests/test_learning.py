@@ -299,3 +299,12 @@ def test_the_lead_of_an_article_page_is_extracted_and_disambiguation_skipped():
     assert lead["title"] == "Kenya" and "Nairobi" in lead["extract"] and "[1]" not in lead["extract"]
     assert "Later" not in lead["extract"] and "infobox" not in lead["extract"]
     assert _lead_from_html('<div id="mw-content-text"><p>Kenya may refer to:</p></div>') == {}
+
+
+def test_curiosity_names_never_run_across_a_sentence_end(tmp_path):
+    engine = fresh_engine(tmp_path)
+    engine.ingest([Document("web", "u1", "Mount Kenya lies in the East of Kenya. This mountain is in East Africa. "
+                                         "By 1900 East Africa was a protectorate.", "Mount Kenya"),
+                   Document("web", "u2", "East Africa borders the Indian Ocean. East of Kenya. This is a test.", "Region")])
+    names = [n for n, _ in knowledge_gaps(engine)]
+    assert "East Africa" in names and not any(". " in n for n in names)  # D-22: no "East of Kenya. This"

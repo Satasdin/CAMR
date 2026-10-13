@@ -197,7 +197,8 @@ def side_by_side(left: Path | None, right: Path, out: Path, labels=("Without mem
     d = ImageDraw.Draw(canvas)
     font = ImageFont.truetype(FONT, 22)
     x = 0
-    for lab, im, col in zip(labels if left else labels[1:], ims, ((235, 104, 52), (27, 175, 122))):
+    colours = ((235, 104, 52), (27, 175, 122)) if left else ((27, 175, 122),)
+    for lab, im, col in zip(labels if left else labels[1:], ims, colours):
         d.text((x + 18, 10), lab, fill=col, font=font)
         canvas.paste(im, (x, head))
         x += im.width + 16

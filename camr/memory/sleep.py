@@ -88,13 +88,14 @@ def knowledge_gaps(engine: MemoryEngine, limit: int = 10, min_mentions: int = 2)
             f"SELECT n.text FROM note n JOIN source s USING(source_id) WHERE n.note_type=? AND {_public_where()}",
             (nt,)):
         body = text.split(": ", 1)[-1]  # drop the "Title: " prefix the write path adds
-        for m in _NAME.finditer(body):
-            name = m.group(1).strip(" .,'’")
-            key = norm(name)
-            if len(key) < 4 or key in _NOT_NAMES or key in known:
-                continue
-            counts[key] += 1
-            spelled.setdefault(key, name)
+        for sentence in re.split(r"(?<=[a-z0-9)])\.\s+", body):  # a name never runs across a sentence end (D-22)
+            for m in _NAME.finditer(sentence):
+                name = m.group(1).strip(" .,'’")
+                key = norm(name)
+                if len(key) < 4 or key in _NOT_NAMES or key in known:
+                    continue
+                counts[key] += 1
+                spelled.setdefault(key, name)
     return [(spelled[k], c) for k, c in counts.most_common() if c >= min_mentions][:limit]
 
 

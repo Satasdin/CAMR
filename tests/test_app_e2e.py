@@ -204,6 +204,7 @@ def test_personal_gap_offers_teach_me_which_switches_to_remember_mode(browser, l
     page.wait_for_selector("#input")
     send(page, "What is my passport number?")
     page.wait_for_selector("button.act.teach", timeout=15000)
+    assert page.locator(".msg.assistant").last.locator("button.act.up").count() == 0  # nothing to approve in "tell me"
     page.click("button.act.teach")
     assert page.locator("#remember-toggle.on").count() == 1
     assert page.evaluate("document.activeElement.id") == "input"

@@ -109,10 +109,12 @@ button { cursor: pointer; }
 /* recall card (memory read before answering) */
 .recall { border: 1px solid var(--border); background: linear-gradient(180deg, rgba(42,120,214,.07), transparent);
   border-radius: 14px; margin-bottom: 12px; overflow: hidden; }
-.recall summary { list-style: none; cursor: pointer; padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.recall summary { list-style: none; cursor: pointer; padding: 8px 34px 8px 12px; display: block; position: relative; font-size: 13.5px;
+  color: var(--muted); line-height: 1.55; }
+.recall summary > span:first-child { margin-right: 6px; }
 .recall summary::-webkit-details-marker { display: none; }
 .recall summary b { color: var(--text); font-weight: 600; }
-.recall summary .chev { margin-left: auto; transition: transform .2s; }
+.recall summary .chev { position: absolute; right: 12px; top: 8px; transition: transform .2s; }
 .recall[open] summary .chev { transform: rotate(180deg); }
 .recall.thinking summary { animation: shimmer 1.6s linear infinite; background: linear-gradient(90deg, transparent, rgba(90,162,240,.10), transparent) 0 0/200% 100%; }
 @keyframes shimmer { to { background-position: -200% 0; } }

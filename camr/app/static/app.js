@@ -215,7 +215,7 @@ function finish(el, t) {
   const stored = t.saved_to_memory && !(t.sources || []).length && !t.abstained;  // a "remember that" turn
   $(".actions", el).innerHTML = (t.turn_id && stored ? `<button class="act copy" title="Copy">⧉ Copy</button>` : t.turn_id ? `
     <button class="act copy" title="Copy">⧉ Copy</button>
-    <button class="act up ${t.feedback === 1 ? "on" : ""}" title="Good answer: save it to memory">👍 ${t.feedback === 1 ? "Learned" : "Teach this"}</button>
+    ${t.ask_to_teach ? "" : `<button class="act up ${t.feedback === 1 ? "on" : ""}" title="Good answer: save it to memory">👍 ${t.feedback === 1 ? "Learned" : "Teach this"}</button>`}
     <button class="act down ${t.feedback === -1 ? "on" : ""}" title="Not helpful">👎</button>` : "")
     + (g != null ? `<span class="ground" title="Share of the answer's words found in the memories it read"><span class="meter"><i style="width:${Math.round(100 * g)}%;background:${gcol}"></i></span>grounded ${Math.round(100 * g)}%</span>` : "")
     + (t.generation_ms ? `<span class="timing">${Math.round(t.retrieval_ms)} ms memory · ${t.first_token_ms ? (t.first_token_ms / 1000).toFixed(1) + " s to first word · " : ""}${(t.generation_ms / 1000).toFixed(1)} s answer</span>` : "");
