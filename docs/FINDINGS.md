@@ -455,6 +455,28 @@ Source: `docs/results/ui_audit.json` (`python scripts/ui_audit.py --axe axe.min.
 
 ---
 
+## F17. CAMR against standard RAG (same embedder, store and prompt)
+
+Source: `results/rag_vs_camr/retrieval.json` (`python scripts/rag_vs_camr.py retrieval`). Standard RAG = the top-k most similar chunks, always, no threshold, no budget cut. 500 questions per benchmark, 38,054-note store.
+
+| Benchmark | Method | Both gold paragraphs | Context precision | Notes | Tokens |
+|---|---|---|---|---|---|
+| HotpotQA | RAG top-3 | 56.2% | 57.0% | 3.0 | 231 |
+| HotpotQA | RAG top-5 | 68.2% | 39.2% | 5.0 | 391 |
+| HotpotQA | RAG top-10 | 78.6% | 21.9% | 10.0 | 800 |
+| HotpotQA | CAMR | 70.8% | 39.1% | 5.6 | 420 |
+| 2Wiki | RAG top-3 | 28.0% | 60.3% | 3.0 | 216 |
+| 2Wiki | RAG top-5 | 34.2% | 42.0% | 5.0 | 373 |
+| 2Wiki | RAG top-10 | 39.2% | 23.4% | 10.0 | 767 |
+| 2Wiki | CAMR | 78.4% | 51.5% | 6.0 | 439 |
+
+**Findings**
+1. **2Wiki (compositional, second hop named only in the first paragraph):** RAG finds one gold paragraph almost always but both only 28–39% of the time; going from k = 5 to 10 doubles the tokens for +5 points. CAMR reaches 78.4% with 439 tokens: twice the recall of top-10 RAG at 43% fewer tokens, with higher precision. Entity bridging, not more retrieval, finds the second hop.
+2. **HotpotQA (both entities usually named in the question):** CAMR ≈ top-5 RAG (70.8% vs 68.2%, same precision). Here CAMR's read path is essentially RAG with a token cap.
+3. The answer-level comparison (answer in memory vs removed) is in `results/rag_vs_camr/answers.json`.
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |

@@ -45,6 +45,9 @@ That was an extension, not a change. The 1–3B models were all tested. The smal
 ## B. Is this "just RAG"?
 
 **B1. How is CAMR different from retrieval-augmented generation?**
+*Short answer for the viva:* its retrieval core is RAG; the difference is every decision around it, and it was measured head to head against a textbook top-k RAG using the same embedder, store and prompt (F17). On 2WikiMultiHopQA, CAMR got both needed paragraphs into the context for 78.4% of questions with 439 tokens. Top-10 RAG managed 39.2% with 767 tokens. On HotpotQA the two were about equal (70.8% vs 68.2%), and I say so.
+
+*Longer answer:*
 The retrieval core is RAG, and that is deliberate: the study measures how far memory can substitute for model size. CAMR differs in four measured ways:
 1. **It is capability-adaptive.**
    - It abstains when nothing is relevant (gating).
