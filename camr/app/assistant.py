@@ -213,7 +213,7 @@ class Assistant:
             "memory": {"write_policy": "verbatim", "retrieval_policy": "similarity_only",
                        "weights": {"similarity": 1.0, "recency": 0.0, "importance": 0.0},
                        "k": 20, "token_budget": self.token_budget, "min_similarity": min_similarity,
-                       "similarity_margin": 0.15, "expansion": "entity", "chunk_tokens": 120},
+                       "similarity_margin": 0.15, "expansion": "entity", "entity_gate": True, "chunk_tokens": 120},
         })
         # One store file per embedder: vectors from different embedders cannot be mixed.
         db = "memory.sqlite" if embedder is not None or self.embedder.name.startswith("BAAI") else \
