@@ -47,8 +47,13 @@ def build(template: Path, out: Path) -> Path:
         "independent and recency carries no signal about them (section ⟦sec_retrieval⟧). Two capability-adaptive additions "
         "transferred well. Gating kept irrelevant text away from a weak reader. Entity bridging, a one-step "
         "associative hop that needs no graph construction, raised full-support recall on 2WikiMultiHopQA from "
-        "35.8% to 78.4% at the same token budget. The applicable techniques on-device are therefore cheap, "
-        "similarity-based and selective, not the weighted composites of large-model agent memories.")
+        "35.8% to 78.4% at the same token budget, twice the recall of standard top-10 RAG with fewer tokens. "
+        "Compared head to head with standard RAG (section ⟦sec_ragresult⟧), CAMR matched or beat it when the answer "
+        "was stored, with about 40% less text, but its similarity gate failed exactly as RAG did when the store held "
+        "notes about *similar* entities and not the right one; an entity-anchored gate, validated on questions that "
+        "played no part in its design, removed most of that failure at no cost on answerable questions. The applicable "
+        "techniques on-device are therefore cheap, selective and anchored in what the question names, not the "
+        "weighted composites of large-model agent memories, and not retrieval alone.")
     c.h3("Research Question ii: How Much of the Gap a Frozen-Weights Memory Engine Closes")
     c.p("Against the frontier cloud model (Kimi K3), the engine closed the entire single-hop knowledge gap for a "
         "0.5B model (gap closed 1.00) and half of the multi-hop gap (0.50, 95% CI 0.20–0.90). The multi-hop result "
@@ -85,10 +90,13 @@ def build(template: Path, out: Path) -> Path:
         "0.5–3B models, and a 21-fold larger memory (282 to 5,976 notes) added only about 10 ms to the lookup "
         "(section ⟦sec_app_speed⟧).")
     c.h3("Contribution and the Boundaries of the Findings")
-    c.p("The study contributes four things: (1) a working, open-source memory engine and evaluation harness; "
+    c.p("The study contributes five things: (1) a working, open-source memory engine and evaluation harness, "
+        "distinguished from standard RAG by measured, capability-adaptive decisions (gating, entity anchoring, "
+        "bridging, per-question budgets and escalation); "
         "(2) measured evidence that external memory lets small on-device models match a frontier cloud model on "
         "knowledge-bound questions, together with the residual gap that memory cannot close; (3) a size map of 19 "
-        "small models showing where memory pays off; and (4) a released desktop application, CAMR Personal, that "
+        "small models showing where memory pays off; (4) a measured comparison with fine-tuning on the same documents; "
+        "and (5) a released desktop application, CAMR Personal, that "
         "puts the approach in users' hands. These conclusions hold for English benchmark questions, for frozen "
         "quantised models run with greedy decoding on 4-core CPUs with 16 GB of memory, for the sample sizes "
         "reported (30–200 questions per condition, 500 for retrieval), and for a stochastic cloud reference "
@@ -128,9 +136,10 @@ def build(template: Path, out: Path) -> Path:
              ["3", "CAMR maintainers", "Code-sign the Windows and macOS downloads before wider distribution, and keep "
               "feedback strictly opt-in", "⟦sec_vc⟧: unsigned builds trigger OS warnings; privacy is a stated design "
               "requirement (NFR-06)"],
-             ["4", "Designers of memory engines for small models", "Use similarity ranking with gating and entity "
-              "bridging; avoid recency/importance weighting for independent questions; calibrate the abstain "
-              "threshold per embedder", "⟦sec_retrieval⟧: Eq. 4.1 lowered recall; bridging doubled 2Wiki recall; ⟦sec_tune_read⟧ "
+             ["4", "Designers of memory engines for small models", "Use similarity ranking with gating, entity "
+              "bridging and an entity-anchored abstain check; do not rely on a similarity threshold alone to detect "
+              "that the answer is not stored; avoid recency/importance weighting for independent questions; calibrate "
+              "the abstain threshold per embedder", "⟦sec_retrieval⟧: Eq. 4.1 lowered recall; bridging doubled 2Wiki recall; ⟦sec_ragresult⟧: entity gate; ⟦sec_tune_read⟧ "
               "calibration rule"],
              ["5", "Designers of memory engines for small models", "Keep the memory budget small for tiny models "
               "(≈128 tokens for facts) and let a policy adapt it", "⟦sec_budget⟧ budget curve; ⟦sec_policy⟧ learned policy"],
@@ -184,7 +193,11 @@ def build(template: Path, out: Path) -> Path:
               "cloud reference was sampled once (⟦sec_limits⟧).", "n ≥ 200 per task; repeated cloud samples or a "
               "deterministic open frontier model; non-English data", "Confidence intervals that exclude the pilot's "
               "uncertainty; variance across repeats"],
-             ["7", "**Better routing signals.** The learned router reached 61–65% against an oracle of 79% (⟦sec_policy⟧).",
+             ["7", "**A learned entity gate.** The rule-based entity gate wrongly abstained on 2.2% of HotpotQA "
+              "questions whose wording names an entity differently from its paragraph (⟦sec_ragresult⟧).", "A small "
+              "named-entity recogniser and alias table (e.g. Wikidata aliases) in place of capitalisation rules",
+              "Abstention on answerable vs unanswerable questions; full-support recall"],
+             ["8", "**Better routing signals.** The learned router reached 61–65% against an oracle of 79% (⟦sec_policy⟧).",
               "The small model's own confidence and the grounding signal as router features", "Held-out accuracy "
               "and cloud share against the same oracle"]],
             [1.6, 5.4, 4.4, 4.5], size=9)

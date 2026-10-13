@@ -1342,6 +1342,13 @@ def formal_model(c: Chapter) -> None:
     c.eq(r"E(q)=\begin{cases}\varnothing & \text{if } s_{(1)}<\tau\\ \left\{n\in C_k(q):s(q,n)\ge s_{(1)}-\delta\right\} & \text{otherwise}\end{cases}", key="eq_gate")
     c.where([(r"\tau", "the abstain threshold (0.50 for BGE, 0.55 for nomic-embed-text; calibrated in section ⟦sec_tune_read⟧);"),
              (r"\delta", "the admission margin (0.15).")])
+    c.p("A second, optional gate was added after the comparison with standard RAG (section ⟦sec_ragresult⟧) showed that "
+        "similarity cannot tell a note about *this* entity from a note about a similar one. Let *N(q)* be the names the "
+        "question mentions (runs of capitalised words and quoted titles, `camr.memory.entities`). If the question names "
+        "something and no eligible note mentions it, the engine abstains:")
+    c.eq(r"E'(q)=\begin{cases}\varnothing & \text{if } N(q)\neq\varnothing \text{ and } N(q)\cap\text{names}(n)=\varnothing\;\;\forall n\in E(q)\\ E(q) & \text{otherwise}\end{cases}", key="eq_entgate")
+    c.p("Questions that name nothing (*when is my dentist appointment?*) are unaffected. The gate is off in the "
+        "benchmark runs reported before section ⟦sec_ragresult⟧ and on in the released application.")
     c.p("Entity bridging then adds, for each of the top three eligible seed notes, up to two notes about other "
         "stored entities whose titles the seed's text mentions. These notes may have low similarity to the question; "
         "they are reached through the seed, which is the second hop of a multi-hop question:")
@@ -1865,8 +1872,9 @@ def rag_definition(c: Chapter) -> None:
              "what CAMR adds", 14.5)
     c.table("CAMR compared with standard RAG, and where each difference is measured",
             ["Aspect", "Standard RAG", "CAMR", "Evidence"],
-            [["When nothing relevant is stored", "Still inserts the k most similar chunks", "Abstains (Equation "
-              "⟦eq_gate_n⟧): the model answers alone, and the app says so", "Section ⟦sec_ragresult⟧ (answer not in "
+            [["When nothing relevant is stored", "Still inserts the k most similar chunks", "Abstains when the best note "
+              "is weak (Equation ⟦eq_gate_n⟧) or is about a different entity than the question names (Equation "
+              "⟦eq_entgate_n⟧): the model answers alone, and the app says so", "Section ⟦sec_ragresult⟧ (answer not in "
               "memory); calibration (⟦sec_tune_read⟧)"],
              ["How many notes", "Always k", "Only notes within δ of the best, under a token budget", "Section "
               "⟦sec_ragresult⟧ (tokens, precision)"],
