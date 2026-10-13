@@ -1901,21 +1901,35 @@ def rag_results(c: Chapter) -> None:
         c.p(RAG_RETRIEVAL_TEXT(r))
     if ap.exists():
         d = json.loads(ap.read_text())
-        labels = [("alone", "Model alone"), ("rag_answerable", f"RAG top-{d['k']}, answer in memory"),
-                  ("camr_answerable", "CAMR, answer in memory"), ("rag_missing", f"RAG top-{d['k']}, answer NOT in memory"),
-                  ("camr_missing", "CAMR, answer NOT in memory")]
-        rows = []
-        for model, m in d["models"].items():
-            for key, lab in labels:
-                x = m["summary"][key]
-                rows.append([model, lab, pct(x["accuracy"]), f"{x['mean_context_words']:.0f}",
-                             pct(x["abstain_rate"]) if key != "alone" else "–",
-                             pct(x["wrong_from_context"]) if key != "alone" else "–"])
+
+        def answer_rows(d):
+            labels = [("alone", "Model alone"), ("rag_answerable", f"RAG top-{d['k']}, answer in memory"),
+                      ("camr_answerable", "CAMR, answer in memory"),
+                      ("camr_eg_answerable", "CAMR + entity gate, answer in memory"),
+                      ("rag_missing", f"RAG top-{d['k']}, answer NOT in memory"),
+                      ("camr_missing", "CAMR, answer NOT in memory"),
+                      ("camr_eg_missing", "CAMR + entity gate, answer NOT in memory")]
+            rows = []
+            for model, m in d["models"].items():
+                for key, lab in labels:
+                    if key not in m["summary"]:
+                        continue
+                    x = m["summary"][key]
+                    rows.append([model, lab, pct(x["accuracy"]), f"{x['mean_context_words']:.0f}",
+                                 pct(x["abstain_rate"]) if key != "alone" else "–",
+                                 pct(x["wrong_from_context"]) if key != "alone" else "–"])
+            return rows
+
+        head = ["Model", "Condition", "Accuracy", "Context words", "Abstained", "Wrong answer copied from the notes"]
         c.table(f"Answers on {d['n']} held-out PopQA questions: standard RAG against CAMR, with the answer in memory and "
-                "with the question's own document removed",
-                ["Model", "Condition", "Accuracy", "Context words", "Abstained", "Wrong answer copied from the notes"],
-                rows, [2.6, 5.0, 1.9, 2.2, 2.0, 2.3], size=8.5)
+                "with the question's own document removed", head, answer_rows(d), [2.6, 5.0, 1.9, 2.2, 2.0, 2.3], size=8.5)
         c.p(RAG_ANSWER_TEXT(d))
+        vp = ROOT / "results/rag_vs_camr/answers_val.json"
+        if vp.exists():
+            v = json.loads(vp.read_text())
+            c.p(ENTITY_GATE_TEXT(d, v))
+            c.table(f"The entity-anchored gate on the {v['n']} validation questions, which played no part in designing it",
+                    head, answer_rows(v), [2.6, 5.0, 1.9, 2.2, 2.0, 2.3], size=8.5)
     c.p("Earlier results in this chapter measure the remaining differences. Against the same store with a fixed budget "
         "and no gating (the *control* configuration), the full engine was 10 points more accurate on single-hop facts "
         "with 42% fewer tokens and answered 3.4 times faster (section ⟦sec_budget⟧). A fixed RAG budget for every "
@@ -1963,6 +1977,10 @@ def RAG_ANSWER_TEXT(d) -> str:  # noqa: N802
 
 
 RAG_ANSWER_NOTES = ""
+
+
+def ENTITY_GATE_TEXT(d, v) -> str:  # noqa: N802 - written from the logged results
+    return ""
 
 
 # Interpretation of the 200-question study; written once its results are in (results/hotpot200).
