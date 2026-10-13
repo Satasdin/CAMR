@@ -1928,17 +1928,23 @@ def rag_results(c: Chapter) -> None:
 def RAG_RETRIEVAL_TEXT(r) -> str:  # noqa: N802
     def get(b, m):
         return next(x for x in r if x["benchmark"] == b and x["method"] == m)
-    h5, hc = get("hotpotqa", "RAG top-5"), get("hotpotqa", "CAMR")
-    w5, wc = get("2wikimultihopqa", "RAG top-5"), get("2wikimultihopqa", "CAMR")
-    w10 = get("2wikimultihopqa", "RAG top-10")
-    return (f"On 2WikiMultiHopQA, where the second paragraph is reached only through a name in the first, CAMR put both "
-            f"gold paragraphs in the context for {pct(wc['support_all'])} of questions against {pct(w5['support_all'])} for "
-            f"top-5 RAG, and even top-10 RAG, with {w10['mean_tokens']:.0f} tokens, reached only "
-            f"{pct(w10['support_all'])}. Entity bridging, not more retrieval, is what finds the second hop. On HotpotQA the "
-            f"two were closer ({pct(hc['support_all'])} against {pct(h5['support_all'])}), and CAMR's context was more "
-            f"precise: {pct(hc['context_precision'])} of its notes were gold paragraphs, against "
-            f"{pct(h5['context_precision'])} for top-5 RAG, because the margin drops weak candidates that RAG always "
-            "includes.")
+    h5, h10, hc = get("hotpotqa", "RAG top-5"), get("hotpotqa", "RAG top-10"), get("hotpotqa", "CAMR")
+    w3, w5, w10, wc = (get("2wikimultihopqa", m) for m in ("RAG top-3", "RAG top-5", "RAG top-10", "CAMR"))
+    return (f"The two benchmarks separate where CAMR adds something and where it does not. On **2WikiMultiHopQA**, whose "
+            "second paragraph is reached only through a name in the first, standard RAG almost always found *one* gold "
+            f"paragraph ({pct(w5['support_any'])} at top-5) but rarely both: {pct(w3['support_all'])}, "
+            f"{pct(w5['support_all'])} and {pct(w10['support_all'])} at k = 3, 5 and 10. Doubling k to 10 doubled the "
+            f"tokens ({w10['mean_tokens']:.0f}) and added only {100 * (w10['support_all'] - w5['support_all']):.0f} points, "
+            "because more of the same kind of retrieval finds more first-hop paragraphs, not the second hop. CAMR put "
+            f"both in the context for {pct(wc['support_all'])} of questions with {wc['mean_tokens']:.0f} tokens, twice "
+            f"the recall of top-10 RAG at {100 * (1 - wc['mean_tokens'] / w10['mean_tokens']):.0f}% fewer tokens, and a "
+            f"larger share of its notes were gold ({pct(wc['context_precision'])} against {pct(w10['context_precision'])}). "
+            f"On **HotpotQA** the difference was small: CAMR {pct(hc['support_all'])} with {hc['mean_tokens']:.0f} tokens "
+            f"against top-5 RAG's {pct(h5['support_all'])} with {h5['mean_tokens']:.0f}, at the same precision "
+            f"({pct(hc['context_precision'])} and {pct(h5['context_precision'])}); top-10 RAG recovered more "
+            f"({pct(h10['support_all'])}) by sending {h10['mean_tokens']:.0f} tokens. HotpotQA questions usually name both "
+            "entities, so similarity alone finds both paragraphs, and on such questions CAMR's read path is essentially "
+            "RAG with a token cap.")
 
 
 def RAG_ANSWER_TEXT(d) -> str:  # noqa: N802
