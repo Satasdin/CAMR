@@ -408,6 +408,53 @@ Source: `docs/results/app_latency.json` (`python scripts/app_latency.py`). Real 
 
 ---
 
+## F15. Tuning the engine's learned and tunable parts on validation data only
+
+Sources: `results/learn/tables/policy_tuning.json` (`python scripts/tune_policy.py`), `results/retrieval_eval/tables/gating_tuning.json` (`python scripts/tune_gating.py`).
+
+**Router (5-fold CV on the 144 training questions; the 72 held-out questions scored once).**
+
+| Hyperparameter | First study (by hand) | Selected by CV |
+|---|---|---|
+| Feature set | full (11 features) | **task only** |
+| Ridge λ | 1.0 | 0.01 |
+| LinUCB α / passes | 0.5 / 5 | 1 / 1 |
+| Cascade threshold θ | 0.2 (read off the held-out split) | 0.05 |
+
+| Policy (held-out, n = 72) | Accuracy | Δ vs always-Kimi | Cloud | s / answer |
+|---|---|---|---|---|
+| always Kimi K3 | 63.9% | — | 100% | 12.6 |
+| tuned router | 62.5% | -1.4 (95% CI -13.9 to +11.1) | 17% | 2.3 |
+| tuned LinUCB | 55.6% | -8.3 (95% CI -20.8 to +4.2) | 17% | 2.0 |
+| **tuned router + cascade** | **66.7%** | +2.8 (95% CI -8.3 to +13.9) | 25% | 2.9 |
+
+**Findings**
+1. Cross-validation preferred the simplest router (task type only); the retrieval features did not improve CV reward on 144 questions, and the fold-to-fold spread (±0.08) exceeds the differences between settings.
+2. Properly tuned, the cascade keeps equal accuracy to always-Kimi (difference not significant) with a quarter of the cloud calls and about a fifth of the time. This replaces F11b's threshold, which had been chosen on the held-out split.
+3. LinUCB's best setting was one pass; more passes did not help on 144 questions.
+
+**Read path (δ, B) on a validation half of the 1,000 retrieval questions, tested on the other half.** Objective J = full-support recall − 0.1 × tokens/1000.
+
+| Setting | Full-support recall (held-out) | Tokens | J |
+|---|---|---|---|
+| Selected on validation: δ = None, B = 1024 | 85.6% | 979 | 0.758 |
+| Study default: δ = 0.15, B = 512 | 72.8% | 431 | 0.685 |
+
+4. At μ = 0.1 per 1k tokens more evidence is worth its tokens; above μ ≈ 0.20 the study default wins. Retrieval-level tuning favours large budgets, but the end-to-end budget sweep (F8) showed the 0.5B *reader* is hurt by extra notes: the read path must be tuned to the reader, which is what the learned router does per question.
+
+---
+
+## F16. Interface audit: accessibility and browser tests
+
+Source: `docs/results/ui_audit.json` (`python scripts/ui_audit.py --axe axe.min.js`), `tests/test_app_e2e.py`.
+
+- **Before:** axe-core 4.10 reported `color-contrast` (serious) and `page-has-heading-one`; 6 token pairs were below WCAG AA (secondary text 2.3–3.3:1; light-theme accent and success colours).
+- **Fix (D-11, D-12):** per-theme token values; a persistent, visually hidden page heading.
+- **After:** 0 axe violations in both themes at desktop and phone width; every token pair ≥ AA.
+- **Browser tests (Chromium, Playwright):** remember→ask with recall card, empty message, 👍 teaches, theme and panel, phone width without horizontal scroll, keyboard-only path with accessible names: 6/6 pass. Total suite: 111 tests.
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |

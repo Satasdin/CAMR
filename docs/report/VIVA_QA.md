@@ -55,7 +55,7 @@ The retrieval core is RAG, and that is deliberate: the study measures how far me
    - The same frozen weights went from 6.7% to 66.7% on long-tail facts as memory grew (F2).
 3. **It is budget-controlled per model and task.**
    - A learned router picks the budget (or escalates to the cloud) per question.
-   - With it, 71% of questions stayed on the device at equal accuracy (F11b).
+   - With it, 75% of questions stayed on the device at equal accuracy (F15).
 4. **It is evaluated as a gap-closing mechanism.**
    - Results are reported as gap closed and residual gap, not as raw accuracy only.
 
@@ -128,7 +128,7 @@ Mathematical reasoning: the residual gap is 83 points, and worked-example memory
 Not for facts. From 1.5B up, every model reached 70–80% with memory, and 14B was no better than 1.5B (F10b). For multi-hop, yes up to about 3B, though family matters: mistral:7b (43.3%) did worse than llama3.2:3b (56.7%).
 
 **E4. Did the learned policy really beat the cloud?**
-No, it matched it. The policy scored 65.3% against 63.9% for always-Kimi, which is within noise. The robust result is equal accuracy with 71% of questions kept on the device and a 4.0× lower mean latency (3.1 s vs 12.6 s) (F11b).
+No, it matched it. After tuning by cross-validation on the training questions only, the router plus cascade scored 66.7% against 63.9% for always-Kimi; the paired 95% interval of the difference (−8.3 to +13.9 points) includes zero. The robust result is equal accuracy with 75% of questions kept on the device and 2.9 s instead of 12.6 s per answer (F15). The first version's escalation threshold had been read off the held-out questions; the tuned version fixes that.
 
 **E5. Why does more memory sometimes lower accuracy?**
 Small models are distracted by extra notes. For the 0.5B model, accuracy on facts at 128 tokens was 76.7%, against 66.7% at 512 and 1,024 (F8). This is why the budget is adaptive.

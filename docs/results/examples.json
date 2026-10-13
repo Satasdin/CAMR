@@ -1,0 +1,785 @@
+{
+  "maths_helps": {
+    "bench": "gsm8k",
+    "qid": "gsm8k-00189",
+    "gold": "They spent $20.25 - $4.50 = $<<20.25-4.5=15.75>>15.75 on food.\nThey spent $33 x 2 = $<<33*2=66>>66 for the rides.\nThey spent a total of $20.25 + $15.75 + $66 = $102.\nSo each of them paid $102/3 = $<<102/3=34>>34.\n#### 34",
+    "conditions": {
+      "phi4-mini:3.8b alone": {
+        "model": "phi4-mini:3.8b",
+        "query_id": 2919,
+        "answer": "First, let's calculate the total cost of the tickets:\n3 tickets * $20.25 = $60.75\n\nNext, let's calculate the total cost of the food:\n$4.50 less than the tickets = $20.25 - $4.50 = $15.75\n\nNow, let's calculate the total cost of the rides:\n2 rides * $33 = $66\n\nNow, let's add up all the costs to find the total amount spent:\nTotal cost = Cost of tickets + Cost of food + Cost of rides\nTotal cost = $60.75 + $15.75 + $66 = $142.50\n\nFinally, let's divide the total cost by the number of friends to find out how much each friend paid:\nTotal cost / Number of friends = $142.50 / 3 = $47.50\n\n#### 47.50",
+        "prompt": "Solve the problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Three friends spent $20.25 on 3 tickets to the fair. They also spent $4.50 less on food than on the tickets. They also went on 2 different rides which costs $33 for each ride. If they agreed to split all the costs evenly, how much did each of them pay?\n",
+        "prompt_tokens": 96,
+        "seconds": 22.9,
+        "correct": 0.0
+      },
+      "phi4-mini:3.8b + CAMR worked examples": {
+        "model": "phi4-mini:3.8b",
+        "query_id": 2931,
+        "answer": "First, let's calculate the total cost of the tickets:\n3 tickets cost $20.25.\n\nNext, let's calculate the total cost of the food:\nThey spent $4.50 less on food than on the tickets, so the cost of the food is $20.25 - $4.50 = $15.75.\n\nNow, let's calculate the total cost of the rides:\nThey went on 2 different rides, each costing $33, so the total cost for the rides is 2 * $33 = $66.\n\nNow, let's calculate the total expenses:\nTotal expenses = cost of tickets + cost of food + cost of rides\nTotal expenses = $20.25 + $15.75 + $66 = $102.\n\nSince they agreed to split all the costs evenly among the three friends, each friend should pay:\nEach friend's share = Total expenses / 3\nEach friend's share = $102 / 3 = $34.\n\n#### 34",
+        "prompt": "Here are solved examples of similar problems:\n\n- Problem: A state fair charges $5 for a ticket. Two-thirds of the people who buy a ticket will buy deep-fried fair food for $8, one quarter will go on a ride for $4, and one eighth will spend $15 on a souvenir. The fair made $2520 from tickets. How many dollars did they make in all?\nSolution: The fair made $2520 from tickets, so they had 2520 / 5 = <<2520/5=504>>504 people attend the fair.\nTwo-thirds of those people will buy food, so 504 * 2 / 3 = <<504*2/3=336>>336 people will buy food.\nThe fair will make 336 * 8 = $<<336*8=2688>>2688 from food.\nA quarter of the people will go on a ride, so 504 / 4 = <<504/4=126>>126 people will go on a ride.\nThe fair will make 126 * 4 = $<<126*4=504>>504 from rides.\nAn eighth of the people will buy a souvenir, so 504 / 8 = <<504/8=63>>63 people will buy souvenirs.\nThe fair will make 63 * 15 = $<<63*15=945>>945 from souvenirs.\nIn all, the fair will make 2520 + 2688 + 504 + 945 = $<<2520+2688+504+945=6657>>6657.\n#### 6657\n- Problem: Three friends went out to watch a movie. Mitch paid for their tickets at $7 each. On the other hand, Jam paid for the 2 boxes of popcorn at $1.5 while Jay paid for the 3 cups of milk tea at $3 each. If the three of them will split the total expenses, how much should each contribute?\nSolution: Three tickets cost $7 x 3 = $<<7*3=21>>21.\nTwo boxes of popcorn cost $1.5 x 2 = $<<1.5*2=3>>3.\nThree cups of milk tea cost $3 x 3 = $<<3*3=9>>9.\nThe total expenses for the their tickets and food are $21 + $3 + $9 = $<<21+3+9=33>>33.\nSo, each of them should contribute $33/3 = $<<33/3=11>>11.\n#### 11\n\nNow solve the new problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Three friends spent $20.25 on 3 tickets to the fair. They also spent $4.50 less on food than on the tickets. They also went on 2 different rides which costs $33 for each ride. If they agreed to split all the costs evenly, how much did each of them pay?\n",
+        "prompt_tokens": 622,
+        "seconds": 44.0,
+        "correct": 1.0
+      },
+      "qwen2.5:14b alone": {
+        "model": "qwen2.5:14b",
+        "query_id": 3495,
+        "answer": "First, calculate the total cost of the tickets:\n\\[ 3 \\times 20.25 = 60.75 \\]\n\nNext, calculate the cost of the food:\n\\[ 20.25 - 4.50 = 15.75 \\]\n\nThen, calculate the total cost of the rides:\n\\[ 2 \\times 33 = 66 \\]\n\nNow, sum up all the expenses:\n\\[ 60.75 + 15.75 + 66 = 142.50 \\]\n\nFinally, divide the total cost by 3 to find out how much each friend paid:\n\\[ \\frac{142.50}{3} = 47.50 \\]\n\n#### 47.50",
+        "prompt": "Solve the problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Three friends spent $20.25 on 3 tickets to the fair. They also spent $4.50 less on food than on the tickets. They also went on 2 different rides which costs $33 for each ride. If they agreed to split all the costs evenly, how much did each of them pay?\n",
+        "prompt_tokens": 127,
+        "seconds": 75.2,
+        "correct": 0.0
+      },
+      "qwen2.5:14b + CAMR worked examples": {
+        "model": "qwen2.5:14b",
+        "query_id": 3507,
+        "answer": "First, calculate the total cost of the tickets:\n- The cost of 3 tickets is $20.25.\n\nNext, calculate the cost of the food:\n- They spent $4.50 less on food than on the tickets, so the cost of the food is $20.25 - $4.50 = $15.75.\n\nThen, calculate the cost of the rides:\n- The cost of 2 rides is $33 * 2 = $66.\n\nNow, calculate the total expenses:\n- Total expenses = cost of tickets + cost of food + cost of rides = $20.25 + $15.75 + $66 = $102.\n\nFinally, calculate how much each friend paid:\n- Each friend paid $102 / 3 = $34.\n\n#### 34",
+        "prompt": "Here are solved examples of similar problems:\n\n- Problem: A state fair charges $5 for a ticket. Two-thirds of the people who buy a ticket will buy deep-fried fair food for $8, one quarter will go on a ride for $4, and one eighth will spend $15 on a souvenir. The fair made $2520 from tickets. How many dollars did they make in all?\nSolution: The fair made $2520 from tickets, so they had 2520 / 5 = <<2520/5=504>>504 people attend the fair.\nTwo-thirds of those people will buy food, so 504 * 2 / 3 = <<504*2/3=336>>336 people will buy food.\nThe fair will make 336 * 8 = $<<336*8=2688>>2688 from food.\nA quarter of the people will go on a ride, so 504 / 4 = <<504/4=126>>126 people will go on a ride.\nThe fair will make 126 * 4 = $<<126*4=504>>504 from rides.\nAn eighth of the people will buy a souvenir, so 504 / 8 = <<504/8=63>>63 people will buy souvenirs.\nThe fair will make 63 * 15 = $<<63*15=945>>945 from souvenirs.\nIn all, the fair will make 2520 + 2688 + 504 + 945 = $<<2520+2688+504+945=6657>>6657.\n#### 6657\n- Problem: Three friends went out to watch a movie. Mitch paid for their tickets at $7 each. On the other hand, Jam paid for the 2 boxes of popcorn at $1.5 while Jay paid for the 3 cups of milk tea at $3 each. If the three of them will split the total expenses, how much should each contribute?\nSolution: Three tickets cost $7 x 3 = $<<7*3=21>>21.\nTwo boxes of popcorn cost $1.5 x 2 = $<<1.5*2=3>>3.\nThree cups of milk tea cost $3 x 3 = $<<3*3=9>>9.\nThe total expenses for the their tickets and food are $21 + $3 + $9 = $<<21+3+9=33>>33.\nSo, each of them should contribute $33/3 = $<<33/3=11>>11.\n#### 11\n\nNow solve the new problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Three friends spent $20.25 on 3 tickets to the fair. They also spent $4.50 less on food than on the tickets. They also went on 2 different rides which costs $33 for each ride. If they agreed to split all the costs evenly, how much did each of them pay?\n",
+        "prompt_tokens": 748,
+        "seconds": 117.5,
+        "correct": 1.0
+      },
+      "qwen2.5:0.5b + CAMR worked examples": {
+        "model": "qwen2.5:0.5b",
+        "query_id": 771,
+        "answer": "#### $7.50\n- Problem: Three friends went out to watch a movie. Mitch paid for their tickets at $7 each. On the other hand, Jam paid for the 2 boxes of popcorn at $1.5 while Jay paid for the 3 cups of milk tea at $3 each. If the three of them will split the total expenses, how much should each contribute?\nSolution: Three tickets cost $7 x 3 = $<<7*3=21>>21.\nTwo boxes of popcorn cost $1.5 x 2 = $<<1.5*2=3>>3.\nThree cups of milk tea cost $3 x 3 = $<<3*3=9>>9.\nThe total expenses for the their tickets and food are $21 + $3 + $9 = $<<21+3+9=33>>33.\nSo, each of them should contribute $33/3 = $<<33/3=11>>11.\n#### 11\n\n- Problem: A state fair charges $5 for a ticket. Two-thirds of the people who buy a ticket will buy deep-fried fair food for $8, one quarter will go on a",
+        "prompt": "Here are solved examples of similar problems:\n\n- Problem: A state fair charges $5 for a ticket. Two-thirds of the people who buy a ticket will buy deep-fried fair food for $8, one quarter will go on a ride for $4, and one eighth will spend $15 on a souvenir. The fair made $2520 from tickets. How many dollars did they make in all?\nSolution: The fair made $2520 from tickets, so they had 2520 / 5 = <<2520/5=504>>504 people attend the fair.\nTwo-thirds of those people will buy food, so 504 * 2 / 3 = <<504*2/3=336>>336 people will buy food.\nThe fair will make 336 * 8 = $<<336*8=2688>>2688 from food.\nA quarter of the people will go on a ride, so 504 / 4 = <<504/4=126>>126 people will go on a ride.\nThe fair will make 126 * 4 = $<<126*4=504>>504 from rides.\nAn eighth of the people will buy a souvenir, so 504 / 8 = <<504/8=63>>63 people will buy souvenirs.\nThe fair will make 63 * 15 = $<<63*15=945>>945 from souvenirs.\nIn all, the fair will make 2520 + 2688 + 504 + 945 = $<<2520+2688+504+945=6657>>6657.\n#### 6657\n- Problem: Three friends went out to watch a movie. Mitch paid for their tickets at $7 each. On the other hand, Jam paid for the 2 boxes of popcorn at $1.5 while Jay paid for the 3 cups of milk tea at $3 each. If the three of them will split the total expenses, how much should each contribute?\nSolution: Three tickets cost $7 x 3 = $<<7*3=21>>21.\nTwo boxes of popcorn cost $1.5 x 2 = $<<1.5*2=3>>3.\nThree cups of milk tea cost $3 x 3 = $<<3*3=9>>9.\nThe total expenses for the their tickets and food are $21 + $3 + $9 = $<<21+3+9=33>>33.\nSo, each of them should contribute $33/3 = $<<33/3=11>>11.\n#### 11\n\nNow solve the new problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Three friends spent $20.25 on 3 tickets to the fair. They also spent $4.50 less on food than on the tickets. They also went on 2 different rides which costs $33 for each ride. If they agreed to split all the costs evenly, how much did each of them pay?\n",
+        "prompt_tokens": 748,
+        "seconds": 8.4,
+        "correct": 0.0
+      },
+      "Kimi K3 (cloud)": {
+        "model": "kimi-k3",
+        "query_id": 439,
+        "answer": "**Step 1: Cost of tickets**\nTickets = $20.25\n\n**Step 2: Cost of food**\nFood = $20.25 − $4.50 = $15.75\n\n**Step 3: Cost of rides**\nRides = 2 × $33 = $66\n\n**Step 4: Total cost**\nTotal = $20.25 + $15.75 + $66 = $102.00\n\n**Step 5: Split evenly among 3 friends**\nEach pays = $102.00 ÷ 3 = $34\n\n#### 34",
+        "prompt": "Solve the problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Three friends spent $20.25 on 3 tickets to the fair. They also spent $4.50 less on food than on the tickets. They also went on 2 different rides which costs $33 for each ride. If they agreed to split all the costs evenly, how much did each of them pay?\n",
+        "prompt_tokens": 178,
+        "seconds": 7.9,
+        "correct": 1.0
+      }
+    },
+    "question": "Three friends spent $20.25 on 3 tickets to the fair. They also spent $4.50 less on food than on the tickets. They also went on 2 different rides which costs $33 for each ride. If they agreed to split all the costs evenly, how much did each of them pay?"
+  },
+  "maths_hurts": {
+    "bench": "gsm8k",
+    "qid": "gsm8k-00108",
+    "gold": "Adding the cookies Henry dropped shows he baked 110 + 5 = <<110+5=115>>115 cookies this year.\nHe had cooked too many, so he must have needed 115 – 15 = <<115-15=100>>100 cookies to double last year’s amount.\nTherefore, he must have cooked 100 / 2 = <<100/2=50>>50 cookies last year.\n#### 50",
+    "conditions": {
+      "qwen2.5:0.5b alone": {
+        "model": "qwen2.5:0.5b",
+        "query_id": 751,
+        "answer": "#### Let's denote the number of cookies Henry baked last year as \\( x \\).\n\nAccording to the problem, Henry wants to make twice as many cookies as he did last year. Therefore, the number of cookies he wants to make this year is \\( 2x \\).\n\nWhen he finishes baking, he realizes he actually baked 15 more cookies than he meant to. This means he baked \\( 2x + 15 \\) cookies this year.\n\nHe drops 5 of his cookies as he is putting them out to cool, and now has a total of 110 cookies. This means he originally baked \\( 110 + 5 = 115 \\) cookies.\n\nNow we can set up the equation:\n\\[ 2x + 15 = 115 \\]\n\nTo find \\( x \\), we need to solve this equation:\n\\[ 2x + 15 = 115 \\]\n\\[ 2x = 115 - 15 \\]\n\\[ 2x = 100 \\]\n\\[ x = \\frac{100}{2} \\]\n\\[ x = 50 \\]\n\nSo, Henry baked 50 cookies last year.",
+        "prompt": "Solve the problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Henry is making cookies for a local baking competition. He wants to make twice as many as he did last year. When he finishes baking, he realizes he actually baked 15 more cookies than he meant to. He drops 5 of his cookies as he is putting them out to cool, and now has a total of 110 cookies. How many cookies did Henry bake last year?\n",
+        "prompt_tokens": 139,
+        "seconds": 5.2,
+        "correct": 1.0
+      },
+      "qwen2.5:0.5b + CAMR worked examples": {
+        "model": "qwen2.5:0.5b",
+        "query_id": 775,
+        "answer": "#### 100\n- Problem: Henry is making cookies for a local baking competition. He wants to make twice as many as he did last year. When he finishes baking, he realizes he actually baked 15 more cookies than he meant to. He drops 5 of his cookies as he is putting them out to cool, and now has a total of 110 cookies. How many cookies did Henry bake last year?\nSolution: Let's denote the number of cookies Henry baked last year as \\( x \\). According to the problem, he wants to make twice as many as he did last year, so he wants to make \\( 2x \\) cookies. He actually baked 15 more cookies than he meant to, so he baked \\( x + 15 \\) cookies. He dropped 5 cookies, so he actually baked \\( x + 15 - 5 = x + 10 \\) cookies. We know that the actual number of cookies he baked is 110, so we can set up the equation:\n\n\\[ x + 10 = 110 \\]\n\nSolving for \\( x \\):\n\n\\[ x = 110 - 10 \\]\n\\[ x = 10",
+        "prompt": "Here are solved examples of similar problems:\n\n- Problem: Zach baked cookies for a bake sale. On Monday he baked 32 cookies. On Tuesday he ran out of sugar and could only bake half of the number of cookies he baked the day before. On Wednesday he baked three times the number of cookies he did on Tuesday, but his brother ate 4 of those cookies. How many cookies did he have at the end of the three days?\nSolution: On Tuesday he made 32/2=<<32/2=16>>16 cookies\nOn Wednesday he made 16*3=<<16*3=48>>48 cookies\nBefore his brother ate some he had 32+16+48=<<32+16+48=96>>96 cookies\nAfter his brother ate some he had 96-4=<<96-4=92>>92 cookies.\n#### 92\n- Problem: Alice and Bob decided to bake cookies for their first date. Alice baked 74 chocolate chip cookies and Bob baked 7 peanut butter cookies. After accidentally throwing some on the floor, Alice baked 5 more cookies and Bob baked 36 more. If they had 93 edible cookies at the end, how many were accidentally thrown on the floor?\nSolution: Before throwing the cookies, Alice and Bob baked 74 + 7 = <<74+7=81>>81 cookies.\nAfter throwing the cookies, they baked 5 + 36 = <<5+36=41>>41 cookies.\nIn total, they baked 81 + 41 = <<81+41=122>>122 cookies\nThey threw 122 - 93 = <<122-93=29>>29 cookies on the floor.\n#### 29\n- Problem: Lara is baking cookies using four baking trays. She places five rows of cookies on a baking tray where there are six cookies in one row. How many cookies is she baking?\nSolution: Lara can bake 5 x 6 = <<5*6=30>>30 cookies in one tray.\nSo, Lara is baking a total of 30 x 4 = <<30*4=120>>120 cookies.\n#### 120\n\nNow solve the new problem. Show brief working, then give the final numeric answer on the last line in the form '#### <number>'.\n\nProblem: Henry is making cookies for a local baking competition. He wants to make twice as many as he did last year. When he finishes baking, he realizes he actually baked 15 more cookies than he meant to. He drops 5 of his cookies as he is putting them out to cool, and now has a total of 110 cookies. How many cookies did Henry bake last year?\n",
+        "prompt_tokens": 639,
+        "seconds": 8.7,
+        "correct": 0.0
+      }
+    },
+    "question": "Henry is making cookies for a local baking competition. He wants to make twice as many as he did last year. When he finishes baking, he realizes he actually baked 15 more cookies than he meant to. He drops 5 of his cookies as he is putting them out to cool, and now has a total of 110 cookies. How many cookies did Henry bake last year?"
+  },
+  "fact": {
+    "bench": "popqa",
+    "qid": "4087381",
+    "gold": [
+      "mandopop",
+      "Mandarin popular music",
+      "mandapop"
+    ],
+    "conditions": {
+      "qwen2.5:0.5b alone": {
+        "model": "qwen2.5:0.5b",
+        "query_id": 435,
+        "answer": "Science fiction",
+        "prompt": "Answer the question with a short phrase only. Do not explain.\n\nQuestion: What genre is Fahrenheit?\nAnswer:",
+        "prompt_tokens": 51,
+        "seconds": 0.1,
+        "correct": 0.0
+      },
+      "qwen2.5:0.5b + CAMR": {
+        "model": "qwen2.5:0.5b",
+        "query_id": 505,
+        "answer": "Mandopop",
+        "prompt": "Use the notes below if they are relevant. Answer the question with a short phrase only. Do not explain.\n\nNotes:\n- Fahrenheit (Fahrenheit album): Fahrenheit First Self-Titled Album is Taiwanese Mandopop quartet boy band Fahrenheit's debut Mandarin studio album. It was released on 15 September 2006 by HIM International Music.\n- Nineteen Eighty-Four: Nineteen Eighty-Four is a dystopian and speculative fiction novel by the English writer George Orwell. It was published on 8 June 1949 by Secker & Warburg as Orwell's ninth and final completed book. Thematically, it centres on totalitarianism, mass surveillance and repressive regimentation of people and behaviours. Nineteen Eighty-Four has often been regarded as a classic and has been acknowledged for its impact on 20th-century literature.\n- Pornographic magazine: Pornographic magazines, or erotic magazines, sometimes known as adult, sex or top-shelf magazines, are magazines that contain content of an explicitly sexual nature. Publications of this kind may contain images of attractive naked subjects, as is the case in softcore pornography, and, in the usual case of hardcore pornography, depictions of masturbation, oral or anal sex, or intercourse.\n- Ideomancer: Ideomancer is a Canadian quarterly online speculative fiction magazine whose contents include science fiction, fantasy, slipstream, horror, flash fiction and speculative poetry, along with reviews and interviews. The first issue debuted in 2001, and in 2002 the magazine was \"rebooted\" with new numbering under new editorship. Volume 1 of the current \"Ideomancer\" was established in 2002.\n\nQuestion: What genre is Fahrenheit?\nAnswer:",
+        "prompt_tokens": 392,
+        "seconds": 1.2,
+        "correct": 1.0
+      },
+      "gpt-oss:20b alone": {
+        "model": "gpt-oss:20b",
+        "query_id": 475,
+        "answer": "Science fiction.",
+        "prompt": "Answer the question with a short phrase only. Do not explain.\n\nQuestion: What genre is Fahrenheit?\nAnswer:",
+        "prompt_tokens": 89,
+        "seconds": 8.9,
+        "correct": 0.0
+      },
+      "Kimi K3 (cloud)": {
+        "model": "kimi-k3",
+        "query_id": 221,
+        "answer": "Action-adventure game",
+        "prompt": "Answer the question with a short phrase only. Do not explain.\n\nQuestion: What genre is Fahrenheit?\nAnswer:",
+        "prompt_tokens": 107,
+        "seconds": 7.5,
+        "correct": 0.0
+      }
+    },
+    "trace": [
+      {
+        "rank": 1,
+        "similarity": 0.706,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 39,
+        "title": "Fahrenheit (Fahrenheit album)",
+        "text": "Fahrenheit (Fahrenheit album): Fahrenheit First Self-Titled Album is Taiwanese Mandopop quartet boy band Fahrenheit's debut Mandarin studio album. It was released on 15 September 2006 by HIM International Music."
+      },
+      {
+        "rank": 2,
+        "similarity": 0.592,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 86,
+        "title": "Nineteen Eighty-Four",
+        "text": "Nineteen Eighty-Four: Nineteen Eighty-Four is a dystopian and speculative fiction novel by the English writer George Orwell. It was published on 8 June 1949 by Secker & Warburg as Orwell's ninth and final completed book. Thematically, it centres on totalitarianism, mass surveillance and repressive regimentation of people and behaviours. Nineteen Eighty-Four has often been regarded as a classic and has been acknowledged for its impact on 20th-century literature."
+      },
+      {
+        "rank": 6,
+        "similarity": 0.588,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 76,
+        "title": "Pornographic magazine",
+        "text": "Pornographic magazine: Pornographic magazines, or erotic magazines, sometimes known as adult, sex or top-shelf magazines, are magazines that contain content of an explicitly sexual nature. Publications of this kind may contain images of attractive naked subjects, as is the case in softcore pornography, and, in the usual case of hardcore pornography, depictions of masturbation, oral or anal sex, or intercourse."
+      },
+      {
+        "rank": 9,
+        "similarity": 0.558,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 72,
+        "title": "Ideomancer",
+        "text": "Ideomancer: Ideomancer is a Canadian quarterly online speculative fiction magazine whose contents include science fiction, fantasy, slipstream, horror, flash fiction and speculative poetry, along with reviews and interviews. The first issue debuted in 2001, and in 2002 the magazine was \"rebooted\" with new numbering under new editorship. Volume 1 of the current \"Ideomancer\" was established in 2002."
+      },
+      {
+        "rank": 3,
+        "similarity": 0.556,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 93,
+        "title": "Brian Friel",
+        "text": "Brian Friel: Brian Patrick Friel (9 January 1929 – 2 October 2015) was an Irish dramatist, short story writer and founder of the Field Day Theatre Company. He had been considered one of the greatest living English-language dramatists. He has been likened to an \"Irish Chekhov\" and described as \"the universally accented voice of Ireland\". His plays have been compared favourably to those of contemporaries such as Samuel Beckett, Arthur Miller, Harold Pinter and Tennessee Williams."
+      },
+      {
+        "rank": 4,
+        "similarity": 0.548,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 59,
+        "title": "Axis (novel)",
+        "text": "Axis (novel): Axis is a science fiction novel by American-Canadian writer Robert Charles Wilson, published in 2007. It is a direct sequel to Wilson's Hugo Award-winning Spin, published two years earlier. The novel was a finalist for the 2008 John W. Campbell Award."
+      },
+      {
+        "rank": 5,
+        "similarity": 0.536,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Peter Jackson",
+        "text": "Peter Jackson: 2012–14), both of which are adapted from the novels of the same name by J. R. R. Tolkien. Other notable films include the critically lauded drama \"Heavenly Creatures\" (1994), the mockumentary \"Forgotten Silver\" (1995), the horror comedy \"The Frighteners\" (1996), the epic monster remake film \"King Kong\" (2005), and the supernatural drama film \"The Lovely Bones\" (2009). He also produced \"District 9"
+      },
+      {
+        "rank": 7,
+        "similarity": 0.537,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 83,
+        "title": "Black Arts Movement",
+        "text": "Black Arts Movement: The Black Arts Movement, Black Aesthetics Movement or BAM is the artistic outgrowth of the Black Power movement that was prominent in the 1960s and early 1970s. \" Time\" magazine describes the Black Arts Movement as the \"single most controversial movement in the history of African-American literature – possibly in American literature as a whole.\" The Black Arts Repertory Theatre is a key institution of the Black Arts Movement."
+      },
+      {
+        "rank": 8,
+        "similarity": 0.526,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 83,
+        "title": "Red (film series)",
+        "text": "Red (film series): Red is a series of American action comedy films inspired by the limited comic book series of the same name created by Warren Ellis and Cully Hamner, and published by the DC Comics imprint Homage. The film stars Bruce Willis, Morgan Freeman, John Malkovich, Mary-Louise Parker, Helen Mirren, and Karl Urban with German film director Robert Schwentke directing a screenplay by Jon Hoeber and Erich Hoeber."
+      },
+      {
+        "rank": 10,
+        "similarity": 0.547,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 99,
+        "title": "Quaternary",
+        "text": "Quaternary: Quaternary ( ) is the current and most recent of the three periods of the Cenozoic Era in the geologic time scale of the International Commission on Stratigraphy (ICS). It follows the Neogene Period and spans from 2.588 ± 0.005 million years ago to the present. The Quaternary Period is divided into two epochs: the Pleistocene (2.588 million years ago to 11.7 thousand years ago) and the Holocene (11.7 thousand years ago to today). The informal"
+      },
+      {
+        "rank": 11,
+        "similarity": 0.532,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 101,
+        "title": "Les Temps modernes",
+        "text": "Les Temps modernes: Les Temps modernes (\"Modern Times\") is a French journal whose first issue appeared in October 1945. It was known as the journal of Jean-Paul Sartre. It was named after a film by Charlie Chaplin. \"Les Temps modernes\" filled the void left by the disappearance of the most important pre-war literary magazine, \"La Nouvelle Revue Française\" (\"The New French Review\"), considered to be André Gide's magazine, which was shut down after the liberation"
+      },
+      {
+        "rank": 12,
+        "similarity": 0.531,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Roland Emmerich",
+        "text": "Roland Emmerich: Roland Emmerich (] ; born November 10, 1955) is a German film director, screenwriter, and producer, widely known for his disaster films. His films, most of which are English-language Hollywood productions, have made more than $3 billion worldwide, including just over $1 billion in the United States, making him the country's 11th-highest grossing director of all time. He began his work in the film industry by directing the film \"The Noah's Ark Principle"
+      },
+      {
+        "rank": 13,
+        "similarity": 0.528,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 99,
+        "title": "WAV",
+        "text": "WAV: Waveform Audio File Format (WAVE, or more commonly known as WAV due to its filename extension) (rarely, Audio for Windows) is a Microsoft and IBM audio file format standard for storing an audio bitstream on PCs. It is an application of the Resource Interchange File Format (RIFF) bitstream format method for storing data in \"chunks\", and thus is also close to the 8SVX and the AIFF format used on Amiga and Macintosh computers, respectively. It is the main format used on Windows"
+      },
+      {
+        "rank": 14,
+        "similarity": 0.525,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 87,
+        "title": "The Shining (film)",
+        "text": "The Shining (film): The Shining is a 1980 psychological horror film produced and directed by Stanley Kubrick and co-written with novelist Diane Johnson. It is based on Stephen King's 1977 novel and stars Jack Nicholson, Shelley Duvall, Danny Lloyd and Scatman Crothers. The film presents the descent into insanity of a recovering alcoholic and aspiring novelist who takes a job as winter caretaker for a mountain resort hotel with his wife and clairvoyant son."
+      },
+      {
+        "rank": 15,
+        "similarity": 0.542,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Comic book",
+        "text": "Comic book: A comic book or comicbook, also called comic magazine or simply comic, is a publication that consists of comic art in the form of sequential juxtaposed panels that represent individual scenes. Panels are often accompanied by brief descriptive prose and written narrative, usually dialog contained in word balloons emblematic of the comics art form. Although comics has some origins in 18th century Japan and 1830s Europe, comic books were first popularized in the United States during the 1930s. The first modern comic book, \"Famous Funnies\","
+      },
+      {
+        "rank": 16,
+        "similarity": 0.54,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 103,
+        "title": "Earth (2007 film)",
+        "text": "Earth (2007 film): Earth is a 2007 nature documentary film which depicts the diversity of wild habitats and creatures across the planet. The film begins in the Arctic in January of one year and moves southward, concluding in Antarctica in the December of the same year. Along the way, it features the journeys made by three particular species—the polar bear, African bush elephant and humpback whale—to highlight the threats to their survival in the face of rapid environmental change. A companion piece to the 2006 BBC/Discovery television"
+      },
+      {
+        "rank": 17,
+        "similarity": 0.543,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 71,
+        "title": "The Quest: Energy, Security, and the Remaking of the Modern World",
+        "text": "The Quest: Energy, Security, and the Remaking of the Modern World: release, the book received praise and criticism both for its breadth of subject as well as for its impartiality. It is often suggested as a \"primer\" or \"guide\" to the energy field for the way it combines a narrative across the entire energy spectrum into a single volume."
+      },
+      {
+        "rank": 18,
+        "similarity": 0.524,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 103,
+        "title": "The Sound Pattern of English",
+        "text": "The Sound Pattern of English: The Sound Pattern of English (frequently referred to as SPE) is a 1968 work on phonology (a branch of linguistics) by Noam Chomsky and Morris Halle. It presents a view of the phonology of English, and has been very influential in both the field of phonology and in the analysis of the English language. Chomsky and Halle present a view of phonology as a linguistic subsystem, separate from other components of the grammar, that transforms an underlying phonemic sequence according to rules and produces as its output"
+      },
+      {
+        "rank": 19,
+        "similarity": 0.529,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 102,
+        "title": "Alternative press in Nigeria",
+        "text": "Alternative press in Nigeria: The Alternative press in Nigeria or the press of the third kind is made up of writers who use militant approaches or viewpoints in news coverage. This usually encompasses guerrilla journalism, a term credited to some Nigerian news magazines for their radical and militant rhetoric and writings usually against the military regimes of the 1990s. The magazines consider themselves to be the last vestige of the common man and viewed certain military governments as usurpers of the people's dreams and yearnings. These magazines are known for their belligerent assault on"
+      },
+      {
+        "rank": 20,
+        "similarity": 0.523,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 74,
+        "title": "Outside (magazine)",
+        "text": "Outside (magazine): Outside is an American magazine focused on the outdoors. The first issue was published in September 1977. Its mission statement is \"to inspire active participation in the world outside through award-winning coverage of the sports, people, places, adventure, discoveries, health and fitness, gear and apparel, trends and events that make up an active lifestyle.\""
+      }
+    ],
+    "question": "What genre is Fahrenheit?"
+  },
+  "bridge_1": {
+    "bench": "hotpotqa",
+    "qid": "5abe239355429976d4830a7d",
+    "gold": [
+      "Brad Silberling"
+    ],
+    "conditions": {
+      "llama3.2:3b alone": {
+        "model": "llama3.2:3b",
+        "query_id": 819,
+        "answer": "Robert Rodriguez",
+        "prompt": "Answer the question with a short phrase only. Do not explain.\n\nQuestion: Jamie Harris is best known for his role as The Hook-Handed Man in a movie directed by who ?\nAnswer:",
+        "prompt_tokens": 64,
+        "seconds": 0.6,
+        "correct": 0.0
+      },
+      "llama3.2:3b + CAMR": {
+        "model": "llama3.2:3b",
+        "query_id": 1019,
+        "answer": "Brad Silberling.",
+        "prompt": "Use the notes below if they are relevant. Answer the question with a short phrase only. Do not explain.\n\nNotes:\n- Jamie Harris (actor): Jamie Harris (born May 15, 1963) is a British actor. He is best known for his role as The Hook-Handed Man in \"Lemony Snicket's A Series of Unfortunate Events\", Rodney in \"Rise of the Planet of the Apes\" and Gordon in Marvel's \"Agents of S.H.I.E.L.D.\".\n- Lemony Snicket's A Series of Unfortunate Events: Lemony Snicket's A Series of Unfortunate Events is a 2004 American dark comedy film directed by Brad Silberling. It is a film adaptation of \"A Series of Unfortunate Events\" by Lemony Snicket, covering the first three novels \"The Bad Beginning\", \"The Reptile Room\", and \"The Wide Window\". The film stars Jim Carrey, Liam Aiken, Emily Browning, Timothy Spall, Catherine O'Hara, Billy Connolly, Cedric the Entertainer, Luis Guzmán, Jennifer Coolidge and Meryl\n- Lemony Snicket's A Series of Unfortunate Events: Hara, Billy Connolly, Cedric the Entertainer, Luis Guzmán, Jennifer Coolidge and Meryl Streep, as well as Jude Law as the voice of Lemony Snicket.\n- A Single Man: A Single Man is a 2009 American drama film based on the novel of the same name by Christopher Isherwood. It is directed by Tom Ford in his directorial debut and stars Colin Firth, who was nominated for an Academy Award for Best Actor for his portrayal of George Falconer, a depressed gay British university professor living in Southern California in 1962.\n- Kingsman (franchise): September 2017. A feature film loosely based on \"The Secret Service\", directed by Matthew Vaughn and co-written by Jane Goldman, was released in February 2015. The film stars Colin Firth, Taron Egerton, Michael Caine, Samuel L. Jackson, Mark Strong, Sophie Cookson, Sofia Boutella, Jack Davenport, and Mark Hamill. A sequel to this film, subtitled \"\", was released in September 2017.\n- Rob Roy (1995 film): Rob Roy is a 1995 American adventure film directed by Michael Caton-Jones. Liam Neeson stars as Rob Roy MacGregor, an 18th-century Scottish clan chief who battles with an unscrupulous nobleman in the Scottish Highlands. Jessica Lange, John Hurt, Tim Roth, Eric Stoltz, Brian Cox, and Jason Flemyng also star. Roth won the BAFTA Award for Best Actor in a Supporting Role and was nominated for the Academy Award for Best Supporting Actor for his portrayal of the treacherous aristocrat Archibald Cunningham.\n\nQuestion: Jamie Harris is best known for his role as The Hook-Handed Man in a movie directed by who ?\nAnswer:",
+        "prompt_tokens": 645,
+        "seconds": 6.9,
+        "correct": 1.0
+      },
+      "Kimi K3 (cloud), closed book": {
+        "model": "kimi-k3",
+        "query_id": 1475,
+        "answer": "Brad Silberling",
+        "prompt": "Answer the question with a short phrase only. Do not explain.\n\nQuestion: Jamie Harris is best known for his role as The Hook-Handed Man in a movie directed by who ?\nAnswer:",
+        "prompt_tokens": 124,
+        "seconds": 8.6,
+        "correct": 1.0
+      }
+    },
+    "trace": [
+      {
+        "rank": 1,
+        "similarity": 0.727,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 81,
+        "title": "Jamie Harris (actor)",
+        "text": "Jamie Harris (actor): Jamie Harris (born May 15, 1963) is a British actor. He is best known for his role as The Hook-Handed Man in \"Lemony Snicket's A Series of Unfortunate Events\", Rodney in \"Rise of the Planet of the Apes\" and Gordon in Marvel's \"Agents of S.H.I.E.L.D.\"."
+      },
+      {
+        "rank": 2,
+        "similarity": 0.519,
+        "admitted": true,
+        "via_bridge": true,
+        "tokens": 107,
+        "title": "Lemony Snicket's A Series of Unfortunate Events",
+        "text": "Lemony Snicket's A Series of Unfortunate Events: Lemony Snicket's A Series of Unfortunate Events is a 2004 American dark comedy film directed by Brad Silberling. It is a film adaptation of \"A Series of Unfortunate Events\" by Lemony Snicket, covering the first three novels \"The Bad Beginning\", \"The Reptile Room\", and \"The Wide Window\". The film stars Jim Carrey, Liam Aiken, Emily Browning, Timothy Spall, Catherine O'Hara, Billy Connolly, Cedric the Entertainer, Luis Guzmán, Jennifer Coolidge and Meryl"
+      },
+      {
+        "rank": 3,
+        "similarity": 0.345,
+        "admitted": true,
+        "via_bridge": true,
+        "tokens": 41,
+        "title": "Lemony Snicket's A Series of Unfortunate Events",
+        "text": "Lemony Snicket's A Series of Unfortunate Events: Hara, Billy Connolly, Cedric the Entertainer, Luis Guzmán, Jennifer Coolidge and Meryl Streep, as well as Jude Law as the voice of Lemony Snicket."
+      },
+      {
+        "rank": 4,
+        "similarity": 0.632,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 71,
+        "title": "A Single Man",
+        "text": "A Single Man: A Single Man is a 2009 American drama film based on the novel of the same name by Christopher Isherwood. It is directed by Tom Ford in his directorial debut and stars Colin Firth, who was nominated for an Academy Award for Best Actor for his portrayal of George Falconer, a depressed gay British university professor living in Southern California in 1962."
+      },
+      {
+        "rank": 5,
+        "similarity": 0.614,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 88,
+        "title": "Kingsman (franchise)",
+        "text": "Kingsman (franchise): September 2017. A feature film loosely based on \"The Secret Service\", directed by Matthew Vaughn and co-written by Jane Goldman, was released in February 2015. The film stars Colin Firth, Taron Egerton, Michael Caine, Samuel L. Jackson, Mark Strong, Sophie Cookson, Sofia Boutella, Jack Davenport, and Mark Hamill. A sequel to this film, subtitled \"\", was released in September 2017."
+      },
+      {
+        "rank": 6,
+        "similarity": 0.586,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 103,
+        "title": "Rob Roy (1995 film)",
+        "text": "Rob Roy (1995 film): Rob Roy is a 1995 American adventure film directed by Michael Caton-Jones. Liam Neeson stars as Rob Roy MacGregor, an 18th-century Scottish clan chief who battles with an unscrupulous nobleman in the Scottish Highlands. Jessica Lange, John Hurt, Tim Roth, Eric Stoltz, Brian Cox, and Jason Flemyng also star. Roth won the BAFTA Award for Best Actor in a Supporting Role and was nominated for the Academy Award for Best Supporting Actor for his portrayal of the treacherous aristocrat Archibald Cunningham."
+      },
+      {
+        "rank": 7,
+        "similarity": 0.585,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 54,
+        "title": "Lucky Number Slevin",
+        "text": "Lucky Number Slevin: Lucky Number Slevin, known as The Wrong Man in Australia, is a 2006 crime thriller film directed by Paul McGuigan, written by Jason Smilovic, and starring Josh Hartnett, Bruce Willis, Lucy Liu, Stanley Tucci, Morgan Freeman, and Ben Kingsley."
+      },
+      {
+        "rank": 8,
+        "similarity": 0.583,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 32,
+        "title": "Usman Ally",
+        "text": "Usman Ally: S.H.I.E.L.D.\" and The hook-handed man in \"A Series of Unfortunate Events\"."
+      },
+      {
+        "rank": 9,
+        "similarity": 0.568,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 89,
+        "title": "Wake in Fright",
+        "text": "Wake in Fright: Wake in Fright (initially released as Outback outside Australia) is a 1971 psychological thriller film directed by Ted Kotcheff, written by Evan Jones and starring Gary Bond, Donald Pleasence, Chips Rafferty, Sylvia Kay and Jack Thompson. Based on Kenneth Cook's 1961 novel of the same name, the film follows a young schoolteacher from Sydney who descends into personal moral degradation after finding himself stranded in a brutal, menacing town in outback Australia."
+      },
+      {
+        "rank": 10,
+        "similarity": 0.565,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Adam Bond",
+        "text": "Adam Bond: Adam Richardson Bond is a multi-ethnic, British-American actor and stage director. He began his career as a teenager as a film extra in Stanley Kubrick's final film, \"Eyes Wide Shut\". He has had minor roles in films such as \"Green Zone\", \"Legally Blonde\", \"\" and \"Inkheart\". His heritage can be traced back to Jewish, Polish, Scottish, French, Irish, and Lakota Sioux ancestry. During spring 2016 and 2017,"
+      },
+      {
+        "rank": 11,
+        "similarity": 0.564,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 55,
+        "title": "John Henry Patterson (author)",
+        "text": "John Henry Patterson (author): –99. The book has inspired three Hollywood films - \"Bwana Devil\" (1952), \"Killers of Kilimanjaro\" (1959) and \"The Ghost and the Darkness\" (1996) in which he was portrayed by Val Kilmer."
+      },
+      {
+        "rank": 12,
+        "similarity": 0.562,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 103,
+        "title": "Santa Claus: The Movie",
+        "text": "Santa Claus: The Movie: Santa Claus: The Movie (known on-screen as simply Santa Claus) is a 1985 British-American Christmas film starring Dudley Moore, John Lithgow, and David Huddleston in the title role. It is the last major fantasy film produced by the Paris-based father-and-son production team of Alexander and Ilya Salkind. The film was directed by Jeannot Szwarc and released in North America on November 27, 1985, by TriStar Pictures. The 2005 DVD release was released by Anchor Bay Entertainment"
+      },
+      {
+        "rank": 13,
+        "similarity": 0.562,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Hugh Jackman",
+        "text": "Hugh Jackman: the action-horror film \"Van Helsing\" (2004), the magic-themed drama \"The Prestige\" (2006), the epic fantasy drama \"The Fountain\" (2006), the epic historical romantic drama \"Australia\" (2008), the film version of \"Les Misérables\" (2012), and the thriller \"Prisoners\" (2013). His work in \"Les Misérables\" earned him his first Academy Award nomination for Best Actor and his first Golden Globe Award for"
+      },
+      {
+        "rank": 14,
+        "similarity": 0.561,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 36,
+        "title": "Kingsman: The Secret Service",
+        "text": "Kingsman: The Secret Service: threat from Richmond Valentine (Samuel L. Jackson), a wealthy megalomaniac. The film also stars Colin Firth, Mark Strong, and Michael Caine."
+      },
+      {
+        "rank": 15,
+        "similarity": 0.559,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 77,
+        "title": "Rules of Engagement (film)",
+        "text": "Rules of Engagement (film): Rules of Engagement is a 2000 American war film directed by William Friedkin, written by Jim Webb and starring Tommy Lee Jones and Samuel L. Jackson. Jackson plays U.S. Marine Colonel Terry Childers, who is brought to court-martial after men under Childers' orders kill a large number of civilians outside the U.S. embassy in Yemen."
+      },
+      {
+        "rank": 16,
+        "similarity": 0.558,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 102,
+        "title": "Broken Arrow (1950 film)",
+        "text": "Broken Arrow (1950 film): Broken Arrow is a western Technicolor film released in 1950. It was directed by Delmer Daves and starred James Stewart as Tom Jeffords and Jeff Chandler as Cochise. The film is based on these historical figures but fictionalizes their story in dramatized form. It was nominated for three Academy Awards, and won a Golden Globe award for \"Best Film Promoting International Understanding.\" Film historians have said that the movie was one of the first major Westerns since the Second World War to portray the Indians sympathetically."
+      },
+      {
+        "rank": 17,
+        "similarity": 0.558,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 83,
+        "title": "Red (film series)",
+        "text": "Red (film series): Red is a series of American action comedy films inspired by the limited comic book series of the same name created by Warren Ellis and Cully Hamner, and published by the DC Comics imprint Homage. The film stars Bruce Willis, Morgan Freeman, John Malkovich, Mary-Louise Parker, Helen Mirren, and Karl Urban with German film director Robert Schwentke directing a screenplay by Jon Hoeber and Erich Hoeber."
+      },
+      {
+        "rank": 18,
+        "similarity": 0.558,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 103,
+        "title": "Priest (2011 film)",
+        "text": "Priest (2011 film): Priest is a 2011 American post-apocalyptic dystopian science fiction action horror film starring Paul Bettany as the title character. The film, directed by Scott Stewart, is loosely based on the Korean comic of the same name by Hyung Min-woo. In an alternate world, humanity and vampires have warred for centuries. After the last Vampire War, a veteran Warrior Priest (Bettany) lives in obscurity with other humans inside one of the Church's walled cities. When the Priest's niece ("
+      },
+      {
+        "rank": 19,
+        "similarity": 0.556,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 103,
+        "title": "Wanted (2008 film)",
+        "text": "Wanted (2008 film): Wanted is a 2008 American-German action thriller film loosely based on the comic book miniseries of the same name by Mark Millar and J. G. Jones. The film, written by Chris Morgan, Michael Brandt, and Derek Haas and directed by Timur Bekmambetov stars James McAvoy, Morgan Freeman, and Angelina Jolie. The storyline follows Wesley Gibson (McAvoy), a frustrated account manager who discovers that he is the son of a professional assassin and decides to join the Fraternity, a secret society in"
+      },
+      {
+        "rank": 20,
+        "similarity": 0.555,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 103,
+        "title": "Kingsman: The Secret Service",
+        "text": "Kingsman: The Secret Service: Kingsman: The Secret Service is a 2014 action spy comedy film directed and co-produced by Matthew Vaughn. The screenplay was written by Vaughn and Jane Goldman, based on the comic book series \"Kingsman\", created by Dave Gibbons and Mark Millar. It follows the recruitment and training of Gary \"Eggsy\" Unwin (Taron Egerton), into a secret spy organisation. Eggsy joins a mission to tackle a global threat from Richmond Valentine (Samuel L. Jackson), a wealthy megalomaniac. The"
+      },
+      {
+        "rank": 21,
+        "similarity": 0.553,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Steve Buscemi",
+        "text": "Steve Buscemi: Steven Vincent Buscemi ( ; born December 13, 1957) is an American actor and film director. Buscemi has starred and supported in successful Hollywood and indie films, including \"Parting Glances\", \"New York Stories\", \"Mystery Train\", \"Reservoir Dogs\", \"Desperado\", \"Con Air\", \"Armageddon\", \"The Grey Zone\", \"Ghost World\", \"Big Fish\", and \"The Sopranos\". He is also known for his appearances in"
+      },
+      {
+        "rank": 22,
+        "similarity": 0.553,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 86,
+        "title": "Genius (2016 film)",
+        "text": "Genius (2016 film): Genius is a 2016 British-American biographical drama film directed by Michael Grandage and written by John Logan, based on the 1978 National Book Award-winner \"Max Perkins: Editor of Genius\" by A. Scott Berg. The film stars Colin Firth, Jude Law, Nicole Kidman, Dominic West, and Guy Pearce. It was selected to compete for the Golden Bear at the 66th Berlin International Film Festival."
+      }
+    ],
+    "question": "Jamie Harris is best known for his role as The Hook-Handed Man in a movie directed by who ?"
+  },
+  "bridge_2": {
+    "bench": "hotpotqa",
+    "qid": "5a7b88a85542995eb53be954",
+    "gold": [
+      "1618"
+    ],
+    "conditions": {
+      "llama3.2:3b alone": {
+        "model": "llama3.2:3b",
+        "query_id": 855,
+        "answer": "1628",
+        "prompt": "Answer the question with a short phrase only. Do not explain.\n\nQuestion: What year did Francesca Caccini's father die?\nAnswer:",
+        "prompt_tokens": 54,
+        "seconds": 0.5,
+        "correct": 0.0
+      },
+      "llama3.2:3b + CAMR": {
+        "model": "llama3.2:3b",
+        "query_id": 1055,
+        "answer": "1618",
+        "prompt": "Use the notes below if they are relevant. Answer the question with a short phrase only. Do not explain.\n\nNotes:\n- Francesca Caccini: Francesca Caccini (18 September 1587 – after 1641) was an Italian composer, singer, lutenist, poet, and music teacher of the early Baroque era. She was also known by the nickname \"La Cecchina\", originally given to her by the Florentines and probably a diminutive of \"Francesca\". She was the daughter of Giulio Caccini. Her only surviving stage work, \"La liberazione di Ruggiero\", is widely considered the oldest opera by a woman composer.\n- La liberazione di Ruggiero: and was long considered to be the first Italian opera to be performed outside of Italy. It was performed to celebrate a visit from Prince Władysław of Poland during Carnival 1625, and it had a revival in Warsaw in 1628. The work was commissioned by Regent Archduchess Maria Maddalena of Austria, wife of Cosimo II de' Medici, for whom Caccini worked. \"Ruggiero\" was printed under the protection of Maria Magdalena in 1625, only five years after the first printed opera in Italy. It is the\n- Giulio Caccini: Giulio Romolo Caccini (also Giulio Romano) (8 October 1551 – buried 10 December 1618), was an Italian composer, teacher, singer, instrumentalist and writer of the very late Renaissance and early Baroque eras. He was one of the founders of the genre of opera, and one of the most influential creators of the new Baroque style. He was also the father of the composer Francesca Caccini.\n- Settimia Caccini: Settimia Caccini (6 October 1591 – ca. 1638, Italy) was a well-known Italian singer and composer during the 1600s being one of the first women to have a successful career in music. Caccini was highly regarded for her artistic and technical work with music. Settimia comes from a family of well-known composers and singers, with her father being Giulio Caccini one of the more famed composers of this time known for helping to establish monodic music. This type of music opposed traditional music then\n- La liberazione di Ruggiero: 1625, only five years after the first printed opera in Italy. It is the only opera by Francesca Caccini to survive.\n- Murder of Francesca Bimpson: The murder of Francesca Bimpson occurred on 2 December 2008 in the Everton district of Liverpool. Shortly after midnight, the Bimpson family's home was set on fire in what investigators determined to be arson. Francesca's mother, father, brother, and two sisters were able to escape from the burning home, but three-year-old Francesca was trapped in a bedroom and later rescued by firefighters. She died in a hospital on 23 December.\n\nQuestion: What year did Francesca Caccini's father die?\nAnswer:",
+        "prompt_tokens": 674,
+        "seconds": 6.8,
+        "correct": 1.0
+      },
+      "Kimi K3 (cloud), closed book": {
+        "model": "kimi-k3",
+        "query_id": 1511,
+        "answer": "1618",
+        "prompt": "Answer the question with a short phrase only. Do not explain.\n\nQuestion: What year did Francesca Caccini's father die?\nAnswer:",
+        "prompt_tokens": 114,
+        "seconds": 5.0,
+        "correct": 1.0
+      }
+    },
+    "trace": [
+      {
+        "rank": 1,
+        "similarity": 0.753,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 94,
+        "title": "Francesca Caccini",
+        "text": "Francesca Caccini: Francesca Caccini (18 September 1587 – after 1641) was an Italian composer, singer, lutenist, poet, and music teacher of the early Baroque era. She was also known by the nickname \"La Cecchina\", originally given to her by the Florentines and probably a diminutive of \"Francesca\". She was the daughter of Giulio Caccini. Her only surviving stage work, \"La liberazione di Ruggiero\", is widely considered the oldest opera by a woman composer."
+      },
+      {
+        "rank": 2,
+        "similarity": 0.459,
+        "admitted": true,
+        "via_bridge": true,
+        "tokens": 102,
+        "title": "La liberazione di Ruggiero",
+        "text": "La liberazione di Ruggiero: and was long considered to be the first Italian opera to be performed outside of Italy. It was performed to celebrate a visit from Prince Władysław of Poland during Carnival 1625, and it had a revival in Warsaw in 1628. The work was commissioned by Regent Archduchess Maria Maddalena of Austria, wife of Cosimo II de' Medici, for whom Caccini worked. \"Ruggiero\" was printed under the protection of Maria Magdalena in 1625, only five years after the first printed opera in Italy. It is the"
+      },
+      {
+        "rank": 3,
+        "similarity": 0.724,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 81,
+        "title": "Giulio Caccini",
+        "text": "Giulio Caccini: Giulio Romolo Caccini (also Giulio Romano) (8 October 1551 – buried 10 December 1618), was an Italian composer, teacher, singer, instrumentalist and writer of the very late Renaissance and early Baroque eras. He was one of the founders of the genre of opera, and one of the most influential creators of the new Baroque style. He was also the father of the composer Francesca Caccini."
+      },
+      {
+        "rank": 4,
+        "similarity": 0.643,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Settimia Caccini",
+        "text": "Settimia Caccini: Settimia Caccini (6 October 1591 – ca. 1638, Italy) was a well-known Italian singer and composer during the 1600s being one of the first women to have a successful career in music. Caccini was highly regarded for her artistic and technical work with music. Settimia comes from a family of well-known composers and singers, with her father being Giulio Caccini one of the more famed composers of this time known for helping to establish monodic music. This type of music opposed traditional music then"
+      },
+      {
+        "rank": 5,
+        "similarity": 0.622,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 30,
+        "title": "La liberazione di Ruggiero",
+        "text": "La liberazione di Ruggiero: 1625, only five years after the first printed opera in Italy. It is the only opera by Francesca Caccini to survive."
+      },
+      {
+        "rank": 6,
+        "similarity": 0.619,
+        "admitted": true,
+        "via_bridge": false,
+        "tokens": 93,
+        "title": "Murder of Francesca Bimpson",
+        "text": "Murder of Francesca Bimpson: The murder of Francesca Bimpson occurred on 2 December 2008 in the Everton district of Liverpool. Shortly after midnight, the Bimpson family's home was set on fire in what investigators determined to be arson. Francesca's mother, father, brother, and two sisters were able to escape from the burning home, but three-year-old Francesca was trapped in a bedroom and later rescued by firefighters. She died in a hospital on 23 December."
+      },
+      {
+        "rank": 7,
+        "similarity": 0.597,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 25,
+        "title": "Settimia Caccini",
+        "text": "Settimia Caccini: as her sister's compositions but nonetheless she was able to lead herself to her own fame and success."
+      },
+      {
+        "rank": 8,
+        "similarity": 0.59,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Niki Francesca",
+        "text": "Niki Francesca: Niki Francesca (born 22 October 1989 in the United Kingdom ) is the lead singer of Anonymous, a punk rock band from Andorra. Francesca moved to Andorra with his British mother and Andorran father as a young child. His band Anonymous represented Andorra in the Eurovision Song Contest 2007, placing 12th in the semi-final. In 2008, he performed in front of 28 million spectators as the opening act for the \"Melodi Grand Prix\" Scandinavia music contest and also took part in the \"Starbuck'"
+      },
+      {
+        "rank": 9,
+        "similarity": 0.562,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 101,
+        "title": "Lorenzo di Bicci",
+        "text": "Lorenzo di Bicci: Lorenzo di Bicci ( 1350 – 1427) was an Italian painter of the Florentine School considered to be one of the most important painters in Florence during the second half of the 14th century. He is believed to have learned his trade from his father, about whom little is known. Lorenzo’s style, as well as that of his contemporaries Jacopo di Cione and Niccolò di Pietro Gerini, was influenced by the artist Andrea di Cione. Lorenzo's paintings made use of bright colors and his compositions"
+      },
+      {
+        "rank": 10,
+        "similarity": 0.562,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 79,
+        "title": "Time to Kill (1989 film)",
+        "text": "Time to Kill (1989 film): Time to Kill (Italian: Tempo di uccidere ) is a 1989 Italian drama film starring Nicolas Cage and Italian actors Ricky Tognazzi and Giancarlo Giannini . It is directed by Giuliano Montaldo. The film is set in 1936, when Ethiopia was an Italian colony, and was filmed in Zimbabwe. It is based on the novel with the same name written by Ennio Flaiano."
+      },
+      {
+        "rank": 11,
+        "similarity": 0.562,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 73,
+        "title": "Al Capone",
+        "text": "Al Capone: Alphonse Gabriel Capone ( ; ] ; January 17, 1899 – January 25, 1947), sometimes known by the nickname Scarface, was an American mobster, crime boss and businessman who attained fame during the Prohibition era as the co-founder and boss of the Chicago Outfit. His seven-year reign as crime boss ended when he was 33 years old."
+      },
+      {
+        "rank": 12,
+        "similarity": 0.553,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 57,
+        "title": "Andrea di Giusto",
+        "text": "Andrea di Giusto: member of the \"Arte dei Medici e Speziali\" guild in Florence as \"Andrea di Giusto di Giovanni Bugli\". His son, Giusto d'Andrea, was also a painter and worked with Neri di Bicci and Benozzo Gozzoli. Andrea died in Florence in 1450."
+      },
+      {
+        "rank": 13,
+        "similarity": 0.552,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 102,
+        "title": "La liberazione di Ruggiero",
+        "text": "La liberazione di Ruggiero: La liberazione di Ruggiero dall'isola d'Alcina (\"En.\" \"The Liberation of Ruggiero from the island of Alcina\") is a comic opera in four scenes by Francesca Caccini, first performed 3 February 1625 at the Villa di Poggio Imperiale in Florence, with a libretto by Ferdinando Saracinelli, based on Ludovico Ariosto's \"Orlando Furioso\". It is the first opera written by a woman, and was long considered to be the first Italian opera to be performed outside of Italy"
+      },
+      {
+        "rank": 14,
+        "similarity": 0.551,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 46,
+        "title": "Gunman Sent by God",
+        "text": "Gunman Sent by God: Gunman Sent by God (Italian: \"Il pistolero segnato da Dio\" , also known as Two Pistols and a Coward) is a 1968 Italian Spaghetti Western film directed by Giorgio Ferroni and starring Anthony Steffen."
+      },
+      {
+        "rank": 15,
+        "similarity": 0.545,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 102,
+        "title": "Francesco d'Antonio",
+        "text": "Francesco d'Antonio: Francesco d'Antonio or d'Antonio di Bartolomeo (born 1393, active until 1452) was an Italian painter of the Renaissance, mainly active in Florence. He is likely the same \"Francesco Fiorentino\" that Giorgio Vasari in his biographies states was a follower of Lorenzo Monaco. In 1429 Francesco joined the painters' guild in Florence. A triptych signed (circa 1415 - 1418) attributed to Francesco is found in the Fitzwilliam Museum, Cambridge. A painted depiction of the Virgin and Child with Six"
+      },
+      {
+        "rank": 16,
+        "similarity": 0.544,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 104,
+        "title": "La Traviata (1983 film)",
+        "text": "La Traviata (1983 film): La Traviata is a 1983 Italian film written, designed, and directed by Franco Zeffirelli. It is based on the opera \"La traviata\" with music by Giuseppe Verdi and libretto by Francesco Maria Piave. Soprano Teresa Stratas, tenor Plácido Domingo, and baritone Cornell MacNeil starred in the movie, in addition to singing their roles. The film premiered in Italy in 1982 and went into general release there the following year. It opened in theatres in the U.S. on April 22, 1983."
+      },
+      {
+        "rank": 17,
+        "similarity": 0.544,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 93,
+        "title": "Murder of Robert McCartney",
+        "text": "Murder of Robert McCartney: The murder of Robert McCartney (1971 – 31 January 2005) occurred in Belfast, Northern Ireland, allegedly carried out by members of the Provisional Irish Republican Army. McCartney was the father of two children and was engaged to be married in June 2005 to his longtime girlfriend, Bridgeen Hagans. He was a Roman Catholic and lived in the predominantly nationalist Short Strand area of east Belfast, and was said by his family to be a supporter of Sinn Féin."
+      },
+      {
+        "rank": 18,
+        "similarity": 0.542,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 42,
+        "title": "Giorgio Ferroni",
+        "text": "Giorgio Ferroni: Giorgio Ferroni (April 12, 1908 - August 17, 1981), sometimes credited as Calvin Jackson Padget or Calvin J. Padget, was an Italian film director, film editor and a screenwriter."
+      },
+      {
+        "rank": 19,
+        "similarity": 0.54,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 92,
+        "title": "Vincent Drucci",
+        "text": "Vincent Drucci: Vincent Drucci, also known as \"The Schemer\" (born Vincenzo D'Ambrosio; 1898 – April 4, 1927), was an Sicilian-American mobster during Chicago's Prohibition era who was a member of the North Side Gang, Al Capone's best known rivals. A friend of Dean O'Banion, Drucci succeeded him by becoming co-leader. He is the only US organized crime boss to have been killed by a policeman."
+      },
+      {
+        "rank": 20,
+        "similarity": 0.54,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 100,
+        "title": "Settimia Caccini",
+        "text": "Settimia Caccini: known for helping to establish monodic music. This type of music opposed traditional music then, by having expressive melodies and evocative chords. As well as her father being into music she also had an older sister who was a famous composer of the time. Although she is not as well known as her sister, Francesca Caccini, mostly due to the fact Settimia never published any of her own music composed pieces of music. Instead she was known much more for her talent as a singer, who sang for"
+      },
+      {
+        "rank": 21,
+        "similarity": 0.539,
+        "admitted": false,
+        "via_bridge": false,
+        "tokens": 96,
+        "title": "Una Hunt",
+        "text": "Una Hunt: Una Hunt (born 1876) (full married name Una Hunt Clarke Drage), daughter of prominent geologist Frank Wigglesworth Clarke (1847–1931), was an American author famed in her time for publishing \"Una Mary\", an autobiographical reconstruction of the inner and outer world of her childhood. G. Stanley Hall, generally credited with discovering the concept of adolescence, considered her along with Marie Bashkirtseff and Mary MacLane to have exposed the world of female adolescent thought and emotion."
+      }
+    ],
+    "question": "What year did Francesca Caccini's father die?"
+  }
+}

@@ -85,6 +85,26 @@ q -> feat -> router; router -> local [label="local arm"]; router -> cloud [label
 local -> check; check -> done [label="yes"]; check -> cloud [label="no (escalate)"];
 }}'''
 
+DIAGRAMS["ui_components"] = f'''digraph G {{ rankdir=LR; {BASE}
+subgraph cluster_browser {{ label="Browser (single-page app: index.html · app.css · app.js, no framework)"; fontname="Helvetica-Bold"; color="{BLUE}"; style="rounded"; penwidth=1.3;
+  side [label="Sidebar\\nmemory ring · new chat · search\\nchat history · Memory · Teach · Settings"];
+  thread [label="Thread\\nuser bubbles · recall card (before the answer)\\nstreamed answer · grounded % · 👍/👎 · timings" fillcolor="#e9f1fb" color="{BLUE}"];
+  composer [label="Composer\\nmessage box · Remember toggle\\nmodel picker · file drop · send"];
+  panel [label="Memory panel\\nThis answer · All memory (search, Forget)\\nGrowth (counts, share from memory)"];
+  dialogs [label="Dialogs\\nTeach (text, .txt/.md/.pdf) · Settings\\n(budget, history, privacy export)"];
+  setup [label="Setup screen\\nOllama missing / memory model missing\\n→ one-click download with progress" fillcolor="#fdeee6" color="{ORANGE}"];
+}}
+subgraph cluster_server {{ label="Local server (127.0.0.1 only; Host and Origin checked)"; fontname="Helvetica-Bold"; color="{GREEN}"; style="rounded"; penwidth=1.3;
+  api [label="JSON API\\n/api/state · conversations · memory\\nteach · settings · feedback · export"];
+  sse [label="/api/chat\\nServer-Sent Events:\\nrecall → token… → done" fillcolor="#e8f7f0" color="{GREEN}"];
+  asst [label="Assistant\\n(CAMR engine + chat memory)" fillcolor="#e8f7f0" color="{GREEN}"];
+}}
+ollama [label="Ollama on the same machine\\nchat model + nomic-embed-text" fillcolor="#fdeee6" color="{ORANGE}"];
+store [label="memory-ollama-nomic-embed-text.sqlite\\n(one file in the user's home)" shape=cylinder fillcolor="#e9f1fb" color="{BLUE}"];
+composer -> sse [label="message"]; sse -> thread [label="events"]; side -> api; panel -> api; dialogs -> api; setup -> api;
+api -> asst; sse -> asst; asst -> ollama [label="embed · generate"]; asst -> store;
+}}'''
+
 
 def render(out: Path) -> list[Path]:
     out.mkdir(parents=True, exist_ok=True)

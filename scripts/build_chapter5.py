@@ -21,8 +21,11 @@ import subprocess
 from pathlib import Path
 
 import docx
+import latex2mathml.converter
+import mathml2omml
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX, WD_TAB_ALIGNMENT
+from lxml import etree
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
@@ -37,6 +40,39 @@ REPO_URL = "https://github.com/Satasdin/CAMR"
 TEXT_WIDTH_CM = 15.9
 
 
+OMML = "http://schemas.openxmlformats.org/officeDocument/2006/math"
+_ACCENTS = {"^": "\u0302", "~": "\u0303", "¯": "\u0305", "‾": "\u0305", "―": "\u0305", "→": "\u20d7", "˙": "\u0307"}
+_SAFE = {"*": "\u2217", "|": "\u2223"}
+
+
+def omath(latex: str):
+    """LaTeX -> native Word equation (OMML), with fixes for what the converters get wrong in Word/LibreOffice."""
+    q = lambda tag: f"{{{OMML}}}{tag}"  # noqa: E731
+    mml = latex2mathml.converter.convert(latex)
+    # \bar is emitted as a stretchy group character that mathml2omml serialises badly; make it a plain accent
+    mml = mml.replace('<mo stretchy="true">&#x000AF;</mo>', "<mo>&#x02015;</mo>")
+    om = mathml2omml.convert(mml)
+    el = etree.fromstring(f'<root xmlns:m="{OMML}">{om}</root>')[0]
+    for lu in list(el.iter(q("limUpp"))):  # \hat, \tilde, \bar -> accent objects
+        lim = lu.find(q("lim"))
+        mark = "".join(lim.itertext()).strip() if lim is not None else ""
+        if mark in _ACCENTS:
+            acc = etree.Element(q("acc"))
+            etree.SubElement(etree.SubElement(acc, q("accPr")), q("chr")).set(q("val"), _ACCENTS[mark])
+            acc.append(lu.find(q("e")))
+            lu.getparent().replace(lu, acc)
+    for rad in el.iter(q("rad")):  # \sqrt needs an explicit hidden degree
+        if rad.find(q("deg")) is None:
+            pr = etree.Element(q("radPr"))
+            etree.SubElement(pr, q("degHide")).set(q("val"), "1")
+            rad.insert(0, pr)
+            rad.insert(1, etree.Element(q("deg")))
+    for t in el.iter(q("t")):
+        if t.text in _SAFE:
+            t.text = _SAFE[t.text]
+    return el
+
+
 class Chapter:
     def __init__(self, template: Path, number: int = 5):
         self.n = number
@@ -45,7 +81,9 @@ class Chapter:
         self._start_at_chapter(number)
         self.fig_n = 0
         self.tab_n = 0
-        self.labels: dict[str, str] = {}  # key -> "Table 5.n" / "Figure 5.n", resolved in text as ⟦key⟧
+        self.eq_n = 0
+        self.sec = [0, 0]  # mirrors Word's heading numbering: section, subsection
+        self.labels: dict[str, str] = {}  # key -> "Table 5.n" / "Figure 5.n" / "Equation 5.n" / "5.8.3", as ⟦key⟧
 
     # ------------------------------------------------------------ template
 
@@ -83,11 +121,47 @@ class Chapter:
     def h1(self, text: str) -> None:
         self.doc.add_paragraph(text, style="Heading 1")
 
-    def h2(self, text: str) -> None:
+    def h2(self, text: str, key: str | None = None) -> None:
+        self.sec = [self.sec[0] + 1, 0]
+        if key:
+            self.labels[key] = f"{self.n}.{self.sec[0]}"
         self.doc.add_paragraph(text, style="Heading 2")
 
-    def h3(self, text: str) -> None:
+    def h3(self, text: str, key: str | None = None) -> None:
+        self.sec[1] += 1
+        if key:
+            self.labels[key] = f"{self.n}.{self.sec[0]}.{self.sec[1]}"
         self.doc.add_paragraph(text, style="Heading 3")
+
+    def eq(self, latex: str, key: str | None = None) -> str:
+        """A displayed, numbered equation: centred, number at the right margin."""
+        self.eq_n += 1
+        label = f"Equation {self.n}.{self.eq_n}"
+        if key:
+            self.labels[key] = label
+            self.labels[key + "_n"] = f"{self.n}.{self.eq_n}"
+        para = self.doc.add_paragraph(style="Normal")
+        pf = para.paragraph_format
+        pf.space_before, pf.space_after, pf.first_line_indent = Pt(4), Pt(6), Cm(0)
+        para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        pf.tab_stops.add_tab_stop(Cm(TEXT_WIDTH_CM / 2), WD_TAB_ALIGNMENT.CENTER)
+        pf.tab_stops.add_tab_stop(Cm(TEXT_WIDTH_CM), WD_TAB_ALIGNMENT.RIGHT)
+        para.add_run("\t")
+        para._p.append(omath(latex))
+        para.add_run(f"\t({self.n}.{self.eq_n})")
+        return label
+
+    def where(self, terms: list[tuple[str, str]]) -> None:
+        """'where' block under an equation: each symbol (LaTeX) with its meaning."""
+        para = self.doc.add_paragraph(style="Normal")
+        para.paragraph_format.space_after = Pt(2)
+        para.add_run("where")
+        for sym, meaning in terms:
+            pp = self.doc.add_paragraph(style="Normal")
+            pf = pp.paragraph_format
+            pf.left_indent, pf.first_line_indent, pf.space_after, pf.line_spacing = Cm(1.0), Cm(0), Pt(1), 1.15
+            pp._p.append(omath(sym))
+            self._runs(pp, " " + meaning)
 
     def _runs(self, p, text: str, size: float | None = None) -> None:
         """Minimal inline markup: **bold**, *italic*, `code`, [[placeholder]] (highlighted)."""
@@ -185,7 +259,7 @@ class Chapter:
             for para in paragraphs:
                 for run in para.runs:
                     if "⟦" in run.text:
-                        run.text = re.sub(r"⟦(\w+)⟧", lambda m: self.labels[m.group(1)], run.text)
+                        run.text = re.sub(r"⟦(\w+)⟧", lambda m: self.labels.get(m.group(1), m.group(0)), run.text)
         fix(self.doc.paragraphs)
         for t in self.doc.tables:
             for row in t.rows:
@@ -194,6 +268,11 @@ class Chapter:
 
     def save(self, out: Path) -> Path:
         self.resolve()
+        missing = sorted({m for p in self.doc.paragraphs for m in re.findall(r"⟦(\w+)⟧", p.text)})
+        if missing:
+            print("warning: unresolved cross-references:", ", ".join(missing))
+        out.parent.mkdir(parents=True, exist_ok=True)
+        (out.parent / f"ch{self.n}_labels.json").write_text(json.dumps(self.labels, indent=1, ensure_ascii=False))
         out.parent.mkdir(parents=True, exist_ok=True)
         path = out.with_suffix(".docx")
         self.doc.save(str(path))
@@ -302,12 +381,14 @@ def build(template: Path, out: Path, declaration: str | None) -> Path:
     c.h2("Introduction")
     c.p("This chapter reports how the design of Chapter 4 was implemented as the CAMR memory engine and its "
         "evaluation harness, how the implementation was tested, and what the experiments measured. The project "
-        "follows the AI and machine learning route of the departmental guidelines with one important difference: "
-        "the language models were never trained or fine-tuned. Every model ran with frozen weights, and what "
-        "changed between conditions was the external memory and the engine's policy for using it. The chapter "
-        "therefore reports dataset provenance, the implemented data-to-answer pipeline, the experimental "
-        "configuration, the tests that verify the requirements of section 4.2, and the measured results for each "
-        "research objective.")
+        "follows the AI and machine learning route of the departmental guidelines. CAMR's language models run with "
+        "frozen weights: what changes between conditions is the external memory and the engine's learned policy for "
+        "using it. The machine-learning components that *are* trained, the router and its escalation cascade, were "
+        "tuned by cross-validation on training data only and tested once on held-out questions. To test the "
+        "proposal's argument against fine-tuning rather than assume it, a LoRA fine-tuned model was also trained on "
+        "the same documents as a comparison baseline. The chapter reports dataset provenance, the engine stated as "
+        "equations, the experimental configuration, the interface and its tests, and the measured results for each "
+        "research objective, with worked examples of what the models actually answered.")
     c.p("Every number in this chapter was produced by the code in the project repository on real public "
         "benchmark data and real models, and each table names the results file it comes from. Where a result is "
         "weaker than expected, or a requirement was not met, it is reported as measured. Section 5.2 describes the "
@@ -329,7 +410,7 @@ def build(template: Path, out: Path, declaration: str | None) -> Path:
              "this chapter", 11.5)
 
     # ================================================================ 5.2
-    c.h2("Implementation Environment")
+    c.h2("Implementation Environment", key="sec_env")
     c.p("All development and every experiment ran on Linux machines with x86-64 CPUs and no GPU. This is the "
         "consumer-laptop class of device that NFR-01 targets: four CPU cores and 16 GB of memory. The system is a "
         "local research prototype. It was not deployed for public access.")
@@ -422,6 +503,18 @@ camr run --config configs/hotpot200.yaml  --condition ceiling_rag --benchmark ho
 python scripts/make_figures.py && python scripts/make_report_figures.py && python scripts/make_diagrams.py
 camr inspect --run-dir results/pilot                    # read-only web view at http://localhost:8501
 python scripts/build_chapter5.py --template proposal.docx --out build/Chapter5""")
+    c.p("**Step 8: tuning, the fine-tuning baseline and the interface audit** (sections ⟦sec_tune_read⟧, "
+        "⟦sec_policy⟧, ⟦sec_uitest⟧ and ⟦sec_scenarios⟧). The fine-tuning baseline downloads the 0.5B model's "
+        "weights from Hugging Face (about 1 GB) and takes several hours on four CPU cores.")
+    c.code("""pip install -e ".[finetune,report]"
+python scripts/tune_policy.py                            # router: 5-fold CV on training questions, one held-out test
+python scripts/tune_gating.py --store-copy /tmp/re      # read path: validation half, then held-out half
+python scripts/finetune_baseline.py tune && python scripts/finetune_baseline.py test \\
+       && python scripts/finetune_baseline.py camr-cost # LoRA vs CAMR on the same documents
+python -m pytest -q tests/test_app_e2e.py               # browser tests (Chromium)
+python scripts/ui_audit.py --axe axe.min.js             # axe-core 4.10 + WCAG contrast
+python scripts/scenario_screens.py --model llama3.2:3b  # live scenarios, with and without memory
+python scripts/extract_examples.py && python scripts/make_method_figures.py""")
     c.p("**The application only** (no experiments): download the file for the platform from the v0.2.1 release "
         "page, or install it with Python:")
     c.code("""pip install "camr[app] @ git+https://github.com/Satasdin/CAMR.git"
@@ -495,7 +588,7 @@ camr app                                                # opens http://127.0.0.1
             [3.4, 12.5], size=9.5)
 
     # ---------------------------------------------------------------- implementation
-    c.h2("System Implementation")
+    c.h2("System Implementation", key="sec_impl")
     c.p(f"{c.next_fig()} shows the implemented architecture. Everything inside the engine runs on the device. The "
         "cloud model is used only as a measurement ceiling and as the escalation target of the learned policy.")
     c.figure(DIAGRAMS / "architecture.png", "Implemented CAMR architecture: write path, single-file store, "
@@ -530,6 +623,7 @@ camr app                                                # opens http://127.0.0.1
     c.p("Recency uses a logical clock, which advances one step per question instead of wall-clock time, and "
         "access state is reset before every run. This makes recall deterministic and independent of machine "
         "speed (NFR-05, design note A1).")
+    formal_model(c)
     c.h3("Model Runners")
     c.p("All runners expose a single `generate` operation, and none can modify model weights (FR-09). "
         "`OllamaRunner` calls the local runtime with greedy decoding (temperature 0, seed 13) and refuses any host "
@@ -546,25 +640,31 @@ camr app                                                # opens http://127.0.0.1
         "and the score. Analysis computes gap closed (Equation 3.1) with paired bootstrap confidence intervals over "
         "2,000 resamples (FR-15). Next to it, it reports the absolute gain, and the **residual gap** "
         "(ceiling_rag − treatment): what model size still buys when both models read the same evidence.")
+    metrics_section(c)
     c.p("The learned policy (`camr learn`) chooses, per question, one of five actions: answer with the small model "
         "alone, with 128, 512 or 1,024 tokens of memory, or escalate to Kimi K3. Its training configuration is "
-        f"given in {c.next_tab()}. No neural network was trained and no model weights changed. The learned "
-        "parameters are a ridge-regression weight vector per action (5 × 11 numbers) and a grounding classifier.")
+        f"given in {c.next_tab()}. No neural network is trained inside CAMR and no model weights change. The learned "
+        "parameters are a ridge-regression weight vector per action (5 × 11 numbers in the first study; 5 × 4 after "
+        "cross-validation chose the task-only features) and the cascade's grounding model.")
+    policy_math(c)
     c.table("Learned-policy training configuration (from `camr/learn/bandit.py` and `rl_report.json`)",
             ["Setting", "Value"],
-            [["Language-model training", "None. All model weights frozen: 0 fine-tuning epochs, no learning rate, no gradient updates"],
+            [["Language-model training", "None inside CAMR: the answering model's weights are frozen. (A separate LoRA "
+              "baseline, section ⟦sec_finetune⟧, is the only model trained in this study.)"],
              ["Training / evaluation questions", f"{rl['n_train']} / {rl['n_test']} (disjoint; 60/60/24 and 30/30/12 PopQA/HotpotQA/GSM8K)"],
              ["Actions (arms)", "local; mem128; mem512 (+ bridging); mem1024 (+ bridging); cloud (Kimi K3)"],
              ["Logged outcomes", f"Every action on every question: {rl['n_train'] * 5} training and {rl['n_test'] * 5} evaluation answers"],
              ["Context features (11)", "Bias; task type (3 one-hot); best-note similarity; margin to second note; "
               "number of near-best notes; question length; task type × best-note similarity (3)"],
              ["Reward", f"correct − {rl['costs']['cloud']} × [cloud call] − {rl['costs']['per_1k_tokens']} × prompt tokens / 1,000"],
-             ["Offline learner", "Ridge regression per action, λ = 1.0, closed-form solution (one pass)"],
-             ["Online learner (LinUCB)", "Bandit feedback only; exploration α = 0.5; **5 epochs** (passes) over the "
-              "144 training questions = 720 episodes, shuffled with seed 13; held-out evaluation every 20 episodes "
-              f"({len(rl['curve'])} checkpoints)"],
-             ["Grounding cascade", "Ridge classifier on answer signals (answer words found in the notes, abstention-like "
-              "text, length); escalation thresholds swept over 0–1.01"],
+             ["Offline learner", "Ridge regression per action (Equation ⟦eq_ridge_n⟧), closed-form; first study λ = 1.0; "
+              "tuned by 5-fold CV over λ ∈ {0.01, 0.1, 1, 10, 100} × three feature sets"],
+             ["Online learner (LinUCB)", "Bandit feedback only (Equation ⟦eq_linucb_n⟧); first study α = 0.5 and **5 "
+              "epochs** (passes) over the 144 training questions = 720 episodes, shuffled with seed 13, held-out "
+              f"evaluation every 20 episodes ({len(rl['curve'])} checkpoints); tuned by CV over α ∈ {{0, 0.1, 0.25, 0.5, "
+              "1, 2}} × 1–10 passes"],
+             ["Grounding cascade", "Ridge model of answer signals (Equation ⟦eq_cascade_n⟧); threshold θ tuned by CV "
+              "over 0–1 in steps of 0.05"],
              ["Cloud-cost sweep", "0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.8, 1.2 (Pareto table)"]],
             [4.3, 11.6])
     c.p(f"{c.next_fig()} shows the learned decision for one question.")
@@ -572,7 +672,7 @@ camr app                                                # opens http://127.0.0.1
              "pre-answer features, and a grounding check escalates local answers that are not supported by the "
              "notes they read", 7.5)
 
-    c.h3("Model Selection and the Validation–Test Protocol")
+    c.h3("Model Selection and the Validation–Test Protocol", key="sec_selection")
     c.p("Because no weights were trained, *selection* meant choosing which frozen model and which engine "
         "configuration to recommend, and that choice was made on evidence kept apart from the final test. The "
         "**baseline** was each small model answering alone (the floor condition). The **candidates** were 19 "
@@ -582,8 +682,12 @@ camr app                                                # opens http://127.0.0.1
         "read path (similarity ranking, gating at 0.50 with a 0.15 margin, entity bridging) and the budgets "
         "(128 tokens for single facts, 512 for multi-hop). The 200-question HotpotQA study (reported in section 5.8) then "
         "served as a **held-out test**: its configuration was written to `configs/hotpot200.yaml` before it ran "
-        "and was not changed afterwards. Every run's configuration, hash, model digest and per-question records "
-        "are saved in its results database and in `records/*.jsonl`, so each reported number can be regenerated.")
+        "and was not changed afterwards. The same discipline was then applied to every tunable part: the read path's "
+        "margin and budget were tuned on one half of the retrieval questions and tested on the other (section "
+        "⟦sec_tune_read⟧); the router's hyperparameters by cross-validation on the training split (section "
+        "⟦sec_policy⟧); and the LoRA baseline's format, learning rate and epochs on a validation split (section "
+        "⟦sec_finetune⟧). Every run's configuration, hash, model digest and per-question records are saved in its "
+        "results database and in `records/*.jsonl`, so each reported number can be regenerated.")
 
     c.h3("Inspection Interface and Integration Workflow")
     c.p("The inspector implements the four wireframes of Figures 4.10–4.13 and opens the results database "
@@ -608,7 +712,7 @@ camr app                                                # opens http://127.0.0.1
         "escalation policy.")
     c.figure(FIG / "setup" / "terminal_ask_empty.png", "Assistant scenario with empty memory: the frozen model guesses", 15.0, key="askempty")
     c.figure(FIG / "setup" / "terminal_ask.png", "Assistant scenario with memory: answers grounded in the user's notes", 12.5, key="ask")
-    c.h3("CAMR Personal: the Engine as an Application")
+    c.h3("CAMR Personal: the Engine as an Application", key="sec_app")
     c.p("To move from benchmarks to real use, the engine was packaged as **CAMR Personal**, a desktop application "
         "that gives any model the user already has in Ollama a long-term memory. The user teaches it notes and files "
         "(.txt, .md, .pdf), dropped anywhere on the window; states facts with *remember that …*; and approves good "
@@ -649,10 +753,12 @@ camr app                                                # opens http://127.0.0.1
         if (FIG / "app" / name).exists():
             c.figure(FIG / "app" / name, cap, w)
 
+    interface_design(c)
+
     # ================================================================ 5.4 Testing
-    c.h2("Testing and Evaluation")
+    c.h2("Testing and Evaluation", key="sec_testing")
     c.h3("Test Strategy and Acceptance Criteria")
-    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 105 tests, fully "
+    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 111 tests, fully "
         "offline) verify each requirement with deterministic test doubles: dry-run models and a hashing embedder. "
         "**System tests** run the real pipeline end to end on real data with real models. **Measurements** "
         "(device profile, latency, memory) verify the non-functional requirements against their thresholds. Each "
@@ -663,8 +769,8 @@ camr app                                                # opens http://127.0.0.1
     c.figure(FIG / "setup" / "terminal_tests_tc.png", "Example requirement test cases: failure handling (IR-07, D-07), "
              "holdout guard (DR-04), byte-identical prompts (NFR-05) and the bootstrap (FR-15)", 15.5)
 
-    c.h3("Test Cases, Defects and Retesting")
-    c.table("Test cases and results (unit tests: `pytest`, 105 passed; measurements: `camr profile`)",
+    c.h3("Test Cases, Defects and Retesting", key="sec_tests")
+    c.table("Test cases and results (unit tests: `pytest`, 111 passed; measurements: `camr profile`)",
             ["Test ID", "Traceability", "Scenario and data", "Expected result", "Actual result and verdict"],
             [["TC-01", "FR-01", "Verbatim and structured policies on fixture passages", "Notes produced; title kept", "As expected. Pass"],
              ["TC-02", "FR-02/03, DR-06", "Empty, duplicate, over-length, injection-like notes", "Rejected with logged reason; provenance on all notes", "As expected. Pass"],
@@ -684,7 +790,7 @@ camr app                                                # opens http://127.0.0.1
               f"Engine {profile['peak_rss_mb_engine_process']:.0f} MB + runtime {profile['peak_rss_mb_model_runtime']:.0f} MB. Pass"],
              ["TC-15", "FR-17, IR-06", "Write through the inspector connection", "Write fails at the driver", "As expected. Pass"],
              ["TC-17", "NFR-02", "Retrieval share of median latency, 0.5B", "≤ 10%",
-              f"{100 * profile['retrieval_share_of_e2e']:.0f}% in the pilot profile. **Fail** (D-05; see 5.8)"],
+              f"{100 * profile['retrieval_share_of_e2e']:.0f}% in the pilot profile. **Fail** (D-05; see ⟦sec_cost⟧)"],
              ["TC-18", "NFR-04, IR-05", "`camr reproduce` end to end (dry-run and real)", "All tables and figures regenerated", "As expected. Pass"],
              ["TC-20", "NFR-06", "Block sockets; run floor and treatment", "No external connection", "As expected. Pass"],
              ["TC-21", "DR-03/04", "Corpus containing an evaluation question", "Ingestion refused", "As expected. Pass"],
@@ -720,10 +826,15 @@ camr app                                                # opens http://127.0.0.1
              ["D-10", "CAMR Personal: the new warm-up loaded the model with the default context size, so Ollama "
               "loaded it a second time for the first question (1.8 s to the first word instead of a fraction of a "
               "second)", "App latency benchmark", "Warm-up sends the same options as a chat request",
-              "Regression test; latency re-measured (⟦applat⟧). Pass"]],
+              "Regression test; latency re-measured (⟦applat⟧). Pass"],
+             ["D-11", "Interface: secondary text (group labels, keyboard hints, memory-kind chips) and, in the light theme, "
+              "accent and success colours were below WCAG AA contrast (2.3–3.3 : 1)", "Accessibility audit "
+              "(section ⟦sec_uitest⟧)", "Token values corrected per theme", "Contrast audit and axe-core: 0 failures. Pass"],
+             ["D-12", "Interface: no top-level heading once a chat had started (screen-reader navigation)",
+              "axe-core audit", "Persistent, visually hidden page heading", "axe-core: 0 violations. Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
-    c.h3("Application Testing (CAMR Personal)")
+    c.h3("Application Testing (CAMR Personal)", key="sec_apptest")
     c.p("The application was tested as a user would meet it, with valid, empty, out-of-scope and unsupported "
         "input and with the runtime missing. The live checks used qwen2.5:1.5b and nomic-embed-text through "
         "Ollama in a browser driven by Playwright. The automated checks are in `tests/test_app*.py` and in the "
@@ -761,7 +872,10 @@ camr app                                                # opens http://127.0.0.1
                  "missing instead of failing", 14.5)
     c.p("These tests show that the application behaves correctly and fails safely. They do not show that people "
         "find it useful or easy to use. That requires a user study, which had not been run when this chapter "
-        "was written (see Limitations, section 5.8).")
+        "was written (see Limitations, section ⟦sec_limits⟧).")
+
+    ui_testing(c)
+    scenarios_section(c)
 
     # ---------------------------------------------------------------- evaluation design
     c.h3("Evaluation Design")
@@ -773,7 +887,7 @@ camr app                                                # opens http://127.0.0.1
         "confidence intervals are reported where they matter.")
 
     # ================================================================ 5.5 version control
-    c.h2("Version Control and Implementation Evidence")
+    c.h2("Version Control and Implementation Evidence", key="sec_vc")
     c.p(f"Project repository: **{REPO_URL}** (development branch `claude/engine-build-docs-yfw9u0`, merged "
         "through a pull request into `main`). The repository contains the README, an illustrated setup "
         "walkthrough (`docs/SETUP.md`), the findings log with every measurement and its source file "
@@ -829,16 +943,16 @@ camr app                                                # opens http://127.0.0.1
         "where it fell short; most importantly, the student required that this chapter report only experiments "
         "that had actually been run and benchmarked with real models, and an earlier draft written before the "
         "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
-        "test suite (105 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "test suite (111 tests), the per-query logs, the read-only inspector, and the findings log, which names "
         "the results file behind every reported number, so that each claim can be traced and re-run. The "
         "student made the final decisions and takes full responsibility for the submitted work.")
 
     # ================================================================ 5.7 results
-    c.h2("Evaluation Results, Discussion and Limitations")
+    c.h2("Evaluation Results, Discussion and Limitations", key="sec_results")
     c.p("The results are organised by research objective. Source files are in `results/` and every table is "
         "reproduced in `docs/FINDINGS.md`.")
 
-    c.h3("Retrieval Quality (Objective ii)")
+    c.h3("Retrieval Quality (Objective ii)", key="sec_retrieval")
     rv = json.loads((ROOT / "results" / "retrieval_eval" / "tables" / "retrieval_eval.json").read_text())
     rr = {(r["benchmark"], r["label"]): r for r in rv["rows"]}
 
@@ -872,7 +986,9 @@ camr app                                                # opens http://127.0.0.1
         "score of Equation 4.1 lowered recall. On independent questions, recency and importance carry no signal "
         "about the current question, which confirms the risk anticipated in section 4.4.7.")
 
-    c.h3("Gap Closed and the Residual Gap (Objective iv)")
+    read_path_tuning(c)
+
+    c.h3("Gap Closed and the Residual Gap (Objective iv)", key="sec_gap")
     c.table("Accuracy by condition, pilot sample (`results/pilot/tables/summary.json`, `gap_vs_kimi.md`)",
             ["Task (n)", "0.5B alone", "0.5B + CAMR", "gpt-oss-20b", "20B + same notes", "Kimi K3", "Kimi K3 + CAMR"],
             [["Single-hop, PopQA (30)", "10.0%", "**66.7%**", "23.3%", "76.7%", "66.7%", "83.3%"],
@@ -890,7 +1006,9 @@ camr app                                                # opens http://127.0.0.1
     c.figure(REPORT / "residual_gap.png", "Residual gap: accuracy of the 0.5B model and of gpt-oss-20b when both read the "
              "same notes (pilot)", 12.0)
 
-    c.h3("Error Analysis: Where Answers Are Lost")
+    worked_examples(c)
+
+    c.h3("Error Analysis: Where Answers Are Lost", key="sec_errors")
     c.p(f"{c.next_tab()} follows each question through the pipeline (from `tables/coverage.md`): is the gold "
         "answer in the store, among the retrieved candidates, in the context actually sent, and was the answer "
         "correct? The last column is accuracy *given* that the answer was in the context.")
@@ -925,7 +1043,7 @@ camr app                                                # opens http://127.0.0.1
               "next Monday (invented); with the note: correct"]],
             [2.5, 5.3, 3.1, 5.0], size=9)
 
-    c.h3("Knowledge Growth with Frozen Weights")
+    c.h3("Knowledge Growth with Frozen Weights", key="sec_growth")
     c.p("The knowledge corpus was fed into one store in three stages, and the same frozen 0.5B model answered "
         f"the same questions after each stage ({c.next_fig()}). On long-tail facts, accuracy rose from 6.7% "
         "to 16.7%, 33.3% and 66.7% as memory grew to 25%, 50% and 100%. That matches Kimi K3 and is roughly three "
@@ -935,7 +1053,7 @@ camr app                                                # opens http://127.0.0.1
     c.figure(FIG / "fig_growth_accuracy.png", "Accuracy of the frozen 0.5B model as the memory store grows")
     c.figure(FIG / "fig_decode_speed.png", "Decode speed of the frozen 0.5B model at each store size")
 
-    c.h3("Ablation and Token Budget (Objective v)")
+    c.h3("Ablation and Token Budget (Objective v)", key="sec_budget")
     c.table("Ablation and budget sweep, 0.5B model (`ablation.md`, `budget_sweep.md`)",
             ["Variant", "Single-hop acc. (tokens)", "Multi-hop acc. (tokens)", "Reasoning acc.", "Answer time (single / multi)"],
             [["Control: similarity only, fixed budget", "56.7% (464)", "26.7% (472)", "–", "2,343 / 2,469 ms"],
@@ -952,7 +1070,7 @@ camr app                                                # opens http://127.0.0.1
         "notes. Multi-hop questions peaked at 512 tokens, and reasoning never benefited. This answers research question "
         "iv: the best budget depends on the task type and the model, which motivated the learned policy.")
 
-    c.h3("Small Models on Their Own: the Baseline Ranking")
+    c.h3("Small Models on Their Own: the Baseline Ranking", key="sec_rank")
     c.p(f"Before memory, the 19 candidate models were ranked by their own accuracy ({c.next_fig()}). The ranking "
         "follows size, but loosely: the rank correlation between parameter count and mean accuracy was ρ = 0.82. "
         "gemma3:12b led (51.7% mean), followed by qwen2.5:7b (47.8%) and gemma2:9b (47.2%); qwen2.5:0.5b was last "
@@ -976,7 +1094,7 @@ camr app                                                # opens http://127.0.0.1
     c.figure(REPORT / "speed_vs_accuracy.png", "Speed against accuracy with CAMR on long-tail facts; the shaded region is "
              "faster than the cloud model", 14.0)
 
-    c.h3("Which Model Sizes Suit the Engine")
+    c.h3("Which Model Sizes Suit the Engine", key="sec_sizes")
     c.p(f"The same store, questions and ceilings were used with {n_models} small models from 0.5B to "
         f"{sweep[-1]['params']} parameters ({c.next_tab()}, {c.next_fig()}). Accuracies are comparable across "
         "machines; decode speeds are comparable only within a machine.")
@@ -1000,7 +1118,7 @@ camr app                                                # opens http://127.0.0.1
 
     h200 = hotpot200()
     if h200:
-        c.h3("Confirmation at Larger Scale: 200 HotpotQA Questions")
+        c.h3("Confirmation at Larger Scale: 200 HotpotQA Questions", key="sec_h200")
         c.p("To test whether the pilot's multi-hop results held beyond 30 questions, the study was repeated on 200 "
             "HotpotQA questions with the read path fixed in advance (similarity, gating and bridging, 512 tokens). "
             "Nothing was tuned on these questions. Three small models and Kimi K3 were run with and without the "
@@ -1012,7 +1130,7 @@ camr app                                                # opens http://127.0.0.1
                  "95% bootstrap intervals", 13.5)
         c.p(h200["text"])
 
-    c.h3("Learning When to Use Memory and When to Escalate")
+    c.h3("Learning When to Use Memory and When to Escalate", key="sec_policy")
     fixed = {k: v for k, v in rl["fixed"].items()}
     off = rl["learned_offline"]
     c.p("A single fixed configuration cannot be best for every question. The learned policy chose an action per "
@@ -1020,7 +1138,7 @@ camr app                                                # opens http://127.0.0.1
         f"({c.next_tab()}, {c.next_fig()}).")
     casc = [r for r in rl["cascade"] if abs(r["stage1_cloud_cost"] - 0.3) < 1e-9 and abs(r["threshold"] - 0.2) < 1e-9][0]
     c.table("Engine policies on the held-out split (`results/learn/tables/rl_policies.md`, `rl_cascade.md`)",
-            ["Policy", "Accuracy", "Sent to cloud", "Mean s / answer"],
+            ["Policy (first study)", "Accuracy", "Sent to cloud", "Mean s / answer"],
             [["Always 0.5B alone", pct(fixed["always local"]["accuracy"]), "0%", f"{fixed['always local']['mean_latency_s']:.1f}"],
              ["Always 0.5B + 128 tokens", pct(fixed["always mem128"]["accuracy"]), "0%", f"{fixed['always mem128']['mean_latency_s']:.1f}"],
              ["Always 0.5B + 512 tokens", pct(fixed["always mem512"]["accuracy"]), "0%", f"{fixed['always mem512']['mean_latency_s']:.1f}"],
@@ -1032,8 +1150,9 @@ camr app                                                # opens http://127.0.0.1
             [6.6, 2.8, 3.0, 3.4])
     c.figure(FIG / "fig_learned_policy.png", "Learned routing compared with fixed choices, and the LinUCB learning curve over 5 epochs")
     c.p("The policy learned without supervision to send every reasoning question to the cloud (12 of 12, all "
-        "correct) and to answer factual questions locally with a small budget. With the grounding cascade, which "
-        "answers locally first and escalates when the answer's words are not found in its notes, the hybrid "
+        "correct) and to answer factual questions locally with a small budget. In this first study, with the "
+        "grounding cascade, which answers locally first and escalates when the answer's words are not found in its "
+        "notes, and its threshold set by inspecting the held-out results, the hybrid "
         f"reached {pct(casc['accuracy'])} against always-Kimi's {pct(fixed['always cloud']['accuracy'])}. "
         f"{100 - 100 * casc['cloud_share']:.0f}% of questions never left the device, and mean latency was "
         f"{fixed['always cloud']['mean_latency_s'] / casc['mean_latency_s']:.1f} times lower. LinUCB, which sees "
@@ -1042,7 +1161,10 @@ camr app                                                # opens http://127.0.0.1
         "multi-hop questions, where pre-answer features cannot predict whether the small model will read the "
         "evidence correctly.")
 
-    c.h3("Cost on the Device (Research Question v)")
+    policy_tuning_results(c)
+    finetune_section(c)
+
+    c.h3("Cost on the Device (Research Question v)", key="sec_cost")
     t = profile["treatment"]
     c.p(f"On machine A, median end-to-end latency was {profile['floor']['median_e2e_ms']:.0f} ms for the 0.5B "
         f"model alone and {t['median_e2e_ms']:.0f} ms with CAMR. The engine added a median of "
@@ -1061,7 +1183,7 @@ camr app                                                # opens http://127.0.0.1
         "as its memory-mapped weights were evicted. On a 16 GB device, a small model with external memory is the "
         "practical design, not merely the cheaper one.")
 
-    c.h3("Responsiveness of the Application")
+    c.h3("Responsiveness of the Application", key="sec_app_speed")
     lat = app_latency()
     if lat:
         ms = lat["models"]
@@ -1106,7 +1228,7 @@ camr app                                                # opens http://127.0.0.1
                  ["Repeated question (cache)", "—", f"{qc['repeat_ms']:.1f} ms", "0 (cached)", "—"]],
                 [4.2, 2.4, 3.0, 3.2, 3.2], size=9)
 
-    c.h3("Alignment with the Proposal (Chapter 1)")
+    c.h3("Alignment with the Proposal (Chapter 1)", key="sec_alignment")
     c.p("Each objective and research question of Chapter 1 was checked against what was built and measured. All "
         "five research questions are answered (section 6.2). Where the work departed from the proposal, the "
         f"departure, its reason and its effect on the findings are recorded in {c.next_tab()}, so that no deviation "
@@ -1119,7 +1241,7 @@ camr app                                                # opens http://127.0.0.1
               "confound to the retrieval study", "Results describe verbatim memory; distillation is untested at scale"],
              ["Obj. ii: rank notes by similarity, recency *and* importance (Eq. 4.1)",
               "Eq. 4.1 implemented and evaluated; the default became similarity + gating + bridging",
-              "Eq. 4.1 lowered full-support recall by 1.2–5.4 points (5.8.1)",
+              "Eq. 4.1 lowered full-support recall by 1.2–5.4 points (⟦sec_retrieval⟧)",
               "A measured improvement on the proposal; recency is untested on sessioned data"],
              ["Obj. iii and scope: one physical consumer laptop as the device",
               "CPU-only cloud containers of laptop class (4 vCPU, 16 GB, no GPU), fully specified",
@@ -1127,17 +1249,21 @@ camr app                                                # opens http://127.0.0.1
               "Accuracy transfers (greedy, deterministic engine); latency is indicative, as limitation 1 expected"],
              ["Scope: small models of 1–3B parameters", "All 1–3B models tested, plus 0.5B and 7–14.8B",
               "To find where the useful size range starts and ends", "An extension: confirms 1.5–4B as the range that "
-              "suits the engine (5.8.7)"],
+              "suits the engine (⟦sec_sizes⟧)"],
              ["Scope: a read-only inspector, not an end-user application",
               "Inspector delivered as scoped; CAMR Personal added after the experiments", "To put the findings in "
               "users' hands and collect feedback", "An extension; it adds no claim to the research results"],
+             ["Delimitation: no training or fine-tuning of any language model", "CAMR trains none. One LoRA "
+              "adapter was trained as a *comparison baseline* only (section ⟦sec_finetune⟧)", "To test the problem "
+              "statement's argument against fine-tuning with evidence", "Strengthens RQ ii; the engine's own claims are "
+              "unchanged (frozen weights)"],
              ["Delimitation: no port to mobile phones", "No mobile results are reported; an unrun Android "
               "prototype is described as future work (6.4)", "Kept within the delimitation", "None"],
              ["NFR-02: retrieval ≤ 10% of answer time", "Measured and reported as not met for 0.5B; diagnosed",
-              "A 0.5B model answers in about 180 ms", "Met only for models of about 1.5B and above (5.8.10)"]],
+              "A 0.5B model answers in about 180 ms", "Met only for models of about 1.5B and above (⟦sec_cost⟧)"]],
             [3.6, 4.0, 4.0, 4.3], size=8.5)
 
-    c.h3("Limitations")
+    c.h3("Limitations", key="sec_limits")
     c.items(["**Sample size.** Pilot samples were 30/30/12 questions per benchmark. One question is 3.3 points, "
              "so differences of one or two questions are within noise. Confidence intervals are reported for "
              "gap closed. The multi-hop results were confirmed on 200 questions, and the retrieval "
@@ -1156,13 +1282,531 @@ camr app                                                # opens http://127.0.0.1
              "laptop or phone. Decode speeds differ between machines.",
              "**No user study yet.** The application was tested for correct and safe behaviour, not for usefulness or "
              "usability with real users.",
-             "**Policy learning.** The learned policy was trained on 144 questions with costs set by the researcher. "
-             "Its advantage over always-Kimi is 1.4 points, which is within sampling noise; the robust result is "
-             "equal accuracy at 71% on-device use and lower latency."])
+             "**Policy learning.** The router was trained on 144 questions with costs set by the researcher. Even "
+             "after cross-validated tuning, its accuracy is statistically equal to always using the cloud model; the "
+             "robust result is equal accuracy with most questions kept on the device and much lower latency. Fold-to-"
+             "fold variation was larger than the differences between hyperparameter settings.",
+             "**Fine-tuning baseline.** One base model (0.5B), one unsupervised training format family and a CPU "
+             "float32 runtime were tested; supervised question–answer data or a larger model could fine-tune better. "
+             "The comparison shows what a user's own device can do with the same documents, not the limit of "
+             "fine-tuning.",
+             "**Live scenarios.** The application scenarios are five hand-designed conversations, run once each with "
+             "one model; they illustrate behaviour and failure modes and are not a statistical evaluation."])
     c.p("Conclusions, recommendations and future work, including feedback from real users of CAMR Personal and a "
         "phone version of the assistant, are presented in Chapter 6.")
 
     return c.save(out)
+
+
+# ----------------------------------------------------------------- formal sections (equations)
+
+
+def formal_model(c: Chapter) -> None:
+    """The read path as mathematics, with a worked example from the logs."""
+    c.h3("Formal Model of the Read Path", key="sec_formal")
+    c.p("This subsection states precisely what the engine computes for a question *q*, so that every setting "
+        "tuned or reported later has an exact meaning. The notation follows Chapter 4. The store holds notes "
+        "*n*, each with its text, a token count *c(n)*, and an embedding produced by the embedder *f*. "
+        "Embeddings are normalised to unit length, so cosine similarity is a dot product:")
+    c.eq(r"s(q,n)=\cos\left(f(q),f(n)\right)=\frac{f(q)\cdot f(n)}{\left\lVert f(q)\right\rVert\,\left\lVert f(n)\right\rVert}=f(q)\cdot f(n)", key="eq_sim")
+    c.where([(r"f(\cdot)\in\mathbb{R}^{384}", "the embedder (BGE-small-en-v1.5 in the experiments; nomic-embed-text "
+              "in the application), with the model card's query prefix on *q*;"),
+             (r"s(q,n)\in[-1,1]", "the similarity of note *n* to the question.")])
+    c.p("The candidate set is the *k* most similar notes, found by exact nearest-neighbour search in sqlite-vec:")
+    c.eq(r"C_k(q)=\underset{S\subseteq\mathcal{M},\,\left|S\right|=k}{\text{arg max}}\;\sum_{n\in S}s(q,n),\qquad k=20", key="eq_knn")
+    c.p("The proposal ranked candidates by a weighted composite of similarity, recency and importance "
+        "(Equation 4.1). As implemented, each term is min-max normalised over the candidate set:")
+    c.eq(r"\text{score}(n)=w_s\,\tilde{s}(q,n)+w_r\,\rho^{\Delta t(n)}+w_i\,\tilde{I}(n),\qquad w_s+w_r+w_i=1", key="eq_comp")
+    c.where([(r"\tilde{s},\tilde{I}", "min-max normalised similarity and importance;"),
+             (r"\rho=0.99", "the recency decay per hour of logical time since the note was last read;"),
+             (r"(w_s,w_r,w_i)", "(0.6, 0.15, 0.25) in the proposal's configuration, and (1, 0, 0) in the "
+              "configuration the evidence selected (section ⟦sec_retrieval⟧), which reduces Equation ⟦eq_comp_n⟧ "
+              "to ranking by similarity.")])
+    c.p("Gating is the first capability-adaptive step. Let *s*₍₁₎ be the best similarity in the candidate set. The "
+        "engine abstains (gives the model no notes) when even the best note is weak; otherwise it keeps only notes "
+        "within a margin δ of the best:")
+    c.eq(r"E(q)=\begin{cases}\varnothing & \text{if } s_{(1)}<\tau\\ \left\{n\in C_k(q):s(q,n)\ge s_{(1)}-\delta\right\} & \text{otherwise}\end{cases}", key="eq_gate")
+    c.where([(r"\tau", "the abstain threshold (0.50 for BGE, 0.55 for nomic-embed-text; calibrated in section ⟦sec_tune_read⟧);"),
+             (r"\delta", "the admission margin (0.15).")])
+    c.p("Entity bridging then adds, for each of the top three eligible seed notes, up to two notes about other "
+        "stored entities whose titles the seed's text mentions. These notes may have low similarity to the question; "
+        "they are reached through the seed, which is the second hop of a multi-hop question:")
+    c.eq(r"B(q)=\bigcup_{n\in\text{top}_3E(q)}\text{first}_2\left\{m\in\mathcal{M}:\text{title}(m)\in\text{mentions}(n)\right\}", key="eq_bridge")
+    c.p("Finally the budgeter admits notes in rank order, each bridged note directly after its seed, until the "
+        "next note would exceed the token budget *B*, and then stops:")
+    c.eq(r"A(q)=\left(n_1,\dots,n_m\right),\quad m=\max\left\{j:\sum_{i=1}^{j}c(n_i)\le B\right\}", key="eq_pack")
+    c.p("The prompt contains exactly the notes in *A(q)*, so the number of context tokens is at most *B* and is "
+        "usually far smaller, because gating removes candidates before the budget binds.")
+    c.p("**Worked example (from the pilot's logs).** For *Who was the director of The Loudwater Mystery?* the 20 "
+        "candidates had best similarity *s*₍₁₎ = 0.771 (the film's own Wikipedia note). Since 0.771 ≥ τ = 0.50, the "
+        "engine did not abstain. The admission floor was *s*₍₁₎ − δ = 0.771 − 0.15 = 0.621, and the next-best note "
+        "(*Klute*, 0.616) fell just below it, so only one note was eligible. That note was 47 tokens, so "
+        f"Equation ⟦eq_pack_n⟧ admitted it and the model read 47 tokens instead of filling the 512-token budget. "
+        f"The 0.5B model answered *Walter West* (correct); alone it had answered *John Sturges*. {c.next_fig()} "
+        "draws this decision from the logged scores.")
+    c.figure(REPORT / "gating_trace.png", "Gating on one real question: candidate similarities, the abstain threshold τ "
+             "and the admission floor s(1) − δ; only the blue note was given to the model", 14.0)
+
+
+def metrics_section(c: Chapter) -> None:
+    c.p("The scores are defined as follows. Let *p* be the model's answer, *G* the set of accepted gold answers, "
+        "and norm(·) the SQuAD normalisation (lower case, punctuation and articles removed, whitespace collapsed):")
+    c.eq(r"\text{EM}(p,G)=\max_{g\in G}\mathbb{1}\left[\text{norm}(p)=\text{norm}(g)\right],\qquad \text{Contains}(p,G)=\max_{g\in G}\mathbb{1}\left[\text{norm}(g)\sqsubseteq\text{norm}(p)\right]", key="eq_em")
+    c.eq(r"\text{F}_1(p,g)=\frac{2PR}{P+R},\quad P=\frac{\left|t_p\cap t_g\right|}{\left|t_p\right|},\quad R=\frac{\left|t_p\cap t_g\right|}{\left|t_g\right|}", key="eq_f1")
+    c.where([(r"\sqsubseteq", "occurrence as a whole-word substring;"),
+             (r"t_p,t_g", "the multisets of normalised tokens of the answer and of the gold answer.")])
+    c.p("For GSM8K the final number in the answer is compared exactly with the gold final number (fractions and "
+        "thousands separators parsed). For a condition with per-question scores *y*ᵢ the accuracy is their mean, and "
+        "the headline measure of the proposal (Equation 3.1) is the fraction of the gap closed, with the residual "
+        "gap beside it:")
+    c.eq(r"G=\frac{\text{Acc}_{\text{CAMR}}-\text{Acc}_{\text{floor}}}{\text{Acc}_{\text{ceiling}}-\text{Acc}_{\text{floor}}},\qquad R=\text{Acc}_{\text{ceiling+notes}}-\text{Acc}_{\text{CAMR}}", key="eq_gap")
+    c.p("*G* = 1 means the small model with memory matches the large model; *G* > 1 means it exceeds a closed-book "
+        "ceiling, which is why the frontier model is used as the anchor. *R* is what model size still buys when both "
+        "models read the same notes. Uncertainty comes from a paired bootstrap over questions: for *b* = 1, …, 2,000, "
+        "draw *Q* questions with replacement and compute the mean paired difference; the 95% interval is the 2.5th "
+        "and 97.5th percentile of these means:")
+    c.eq(r"\hat{\Delta}^{*}_b=\frac{1}{Q}\sum_{i=1}^{Q}\left(y^{\text{CAMR}}_{j_{b,i}}-y^{\text{floor}}_{j_{b,i}}\right),\qquad \text{CI}_{95}=\left[\hat{\Delta}^{*}_{(0.025)},\;\hat{\Delta}^{*}_{(0.975)}\right]", key="eq_boot")
+    c.p("At the retrieval level, without any language model, the measure is full-support recall: the share of "
+        "questions for which every gold supporting paragraph *S*_q reached the context:")
+    c.eq(r"\text{SR}=\frac{1}{\left|Q\right|}\sum_{q\in Q}\mathbb{1}\left[S_q\subseteq\text{titles}\left(A(q)\right)\right]", key="eq_sr")
+
+
+def policy_math(c: Chapter) -> None:
+    c.p("Formally, the router faces a contextual bandit. For question *q* with features φ(*q*) it chooses an "
+        "action *a* from the set 𝒜 = {local, mem128, mem512, mem1024, cloud} and receives the reward")
+    c.eq(r"r(q,a)=y(q,a)-c_{\text{cloud}}\,\mathbb{1}\left[a=\text{cloud}\right]-\mu\,\frac{T(q,a)}{1000}", key="eq_reward")
+    c.where([(r"y(q,a)\in\{0,1\}", "whether action *a* answered *q* correctly;"),
+             (r"c_{\text{cloud}}=0.3", "the price of one cloud call in units of one correct answer (a design preference, "
+              "swept from 0 to 1.2 for the Pareto table);"),
+             (r"\mu=0.1", "the price of the small model reading 1,000 prompt tokens, *T(q, a)*.")])
+    c.p("The offline learner fits one ridge regression per action on the training questions (design matrix *X* of "
+        "feature rows, reward vector **r**ₐ) and routes to the action with the highest predicted reward:")
+    c.eq(r"\hat{\theta}_a=\left(X^\top X+\lambda I\right)^{-1}X^\top\mathbf{r}_a,\qquad \pi(q)=\underset{a\in\mathcal{A}}{\text{arg max}}\;\hat{\theta}_a^\top\varphi(q)", key="eq_ridge")
+    c.p("The online learner, LinUCB (Li et al., 2010), sees only the reward of the action it took. It keeps "
+        "*A*ₐ = *I* + Σ*x x*ᵀ and **b**ₐ = Σ*r x* for each action and chooses optimistically:")
+    c.eq(r"a_t=\underset{a\in\mathcal{A}}{\text{arg max}}\;\hat{\theta}_a^\top x_t+\alpha\sqrt{x_t^\top A_a^{-1}x_t},\qquad \hat{\theta}_a=A_a^{-1}\mathbf{b}_a", key="eq_linucb")
+    c.p("The cascade answers locally first and escalates when a ridge model of the answer's own signals ψ (are the "
+        "answer's words in the notes it read? is it abstention-like? how long is it?) predicts that the answer is "
+        "wrong:")
+    c.eq(r"\text{escalate}(q)=\mathbb{1}\left[\hat{w}^\top\psi\left(p_{\pi(q)}\right)<\theta\right]", key="eq_cascade")
+    c.p("The hyperparameters λ, α, the number of passes and θ are chosen by *K*-fold cross-validation on the "
+        "training split only (*K* = 5, folds stratified by task type), maximising the mean validation reward:")
+    c.eq(r"h^{*}=\underset{h}{\text{arg max}}\;\frac{1}{K}\sum_{k=1}^{K}\bar{r}\left(\pi_h^{(D\setminus D_k)},D_k\right)", key="eq_cv")
+    c.where([(r"\pi_h^{(D\setminus D_k)}", "the policy with hyperparameters *h* trained without fold *k*;"),
+             (r"\bar{r}(\pi,D_k)", "its mean reward (Equation ⟦eq_reward_n⟧) on the held-out fold.")])
+
+
+def interface_design(c: Chapter) -> None:
+    c.h3("Interface Design of CAMR Personal", key="sec_ui")
+    c.p("The interface had one job beyond being a usable chat window: to make memory, the thing the research is "
+        "about, visible and controllable. Its design followed six principles, each traceable to a feature and to a "
+        f"test ({c.next_tab()}).")
+    c.table("Design principles of the interface and how each was realised and checked",
+            ["Principle", "Realised as", "Checked by"],
+            [["Memory is visible, before the answer", "A *Recalled N memories* card streams before the first word; "
+              "an *answered by the model alone* label when gating abstains", "TC-27, TC-25; browser test (TC-37)"],
+             ["Familiar conventions", "ChatGPT's minimal composer and chat list; Ollama's model picker inside the "
+              "composer and drop-anywhere files; Kimi's sources-first answers", "Design review against the three apps"],
+             ["Honest provenance", "Grounded % per answer; each memory labelled note / chat / learned / file; Forget on "
+              "every item", "TC-28, TC-29; memory panel test"],
+             ["The user stays in control", "*remember that…* stores without a model call; 👍 teaches, 👎 only records; "
+              "export hides text by default", "TC-26, TC-39"],
+             ["Local and private by construction", "Server bound to 127.0.0.1; Host and Origin checked; no telemetry",
+              "TC-31, TC-32"],
+             ["Accessible and responsive", "WCAG 2.2 AA contrast in both themes; one heading structure; layout from 390 "
+              "px phones to desktops", "Contrast audit, axe-core audit, phone-width test (TC-40, TC-41)"]],
+            [4.0, 7.2, 4.7], size=9)
+    c.p(f"{c.next_fig()} shows how the interface is built. The front end is plain HTML, CSS and JavaScript with no "
+        "framework or build step, so the downloadable executable stays small (16–43 MB) and starts in about a second. "
+        "Answers arrive as Server-Sent Events in a fixed order: *recall* (which notes were read), then *token* events, "
+        "then *done* with timings and the grounding score. That order is what puts memory in front of the answer.")
+    c.figure(DIAGRAMS / "ui_components.png", "Interface components of CAMR Personal and the local server they talk to", 15.5)
+    c.p("**Layout.** A three-column CSS grid: a 272 px sidebar, a fluid thread capped at 768 px for comfortable line "
+        "length, and a 360 px memory panel that slides in. Below 900 px the sidebar becomes an overlay and the panel "
+        "covers the screen, so the same interface works at phone width (TC-41). **Typography.** The system UI font "
+        "stack (Inter where installed) at 15 px with 1.6 line height; monospace for codes and timings. **Colour.** "
+        "Dark-first, with a single blue-to-green accent taken from the study's chart palette, and a light theme. "
+        "Every colour is a named design token, so the two themes differ only in token values.")
+    c.p("Text must stand out from its background for readers with low vision. WCAG 2.2 defines the contrast ratio "
+        "of two colours from their relative luminance *L*, computed from the linearised sRGB channels:")
+    c.eq(r"\text{CR}=\frac{L_{\text{light}}+0.05}{L_{\text{dark}}+0.05},\qquad L=0.2126\,R_{\text{lin}}+0.7152\,G_{\text{lin}}+0.0722\,B_{\text{lin}}", key="eq_contrast")
+    c.p("Level AA requires CR ≥ 4.5 for normal text and ≥ 3 for large text and interface marks. "
+        f"{c.next_fig()} shows every token pair the stylesheet uses, measured with this formula after the audit in "
+        "section ⟦sec_uitest⟧ corrected the four tokens that failed.")
+    c.figure(REPORT / "design_tokens.png", "Design tokens of both themes with their measured contrast ratios", 15.5)
+
+
+def ui_testing(c: Chapter) -> None:
+    c.h3("Interface Testing: Browser, Accessibility and Layout", key="sec_uitest")
+    audit = json.loads((ROOT / "docs/results/ui_audit.json").read_text())
+    before, after = audit["before"], audit["after"]
+    c.p("The interface was tested in three further ways. **End-to-end browser tests** (`tests/test_app_e2e.py`) "
+        "drive the real interface in Chromium through Playwright, as a user would, with the deterministic test "
+        "doubles in place of the model so that a failure means the interface is wrong, not the model. An "
+        "**automated accessibility audit** (`scripts/ui_audit.py`) runs axe-core 4.10 (Deque Systems) against WCAG "
+        "2.0/2.1/2.2 A and AA rules and best practices, in both themes, at desktop (1,366 × 860) and phone (390 × 844) "
+        "size, on a populated chat with the memory panel open. A **contrast audit** computes Equation "
+        "⟦eq_contrast_n⟧ for every token pair.")
+    c.table("Automated interface tests (Chromium, Playwright)",
+            ["Test ID", "What the browser does", "Expected", "Result"],
+            [["TC-37", "Types *remember that my bike lock code is 4471*, then asks for the code", "Stored without a "
+              "model call; the recall card shows the memory before the answer; the answer contains 4471; memory "
+              "counter increases", "Pass"],
+             ["TC-38", "Submits a message of spaces", "Nothing is sent; no chat created", "Pass"],
+             ["TC-39", "Clicks 👍 on an answer", "Button reads *Learned*; memory counter increases", "Pass"],
+             ["TC-40", "Toggles the theme and opens the memory panel", "Theme changes; panel opens", "Pass"],
+             ["TC-41", "Loads the app at 390 × 844 px", "Composer fully on screen; no horizontal scrolling", "Pass"],
+             ["TC-42", "Uses only the keyboard: Tab to the message box, type, Enter", "Message box reachable by Tab; "
+              "message sent; every visible control has an accessible name", "Pass"]],
+            [1.5, 5.6, 6.4, 2.4], size=9)
+
+    def axe_summary(run):
+        out = {}
+        for r in run["axe"]:
+            for v in r["violations"]:
+                out.setdefault(v["id"], {"impact": v["impact"], "help": v["help"], "where": set()})["where"].add(
+                    f"{r['theme']} {r['viewport']}")
+        return out
+
+    b_axe = axe_summary(before)
+    fails = [r for r in before["contrast"] if not r["pass_AA"]]
+    c.p(f"The first audit found real defects. axe-core reported {len(b_axe)} rule violations "
+        f"({', '.join(sorted(b_axe))}) and the contrast audit found {len(fails)} token pairs below AA, all of them in "
+        "small secondary text (sidebar group labels, keyboard hints, memory-kind chips) and, in the light theme, the "
+        "accent and success colours. The page also had no top-level heading once a chat had started, which hurts "
+        "screen-reader navigation. They were logged as defects D-11 and D-12, fixed by darkening or lightening the "
+        "failing tokens per theme and adding a persistent (visually hidden) page heading, and re-audited:")
+    rows = []
+    for r in before["axe"]:
+        a = next(x for x in after["axe"] if x["theme"] == r["theme"] and x["viewport"] == r["viewport"])
+        rows.append([f"{r['theme'].capitalize()}, {r['viewport']}",
+                     ", ".join(f"{v['id']} ({v['impact']}, {v['nodes']})" for v in r["violations"]) or "none",
+                     str(r["passes"]), "none" if not a["violations"] else ", ".join(v["id"] for v in a["violations"]),
+                     str(a["passes"])])
+    c.table("Accessibility audit with axe-core: violations (impact, elements) before and after the fixes",
+            ["Theme and size", "Violations before", "Rules passed before", "Violations after", "Rules passed after"],
+            rows, [3.0, 6.1, 2.2, 2.4, 2.2], size=9)
+    c.table("Colour-contrast failures found and fixed (WCAG 2.2 AA)",
+            ["Theme", "Token pair", "Used for", "Before", "After", "Required"],
+            [[r["theme"], f"{r['fg']} on {r['bg']}", r["use"], f"{r['ratio']:.2f}:1",
+              f"{next(x['ratio'] for x in after['contrast'] if (x['theme'], x['fg'], x['bg']) == (r['theme'], r['fg'], r['bg'])):.2f}:1",
+              f"{r['required_AA']:g}:1"] for r in fails],
+            [1.6, 3.4, 4.6, 2.0, 2.0, 2.0], size=9)
+    c.p("After the fixes the audit reported no violations in either theme at either size, and every token pair met "
+        "AA. Keyboard-only use of the main path is covered by TC-42. Automated tools catch only part of what makes an "
+        "interface accessible: the interface was **not** tested with a screen reader or with users who rely on one, "
+        "and a usability study with real users remains future work (Chapter 6).")
+    c.p("As a structured design review, the interface was also checked against Nielsen's ten usability heuristics "
+        f"({c.next_tab()}). This is the author's own expert review, not a user study; its value is that each "
+        "heuristic is tied to a concrete feature or to a gap that is admitted.")
+    c.table("Heuristic review of the interface (Nielsen, 1994)",
+            ["Heuristic", "How the interface meets it", "Known gap"],
+            [["Visibility of system status", "*Searching your memory…*, recall card, streaming, time to first word, "
+              "download progress", "—"],
+             ["Match with the real world", "Plain words: *Teach*, *Remember*, *Forget*, *Learned*", "—"],
+             ["User control and freedom", "Forget any memory; rename or delete chats; 👎 never teaches", "No undo after Forget"],
+             ["Consistency and standards", "ChatGPT/Ollama conventions; one token system across themes", "—"],
+             ["Error prevention", "Empty messages rejected; duplicates detected; local-only server", "—"],
+             ["Recognition rather than recall", "Suggestions on the empty chat; model picker shows installed models",
+              "—"],
+             ["Flexibility and efficiency", "⌘K new chat; Enter to send; *remember that…* shortcut", "Few keyboard shortcuts"],
+             ["Aesthetic and minimalist design", "One accent colour; memory details in a panel, not in the thread", "—"],
+             ["Help users recover from errors", "Setup screen names the missing step (TC-30); toasts explain failures",
+              "Model errors shown as raw text"],
+             ["Help and documentation", "docs/APP.md, illustrated setup guide, About in Settings", "No in-app tour"]],
+            [3.6, 7.6, 4.7], size=9)
+
+
+def worked_examples(c: Chapter) -> None:
+    ex = json.loads((ROOT / "docs/results/examples.json").read_text())
+    c.h3("What the Models Actually Answered: Worked Examples", key="sec_examples")
+    c.p("Aggregate accuracy hides how an answer is won or lost. This subsection follows single questions through the "
+        "engine, with and without memory, using the logged prompts and answers verbatim (abridged only where marked "
+        "…). The examples were chosen to show each mechanism and each failure mode, not to flatter the engine; "
+        "`scripts/extract_examples.py` pulls them from the result databases.")
+
+    f = ex["fact"]
+    fc = f["conditions"]
+    c.p(f"**Example 1: a long-tail fact, and an ambiguous name.** *{f['question']}* PopQA's intended entity is the "
+        f"Taiwanese band *Fahrenheit*, and the accepted answers are {', '.join(f['gold'])}.")
+    c.table("Example 1: answers to a long-tail question with and without memory (pilot logs)",
+            ["Model and condition", "Answer", "Correct", "Prompt tokens", "Seconds"],
+            [[n, v["answer"].strip().splitlines()[0][:60], "yes" if v["correct"] else "no", str(v["prompt_tokens"]),
+              f"{v['seconds']:.1f}"] for n, v in fc.items()],
+            [5.0, 4.6, 1.7, 2.3, 2.0], size=9)
+    c.p("Without memory, each model answered for a *different* Fahrenheit: the 0.5B and 20B models chose the novel's "
+        "genre, Kimi K3 the video game. With CAMR, the 0.5B model read the stored note about the band and answered "
+        "correctly in 1.2 s. Memory supplied not only a missing fact but the user's intended referent, which no amount "
+        "of parameters can guess. This is the personal-assistant case in miniature: *my* dentist, *my* supervisor.")
+
+    for key, n in (("bridge_1", 2), ("bridge_2", 3)):
+        e = ex[key]
+        adm = [x for x in e["trace"] if x["admitted"]]
+        via = [x for x in adm if x["via_bridge"]]
+        cc = e["conditions"]
+        c.p(f"**Example {n}: a two-hop question solved by bridging.** *{e['question']}* (gold: {e['gold'][0]}). "
+            f"The engine admitted {len(adm)} notes; {len(via)} of them came only through entity bridging "
+            f"(*{via[0]['title']}*, similarity {via[0]['similarity']:.2f}), reached because an admitted seed note named it. "
+            f"llama3.2:3b answered *{cc['llama3.2:3b alone']['answer'].strip()[:40]}* alone and "
+            f"*{cc['llama3.2:3b + CAMR']['answer'].strip()[:40]}* with CAMR (correct), in "
+            f"{cc['llama3.2:3b + CAMR']['seconds']:.1f} s; Kimi K3 knew it closed-book "
+            f"({cc['Kimi K3 (cloud), closed book']['seconds']:.1f} s).")
+    c.figure(REPORT / "bridge_trace.png", "Admitted notes for the two multi-hop examples; orange notes were reached only by "
+             "entity bridging (Equation ⟦eq_bridge_n⟧)", 15.5)
+
+    m = ex["maths_helps"]
+    mc = m["conditions"]
+    c.p(f"**Example 4: a maths problem where worked-example memory helps.** *{m['question']}* The gold solution is a "
+        "chain of four operations:")
+    c.eq(r"\text{food}=20.25-4.50=15.75,\quad \text{rides}=2\times33=66,\quad \frac{20.25+15.75+66}{3}=\frac{102}{3}=34")
+    c.p("For reasoning questions CAMR retrieves solved GSM8K *training* problems instead of facts. Here it retrieved two: "
+        "a state-fair ticket problem and *three friends split the cost of a movie*. "
+        f"{c.next_tab()} shows the decisive step of each answer.")
+    def first_lines(t, k=4):
+        lines = [x.strip() for x in t.strip().splitlines() if x.strip()]
+        return " / ".join(lines[:k])[:170] + " …"
+    c.table("Example 4: the same GSM8K problem with and without worked-example memory (logged answers)",
+            ["Model and condition", "Opening of the answer (abridged)", "Final", "Correct"],
+            [[n, first_lines(v["answer"]), (re.search(r"####\s*([^\n]+)", v["answer"]) or re.search("(.*)", "–")).group(1)[:10],
+              "yes" if v["correct"] else "no"] for n, v in mc.items()],
+            [3.8, 8.6, 1.8, 1.7], size=8.5)
+    c.p("Alone, both phi4-mini (3.8B) and qwen2.5:14b read *$20.25 on 3 tickets* as a price per ticket and computed "
+        "3 × 20.25 = 60.75, which led to 47.50. With the two worked examples in the prompt, both read it as the total and "
+        "reached 34, matching Kimi K3. The 0.5B model, given the same examples, printed an answer and then began copying "
+        "an example problem: the format of the examples overwhelmed it.")
+    h = ex["maths_hurts"]
+    hc = h["conditions"]
+    c.p(f"**Example 5: where the same memory hurts.** *{h['question'][:160]}…* The 0.5B model alone solved it "
+        f"(answer ending *{hc['qwen2.5:0.5b alone']['answer'].strip().splitlines()[-1][:20]}*). With worked examples it "
+        f"answered *{hc['qwen2.5:0.5b + CAMR worked examples']['answer'].strip().splitlines()[0][:20]}* and then repeated "
+        "the problem text. Across the pilot, exemplar memory moved the 0.5B model from 33.3% to 16.7% on GSM8K, and over "
+        "19 models it helped 8, was neutral for 4 and hurt 7. This is why the learned router sends maths to a stronger "
+        "model instead of adding memory (section ⟦sec_policy⟧).")
+
+
+def read_path_tuning(c: Chapter) -> None:
+    p = ROOT / "results/retrieval_eval/tables/gating_tuning.json"
+    if not p.exists():
+        return
+    d = json.loads(p.read_text())
+    c.h3("Tuning the Read Path on Validation Data", key="sec_tune_read")
+    sel, t = d["selected"], d["test"]
+    st, df = t["selected"], t["study default (0.15, 512)"]
+    c.p("The margin δ and the budget *B* were fixed by design in the first study. To check them properly, they were "
+        "tuned on a **validation** half of the 500 HotpotQA and 500 2WikiMultiHopQA retrieval questions "
+        f"({d['n_val']} questions) and the chosen setting was scored once on the other, **held-out** half. Because a "
+        "larger budget always recovers more evidence, the objective charges for tokens at the same rate μ as the "
+        "learned router's reward (Equation ⟦eq_reward_n⟧):")
+    c.eq(r"J(\delta,B)=\text{SR}(\delta,B)-\mu\,\frac{\bar{T}(\delta,B)}{1000},\qquad \mu=0.1", key="eq_j")
+    c.p(f"{c.next_fig()} shows the {len(d['margins']) * len(d['budgets'])}-point grid. Recall rises with the budget "
+        "and with a wider margin, and so does the token bill; the objective balances them.")
+    c.figure(REPORT / "gating_tuning.png", "Read-path grid on the validation half: full-support recall, tokens supplied and "
+             "the objective J; the box marks the selected setting", 15.5)
+    lab = lambda m: "none" if m is None else f"{m:.2f}"  # noqa: E731
+    c.table("Read path on the held-out half: tuned setting against the study's default",
+            ["Setting", "δ", "B", "Full-support recall", "Tokens", "J"],
+            [["Selected on validation", lab(sel["margin"]), str(sel["budget"]), pct(st["support_all"]),
+              f"{st['mean_tokens']:.0f}", f"{st['J']:.3f}"],
+             ["Study default", "0.15", "512", pct(df["support_all"]), f"{df['mean_tokens']:.0f}", f"{df['J']:.3f}"]],
+            [4.2, 1.6, 1.6, 3.2, 2.2, 2.2], size=9.5)
+    c.p(READ_TUNING_TEXT(d))
+    c.p("The abstain threshold τ is different: on these questions every memory is on-topic, so a higher τ can only "
+        "lose recall. It was therefore set on separate data, the similarity of each question to an *off-topic* "
+        "paragraph, as the 90th percentile of that distribution. " f"{c.next_fig()} shows the trade-off for both "
+        "embedders: at the chosen τ almost every relevant note is kept, and about 90% of off-topic notes are refused.")
+    c.figure(REPORT / "tau_tradeoff.png", "The abstain threshold τ: relevant notes kept against off-topic notes rejected on "
+             "200 HotpotQA questions, for the benchmark and the application embedders", 13.0)
+
+
+def READ_TUNING_TEXT(d: dict) -> str:  # noqa: N802
+    sel, t = d["selected"], d["test"]
+    st, df = t["selected"], t["study default (0.15, 512)"]
+    g = {(x["margin"], x["budget"]): x for x in d["validation_grid"]}
+    a, b = g[(sel["margin"], sel["budget"])], g[(0.15, 512)]
+    mu_star = (a["support_all"] - b["support_all"]) / ((a["mean_tokens"] - b["mean_tokens"]) / 1000)
+    lab = "no margin" if sel["margin"] is None else f"δ = {sel['margin']:.2f}"
+    return (f"Validation selected {lab} and B = {sel['budget']}: at a price of μ = 0.1 per 1,000 tokens, more evidence "
+            f"is worth its tokens. On the held-out half it raised full-support recall from {pct(df['support_all'])} to "
+            f"{pct(st['support_all'])}, but supplied {st['mean_tokens']:.0f} tokens per question instead of "
+            f"{df['mean_tokens']:.0f}. The choice is sensitive to the price of a token: the study's setting wins as soon "
+            f"as a token costs more than μ ≈ {mu_star:.2f} per 1,000, and the margin's main effect is to save tokens "
+            "(at B = 1,024, δ = 0.15 supplies about a fifth fewer tokens for a few points of recall). More importantly, "
+            "this objective measures *retrieval*, not answers. The end-to-end budget sweep (section ⟦sec_budget⟧) "
+            "showed that the 0.5B model answers *worse* when given more notes, because it is distracted by them. The "
+            "read path should therefore be tuned to the reader: a large budget with no margin suits strong readers "
+            "and multi-hop questions, where missing evidence is the binding constraint; the study's small budget and "
+            "margin suit tiny models. This is exactly the per-question trade-off the learned router makes, and the "
+            "reason a single fixed setting cannot be best.")
+
+
+def policy_tuning_results(c: Chapter) -> None:
+    p = ROOT / "results/learn/tables/policy_tuning.json"
+    if not p.exists():
+        return
+    d = json.loads(p.read_text())
+    h = d["held_out"]
+    r, lin = d["router_selected"], d["linucb_selected"]
+    c.p("**Tuning the router properly.** The first version fixed λ = 1, α = 0.5 and 5 passes by hand, and its "
+        "cascade threshold (0.2) was read off the held-out questions, which flatters the result. All four were "
+        "re-chosen by 5-fold cross-validation on the 144 training questions only (Equation ⟦eq_cv_n⟧), and the 72 "
+        f"held-out questions were then scored once ({c.next_fig()}, {c.next_tab()}).")
+    c.figure(REPORT / "router_tuning.png", "Cross-validated tuning of the learned router, LinUCB and the cascade threshold", 15.8)
+    c.table("Hyperparameters before and after cross-validated tuning",
+            ["Hyperparameter", "First study (by hand)", "Selected by 5-fold CV", "CV mean reward"],
+            [["Feature set", "full (11 features)", r["features"], f"{r['cv_reward']:.3f} ± {r['cv_reward_sd']:.3f}"],
+             ["Ridge penalty λ", "1.0", f"{r['lambda']:g}", "(same run)"],
+             ["LinUCB exploration α", "0.5", f"{lin['alpha']:g}", f"{lin['cv_reward']:.3f} ± {lin['cv_reward_sd']:.3f}"],
+             ["LinUCB passes (epochs)", "5", str(lin["passes"]), "(same run)"],
+             ["Cascade threshold θ", "0.2 (chosen on held-out data)", f"{d['cascade_selected']:g}",
+              f"{max(x['cv_reward'] for x in d['cascade_grid']):.3f}"]],
+            [4.0, 4.0, 3.8, 4.0], size=9.5)
+    hc = h["tuned router + cascade"]
+    lo, hi = hc["vs_always_cloud"][1], hc["vs_always_cloud"][2]
+    c.figure(REPORT / "heldout_policies.png", "Tuned policies on the 72 held-out questions: accuracy with the paired "
+             "95% interval of the difference from always using the cloud, and time per answer", 15.5)
+    c.p(f"Two results stand out. First, cross-validation preferred the **simplest** router: task type alone, with "
+        "the retrieval features adding nothing measurable on 144 questions (the fold-to-fold spread, about ±0.08, is "
+        "larger than the differences between feature sets). With so little training data the richer model mainly "
+        "fits noise; the retrieval features may pay off with more data. Second, the honestly tuned cascade is at "
+        f"least as good as the hand-set one: {pct(hc['accuracy'])} held-out accuracy with "
+        f"{100 * hc['cloud_share']:.0f}% of questions sent to the cloud and {hc['mean_latency_s']:.1f} s per answer, "
+        f"against {pct(h['always cloud']['accuracy'])} and {h['always cloud']['mean_latency_s']:.1f} s for always "
+        f"asking Kimi K3. The difference in accuracy, {100 * hc['vs_always_cloud'][0]:+.1f} points (95% CI "
+        f"{100 * lo:+.1f} to {100 * hi:+.1f}), is not significant: the defensible claim is *equal accuracy at a "
+        f"quarter of the cloud calls and about a fifth of the time*. LinUCB, which learns only from the actions it "
+        f"takes, stayed below the offline router ({pct(h['tuned LinUCB']['accuracy'])}); its best setting was one "
+        "pass, and more passes did not help, a sign that 144 questions are too few for exploration to pay off.")
+
+
+def finetune_section(c: Chapter) -> None:
+    grid_p, test_p, cost_p = (ROOT / "results/finetune/tune/grid.json", ROOT / "results/finetune/test.json",
+                              ROOT / "results/finetune/camr_cost.json")
+    if not test_p.exists():
+        return
+    grid, res = json.loads(grid_p.read_text()), json.loads(test_p.read_text())
+    cost = json.loads(cost_p.read_text()) if cost_p.exists() else None
+    c.h3("Fine-Tuning Compared with Memory", key="sec_finetune")
+    c.p("The problem statement (section 1.2) argued that fine-tuning is the wrong tool for giving a small on-device "
+        "model new knowledge: it needs compute users do not have, must be repeated whenever knowledge changes, and can "
+        "damage what the model already does well. CAMR itself never changes the model's weights. To test that "
+        "argument rather than assume it, the obvious alternative was run as a **baseline**: the same 0.5B model was "
+        "fine-tuned on exactly the documents CAMR stores, and the two were compared on the same held-out questions.")
+    c.p("**Method.** Low-Rank Adaptation (LoRA; Hu et al., 2022) freezes each weight matrix *W* and learns a "
+        "low-rank update, so only a small fraction of parameters is trained:")
+    c.eq(r"W'=W+\frac{\alpha_{\text{LoRA}}}{r}\,BA,\qquad B\in\mathbb{R}^{d\times r},\;A\in\mathbb{R}^{r\times k},\;r\ll\min(d,k)", key="eq_lora")
+    c.p("The adapters were trained with the causal language-modelling loss over the document tokens *x*₁…*x*_T:")
+    c.eq(r"\mathcal{L}(\theta)=-\frac{1}{T}\sum_{t=1}^{T}\log p_\theta\left(x_t\mid x_{<t}\right)", key="eq_lm")
+    g0 = grid[0]
+    c.table("Fine-tuning set-up (`scripts/finetune_baseline.py`)",
+            ["Setting", "Value"],
+            [["Model", "Qwen2.5-0.5B-Instruct (Hugging Face weights, float32 on CPU; the same base as qwen2.5:0.5b)"],
+             ["Training data", f"The {g0['docs']} PopQA documents CAMR stores for the pilot and learning splits "
+              f"({g0['train_tokens']:,} trained tokens per epoch); no questions or answers"],
+             ["Formats compared", "*raw*: title and text as plain text; *chat*: the document as the assistant's answer to "
+              "\"What do you know about <title>?\" (loss on the answer only)"],
+             ["LoRA", f"rank r = {g0['rank']}, α = {2 * g0['rank']}, dropout 0.05, on all attention and MLP projections; "
+              f"{g0['trainable_params']:,} trainable parameters (about {100 * g0['trainable_params'] / 494e6:.1f}% of "
+              "the model)"],
+             ["Optimisation", f"AdamW, learning rate {{1e-4, 3e-4}} with warm-up then constant, batch {g0['batch']} "
+              "(micro-batch 2 × 4 accumulation steps), gradient clipping 1.0, gradient checkpointing, seed 13"],
+             ["Epochs", "Up to 8; checkpoints evaluated after epochs 1, 2, 4 and 8"],
+             ["Validation (selection)", "60 PopQA questions of the learning split's *training* set, closed book"],
+             ["Test (reported once)", f"{res['n_test']} held-out PopQA questions (pilot 30 + learning evaluation 30), "
+              f"closed book and with CAMR's logged prompts; GSM8K ({res['n_gsm8k']} questions) for side effects"],
+             ["Decoding", "Greedy, the same chat template for every condition"]],
+            [4.0, 11.9], size=9)
+    c.figure(REPORT / "finetune_curves.png", "LoRA training loss and validation accuracy per epoch for the four "
+             "configurations", 15.5)
+    b, lo = res["conditions"]["base"], res["conditions"]["lora"]
+    sel = res["selected"]
+    run = next(r for r in grid if r["fmt"] == sel["fmt"] and r["lr"] == sel["lr"])
+    ep = next(e for e in run["epochs"] if e["epoch"] == sel["epoch"])
+    rows = [["Base model alone", pct(b["test_closed"]["accuracy"]), pct(b["gsm8k"]["accuracy"]), "–", "–"],
+            ["Base + CAMR (no training)", pct(b["test_camr"]["accuracy"]), pct(b["gsm8k"]["accuracy"]),
+             f"{cost['ingest_seconds']:.0f} s to store" if cost else "–", f"{cost['store_mb']:.1f} MB store" if cost else "–"],
+            [f"LoRA fine-tuned ({sel['fmt']}, lr {sel['lr']:g}, {sel['epoch']} epochs)", pct(lo["test_closed"]["accuracy"]),
+             pct(lo["gsm8k"]["accuracy"]), f"{ep['train_seconds'] / 60:.0f} min to train", f"{ep['adapter_mb']:.0f} MB adapter"],
+            ["LoRA fine-tuned + CAMR", pct(lo["test_camr"]["accuracy"]), pct(lo["gsm8k"]["accuracy"]), "both", "both"]]
+    c.table("Memory against fine-tuning on the same documents (held-out test, one runtime for all conditions)",
+            ["Condition", "PopQA (long-tail facts)", "GSM8K (side effect)", "Cost to add the knowledge", "Artefact"],
+            rows, [5.4, 2.6, 2.6, 2.9, 2.4], size=9)
+    c.figure(REPORT / "finetune_vs_camr.png", "Held-out accuracy of the base model, CAMR, LoRA and both; and GSM8K accuracy "
+             "before and after fine-tuning", 15.0)
+    c.p(FINETUNE_TEXT(res, run, ep, cost))
+
+
+def FINETUNE_TEXT(res, run, ep, cost) -> str:  # noqa: N802
+    b, lo = res["conditions"]["base"], res["conditions"]["lora"]
+    bc, bm, lc, lm = (b["test_closed"]["accuracy"], b["test_camr"]["accuracy"], lo["test_closed"]["accuracy"],
+                      lo["test_camr"]["accuracy"])
+    dg = lo["gsm8k"]["accuracy"] - b["gsm8k"]["accuracy"]
+    parts = [f"Fine-tuning moved closed-book accuracy from {pct(bc)} to {pct(lc)}; giving the untrained model CAMR's "
+             f"notes moved it to {pct(bm)}."]
+    if bm > lc:
+        parts.append(f"Memory beat fine-tuning by {100 * (bm - lc):.1f} points on the same documents, which matches "
+                     "Ovadia et al. (2023): unsupervised fine-tuning teaches a model to continue the documents, not "
+                     "reliably to answer questions about them, while retrieval puts the exact sentence in front of it.")
+    else:
+        parts.append("Here fine-tuning matched or beat memory on the facts, so the advantage of memory lies in its "
+                     "cost and flexibility rather than accuracy.")
+    if cost:
+        parts.append(f"The costs differ by orders of magnitude: CAMR stored the {cost['docs']} documents in "
+                     f"{cost['ingest_seconds']:.0f} s, and a new note is usable the moment it is saved, whereas the "
+                     f"selected adapter took {ep['train_seconds'] / 60:.0f} min of training on four CPU cores, after a "
+                     "hyperparameter search of several times that, and must be retrained whenever knowledge changes.")
+    parts.append(f"Fine-tuning also changed GSM8K accuracy by {100 * dg:+.1f} points ({pct(b['gsm8k']['accuracy'])} → "
+                 f"{pct(lo['gsm8k']['accuracy'])})" + (", the forgetting the problem statement warned of." if dg < 0 else
+                 "; on this small sample no forgetting was measured."))
+    parts.append(f"Combining the two gave {pct(lm)}: " + ("fine-tuning added nothing on top of memory." if lm <= bm + 1e-9
+                                                         else "the adapter and the notes were complementary."))
+    return " ".join(parts)
+
+
+def scenarios_section(c: Chapter) -> None:
+    p = ROOT / "docs/results/scenarios.json"
+    if not p.exists():
+        return
+    d = json.loads(p.read_text())
+    sc = d["scenarios"]
+    c.h3("Complex Interactions with a Real Model", key="sec_scenarios")
+    c.p("Benchmarks ask one independent question at a time. A personal assistant meets harder situations: two notes "
+        "that must be joined, arithmetic on a remembered number, a fact that changes, a detail said many turns earlier, "
+        f"a document dropped into the window. Five such scenarios were run in the released application with "
+        f"**{d['model']}** through Ollama on the 4-core CPU, each in a fresh home, once **without memory** (the same "
+        "app and model with nothing taught, or with chat memory switched off) and once **with CAMR**. The screenshots "
+        "below are the real screens, captured automatically by `scripts/scenario_screens.py`, which also logs every "
+        "answer; nothing was retyped or retried. An answer counts as correct when it contains every expected element.")
+    rows = []
+    for key, e in sc.items():
+        q = e["with"]["turns"][-1]["question"]
+        wo = e.get("without")
+        rows.append([e["title"], q[:90],
+                     ("–" if not wo else ("correct" if wo["correct"] else "wrong") + ": " + wo["turns"][-1]["answer"].strip().replace("\n", " ")[:80]),
+                     ("correct" if e["with"]["correct"] else "wrong") + ": " + e["with"]["turns"][-1]["answer"].strip().replace("\n", " ")[:80],
+                     ", ".join(x for x in e["with"]["turns"][-1]["sources"] if x)[:60] or "none (abstained)"])
+    c.table(f"Complex interactions in CAMR Personal ({d['model']}): final question, answers without and with memory, and "
+            "the memories recalled (`docs/results/scenarios.json`)",
+            ["Scenario", "Final question", "Without memory", "With CAMR", "Recalled"],
+            rows, [2.6, 3.6, 3.6, 3.6, 2.5], size=8)
+    for key, e in sc.items():
+        img = ROOT / "docs/figures/scenarios" / f"{key}.png"
+        if img.exists():
+            c.figure(img, f"Scenario: {e['title'].lower()}" + ("" if "without" not in e else
+                     " (left: without memory, right: with CAMR)"), 15.8 if "without" in e else 10.5)
+    c.p(SCENARIO_TEXT(d))
+
+
+def SCENARIO_TEXT(d: dict) -> str:  # noqa: N802 - written from the logged answers
+    sc = d["scenarios"]
+    n = len(sc)
+    w = sum(1 for e in sc.values() if e["with"]["correct"])
+    wo = [e for e in sc.values() if "without" in e]
+    wo_ok = sum(1 for e in wo if e["without"]["correct"])
+    return (f"With memory the assistant answered {w} of {n} scenarios correctly; without it, {wo_ok} of {len(wo)}. "
+            + SCENARIO_NOTES)
+
+
+SCENARIO_NOTES = ""
 
 
 # Interpretation of the 200-question study; written once its results are in (results/hotpot200).
@@ -1206,12 +1850,12 @@ def APP_LATENCY_TEXT(lat: dict) -> str:  # noqa: N802 - named hook, like H200_TE
         "**Budget.** The budget made no measurable difference here: on personal notes, gating admitted only the one "
         f"or two notes that matched, so every budget sent the same prompt (about "
         f"{ms[names[0]]['budgets']['384']['median_prompt_tokens']:.0f} tokens) and the budget never bound. It "
-        "matters when many notes are relevant, as in the benchmarks (section 5.8.5). "
+        "matters when many notes are relevant, as in the benchmarks (section ⟦sec_budget⟧). "
         f"**Lookup.** Inside a conversation the memory lookup took a median of "
         f"{min(ms[m]['budgets']['384']['median_retrieval_ms'] for m in names):.0f}–"
         f"{max(ms[m]['budgets']['384']['median_retrieval_ms'] for m in names):.0f} ms, against "
         f"{sz['small']['median_retrieval_ms']:.0f} ms with nothing else running: the embedding model and the chat "
-        "model share the same four cores, the contention already diagnosed in section 5.8.10. A repeated question "
+        "model share the same four cores, the contention already diagnosed in section ⟦sec_cost⟧. A repeated question "
         f"skipped the embedding and took {qc['repeat_ms']:.1f} ms instead of {qc['first_ms']:.0f} ms. Growing memory "
         f"{sz['large']['notes'] / sz['small']['notes']:.0f}-fold, from {sz['small']['notes']:,} to "
         f"{sz['large']['notes']:,} notes, raised the lookup only from {sz['small']['median_retrieval_ms']:.0f} to "
