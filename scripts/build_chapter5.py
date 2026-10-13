@@ -1740,7 +1740,7 @@ def finetune_section(c: Chapter) -> None:
              ["Decoding", "Greedy, the same chat template for every condition"]],
             [4.0, 11.9], size=9)
     c.figure(REPORT / "finetune_curves.png", "LoRA training loss and validation accuracy per epoch for each "
-             "configuration", 15.5)
+             "configuration", 15.5, key="fig_finetune_curves")
     b, lo = res["conditions"]["base"], res["conditions"]["lora"]
     sel = res["selected"]
     run = next(r for r in grid if r["fmt"] == sel["fmt"] and r["lr"] == sel["lr"])
@@ -1759,31 +1759,43 @@ def finetune_section(c: Chapter) -> None:
     c.p(FINETUNE_TEXT(res, run, ep, cost))
 
 
-def FINETUNE_TEXT(res, run, ep, cost) -> str:  # noqa: N802
+def FINETUNE_TEXT(res, run, ep, cost) -> str:  # noqa: N802 - written from results/finetune
+    grid = json.loads((ROOT / "results/finetune/tune/grid.json").read_text())
+    search_h = sum(r["epochs"][-1]["train_seconds"] for r in grid) / 3600
+    n = res["n_test"]
     b, lo = res["conditions"]["base"], res["conditions"]["lora"]
     bc, bm, lc, lm = (b["test_closed"]["accuracy"], b["test_camr"]["accuracy"], lo["test_closed"]["accuracy"],
                       lo["test_camr"]["accuracy"])
     dg = lo["gsm8k"]["accuracy"] - b["gsm8k"]["accuracy"]
-    parts = [f"Fine-tuning moved closed-book accuracy from {pct(bc)} to {pct(lc)}; giving the untrained model CAMR's "
-             f"notes moved it to {pct(bm)}."]
-    if bm > lc:
-        parts.append(f"Memory beat fine-tuning by {100 * (bm - lc):.1f} points on the same documents, which matches "
-                     "Ovadia et al. (2023): unsupervised fine-tuning teaches a model to continue the documents, not "
-                     "reliably to answer questions about them, while retrieval puts the exact sentence in front of it.")
-    else:
-        parts.append("Here fine-tuning matched or beat memory on the facts, so the advantage of memory lies in its "
-                     "cost and flexibility rather than accuracy.")
+    q = lambda x: round(x * n)  # noqa: E731 - questions out of n
+    parts = [f"**Memory beat fine-tuning by {100 * (bm - lc):.0f} points on the same documents.** Fine-tuning moved "
+             f"closed-book accuracy from {pct(bc)} to {pct(lc)} ({q(lc) - q(bc):+d} questions of {n}); giving the untrained "
+             f"model CAMR's notes moved it to {pct(bm)}. Across the whole grid, validation accuracy never rose above "
+             f"13.3% while the training loss fell from about 2.2 to as low as 0.16 ({c_ref('finetune_curves')}): the "
+             "adapters learned to *reproduce* the documents, not to answer questions about them. This matches Ovadia et "
+             "al. (2023), who found unsupervised fine-tuning a poor way to inject new knowledge compared with retrieval, "
+             "which puts the exact sentence in front of the model."]
     if cost:
-        parts.append(f"The costs differ by orders of magnitude: CAMR stored the {cost['docs']} documents in "
-                     f"{cost['ingest_seconds']:.0f} s, and a new note is usable the moment it is saved, whereas the "
-                     f"selected adapter took {ep['train_seconds'] / 60:.0f} min of training on four CPU cores, after a "
-                     "hyperparameter search of several times that, and must be retrained whenever knowledge changes.")
-    parts.append(f"Fine-tuning also changed GSM8K accuracy by {100 * dg:+.1f} points ({pct(b['gsm8k']['accuracy'])} → "
-                 f"{pct(lo['gsm8k']['accuracy'])})" + (", the forgetting the problem statement warned of." if dg < 0 else
-                 "; on this small sample no forgetting was measured."))
-    parts.append(f"Combining the two gave {pct(lm)}: " + ("fine-tuning added nothing on top of memory." if lm <= bm + 1e-9
-                                                         else "the adapter and the notes were complementary."))
+        parts.append(f"The costs differ by orders of magnitude. CAMR stored the {cost['docs']} documents as "
+                     f"{cost['notes']} notes in {cost['ingest_seconds']:.0f} s ({cost['store_mb']:.1f} MB), and a new note "
+                     f"is usable the moment it is saved. The selected adapter needed {ep['train_seconds'] / 60:.1f} min of "
+                     f"training on four CPU cores ({ep['adapter_mb']:.0f} MB), but finding it took a {search_h:.1f}-hour "
+                     "search over formats, learning rates and epochs, and any change to the user's knowledge means "
+                     "training again.")
+    parts.append("GSM8K accuracy was " + (f"unchanged ({pct(b['gsm8k']['accuracy'])} before and after): one epoch of "
+                                          "low-rank training on short documents caused no measurable forgetting on this "
+                                          "sample." if abs(dg) < 1e-9 else
+                                          f"{pct(b['gsm8k']['accuracy'])} before and {pct(lo['gsm8k']['accuracy'])} after "
+                                          "fine-tuning."))
+    diff = q(lm) - q(bm)
+    parts.append(f"Adding the adapter to CAMR changed accuracy from {pct(bm)} to {pct(lm)} ({diff:+d} questions), "
+                 + ("which is within noise at this sample size: fine-tuning adds little once the notes are there."
+                    if abs(diff) <= 3 else "a clear further gain."))
     return " ".join(parts)
+
+
+def c_ref(name: str) -> str:
+    return "⟦fig_" + name + "⟧"  # resolves to "Figure 5.n"
 
 
 def scenarios_section(c: Chapter) -> None:
