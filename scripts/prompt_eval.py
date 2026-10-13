@@ -123,7 +123,7 @@ Answer concisely.
 
 ### Assistant
 """,
-    "F (eager, answer-first; D-19 fix)": """You are a private personal assistant running on the user's own computer.
+    "F (eager; answer first; D-19 fix)": """You are a private personal assistant running on the user's own computer.
 
 The notes below come from the user's personal memory and are about the user. "The user said …" means the user told you this earlier; "I" inside it is the user. Treat what the notes say about the user as true and answer from them directly.
 
