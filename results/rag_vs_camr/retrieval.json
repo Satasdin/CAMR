@@ -51,6 +51,20 @@
       "similarity_margin": 0.15,
       "expansion": "entity",
       "token_budget": 512
+    },
+    "CAMR + entity gate": {
+      "retrieval_policy": "similarity_only",
+      "weights": {
+        "similarity": 1.0,
+        "recency": 0.0,
+        "importance": 0.0
+      },
+      "k": 20,
+      "min_similarity": 0.5,
+      "similarity_margin": 0.15,
+      "expansion": "entity",
+      "token_budget": 512,
+      "entity_gate": true
     }
   },
   "rows": [
@@ -134,6 +148,28 @@
     {
       "benchmark": "2wikimultihopqa",
       "method": "CAMR",
+      "n": 500,
+      "support_all": 0.784,
+      "support_any": 0.998,
+      "context_precision": 0.5150963924963925,
+      "mean_tokens": 438.742,
+      "mean_notes": 6.048,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "hotpotqa",
+      "method": "CAMR + entity gate",
+      "n": 500,
+      "support_all": 0.696,
+      "support_any": 0.952,
+      "context_precision": 0.3929464082838316,
+      "mean_tokens": 410.146,
+      "mean_notes": 5.472,
+      "abstain_rate": 0.022
+    },
+    {
+      "benchmark": "2wikimultihopqa",
+      "method": "CAMR + entity gate",
       "n": 500,
       "support_all": 0.784,
       "support_any": 0.998,
