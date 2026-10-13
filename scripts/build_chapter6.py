@@ -92,15 +92,31 @@ def build(template: Path, out: Path) -> Path:
         "loading the model in the background before the first question brought the first word to 0.6–1.7 s for "
         "0.5–3B models, and a 21-fold larger memory (282 to 5,976 notes) added only about 10 ms to the lookup "
         "(section ⟦sec_app_speed⟧).")
+    c.h3("Beyond the Research Questions: a Model That Learns As It Goes")
+    c.p("The last extension asked whether a small model with frozen weights can keep learning, and whether it then "
+        "competes with larger models. It can, through its memory. Starting from an **empty** memory and looking up "
+        "what it did not know, a 0.5B model answered 43.5% of 200 new questions, against 10.0% for the same model "
+        "closed-book and 19.0% for a 3B model; offline and asked in other words, it kept 41.5%, and a 3B model reading "
+        "the memory the 0.5B model had learned reached 45.0% (section ⟦sec_learn_results⟧). The most literal form of "
+        "*external weights* was measured too: a token-level memory beside the frozen model (kNN-LM) reached 13.3% on "
+        "held-out questions, the same as fine-tuning, against 75.0% for notes the model reads (section ⟦sec_tokenmem⟧). "
+        "Knowledge therefore grows best as text the model reads, not as numbers inside or beside it. Where the engine "
+        "tried to learn its own retrieval, the evidence was negative: a query adapter never beat the untrained one on "
+        "unseen questions, which is why sleep keeps one only when held-out recall rises (section ⟦sec_sleep_results⟧). "
+        "In the application, a personal question memory cannot answer is now met with a request to be taught rather "
+        "than a bare *I don't know*, without any loss on the cases that guard against over-refusal (section "
+        "⟦sec_learn_results⟧), and nothing personal is ever sent to the web.")
     c.h3("Contribution and the Boundaries of the Findings")
-    c.p("The study contributes five things: (1) a working, open-source memory engine and evaluation harness, "
+    c.p("The study contributes six things: (1) a working, open-source memory engine and evaluation harness, "
         "distinguished from standard RAG by measured, capability-adaptive decisions (gating, entity anchoring, "
         "bridging, per-question budgets and escalation); "
         "(2) measured evidence that external memory lets small on-device models match a frontier cloud model on "
         "knowledge-bound questions, together with the residual gap that memory cannot close; (3) a size map of 19 "
         "small models showing where memory pays off; (4) a measured comparison with fine-tuning on the same documents; "
-        "and (5) a released desktop application, CAMR Personal, that "
-        "puts the approach in users' hands. These conclusions hold for English benchmark questions, for frozen "
+        "(5) a released desktop application, CAMR Personal, that "
+        "puts the approach in users' hands; and (6) eager learning, knowledge packs and sleep around a frozen model, "
+        "with privacy rules, measured against closed-book models of several sizes, fine-tuning and a token-level memory. "
+        "These conclusions hold for English benchmark questions, for frozen "
         "quantised models run with greedy decoding on 4-core CPUs with 16 GB of memory, for the sample sizes "
         "reported (30–200 questions per condition, 500 for retrieval), and for a stochastic cloud reference "
         "sampled once. They do not yet extend to real users' personal data, to phones, or to sessioned "
@@ -111,7 +127,8 @@ def build(template: Path, out: Path) -> Path:
               "built switchable and measured (⟦sec_retrieval⟧, ⟦sec_gap⟧)", "Similarity + gating + bridging transfer; Eq. 4.1 does "
               "not; the gap is mostly knowledge and reading", "Met"],
              ["ii. Design a lightweight memory engine (write policy, ranking, token budget)", "Write path, screener, "
-              "single-file store, adaptive read path, budgeter (⟦sec_impl⟧); TC-01–TC-42; D-01–D-16",
+              "single-file store, adaptive read path, budgeter (⟦sec_impl⟧); eager learning, packs, sleep "
+              "(⟦sec_learning⟧); TC-01–TC-58; D-01–D-23",
               "Implemented and verified; ranking changed on evidence; distilled notes not evaluated at scale",
               "Met, with two recorded deviations (⟦sec_alignment⟧)"],
              ["iii. Develop it on a consumer laptop without a GPU, with an embedded store", "SQLite + sqlite-vec, "
@@ -157,7 +174,14 @@ def build(template: Path, out: Path) -> Path:
               "⟦sec_budget⟧: smaller budgets are also more accurate for 0.5B"],
              ["9", "The student and supervisor", "Obtain ethics approval and a consent statement before collecting "
               "feedback from real users of CAMR Personal", "⟦sec_apptest⟧: no user study yet; feedback export is designed "
-              "to be metrics-only by default"]],
+              "to be metrics-only by default"],
+             ["10", "Developers of local assistant apps", "When memory has nothing for a general question, look it up, "
+              "store what was read with its source, and answer from it; never send questions about the user, and "
+              "ask to be taught instead; identify the client and honour rate limits", "⟦sec_learn_results⟧: 43.5% vs "
+              "10.0% for the same model; ⟦sec_learn_scen⟧; D-18, D-21"],
+             ["11", "Designers of memory engines", "Train any learned retrieval component only behind a held-out "
+              "acceptance test, and prefer notes the model reads to weights inside or beside it", "⟦sec_sleep_results⟧: "
+              "adapter never beat the identity on unseen questions; ⟦sec_tokenmem⟧: kNN-LM = LoRA = 13.3% vs 75.0%"]],
             [0.8, 3.4, 5.6, 6.1], size=9)
 
     # ------------------------------------------------------------ 6.4
@@ -202,7 +226,15 @@ def build(template: Path, out: Path) -> Path:
               "Abstention on answerable vs unanswerable questions; full-support recall"],
              ["8", "**Better routing signals.** The learned router reached 61–65% against an oracle of 79% (⟦sec_policy⟧).",
               "The small model's own confidence and the grounding signal as router features", "Held-out accuracy "
-              "and cloud share against the same oracle"]],
+              "and cloud share against the same oracle"],
+             ["9", "**Better lookups.** In the learning stream the answer was in the fetched text for only about half "
+              "of the questions, and the reader was right on most of those (⟦sec_learn_results⟧): the lookup sets the "
+              "ceiling.", "Search with a key where the user has one; Wikidata for entity disambiguation; more than "
+              "the lead section", "Answer-in-fetched-text rate and accuracy on a fresh stream"],
+             ["10", "**Sleep with real users.** The adapter could not help with a few hundred benchmark questions; a "
+              "user's own approved answers are a different, narrower distribution.", "Opt-in logging of the adapter's "
+              "acceptance tests in the user study (priority 1)", "Recall on each user's held-out repeated questions "
+              "before and after sleep"]],
             [1.6, 5.4, 4.4, 4.5], size=9)
     c.p("Each direction should be scoped with the supervisor. The first two are the most valuable because they "
         "test the claim the application makes to its users, that it grows with them, under the conditions in "
