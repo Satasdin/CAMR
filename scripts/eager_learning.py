@@ -262,9 +262,13 @@ def devtune(a) -> None:
     dev_items = random.Random(SEED + 1).sample(rows, a.n_dev)  # the same 60 as `dev`
     runner = runner_for(a.model)
     bare, mem = answer_template("single_hop", False), answer_template("single_hop", True)
-    out = {"n": len(dev_items), "model": a.model, "grid": []}
+    path = OUT / "devtune.json"
+    out = json.loads(path.read_text()) if path.exists() else {"n": len(dev_items), "model": a.model, "grid": []}
+    done = {(g["max_pages"], g["token_budget"]) for g in out["grid"]}
     for pages in (1, 2, 3):
         for budget in (128, 512):
+            if (pages, budget) in done:  # resumable: each setting is saved as soon as it is measured
+                continue
             tmp = Path(tempfile.mkdtemp(prefix="devtune-"))
             CAMR["token_budget"] = budget
             engine, store = build_engine(tmp / "store.sqlite")
@@ -276,11 +280,12 @@ def devtune(a) -> None:
                 g = runner.generate(bare.render(r["question"]) if rec.abstained else mem.render(r["question"], rec.context))
                 correct += judge({"answers": json.loads(r["possible_answers"])}, g.text)["correct"]
             out["grid"].append({"max_pages": pages, "token_budget": budget, "accuracy": correct / len(dev_items)})
+            save(path, out)
             print(out["grid"][-1], flush=True)
             store.close()
             shutil.rmtree(tmp, ignore_errors=True)
     CAMR["token_budget"] = 512
-    save(OUT / "devtune.json", out)
+    save(path, out)
 
 
 # ------------------------------------------------------------------ pass 1: learn online
