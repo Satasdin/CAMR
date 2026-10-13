@@ -2349,14 +2349,21 @@ def SCALE_TEXT(idx) -> str:  # noqa: N802
 def EAGER_ADAPTER_TEXT(eg) -> str:  # noqa: N802
     b, a = eg["before"], eg["after"]
     rep = eg["sleep_report"]["adapter"]
-    kept = "kept" if eg["adapter_kept"] else "rejected"
-    return (f"**Learning to fetch from its own experience.** After the learning stream, the engine slept on what it had "
-            f"experienced: pairs (question as first asked → the notes that contained its answer) for "
-            f"{eg['train']} questions, with {eg['test']} held out. Sleep's own acceptance test {kept} the adapter "
-            f"(held-out recall@5 {pct(rep['recall_before']['recall@5'])} → {pct(rep['recall_after']['recall@5'])}). "
-            f"On the reworded questions of the second pass, recall@1 for facts it had learned went from "
-            f"{pct(b['seen_reworded']['recall@1'])} to {pct(a['seen_reworded']['recall@1'])}, and for held-out facts from "
-            f"{pct(b['unseen_reworded']['recall@1'])} to {pct(a['unseen_reworded']['recall@1'])}.")
+    rb, ra = rep["recall_before"], rep["recall_after"]
+    head = (f"**Learning to fetch from its own experience.** After the learning stream, the engine slept on what it had "
+            f"experienced: pairs (question as first asked → the notes that held its answer) for {eg['train']} "
+            f"questions, with {eg['test']} kept aside. Inside sleep, the adapter's own held-out check moved recall@1 from "
+            f"{pct(rb['recall@1'])} to {pct(ra['recall@1'])} and recall@5 from {pct(rb['recall@5'])} to "
+            f"{pct(ra['recall@5'])}, ")
+    if not eg["adapter_kept"]:
+        return head + ("so the adapter was **rejected** and retrieval stayed exactly as it was: on the reworded questions "
+                       f"recall@1 remained {pct(b['seen_reworded']['recall@1'])} for facts it had learned and "
+                       f"{pct(b['unseen_reworded']['recall@1'])} for the ones kept aside. Both studies point the same "
+                       "way: with a strong embedder and a few hundred questions, a learned query map has little to add, "
+                       "and the acceptance test is what keeps sleep from making retrieval worse.")
+    return head + (f"so it was kept. On the reworded questions recall@1 went from {pct(b['seen_reworded']['recall@1'])} "
+                   f"to {pct(a['seen_reworded']['recall@1'])} for learned facts and from "
+                   f"{pct(b['unseen_reworded']['recall@1'])} to {pct(a['unseen_reworded']['recall@1'])} for the rest.")
 
 
 def LEARN_TEXT(learn, retain, base, para) -> str:  # noqa: N802 - written from results/eager
