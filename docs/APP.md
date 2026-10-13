@@ -4,7 +4,9 @@ CAMR Personal is the research engine packaged as a desktop app. You bring any mo
 [Ollama](https://ollama.com). CAMR gives it a **long-term memory** built from:
 - your notes and files;
 - what you tell it in chat;
-- answers you approve.
+- answers you approve;
+- what it looks up when it doesn't know (0.3): general questions only, with the source linked;
+- knowledge packs: ready-made memory you install in one click (0.3).
 
 The model's weights never change. It gets more useful as its memory grows, and that costs **storage, not
 compute**. Memory isn't limited by the context window either: each question reads only the few memories it needs.
@@ -49,11 +51,19 @@ Add `--window` to open it in a native window (needs `pip install pywebview`).
 | Type **remember that …**, or toggle **✦ Remember** | The fact is stored instantly, with no model call. |
 | **👍 Teach this** | The answer is stored as memory and reused next time. |
 | Drop a `.txt`, `.md` or `.pdf` anywhere, or use **＋** | The file is learned. |
-| Open the **✦ memory panel** | Three tabs: *This answer* (what was read), *All memory* (search, and Forget), and *Growth*. |
+| Open the **✦ memory panel** | Four tabs: *This answer* (what was read), *All memory* (search, and Forget), *Learning* and *Growth*. |
+| Ask something it doesn't know (0.3) | For a general question it **looks it up** (DuckDuckGo → Wikipedia), stores what it read with its link, and answers from it; the card shows *looked up … → learned N → Recalled*. Next time it answers from memory, offline. |
+| Ask about yourself when it doesn't know (0.3) | It says *I don't know that yet, can you tell me…* and shows **✦ Teach me**. Personal questions are never sent anywhere. |
+| Open **◎ Learning** (0.3) | External weights (frozen model vs growing memory), what it looked up, **knowledge packs** (install / remove / harvest a topic) and **sleep**. |
+| Leave it idle (0.3) | After 10 quiet minutes it **sleeps**: tidies duplicates, looks up names it keeps seeing, and tries to learn better retrieval (kept only if it helps). |
 | Switch models | Use the picker inside the message box. The models come from your Ollama. |
 
 Chats are listed in the sidebar like any chat app. What you say is also stored as memory, so it can be recalled in
 **any** chat, weeks later, long after it would have dropped out of a context window.
+
+| Looking up what it doesn't know (0.3) | Learning tab (0.3) |
+|---|---|
+| ![Looked up and learned](figures/scenarios/fetch_new_with.png) | <img src="figures/scenarios/pack_sleep_panel.png" width="260"> |
 
 | Growth panel | Phone-sized window |
 |---|---|
@@ -83,8 +93,12 @@ Measured on a 4-core laptop-class CPU with no GPU (`docs/FINDINGS.md`, F10 and F
 
 ## Privacy
 
-- **Local only.** Everything lives in `~/.camr/`. The app listens only on 127.0.0.1, talks only to the Ollama
-  on your machine, and refuses requests from other hosts or websites.
+- **Local first.** Everything lives in `~/.camr/`. The app listens only on 127.0.0.1, answers with the Ollama on
+  your machine, and refuses requests from other hosts or websites.
+- **Lookups (0.3), and how to turn them off.** When memory has nothing for a *general* question, the app sends the
+  question's subject (e.g. *Doomwatch*) to DuckDuckGo and Wikipedia, identified as CAMR. A question about you
+  (*my*, *I*, *we*…) is never sent; your notes and chats never leave the machine. Turn lookups off in
+  **Settings → Look things up online**; the pill at the top shows *learning on* or *offline*.
 - **Your data, your files.** Back it up by copying the folder; delete the folder to wipe it.
 - **Feedback is opt-in.** **Settings → Download feedback file** exports numbers only (counts, timings, 👍/👎).
   Your messages are included only if you tick the box.
