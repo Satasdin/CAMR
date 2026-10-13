@@ -173,7 +173,7 @@ def fig_gating_tuning(out: Path) -> Path | None:
                                       (axes[1], "mean_tokens", "Tokens supplied", "{:.0f}", "Oranges"),
                                       (axes[2], "J", "Objective J = recall − 0.1 × tokens/1000", "{:.3f}", "Greens")):
         M = np.array([[grid[(m, b)][key] * (100 if key == "support_all" else 1) for b in budgets] for m in margins])
-        im = ax.imshow(M, cmap=cmap, aspect="auto")
+        ax.imshow(M, cmap=cmap, aspect="auto")
         for i in range(len(margins)):
             for j in range(len(budgets)):
                 v = M[i, j]

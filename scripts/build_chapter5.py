@@ -14,7 +14,6 @@ estimated.
 from __future__ import annotations
 
 import argparse
-import copy
 import json
 import re
 import subprocess
@@ -179,13 +178,17 @@ class Chapter:
             if not part:
                 continue
             if part.startswith("**"):
-                r = p.add_run(part[2:-2]); r.bold = True
+                r = p.add_run(part[2:-2])
+                r.bold = True
             elif part.startswith("[["):
-                r = p.add_run(part[2:-2]); r.font.highlight_color = WD_COLOR_INDEX.YELLOW
+                r = p.add_run(part[2:-2])
+                r.font.highlight_color = WD_COLOR_INDEX.YELLOW
             elif part.startswith("*"):
-                r = p.add_run(part[1:-1]); r.italic = True
+                r = p.add_run(part[1:-1])
+                r.italic = True
             elif part.startswith("`"):
-                r = p.add_run(part[1:-1]); r.font.name = "Courier New"
+                r = p.add_run(part[1:-1])
+                r.font.name = "Courier New"
                 r.font.size = Pt(size - 1 if size else 11)
             else:
                 r = p.add_run(part)
@@ -2029,20 +2032,20 @@ def RAG_RETRIEVAL_TEXT(r) -> str:  # noqa: N802
 
 
 def RAG_ANSWER_TEXT(d) -> str:  # noqa: N802 - written from results/rag_vs_camr/answers.json
-    q, l = d["models"]["qwen2.5:0.5b"]["summary"], d["models"]["llama3.2:3b"]["summary"]
+    q, ll = d["models"]["qwen2.5:0.5b"]["summary"], d["models"]["llama3.2:3b"]["summary"]
     return (f"**When the answer is in memory, CAMR matched or beat RAG with about 40% less text.** The 0.5B model reached "
             f"{pct(q['camr_answerable']['accuracy'])} with CAMR against {pct(q['rag_answerable']['accuracy'])} with RAG, "
             f"reading {q['camr_answerable']['mean_context_words']:.0f} words of notes instead of "
             f"{q['rag_answerable']['mean_context_words']:.0f}: the extra chunks RAG always adds were distraction for a weak "
-            f"reader. The 3B model scored the same with both ({pct(l['camr_answerable']['accuracy'])}). "
+            f"reader. The 3B model scored the same with both ({pct(ll['camr_answerable']['accuracy'])}). "
             "**When the answer is not in memory, the first version of CAMR failed exactly as RAG did.** With the "
             "question's own document removed, the store still held notes about other films, people and albums that were "
             "as similar to the question as the missing note, so the similarity gate abstained on only "
             f"{pct(q['camr_missing']['abstain_rate'])} of questions. Both systems filled the prompt with unrelated notes, "
             f"and the 0.5B model answered with a wrong name taken from them {pct(q['rag_missing']['wrong_from_context'])} "
             f"(RAG) and {pct(q['camr_missing']['wrong_from_context'])} (CAMR) of the time. The irrelevant notes even made "
-            f"the 3B model worse than answering alone ({pct(l['alone']['accuracy'])} alone, "
-            f"{pct(l['rag_missing']['accuracy'])} with RAG, {pct(l['camr_missing']['accuracy'])} with CAMR): they overrode "
+            f"the 3B model worse than answering alone ({pct(ll['alone']['accuracy'])} alone, "
+            f"{pct(ll['rag_missing']['accuracy'])} with RAG, {pct(ll['camr_missing']['accuracy'])} with CAMR): they overrode "
             "facts it already knew. A similarity threshold cannot tell *a different film by a similar director* from "
             "*this film*.")
 
