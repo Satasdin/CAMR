@@ -99,6 +99,7 @@ class MemoryConfig:
     # Capability-adaptive gating (docs/BRIDGING_THE_GAP.md section 3.1).
     min_similarity: float = 0.0  # abstain when the best note is weaker than this (raw cosine)
     similarity_margin: float | None = None  # admit only notes within this of the best one
+    entity_gate: bool = False  # abstain when the question names an entity no eligible note mentions
     # Entity-bridge expansion (section 3.2).
     expansion: str = "none"  # none | entity
     expansion_seeds: int = 3

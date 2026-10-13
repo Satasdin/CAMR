@@ -17,6 +17,7 @@ from camr.config import Config
 from camr.memory.budgeter import TokenBudgeter
 from camr.memory.clock import Clock, WallClock
 from camr.memory.embedder import Embedder
+from camr.memory.entities import mentions_any, question_entities
 from camr.memory.importance import HeuristicImportance, ImportanceScorer, ModelImportance
 from camr.memory.note import Document, RecallResult, ScoredNote, to_iso
 from camr.memory.retrieval import RetrievalPolicy, build_policy
@@ -75,6 +76,7 @@ class MemoryEngine:
         batch_size: int = 32,
         min_similarity: float = 0.0,
         similarity_margin: float | None = None,
+        entity_gate: bool = False,
         expansion: str = "none",
         expansion_seeds: int = 3,
         expansion_per_seed: int = 2,
@@ -91,6 +93,7 @@ class MemoryEngine:
         self.batch_size = batch_size
         self.min_similarity = min_similarity
         self.similarity_margin = similarity_margin
+        self.entity_gate = entity_gate
         self.expansion = expansion
         self.expansion_seeds = expansion_seeds
         self.expansion_per_seed = expansion_per_seed
@@ -139,6 +142,7 @@ class MemoryEngine:
             k=m.k,
             min_similarity=m.min_similarity,
             similarity_margin=m.similarity_margin,
+            entity_gate=m.entity_gate,
             expansion=m.expansion,
             expansion_seeds=m.expansion_seeds,
             expansion_per_seed=m.expansion_per_seed,
@@ -243,6 +247,8 @@ class MemoryEngine:
         ranked = self.retrieval_policy.rank(candidates, self.clock.now())
         top_sim = max((c.similarity for c in ranked), default=None)
         abstained = self._gate(ranked, top_sim)
+        if self.entity_gate and not abstained:
+            abstained = self._entity_gate(question, ranked)
         t3 = time.perf_counter()
         if self.expansion == "entity" and not abstained:
             ranked = self._expand(ranked, qvec, nt)
@@ -287,6 +293,19 @@ class MemoryEngine:
             for c in ranked:
                 c.eligible = c.similarity >= floor
         return False
+
+    @staticmethod
+    def _entity_gate(question: str, ranked: list[ScoredNote]) -> bool:
+        """Entity-anchored gate: when the question names an entity (e.g. "The Loudwater Mystery") and no
+        eligible note mentions it, the notes are about something else, however similar they look, so
+        memory is withheld. Similarity alone cannot tell "a different film by a similar director" from
+        "this film"; a name can. Questions that name no entity are unaffected."""
+        entities = question_entities(question)
+        if not entities or any(mentions_any(c.note.text, entities) for c in ranked if c.eligible):
+            return False
+        for c in ranked:
+            c.eligible = False
+        return True
 
     def _expand(self, ranked: list[ScoredNote], qvec, note_type: str) -> list[ScoredNote]:
         """Entity-bridge expansion: one step of spreading activation over titles.

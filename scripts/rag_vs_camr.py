@@ -39,6 +39,8 @@ def rag(k: int) -> dict:
 
 
 CAMR = {**SIM, "k": 20, "min_similarity": 0.50, "similarity_margin": 0.15, "expansion": "entity", "token_budget": 512}
+CAMR_EG = {**CAMR, "entity_gate": True}  # + the entity-anchored gate (added after the first comparison; see the chapter)
+METHODS = {"camr": CAMR, "camr_eg": CAMR_EG}
 
 
 # ------------------------------------------------------------------ retrieval level
@@ -60,7 +62,10 @@ def retrieval(a) -> None:
     cfg = Config.load(ROOT / "configs/retrieval_eval.yaml")
     ws = Workspace(cfg, run_dir=dst)
     ws._embedder = tg.CachedEmbedder(ws.embedder)
-    variants = [("RAG top-3", rag(3)), ("RAG top-5", rag(5)), ("RAG top-10", rag(10)), ("CAMR", CAMR)]
+    variants = [("RAG top-3", rag(3)), ("RAG top-5", rag(5)), ("RAG top-10", rag(10)), ("CAMR", CAMR),
+                ("CAMR + entity gate", CAMR_EG)]
+    if a.only:
+        variants = [v for v in variants if v[0] in a.only.split(",")]
     rows = []
     for bench in ("hotpotqa", "2wikimultihopqa"):
         qs = [q for q in ws.sample(bench) if q.support]
@@ -89,17 +94,25 @@ def retrieval(a) -> None:
                          "mean_notes": statistics.mean(nadm), "abstain_rate": abst / n})
             print(rows[-1], flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "retrieval.json").write_text(json.dumps({"variants": {n: v for n, v in variants}, "rows": rows}, indent=2))
+    path = OUT / "retrieval.json"
+    old = json.loads(path.read_text()) if path.exists() else {"variants": {}, "rows": []}
+    names = {n for n, _ in variants}
+    old["variants"].update({n: v for n, v in variants})
+    old["rows"] = [r for r in old["rows"] if r["method"] not in names] + rows
+    path.write_text(json.dumps(old, indent=2))
 
 
 # ------------------------------------------------------------------ answer level
-def popqa_sets():
-    """The 60 held-out PopQA questions (pilot 30 + learning evaluation 30) with their subject document."""
+def popqa_sets(split: str = "test"):
+    """test: the 60 held-out PopQA questions (pilot 30 + learning evaluation 30); val: the learning split's 60
+    training questions. Each with its subject's Wikipedia title (the title of its document in the corpus)."""
     from camr.harness.benchmarks import load_questions
 
     meta = {r["id"]: r for r in csv.DictReader(open(ROOT / "data/popqa/test.tsv"), delimiter="\t")}
+    files = ((ROOT / "results/pilot/samples/popqa.json", ROOT / "results/learn/samples/popqa.json") if split == "test"
+             else (ROOT / "results/learn/samples/popqa.train.json",))
     ids = []
-    for f in (ROOT / "results/pilot/samples/popqa.json", ROOT / "results/learn/samples/popqa.json"):
+    for f in files:
         ids += json.loads(f.read_text())["question_ids"]
     qs = {q.qid: q for q in load_questions("popqa", ROOT / "data/popqa/test.tsv")}
     return [(qs[i], meta[i]["s_wiki_title"]) for i in dict.fromkeys(ids)]
@@ -144,7 +157,8 @@ def answers(a) -> None:
     from camr.models.runner import OllamaRunner
 
     cfg = Config.load(ROOT / "results/learn/config.yaml")
-    qs, docs = popqa_sets(), documents()
+    qs, docs = popqa_sets(a.split), documents()
+    methods = a.methods.split(",")
     rng = random.Random(13)
     group = {q.qid: rng.random() < 0.5 for q, _ in qs}  # which half-store lacks this question's document
     tmp = Path(tempfile.mkdtemp(prefix="ragcamr-"))
@@ -153,13 +167,18 @@ def answers(a) -> None:
               False: [d for d in docs if d["title"] not in removed[False]]}
     engines = {}
     for key, ds in stores.items():
-        for name, over in (("rag", rag(a.k)), ("camr", CAMR)):
+        for name in methods:
+            over = rag(a.k) if name == "rag" else METHODS[name]
             engines[(key, name)] = build_engine(cfg, tmp / f"store-{key}.sqlite", ds, over)
     bare, mem = answer_template("single_hop", False), answer_template("single_hop", True)
-    out = {"k": a.k, "n": len(qs), "camr": CAMR, "models": {}}
+    path = OUT / f"answers{'' if a.split == 'test' else '_val'}.json"
+    out = json.loads(path.read_text()) if path.exists() else {"k": a.k, "n": len(qs), "camr": CAMR, "models": {}}
+    out["split"], out["camr_entity_gate"] = a.split, CAMR_EG
     for model in a.models.split(","):
         runner = OllamaRunner(LocalModelConfig(name=model, host="http://127.0.0.1:11434", max_tokens=64, num_ctx=4096))
-        res = {c: [] for c in ("alone", "rag_answerable", "camr_answerable", "rag_missing", "camr_missing")}
+        prev = out["models"].get(model, {"summary": {}, "per_question": {}})
+        res = {"alone": []} if "alone" not in prev["per_question"] else {}
+        res.update({f"{m}_{c}": [] for m in methods for c in ("answerable", "missing")})
         for q, title in qs:
             def ask(prompt, context, abstained):
                 g = runner.generate(prompt)
@@ -169,9 +188,10 @@ def answers(a) -> None:
                 return {"qid": q.qid, "correct": corr, "answer": g.text.strip()[:200], "context_tokens": len(context.split()),
                         "abstained": abstained, "declined": abstention_like(g.text), "wrong_from_context": from_ctx,
                         "gold_in_context": any(f" {normalize_answer(x)} " in f" {normalize_answer(context)} " for x in q.answers)}
-            res["alone"].append(ask(bare.render(q.question), "", True))
+            if "alone" in res:
+                res["alone"].append(ask(bare.render(q.question), "", True))
             for cond, key in (("answerable", "full"), ("missing", group[q.qid])):
-                for name in ("rag", "camr"):
+                for name in methods:
                     r = engines[(key, name)].recall(q.question, touch=False)
                     prompt = bare.render(q.question) if r.abstained else mem.render(q.question, r.context)
                     res[f"{name}_{cond}"].append(ask(prompt, r.context if not r.abstained else "", r.abstained))
@@ -181,10 +201,11 @@ def answers(a) -> None:
                        "declined": statistics.mean(x["declined"] for x in v),
                        "wrong_from_context": statistics.mean(x["wrong_from_context"] for x in v),
                        "gold_in_context": statistics.mean(x["gold_in_context"] for x in v)} for c, v in res.items()}
-        out["models"][model] = {"summary": summary, "per_question": res}
+        out["models"][model] = {"summary": {**prev["summary"], **summary},
+                                "per_question": {**prev["per_question"], **res}}
         print(model, json.dumps(summary, indent=1), flush=True)
         OUT.mkdir(parents=True, exist_ok=True)
-        (OUT / "answers.json").write_text(json.dumps(out, indent=2))
+        path.write_text(json.dumps(out, indent=2))
 
 
 if __name__ == "__main__":
@@ -193,5 +214,8 @@ if __name__ == "__main__":
     ap.add_argument("--store-copy", default=str(ROOT / ".cache/retrieval_eval"))
     ap.add_argument("--models", default="qwen2.5:0.5b,llama3.2:3b")
     ap.add_argument("--k", type=int, default=5)
+    ap.add_argument("--split", default="test", choices=["test", "val"])
+    ap.add_argument("--methods", default="rag,camr", help="rag, camr, camr_eg")
+    ap.add_argument("--only", help="retrieval: comma-separated method names to (re)run")
     a = ap.parse_args()
     retrieval(a) if a.part == "retrieval" else answers(a)
