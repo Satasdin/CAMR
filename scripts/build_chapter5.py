@@ -885,7 +885,13 @@ camr app                                                # opens http://127.0.0.1
               "and Wikimedia throttles and blocks generic agents, so most Wikipedia requests failed", "Pack rebuild "
               "(a direct request with the CAMR agent succeeded where the fetcher's failed)", "The CAMR User-Agent "
               "replaces a session's default", "Unit test; learning stream repeated after the fix (section "
-              "⟦sec_learn_results⟧). Pass"]],
+              "⟦sec_learn_results⟧). Pass"],
+             ["D-22", "Sleep's curiosity read names across sentence ends (*East of Kenya. This*) and looked them up",
+              "Live scenario *pack and sleep*", "Names are read within one sentence", "Regression test; scenario "
+              "re-run. Pass"],
+             ["D-23", "Interface 0.3: the *grows* and *trained* chips in the Learning tab were below AA contrast in the "
+              "light theme", "axe-core audit with the Learning tab open", "Chips use the darker learned-memory green",
+              "axe-core: 0 violations in both themes at both sizes. Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
     c.h3("Application Testing (CAMR Personal)", key="sec_apptest")
