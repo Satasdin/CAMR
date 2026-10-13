@@ -2015,12 +2015,23 @@ def ENTITY_GATE_TEXT(d, v) -> str:  # noqa: N802 - written from the logged resul
             f"copied wrong answers {pct(tq['camr_missing']['wrong_from_context'])} → {pct(tq['camr_eg_missing']['wrong_from_context'])} "
             f"(0.5B) and {pct(tl['camr_missing']['wrong_from_context'])} → {pct(tl['camr_eg_missing']['wrong_from_context'])} "
             f"(3B), and the 3B model's accuracy without the document recovered from {pct(tl['camr_missing']['accuracy'])} "
-            f"to {pct(tl['camr_eg_missing']['accuracy'])}, close to its {pct(tl['alone']['accuracy'])} alone. The cost was "
-            f"one test question in 60 whose note was wrongly withheld ({pct(tq['camr_answerable']['accuracy'])} → "
-            f"{pct(tq['camr_eg_answerable']['accuracy'])} for 0.5B, {pct(tl['camr_answerable']['accuracy'])} → "
-            f"{pct(tl['camr_eg_answerable']['accuracy'])} for 3B), where the question's wording of the name differed from "
-            "the note's." + ret + " Standard RAG has no step at which this decision could be made; that is the "
-            "difference between retrieving text and deciding whether a small model should read it.")
+            f"to {pct(tl['camr_eg_missing']['accuracy'])}, close to its {pct(tl['alone']['accuracy'])} alone. "
+            + GATE_COST_TEXT(tq, tl) + ret + " Standard RAG has no step at which this decision could be made; that is "
+            "the difference between retrieving text and deciding whether a small model should read it.")
+
+
+def GATE_COST_TEXT(tq, tl) -> str:  # noqa: N802
+    lost_q = tq["camr_answerable"]["accuracy"] - tq["camr_eg_answerable"]["accuracy"]
+    lost_l = tl["camr_answerable"]["accuracy"] - tl["camr_eg_answerable"]["accuracy"]
+    first = ("The first run of the gate lost one answerable test question, *Who was the producer of Peck's Bad Girl?*, "
+             "because the possessive was normalised differently in the question and in the note (defect D-15); the "
+             "numbers here are after the fix, and the first run is kept in `results/rag_vs_camr/answers_before_D15.json`. ")
+    if lost_q <= 1e-9 and lost_l <= 1e-9:
+        return first + "After it, the gate cost nothing on answerable questions."
+    return first + (f"After it, the gate still withheld a correct note on some answerable questions "
+                    f"({pct(tq['camr_answerable']['accuracy'])} → {pct(tq['camr_eg_answerable']['accuracy'])} for 0.5B, "
+                    f"{pct(tl['camr_answerable']['accuracy'])} → {pct(tl['camr_eg_answerable']['accuracy'])} for 3B), "
+                    "where the question names the entity differently from its note.")
 
 
 # Interpretation of the 200-question study; written once its results are in (results/hotpot200).
