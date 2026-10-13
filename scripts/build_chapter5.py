@@ -1715,16 +1715,19 @@ def finetune_section(c: Chapter) -> None:
              ["LoRA", f"rank r = {g0['rank']}, α = {2 * g0['rank']}, dropout 0.05, on all attention and MLP projections; "
               f"{g0['trainable_params']:,} trainable parameters (about {100 * g0['trainable_params'] / 494e6:.1f}% of "
               "the model)"],
-             ["Optimisation", f"AdamW, learning rate {{1e-4, 3e-4}} with warm-up then constant, batch {g0['batch']} "
-              "(micro-batch 2 × 4 accumulation steps), gradient clipping 1.0, gradient checkpointing, seed 13"],
+             ["Optimisation", f"AdamW with warm-up then a constant learning rate; batch {g0['batch']} (micro-batch 2 × 4 "
+              "accumulation steps, because batch 8 exhausted the 14 GB memory limit), gradient clipping 1.0, gradient "
+              "checkpointing, seed 13"],
+             ["Grid", "*chat* format at learning rates 1e-4 and 3e-4; *raw* format at 3e-4 only, because the learning "
+              "rate made no difference in the chat format and each configuration costs over an hour on the CPU"],
              ["Epochs", "Up to 8; checkpoints evaluated after epochs 1, 2, 4 and 8"],
              ["Validation (selection)", "60 PopQA questions of the learning split's *training* set, closed book"],
              ["Test (reported once)", f"{res['n_test']} held-out PopQA questions (pilot 30 + learning evaluation 30), "
               f"closed book and with CAMR's logged prompts; GSM8K ({res['n_gsm8k']} questions) for side effects"],
              ["Decoding", "Greedy, the same chat template for every condition"]],
             [4.0, 11.9], size=9)
-    c.figure(REPORT / "finetune_curves.png", "LoRA training loss and validation accuracy per epoch for the four "
-             "configurations", 15.5)
+    c.figure(REPORT / "finetune_curves.png", "LoRA training loss and validation accuracy per epoch for each "
+             "configuration", 15.5)
     b, lo = res["conditions"]["base"], res["conditions"]["lora"]
     sel = res["selected"]
     run = next(r for r in grid if r["fmt"] == sel["fmt"] and r["lr"] == sel["lr"])
