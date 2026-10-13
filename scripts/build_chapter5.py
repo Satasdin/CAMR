@@ -2219,6 +2219,13 @@ def learning_results(c: Chapter) -> None:
     after = _j(EAGER / "learn_after_D21.json")
     if after and len(after["turns"]) == n:
         c.p(AFTER_D21_TEXT(learn, after))
+        dt, tuned = _j(EAGER / "devtune.json"), _j(EAGER / "learn_tuned.json")
+        if dt and len(dt["grid"]) == 6:
+            g = {(x["max_pages"], x["token_budget"]): x["accuracy"] for x in dt["grid"]}
+            c.table("How much a lookup should give the 0.5B reader, chosen on 60 development questions",
+                    ["Pages kept per lookup", "128-token budget", "512-token budget"],
+                    [[str(p_), pct(g[(p_, 128)]), pct(g[(p_, 512)])] for p_ in (1, 2, 3)], [5.0, 4.0, 4.0], size=9)
+            c.p(TUNED_TEXT(learn, after, tuned, _j(EAGER / "retain_tuned.json"), g))
     pe = _j(ROOT / "docs/results/prompt_eval.json")
     if pe:
         c.p("**Eager, not evasive, in the application.** The benchmark prompt above asks for a short answer, so the model "
@@ -2425,6 +2432,24 @@ def AFTER_D21_TEXT(before, after) -> str:  # noqa: N802
             f"replayed from the cache: pages per question rose from {p1:.2f} to {p2:.2f} and accuracy went from "
             f"{pct(a1)} to {pct(a2)}. The first run is the one reported in ⟦tab_learn⟧, since the stream's design was "
             "fixed before it.")
+
+
+def TUNED_TEXT(first, after, tuned, retain_t, g) -> str:  # noqa: N802
+    best = max(g, key=g.get)
+    text = ("The remedy was chosen on the 60 development questions, never the stream: keeping three pages per lookup "
+            f"mattered most ({pct(g[(3, 128)])} and {pct(g[(3, 512)])} against at most {pct(max(g[(1, 128)], g[(2, 128)]))} "
+            "with one or two, because the gate needs candidates to choose between), and a 128-token budget was "
+            f"slightly better than 512 ({pct(g[(3, 128)])} against {pct(g[(3, 512)])}, two questions of 60), so "
+            f"{best[0]} pages at {best[1]} tokens was adopted.")
+    if tuned and len(tuned["turns"]) == len(first["turns"]):
+        a = sum(x["correct"] for x in tuned["turns"]) / len(tuned["turns"])
+        text += (f" Run once on the stream with the corrected fetcher, it scored {pct(a)}, against "
+                 f"{pct(sum(x['correct'] for x in after['turns']) / len(after['turns']))} with the earlier settings")
+        if retain_t and "qwen2.5:0.5b" in retain_t.get("models", {}):
+            text += f", and {pct(retain_t['models']['qwen2.5:0.5b']['accuracy'])} offline on the reworded questions"
+        text += (". The first run, made before any of this was known, remains the headline result in ⟦tab_learn⟧; "
+                 "the tuned run shows what the corrected engine does when its reading is sized for a 0.5B model.")
+    return text
 
 
 def PROMPT_ROWS(pe) -> list[list[str]]:  # noqa: N802
