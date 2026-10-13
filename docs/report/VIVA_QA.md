@@ -204,3 +204,38 @@ Windows x64/ARM64, macOS Apple Silicon/Intel and Linux x64/ARM64. Continuous int
 
 **H2. What is the contribution in one line?**
 Measured evidence that external memory lets 1.5–4B models on a CPU match a frontier cloud model on knowledge-bound questions, together with the residual gap that memory cannot close, released as open-source software that people can use.
+
+---
+
+## I. Tuning, interface testing and live scenarios
+
+**I1. How did you avoid tuning on the test set?**
+Every tunable part was chosen on data kept apart from the test:
+- **Router (λ, features, α, passes, cascade threshold):** 5-fold cross-validation on the 144 training questions only, then a single evaluation on the 72 held-out questions (F15).
+- **Read path (margin δ, budget B):** tuned on one half of the 1,000 retrieval questions, tested once on the other half.
+- **LoRA baseline (format, learning rate, epochs):** chosen on 60 validation questions from the learning split's training set, tested once on 60 held-out questions.
+
+The first study's cascade threshold had been read off the held-out results. The tuned version corrects that, and the result held: 66.7% vs 63.9% for always-Kimi, a difference that is not significant.
+
+**I2. Why did cross-validation pick fewer features?**
+With 144 questions the richer models fit noise. The spread between folds (±0.08 in mean reward) was larger than the differences between feature sets, so the simplest router (task type only) generalised best. More data is needed before the retrieval features can pay off.
+
+**I3. Did tuning the read path change your recommendation?**
+It sharpened it. Judged on retrieval alone with tokens priced at μ = 0.1 per 1,000, the best setting was no margin and B = 1,024: held-out full-support recall rose from 72.8% to 85.6%, but tokens more than doubled. Above μ ≈ 0.20 the original setting (δ = 0.15, B = 512) wins. Retrieval-level tuning ignores the reader, and the end-to-end sweep showed the 0.5B model is hurt by extra notes. So the read path must be tuned to the reader, which is exactly what the learned router does per question.
+
+**I4. How was the interface tested?**
+- **Six end-to-end browser tests** in Chromium (Playwright): remember→ask with the recall card, empty message, 👍 teaching, theme and panel, phone width, keyboard-only use.
+- **An axe-core 4.10 accessibility audit**, in both themes, at desktop and phone size.
+- **A WCAG contrast check** of every design-token pair.
+
+The first audit found real defects: secondary text below AA contrast (as low as 2.3:1) and no page heading. These are D-11 and D-12. After the fixes there were zero violations. Screen readers were *not* tested, and a user study is future work.
+
+**I5. What did the live scenarios show?**
+llama3.2:3b in the released app, with and without memory, on five realistic conversations:
+- two notes needed for one answer;
+- arithmetic on a remembered mileage;
+- a fact that changes;
+- a detail from eight turns earlier;
+- a taught document.
+
+The first run exposed two defects. The model refused general questions such as 17 × 23 (D-13, caused by the prompt), and every chat question was stored as a "memory" (D-14). Both were fixed and the scenarios re-run. Showing that test → defect → fix → retest loop is the point of the section.
