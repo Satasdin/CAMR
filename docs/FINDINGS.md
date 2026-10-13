@@ -514,6 +514,32 @@ Source: `results/rag_vs_camr/retrieval.json` (`python scripts/rag_vs_camr.py ret
 
 ---
 
+## F18. Fine-tuning compared with memory (LoRA baseline, same documents)
+
+Sources: `results/finetune/tune/grid.json`, `results/finetune/test.json`, `results/finetune/camr_cost.json` (`python scripts/finetune_baseline.py tune|test|camr-cost`). Qwen2.5-0.5B-Instruct, float32 on 4 CPU cores, LoRA r = 16 on all projections (8,798,208 trainable parameters), trained on the 237 PopQA documents CAMR stores; selection on 60 validation questions, one test on 60 held-out questions; one runtime for every condition.
+
+| Format | lr | Validation accuracy (closed book) by epoch | Final train loss |
+|---|---|---|---|
+| chat | 0.0001 | ep1: 11.7% · ep2: 10.0% · ep4: 10.0% · ep8: 11.7% | 0.48 |
+| chat | 0.0003 | ep1: 10.0% · ep2: 11.7% · ep4: 10.0% · ep8: 11.7% | 0.16 |
+| raw | 0.0003 | ep1: 13.3% · ep2: 13.3% · ep4: 8.3% · ep8: 11.7% | 0.19 |
+
+| Held-out (n = 60) | PopQA | GSM8K (n = 48) |
+|---|---|---|
+| Base alone | 10.0% | 45.8% |
+| **Base + CAMR (no training)** | **71.7%** | — |
+| LoRA (raw, lr 0.0003, epoch 1) | 13.3% | 45.8% |
+| LoRA + CAMR | 75.0% | — |
+
+**Findings**
+1. **Memory beat fine-tuning by 58 points** on the same documents. Training loss fell to 0.16–0.48 while validation accuracy never exceeded 13.3%: the adapters learned to reproduce the documents, not to answer questions about them (as Ovadia et al., 2023).
+2. **Cost:** CAMR stored the documents in 6 s (305 notes, 2.6 MB); the selected adapter took 7.5 min of training, the search 3.5 h, and retraining is needed whenever knowledge changes.
+3. No measurable forgetting on GSM8K after one epoch (45.8% before and after).
+4. LoRA + CAMR vs CAMR: 71.7% → 75.0% (+2 questions), within noise.
+5. Training batch 8 exhausted the 14 GB memory limit (OOM-killed at 13.9 GB); micro-batch 2 × 4 accumulation with gradient checkpointing peaked at ~3.7 GB.
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |

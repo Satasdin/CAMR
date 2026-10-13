@@ -60,7 +60,10 @@ def build(template: Path, out: Path) -> Path:
         "was confirmed on 200 held-out questions with the configuration fixed in advance. With CAMR, a 3B model "
         "reached 54.0% exact match against the cloud model's closed-book 51.8%, at 5.8 s instead of 18.4 s per "
         "answer, and the gain from memory excluded zero for every small model tested (section ⟦sec_h200⟧). Across 19 "
-        "models, 18 reached or exceeded the cloud model on long-tail facts once they had memory (section ⟦sec_sizes⟧).")
+        "models, 18 reached or exceeded the cloud model on long-tail facts once they had memory (section ⟦sec_sizes⟧). "
+        "Fine-tuning the same 0.5B model on the same documents, the alternative the problem statement argued against, "
+        "reached 13.3% against memory's 71.7% on the same held-out questions, after a 3.5-hour search; memory stored "
+        "the documents in 6 s (section ⟦sec_finetune⟧).")
     c.h3("Research Question iii: Knowledge-Bound Versus Reasoning-Bound Tasks")
     c.p("Yes. Memory helps knowledge-bound tasks and does not help reasoning-bound ones. The residual gap between a "
         "0.5B and a 20B model reading the same notes was 10.0 points on single-hop facts, 23.3 on multi-hop "
