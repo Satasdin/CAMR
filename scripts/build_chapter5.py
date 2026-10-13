@@ -1783,7 +1783,23 @@ def scenarios_section(c: Chapter) -> None:
         f"**{d['model']}** through Ollama on the 4-core CPU, each in a fresh home, once **without memory** (the same "
         "app and model with nothing taught, or with chat memory switched off) and once **with CAMR**. The screenshots "
         "below are the real screens, captured automatically by `scripts/scenario_screens.py`, which also logs every "
-        "answer; nothing was retyped or retried. An answer counts as correct when it contains every expected element.")
+        "answer. An answer counts as correct when it contains every expected element.")
+    bf = ROOT / "docs/results/scenarios_before_fix.json"
+    if bf.exists():
+        w = json.loads(bf.read_text())["scenarios"]["window"]["with"]["turns"]
+        refused = [t["question"] for t in w if t["answer"].strip().lower().startswith("i don't know")
+                   and "allergic" not in t["question"]]
+        leap = next((t for t in w if "leap" in t["question"]), None)
+        c.p("**The first run found two defects.** In the context-window scenario the model answered *I don't know* to "
+            f"{len(refused)} general questions it can answer ({'; '.join(refused[:3])}), and for *{leap['question']}* the "
+            f"engine recalled {len(leap['sources'])} earlier chat messages as memories, all of them questions. The "
+            "first was caused by the chat prompt, which told the model to refuse whenever the notes lacked the answer "
+            "(D-13); the second by storing every message, including questions, as chat memory (D-14). Both were fixed, "
+            "covered by regression tests, and all five scenarios were run again from scratch. The results below are "
+            "from that second run; the first is kept in `docs/results/scenarios_before_fix.json`.")
+        if (ROOT / "docs/figures/scenarios/before_fix/window_with.png").exists():
+            c.figure(ROOT / "docs/figures/scenarios/before_fix/window_with.png", "First run, before the fixes: general "
+                     "questions refused and unrelated chat messages recalled as memories (D-13, D-14)", 9.5)
     rows = []
     for key, e in sc.items():
         q = e["with"]["turns"][-1]["question"]

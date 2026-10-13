@@ -35,7 +35,7 @@ LAB_RULES = """# Chemistry lab safety rules (Science Complex, Lab 2)
 """
 
 SCENARIOS = [
-    {"key": "bridge", "title": "Two notes joined by a name (entity bridging)",
+    {"key": "bridge", "title": "An answer that needs two notes",
      "notes": [("Project CAMR", "Project CAMR is supervised by Dr. Achieng Otieno. Supervisor meetings are every second "
                                 "Tuesday at 10:00, and Chapter 5 is due on 20 October."),
                ("Dr. Achieng Otieno", "Dr. Achieng Otieno's office is Room 4.12 on the third floor of the Science "
@@ -122,6 +122,8 @@ def run_variant(browser, sc: dict, with_memory: bool, model: str, out: Path) -> 
     turns = turns.get("turns", turns) if isinstance(turns, dict) else turns
     log = [{"question": t["question"], "answer": t["answer"], "abstained": t.get("abstained"),
             "grounded": t.get("grounded"), "sources": [s.get("title") or s.get("kind") for s in t.get("sources", [])],
+            "via_bridge": [bool(s.get("via_bridge")) for s in t.get("sources", [])],
+            "similarity": [s.get("similarity") for s in t.get("sources", [])],
             "retrieval_ms": t.get("retrieval_ms"), "generation_ms": t.get("generation_ms")} for t in turns]
     page.close()
     httpd.shutdown()
