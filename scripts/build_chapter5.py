@@ -774,7 +774,7 @@ camr app                                                # opens http://127.0.0.1
     # ================================================================ 5.4 Testing
     c.h2("Testing and Evaluation", key="sec_testing")
     c.h3("Test Strategy and Acceptance Criteria")
-    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 115 tests, fully "
+    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 148 tests, fully "
         "offline) verify each requirement with deterministic test doubles: dry-run models and a hashing embedder. "
         "**System tests** run the real pipeline end to end on real data with real models. **Measurements** "
         "(device profile, latency, memory) verify the non-functional requirements against their thresholds. Each "
@@ -786,7 +786,7 @@ camr app                                                # opens http://127.0.0.1
              "holdout guard (DR-04), byte-identical prompts (NFR-05) and the bootstrap (FR-15)", 15.5)
 
     c.h3("Test Cases, Defects and Retesting", key="sec_tests")
-    c.table("Test cases and results (unit tests: `pytest`, 115 passed; measurements: `camr profile`)",
+    c.table("Test cases and results (unit tests: `pytest`, 148 passed; measurements: `camr profile`)",
             ["Test ID", "Traceability", "Scenario and data", "Expected result", "Actual result and verdict"],
             [["TC-01", "FR-01", "Verbatim and structured policies on fixture passages", "Notes produced; title kept", "As expected. Pass"],
              ["TC-02", "FR-02/03, DR-06", "Empty, duplicate, over-length, injection-like notes", "Rejected with logged reason; provenance on all notes", "As expected. Pass"],
@@ -1005,7 +1005,7 @@ camr app                                                # opens http://127.0.0.1
         "where it fell short; most importantly, the student required that this chapter report only experiments "
         "that had actually been run and benchmarked with real models, and an earlier draft written before the "
         "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
-        "test suite (115 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "test suite (148 tests), the per-query logs, the read-only inspector, and the findings log, which names "
         "the results file behind every reported number, so that each claim can be traced and re-run. The "
         "student made the final decisions and takes full responsibility for the submitted work.")
 
