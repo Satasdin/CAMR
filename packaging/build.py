@@ -20,6 +20,7 @@ SEP = ";" if OS == "windows" else ":"
 
 args = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--name", "camr-personal",
         "--add-data", f"{ROOT / 'camr' / 'app' / 'static'}{SEP}camr/app/static",
+        "--add-data", f"{ROOT / 'camr' / 'app' / 'packs'}{SEP}camr/app/packs",
         "--collect-all", "sqlite_vec", "--hidden-import", "pypdf",
         "--exclude-module", "torch", "--exclude-module", "sentence_transformers", "--exclude-module", "streamlit",
         "--exclude-module", "matplotlib", "--exclude-module", "pandas", "--exclude-module", "anthropic",

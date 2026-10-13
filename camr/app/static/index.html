@@ -30,6 +30,7 @@
     <nav class="chats" id="chats" aria-label="Chats"></nav>
     <div class="side-bottom">
       <button class="nav-item" data-panel="memory"><span class="glyph">✦</span> Memory <span class="badge" id="mem-badge">0</span></button>
+      <button class="nav-item" data-panel="learning"><span class="glyph">◎</span> Learning <span class="badge live hidden" id="learn-badge">sleeping</span></button>
       <button class="nav-item" id="open-teach"><span class="glyph">＋</span> Teach a note or file</button>
       <button class="nav-item" id="open-settings"><span class="glyph">⚙</span> Settings</button>
     </div>
@@ -41,6 +42,7 @@
     <header class="topbar">
       <button class="icon-btn" id="toggle-side" aria-label="Toggle sidebar">☰</button>
       <div class="title" id="chat-title" contenteditable="false" spellcheck="false"></div>
+      <button class="pill" id="learn-pill" title="Learning settings" aria-label="Learning status"><i class="dot"></i><span id="learn-pill-text">learning on</span></button>
       <div class="top-actions">
         <button class="icon-btn" id="theme-btn" aria-label="Toggle theme" title="Theme">◐</button>
         <button class="icon-btn" id="panel-btn" aria-label="Memory panel" title="Memory panel">✦</button>
@@ -78,9 +80,10 @@
         <button type="button" data-fill="remember that ">✦ Remember that…</button>
         <button type="button" data-action="teach">＋ Teach a file</button>
         <button type="button" data-fill="What do you know about me?">What do you know about me?</button>
-        <button type="button" data-fill="Summarise my notes on ">Summarise my notes on…</button>
+        <button type="button" data-fill="Who won the 2026 FIFA World Cup?">◎ Ask something new</button>
+        <button type="button" data-action="learning">◎ Install a knowledge pack</button>
       </div>
-      <div class="fine">Runs on your computer. Answers cite the memories they used.</div>
+      <div class="fine" id="fine">Runs on your computer. Answers cite the memories they used. When memory has nothing for a general question, it looks it up and remembers it; questions about you never leave this computer.</div>
     </form>
   </main>
 
@@ -90,6 +93,7 @@
       <div class="tabs">
         <button class="tab active" data-tab="recall">This answer</button>
         <button class="tab" data-tab="memory">All memory</button>
+        <button class="tab" data-tab="learning">Learning</button>
         <button class="tab" data-tab="growth">Growth</button>
       </div>
       <button class="icon-btn" id="close-panel" aria-label="Close panel">✕</button>
@@ -97,11 +101,12 @@
     <div class="panel-body" id="panel-recall"><p class="muted">Ask something and the memories it read appear here.</p></div>
     <div class="panel-body hidden" id="panel-memory">
       <div class="mem-tools">
-        <input id="mem-search" placeholder="Search memory">
-        <select id="mem-kind"><option value="">All</option><option value="note">Notes</option><option value="file">Files</option><option value="chat">Said in chat</option><option value="learned">Approved answers</option></select>
+        <input id="mem-search" placeholder="Search memory" aria-label="Search memory">
+        <select id="mem-kind" aria-label="Kind of memory"><option value="">All</option><option value="note">Notes</option><option value="file">Files</option><option value="chat">Said in chat</option><option value="learned">Approved answers</option><option value="web">Looked up online</option><option value="pack">Knowledge packs</option></select>
       </div>
       <div id="mem-list"></div>
     </div>
+    <div class="panel-body hidden" id="panel-learning"></div>
     <div class="panel-body hidden" id="panel-growth"></div>
   </aside>
 </div>
@@ -128,6 +133,10 @@
       <input type="range" id="set-turns" min="0" max="12" step="1">
       <small>Older turns are not lost: what you say is stored as memory and recalled when it matters.</small></label>
     <label class="switch"><input type="checkbox" id="set-chat"> Remember what I say in chat</label>
+    <label class="switch"><input type="checkbox" id="set-online"> Look things up online when memory has nothing</label>
+    <small class="muted switch-note">Only the subject of a general question is sent (to DuckDuckGo and Wikipedia); questions about you never are. What it reads is kept as memory, with its link.</small>
+    <label class="switch"><input type="checkbox" id="set-sleep"> Sleep when idle</label>
+    <small class="muted switch-note">After 10 quiet minutes it tidies memory, re-indexes it and learns to find things faster. Your own notes are never deleted.</small>
     <hr>
     <h3>Share feedback (optional)</h3>
     <p class="muted">The file contains numbers only (counts, timings, 👍/👎) unless you tick the box.</p>

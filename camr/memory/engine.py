@@ -97,6 +97,7 @@ class MemoryEngine:
         self.expansion = expansion
         self.expansion_seeds = expansion_seeds
         self.expansion_per_seed = expansion_per_seed
+        self.query_adapter = None  # learned during sleep (camr.memory.adapter); None = the embedder's own vector
 
     @property
     def note_type(self) -> str:
@@ -239,6 +240,8 @@ class MemoryEngine:
         nt = note_type or self.note_type
         t0 = time.perf_counter()
         qvec = self.embedder.encode_one(question, is_query=True)
+        if self.query_adapter is not None:
+            qvec = self.query_adapter.apply(qvec)
         t1 = time.perf_counter()
         hits = self.store.knn(qvec, self.k, nt)
         notes = self.store.get_notes(i for i, _ in hits)

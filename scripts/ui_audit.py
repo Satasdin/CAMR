@@ -32,7 +32,10 @@ PAIRS = [("text", "bg", "Body text, answers", "normal"), ("text", "surface-2", "
          ("faint", "bg", "Group labels, keyboard hints (11–12 px)", "normal"),
          ("faint", "bg-2", "Sidebar group labels", "normal"),
          ("accent-2", "bg", "Glyphs, links", "normal"), ("accent", "bg", "Accent text and focus ring", "large"),
-         ("good", "bg", "Grounded meter, success", "large"), ("warn", "bg", "Warnings", "large")]
+         ("good", "bg", "Grounded meter, success", "large"), ("warn", "bg", "Warnings", "large"),
+         ("kind-web", "surface-2", "'Looked up online' chips (0.3)", "normal"),
+         ("kind-pack", "surface-2", "'Knowledge pack' chips (0.3)", "normal"),
+         ("kind-web", "surface", "Learning feed chips (0.3)", "normal")]
 
 
 def tokens(css: str) -> dict[str, dict[str, str]]:
@@ -85,7 +88,7 @@ def serve():
     return httpd, app
 
 
-def axe_audit(axe_js: Path) -> list[dict]:
+def axe_audit(axe_js: Path, learning_tab: bool = False) -> list[dict]:
     from playwright.sync_api import sync_playwright
 
     httpd, app = serve()
@@ -110,6 +113,10 @@ def axe_audit(axe_js: Path) -> list[dict]:
                 if name == "desktop":
                     page.click("#panel-btn")
                     page.wait_for_timeout(400)
+                    if learning_tab:  # 0.3: audit with the Learning tab open (external weights, packs, sleep, feed)
+                        page.click(".tab[data-tab=learning]")
+                        page.wait_for_selector("#panel-learning .weights")
+                        page.wait_for_timeout(300)
                 page.add_script_tag(path=str(axe_js))
                 res = page.evaluate("""async () => {
                     const r = await axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa','best-practice']}});
@@ -130,10 +137,11 @@ def main():
     ap.add_argument("--axe", required=True, help="path to axe.min.js (axe-core 4.x)")
     ap.add_argument("--out", default=str(ROOT / "docs/results/ui_audit.json"))
     ap.add_argument("--label", default="after", help="before/after a fix, kept side by side in the output file")
+    ap.add_argument("--learning-tab", action="store_true", help="audit with the Learning tab open (0.3)")
     a = ap.parse_args()
     out = Path(a.out)
     data = json.loads(out.read_text()) if out.exists() else {}
-    data[a.label] = {"contrast": contrast_table(), "axe": axe_audit(Path(a.axe))}
+    data[a.label] = {"contrast": contrast_table(), "axe": axe_audit(Path(a.axe), learning_tab=a.learning_tab)}
     out.write_text(json.dumps(data, indent=2))
     c = data[a.label]["contrast"]
     print("contrast failures:", [(r["theme"], r["fg"], r["bg"], r["ratio"]) for r in c if not r["pass_AA"]])

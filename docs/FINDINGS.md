@@ -451,7 +451,7 @@ Source: `docs/results/ui_audit.json` (`python scripts/ui_audit.py --axe axe.min.
 - **Before:** axe-core 4.10 reported `color-contrast` (serious) and `page-has-heading-one`; 6 token pairs were below WCAG AA (secondary text 2.3–3.3:1; light-theme accent and success colours).
 - **Fix (D-11, D-12):** per-theme token values; a persistent, visually hidden page heading.
 - **After:** 0 axe violations in both themes at desktop and phone width; every token pair ≥ AA.
-- **Browser tests (Chromium, Playwright):** remember→ask with recall card, empty message, 👍 teaches, theme and panel, phone width without horizontal scroll, keyboard-only path with accessible names: 6/6 pass. Total suite: 115 tests.
+- **Browser tests (Chromium, Playwright):** remember→ask with recall card, empty message, 👍 teaches, theme and panel, phone width without horizontal scroll, keyboard-only path with accessible names: 6/6 pass. Total suite: 148 tests (after 0.3: 10 browser tests).
 
 ---
 
@@ -537,6 +537,66 @@ Sources: `results/finetune/tune/grid.json`, `results/finetune/test.json`, `resul
 3. No measurable forgetting on GSM8K after one epoch (45.8% before and after).
 4. LoRA + CAMR vs CAMR: 71.7% → 75.0% (+2 questions), within noise.
 5. Training batch 8 exhausted the 14 GB memory limit (OOM-killed at 13.9 GB); micro-batch 2 × 4 accumulation with gradient checkpointing peaked at ~3.7 GB.
+
+---
+
+## F19. Eager learning: a frozen 0.5B model that looks up what it doesn't know (CAMR 0.3)
+
+Source: `results/eager/` (`python scripts/eager_learning.py select|dev|learn|retain|baseline|ram`). 200 PopQA questions no earlier run used (30 subjects asked twice, 40–90 questions apart); qwen2.5:0.5b with memory that starts **empty**, BGE-small, gate τ = 0.50 / δ = 0.15, entity gate, 512-token budget; lookups through DuckDuckGo Instant Answers and Wikipedia (cached, rate-limit aware). The ordering of an ambiguous name's meanings was chosen on 60 other fresh questions (embedding similarity: answer in fetched text 55% vs 35% for shared words).
+
+| System | As asked | Reworded (offline) | Model RAM |
+|---|---|---|---|
+| qwen2.5:0.5b alone | 10.0% | 10.5% | 0.70 GB |
+| qwen2.5:1.5b alone | 11.0% | – | 2.02 GB |
+| llama3.2:3b alone | 19.0% | 18.0% | 4.31 GB |
+| gpt-oss:20b alone | 20.5% | – | 13.24 GB |
+| **qwen2.5:0.5b + eager learning** | **43.5%** (online) | **41.5%** | 0.70 GB (+0.59 GB engine) |
+| llama3.2:3b reading the memory the 0.5B model learned | – | 45.0% | 4.31 GB |
+
+RAM: resident memory of each model's process after one answer, alone (`results/eager/ram.json`). The cloud model (Kimi K3) could not be rerun: its API key had been rotated (HTTP 401).
+
+1. 158 lookups, 9 found nothing, 35 answers came from memory with no request; 25 of the 30 second questions about a subject needed no lookup.
+2. Retention: 79 of the 87 facts answered right online were answered right offline in other words (90.8%).
+3. The answer was in the fetched text for 52% of questions; when it was, the 0.5B model was right 76% of the time: the lookup, not the reader, sets the ceiling (PopQA's long-tail names are often ambiguous).
+4. Memory grew to 333 notes, 2.7 MB. Times in this run are dominated by rate-limit waits on a shared cloud machine and are not the app's speed.
+5. Defects found and fixed during the stream: D-17 (subject extraction), D-18 (an empty DuckDuckGo reply cached as "nothing known"), D-21 (the fetcher sent no CAMR User-Agent, so Wikimedia refused most requests). The stream was re-run from scratch after D-17/D-18 and repeated after D-21 (`learn_after_D21.json`).
+6. After D-21 every lookup found pages (0 empty vs 9) and pages per question rose from 1.07 to 1.9, but the answer was in the fetched text no more often (52.5% vs 52%) and accuracy fell to 37.5%: more text distracted the 0.5B reader. Pages per lookup and the token budget were then chosen on the 60 development questions (`devtune.json`): 3 pages at 128 tokens 36.7%, 3 at 512 33.3%, 1–2 pages 15–20%. The tuned run on the stream (corrected fetcher, 3 pages, 128 tokens): **43.0% online, 42.5% offline reworded** (0.5B), with 77 context tokens per answer instead of 260 (`learn_tuned.json`, `retain_tuned.json`).
+
+## F20. Asking to be taught instead of "I don't know" (prompt F)
+
+Source: `docs/results/prompt_eval.json`. Prompt E (ask to be taught) regressed one development case on llama3.2:3b (it led with "I don't know that yet" though the notes held the answer: **D-19**). Prompt F answers first when the notes answer and asks to be taught only for a missing personal fact: 6/6, 7/7, 8/8 on development, held-out and fresh cases for both llama3.2:3b and qwen2.5:1.5b, and asks to be taught on 9 of 10 unknown personal facts. CAMR Personal 0.3 uses prompt F.
+
+## F21. Token memory (kNN-LM) beside the frozen model, against LoRA and CAMR
+
+Source: `results/token_memory/` (`python scripts/token_memory.py tune|test`). Same 237 documents and 60 validation / 60 held-out questions as F18. Datastore: 22,554 (hidden state, next token) pairs, 40.6 MB, built in 210 s. No λ ∈ {0.25, 0.5, 0.75}, τ ∈ {0.02, 0.05}, format ∈ {raw, chat} beat 13.3% on validation.
+
+| Held-out (n = 60) | Accuracy |
+|---|---|
+| 0.5B alone | 10.0% |
+| LoRA (F18) | 13.3% |
+| kNN-LM | 13.3% |
+| CAMR | 75.0% |
+| kNN-LM + CAMR | 75.0% |
+
+Weights beside the model help no more than weights inside it; notes the model reads do.
+
+## F22. Sleep: learned index, query adapter, tidy and curiosity
+
+Sources: `results/sleep/` (`python scripts/sleep_eval.py index|adapter|eager`).
+
+1. Query adapter on unseen HotpotQA / 2Wiki questions (train half, epoch chosen on a validation part of it, test half): no epoch beat the untrained identity on validation (recall@1 already 88% / 97%, recall@5 97.6% / 100%); trained 40 epochs regardless it lowered recall@1 to 83% / 81%. Sleep keeps an adapter only when held-out recall rises.
+2. Live scenario: after installing the Kenya pack, sleep looked up names the pack mentioned but memory lacked (East Africa, Indian Ocean, …). D-22: names were read across sentence ends; fixed.
+3. Learned-index scaling and the adapter on the stream's own experience: see the chapter (filled from `index.json`, `eager.json`).
+
+## F23. CAMR Personal 0.3 in use: live scenarios, packs, accessibility
+
+Sources: `docs/results/scenarios_v3.json`, `docs/figures/scenarios/{fetch_new,foreign,teach_me,pack_sleep}*.png`, `docs/results/ui_audit.json` (label `v0.3`).
+
+1. Newer than the model: with lookups off the 3B model said it did not know and asked to be told; with lookups on it answered *Spain* from Wikipedia with links, and the reworded follow-up came from memory with no lookup.
+2. A made-up unit (*kazoru*) taught once was applied correctly (4 points × ½ kazoru × 3 h = 6 hours).
+3. A personal gap was answered by asking to be taught, then answered from what the user taught.
+4. Bundled packs (harvested after D-20/D-21, nomic-embed-text vectors): Kenya 24 notes, Solar System 25, Photosynthesis 18; install copies vectors without running a model.
+5. axe-core with the Learning tab open: 0 violations in both themes at both sizes after D-23; every new colour pair passes AA.
 
 ---
 

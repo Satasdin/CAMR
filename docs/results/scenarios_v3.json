@@ -1,0 +1,467 @@
+{
+  "model": "llama3.2:3b",
+  "scenarios": {
+    "fetch_new": {
+      "title": "Something newer than the model",
+      "notes": [],
+      "file": null,
+      "expected": [
+        [
+          "spain"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/fetch_new_without.png",
+        "turns": [
+          {
+            "question": "Who won the 2026 FIFA World Cup?",
+            "answer": "I don't know that yet. Can you tell me who won the 2026 FIFA World Cup?",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "source_kinds": [],
+            "source_urls": [],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": false,
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 99.3,
+            "generation_ms": 3778.5
+          },
+          {
+            "question": "Which country won the 2026 World Cup final?",
+            "answer": "I don't know that yet. Can you tell me which country won the 2026 World Cup final?",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "source_kinds": [],
+            "source_urls": [],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": false,
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 153.9,
+            "generation_ms": 4035.1
+          }
+        ],
+        "panel_screenshot": null,
+        "learning": null,
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/fetch_new_with.png",
+        "turns": [
+          {
+            "question": "Who won the 2026 FIFA World Cup?",
+            "answer": "Spain won the 2026 FIFA World Cup.",
+            "abstained": false,
+            "grounded": 0.8333333333333334,
+            "sources": [
+              "2026 FIFA World Cup",
+              "2026 FIFA World Cup"
+            ],
+            "source_kinds": [
+              "web",
+              "web"
+            ],
+            "source_urls": [
+              "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup",
+              "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup"
+            ],
+            "looked_up": true,
+            "learned": {
+              "queries": [
+                "2026 FIFA World Cup",
+                "won the 2026 FIFA World Cup"
+              ],
+              "notes_added": 2,
+              "ms": 5805.0,
+              "pages": [
+                {
+                  "title": "2026 FIFA World Cup",
+                  "url": "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup",
+                  "source": "wikipedia via duckduckgo"
+                }
+              ],
+              "errors": [
+                "en.wikipedia.org: rate limited",
+                "en.wikipedia.org/search: rate limited"
+              ]
+            },
+            "ask_to_teach": false,
+            "via_bridge": [
+              false,
+              false
+            ],
+            "similarity": [
+              0.86,
+              0.785
+            ],
+            "retrieval_ms": 4.6,
+            "generation_ms": 4773.6
+          },
+          {
+            "question": "Which country won the 2026 World Cup final?",
+            "answer": "Spain.",
+            "abstained": false,
+            "grounded": 1.0,
+            "sources": [
+              "2026 FIFA World Cup",
+              "2026 FIFA World Cup"
+            ],
+            "source_kinds": [
+              "web",
+              "web"
+            ],
+            "source_urls": [
+              "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup",
+              "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup"
+            ],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": false,
+            "via_bridge": [
+              false,
+              false
+            ],
+            "similarity": [
+              0.825,
+              0.761
+            ],
+            "retrieval_ms": 71.0,
+            "generation_ms": 1143.2
+          }
+        ],
+        "panel_screenshot": null,
+        "learning": {
+          "lookups": {
+            "total": 1,
+            "learned_from": 1,
+            "notes": 2
+          },
+          "weights": {
+            "notes": 2,
+            "dim": 768,
+            "memory_parameters": 1536,
+            "adapter_parameters": 0,
+            "index_clusters": 0,
+            "store_mb": 3.3
+          },
+          "last_sleep": null
+        },
+        "correct": true
+      }
+    },
+    "foreign": {
+      "title": "Teaching it a new concept",
+      "notes": [
+        [
+          "Kazoru",
+          "A kazoru is our team's unit of effort: one kazoru is three hours of focused work. In our sprints, one story point is half a kazoru."
+        ]
+      ],
+      "file": null,
+      "expected": [
+        [
+          "6 hours",
+          "six hours",
+          "6 hrs",
+          "6-hour",
+          "= 6"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/foreign_without.png",
+        "turns": [
+          {
+            "question": "How many hours of work is a 4-point story in our sprint?",
+            "answer": "I don't know that yet. Can you tell me how many hours of work a 4-point story in your sprint represents?",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "source_kinds": [],
+            "source_urls": [],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": true,
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 80.8,
+            "generation_ms": 4564.4
+          }
+        ],
+        "panel_screenshot": null,
+        "learning": null,
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/foreign_with.png",
+        "turns": [
+          {
+            "question": "How many hours of work is a 4-point story in our sprint?",
+            "answer": "According to the notes, one story point is half a kazoru, and a kazoru is three hours of focused work. Therefore, a 4-point story would be 4 x 0.5 = 2 kazoru, which is 2 x 3 = 6 hours of work.",
+            "abstained": false,
+            "grounded": 0.5384615384615384,
+            "sources": [
+              "Kazoru"
+            ],
+            "source_kinds": [
+              "note"
+            ],
+            "source_urls": [],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": false,
+            "via_bridge": [
+              false
+            ],
+            "similarity": [
+              0.631
+            ],
+            "retrieval_ms": 124.6,
+            "generation_ms": 32917.3
+          }
+        ],
+        "panel_screenshot": null,
+        "learning": {
+          "lookups": {
+            "total": 0,
+            "learned_from": 0,
+            "notes": 0
+          },
+          "weights": {
+            "notes": 1,
+            "dim": 768,
+            "memory_parameters": 768,
+            "adapter_parameters": 0,
+            "index_clusters": 0,
+            "store_mb": 3.29
+          },
+          "last_sleep": null
+        },
+        "correct": true
+      }
+    },
+    "teach_me": {
+      "title": "Asking to be taught instead of “I don't know”",
+      "notes": [],
+      "file": null,
+      "expected": [
+        [
+          "ak0412345"
+        ]
+      ],
+      "with": {
+        "screenshot": "docs/figures/scenarios/teach_me_with.png",
+        "turns": [
+          {
+            "question": "What is my passport number?",
+            "answer": "I don't know that yet. Can you tell me your passport number so I can remember it?",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "source_kinds": [],
+            "source_urls": [],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": true,
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 83.4,
+            "generation_ms": 2996.8
+          },
+          {
+            "question": "remember that my passport number is AK0412345",
+            "answer": "Got it. I'll remember that.",
+            "abstained": false,
+            "grounded": null,
+            "sources": [],
+            "source_kinds": [],
+            "source_urls": [],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": false,
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 0.0,
+            "generation_ms": 0.0
+          },
+          {
+            "question": "What is my passport number?",
+            "answer": "Your passport number is AK0412345.",
+            "abstained": false,
+            "grounded": 1.0,
+            "sources": [
+              "note"
+            ],
+            "source_kinds": [
+              "note"
+            ],
+            "source_urls": [],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": false,
+            "via_bridge": [
+              false
+            ],
+            "similarity": [
+              0.824
+            ],
+            "retrieval_ms": 39.6,
+            "generation_ms": 4848.2
+          }
+        ],
+        "panel_screenshot": null,
+        "learning": {
+          "lookups": {
+            "total": 0,
+            "learned_from": 0,
+            "notes": 0
+          },
+          "weights": {
+            "notes": 1,
+            "dim": 768,
+            "memory_parameters": 768,
+            "adapter_parameters": 0,
+            "index_clusters": 0,
+            "store_mb": 3.29
+          },
+          "last_sleep": null
+        },
+        "correct": true
+      }
+    },
+    "pack_sleep": {
+      "title": "A knowledge pack, then a night's sleep",
+      "notes": [],
+      "file": null,
+      "expected": [
+        [
+          "mount kenya"
+        ]
+      ],
+      "with": {
+        "screenshot": "docs/figures/scenarios/pack_sleep_with.png",
+        "turns": [
+          {
+            "question": "What is the highest mountain in Kenya, and how tall is it?",
+            "answer": "The highest mountain in Kenya is Mount Kenya, and its highest peak, Batian, is approximately 5,199 meters tall.",
+            "abstained": false,
+            "grounded": 0.75,
+            "sources": [
+              "Mount Kenya",
+              "Mount Kenya",
+              "Kenya"
+            ],
+            "source_kinds": [
+              "pack",
+              "pack",
+              "pack"
+            ],
+            "source_urls": [
+              "https://en.wikipedia.org/wiki/Mount_Kenya",
+              "https://en.wikipedia.org/wiki/Mount_Kenya",
+              "https://en.wikipedia.org/wiki/Kenya"
+            ],
+            "looked_up": false,
+            "learned": null,
+            "ask_to_teach": false,
+            "via_bridge": [
+              false,
+              false,
+              false
+            ],
+            "similarity": [
+              0.845,
+              0.747,
+              0.745
+            ],
+            "retrieval_ms": 54.4,
+            "generation_ms": 10341.9
+          }
+        ],
+        "panel_screenshot": "docs/figures/scenarios/pack_sleep_panel.png",
+        "learning": {
+          "lookups": {
+            "total": 0,
+            "learned_from": 0,
+            "notes": 0
+          },
+          "weights": {
+            "notes": 31,
+            "dim": 768,
+            "memory_parameters": 23808,
+            "adapter_parameters": 0,
+            "index_clusters": 0,
+            "store_mb": 3.44
+          },
+          "last_sleep": {
+            "at": "2026-10-13T20:29:14+00:00",
+            "report": {
+              "started": "2026-10-13T20:28:59+00:00",
+              "notes_before": 24,
+              "tidy": {
+                "duplicates_removed": 0
+              },
+              "curiosity": {
+                "looked_up": [
+                  "East Africa",
+                  "Republic of Kenya",
+                  "Indian Ocean",
+                  "Nakuru City",
+                  "Rift Valley",
+                  "UNESCO World Heritage Site",
+                  "Colony of Kenya",
+                  "East of Kenya",
+                  "KQ Lenders Company",
+                  "Kenya National Bureau of Statistics"
+                ],
+                "learned": [
+                  {
+                    "name": "East Africa",
+                    "mentions": 6,
+                    "title": "East Africa",
+                    "url": "https://en.wikipedia.org/wiki/East_Africa"
+                  },
+                  {
+                    "name": "Indian Ocean",
+                    "mentions": 3,
+                    "title": "Indian Ocean",
+                    "url": "https://en.wikipedia.org/wiki/Indian_Ocean"
+                  },
+                  {
+                    "name": "UNESCO World Heritage Site",
+                    "mentions": 2,
+                    "title": "World Heritage Site",
+                    "url": "https://en.wikipedia.org/wiki/World_Heritage_Site"
+                  },
+                  {
+                    "name": "Kenya National Bureau of Statistics",
+                    "mentions": 2,
+                    "title": "Kenya National Bureau of Statistics",
+                    "url": "https://en.wikipedia.org/wiki/Kenya_National_Bureau_of_Statistics"
+                  }
+                ]
+              },
+              "index": {
+                "built": false,
+                "notes": 31,
+                "reason": "exact search is fast below 2000 notes"
+              },
+              "adapter": {
+                "trained": false,
+                "pairs": 1,
+                "reason": "needs at least 20 answered questions"
+              },
+              "notes_after": 31,
+              "seconds": 15.26
+            }
+          }
+        },
+        "correct": true
+      }
+    }
+  }
+}

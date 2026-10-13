@@ -13,8 +13,13 @@ The server binds to 127.0.0.1 only. The API is used by camr/app/static/app.js:
   POST /api/feedback                  {"turn_id", "helpful"}
   POST /api/teach                     {"text", "title"}  or  {"filename", "data_base64"}
   GET  /api/memory?q=&kind=           memory items        DELETE /api/memory/<source_id>
-  POST /api/settings                  {"model", "token_budget", "history_turns", "remember_chat"}
+  POST /api/settings                  {"model", "token_budget", "history_turns", "remember_chat", "learn_online",
+                                       "sleep_when_idle"}
   GET  /api/export?text=0|1           metrics-only feedback file (text only when asked)
+  GET  /api/learning                  learning feed, lookups, packs, background jobs, last sleep, external weights
+  POST /api/packs/install             {"name"}            DELETE /api/packs/<name>   remove a pack
+  POST /api/packs/harvest             {"topic", "pages"}  build a pack from the web and install it (background)
+  POST /api/sleep                     consolidate memory now (background; report in /api/learning)
 """
 
 from __future__ import annotations
@@ -35,7 +40,7 @@ import requests
 from camr.app.assistant import DEFAULT_EMBED_MODEL, DEFAULT_HOME, DEFAULT_HOST, Assistant, installed_models
 
 STATIC = Path(__file__).resolve().parent / "static"
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 
 
 class App:
@@ -68,7 +73,19 @@ class App:
                     if chat:
                         self.assistant.save_settings(model=chat[0]["name"])
                 threading.Thread(target=self.assistant.warm, daemon=True).start()
+                threading.Thread(target=self._idle_loop, daemon=True).start()
             return self.assistant
+
+    def _idle_loop(self) -> None:
+        """Sleep (consolidate memory) when the user has been away for a while."""
+        import time
+
+        while self.assistant is not None:
+            time.sleep(60)
+            try:
+                self.assistant.maybe_sleep()
+            except Exception:  # never let background housekeeping take the app down
+                pass
 
     def start_pull(self, name: str = DEFAULT_EMBED_MODEL) -> None:
         if self.pull.get("status") == "pulling":
@@ -174,6 +191,9 @@ def make_handler(app: App):
                 a = self._assistant()
                 q = parse_qs(url.query)
                 return a and self._json(a.sources(q.get("kind", [None])[0] or None, q.get("q", [""])[0]))
+            if path == "/api/learning":
+                a = self._assistant()
+                return a and self._json(a.learning())
             if path == "/api/export":
                 a = self._assistant()
                 with_text = parse_qs(url.query).get("text", ["0"])[0] == "1"
@@ -223,10 +243,22 @@ def make_handler(app: App):
                 else:
                     n = a.teach(data.get("text", ""), title=data.get("title", ""))
                 return self._json({"notes": n})
+            if path == "/api/packs/install":
+                try:
+                    return self._json(a.install_pack(str(data.get("name", ""))))
+                except FileNotFoundError as exc:
+                    return self._json({"error": str(exc)}, 404)
+            if path == "/api/packs/harvest":
+                try:
+                    return self._json(a.harvest(str(data.get("topic", "")), int(data.get("pages", 15))))
+                except (RuntimeError, ValueError) as exc:
+                    return self._json({"error": str(exc)}, 400)
+            if path == "/api/sleep":
+                return self._json(a.sleep_now())
             if path == "/api/settings":
                 changed = "model" in data and data["model"] != a.model
-                a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat")
-                                   if k in data})
+                a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat",
+                                                        "learn_online", "sleep_when_idle") if k in data})
                 if changed:  # load the newly chosen model now, not on the next question
                     threading.Thread(target=a.warm, daemon=True).start()
                 return self._json(a.settings())
@@ -273,6 +305,9 @@ def make_handler(app: App):
             m = re.fullmatch(r"/api/memory/(\d+)", path)
             if m:
                 return self._json({"removed": a.forget(int(m.group(1)))})
+            m = re.fullmatch(r"/api/packs/([a-z0-9-]+)", path)
+            if m:
+                return self._json({"removed": a.remove_pack(m.group(1))})
             self._json({"error": "not found"}, 404)
 
     return Handler

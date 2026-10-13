@@ -137,6 +137,9 @@ class SQLiteVectorStore(MemoryStore):
             self.conn.commit()
         self._matrix_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         self._title_cache: dict[str, tuple[dict[str, list[int]], int]] = {}
+        self._fresh_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self.ivf = None  # learned index built during sleep (camr.memory.ivf); None = exact search
+        self.load_ivf()
 
     # -------------------------------------------------------------- setup
     def _load_vec(self) -> None:
@@ -195,9 +198,41 @@ class SQLiteVectorStore(MemoryStore):
         finally:
             self._matrix_cache.clear()
             self._title_cache.clear()
+            self._fresh_cache.clear()
 
     def close(self) -> None:
         self.conn.close()
+
+    # -------------------------------------------------------------- learned index
+    @property
+    def ivf_dir(self) -> Path:
+        return self.path.with_suffix(".ivf")
+
+    def load_ivf(self) -> None:
+        from camr.memory.ivf import IVFIndex
+
+        self.ivf = None
+        if (self.ivf_dir / "meta.json").exists():
+            try:
+                self.ivf = IVFIndex.load(self.ivf_dir)
+            except (OSError, ValueError, KeyError):  # a damaged index is rebuilt at the next sleep
+                self.ivf = None
+
+    def all_vectors(self, note_type: str) -> tuple[np.ndarray, np.ndarray]:
+        """(ids, vectors) of every note of a population, read once (used to build the index)."""
+        return self._matrix(note_type)
+
+    def _fresh(self, note_type: str, after_id: int) -> tuple[np.ndarray, np.ndarray]:
+        """Notes written since the index was built: searched exactly until the next sleep files them."""
+        if note_type not in self._fresh_cache:
+            rows = self.conn.execute(
+                "SELECT e.note_id, e.embedding FROM note_embedding e JOIN note n USING(note_id)"
+                " WHERE n.note_type=? AND e.note_id>? ORDER BY e.note_id", (note_type, after_id)).fetchall()
+            ids = np.array([r[0] for r in rows], dtype=np.int64)
+            mat = (np.vstack([np.frombuffer(r[1], dtype=np.float32) for r in rows]) if rows
+                   else np.zeros((0, self.dim), dtype=np.float32))
+            self._fresh_cache[note_type] = (ids, mat)
+        return self._fresh_cache[note_type]
 
     # -------------------------------------------------------------- writes
     def get_or_create_source(self, dataset: str, doc_id: str, note_type: str, ingested_at: str,
@@ -324,6 +359,8 @@ class SQLiteVectorStore(MemoryStore):
     def knn(self, query: np.ndarray, k: int, note_type: str) -> list[tuple[int, float]]:
         """Top-k (note_id, cosine similarity), ordered by similarity then note_id."""
         q = as_float32(query)
+        if self.ivf is not None and self.ivf.note_type == note_type:
+            return self._knn_ivf(q, k, note_type)
         if self.use_vec:
             rows = self.conn.execute(
                 "SELECT rowid FROM note_vec WHERE embedding MATCH ? AND k = ? AND note_type = ?"
@@ -353,6 +390,25 @@ class SQLiteVectorStore(MemoryStore):
             scored = [(int(ids_arr[j]), float(sims[j])) for j in top]
         scored.sort(key=lambda t: (-round(t[1], 7), t[0]))
         return scored
+
+    def _knn_ivf(self, q: np.ndarray, k: int, note_type: str) -> list[tuple[int, float]]:
+        """Consolidated notes through the learned index, fresh notes exactly; deleted notes dropped."""
+        scored = self.ivf.search(q, int(k) + 8)
+        ids_f, mat_f = self._fresh(note_type, self.ivf.max_note_id)
+        if len(ids_f):
+            qn = float(np.linalg.norm(q)) or 1.0
+            norms = np.linalg.norm(mat_f, axis=1)
+            norms[norms == 0] = 1.0
+            sims = (mat_f @ q) / (norms * qn)
+            top = np.argsort(-sims, kind="stable")[: int(k)]
+            scored += [(int(ids_f[j]), float(sims[j])) for j in top]
+        if scored:
+            marks = ",".join("?" * len(scored))
+            alive = {r[0] for r in self.conn.execute(f"SELECT note_id FROM note WHERE note_id IN ({marks})",
+                                                     [i for i, _ in scored])}
+            scored = [t for t in scored if t[0] in alive]
+        scored.sort(key=lambda t: (-round(t[1], 7), t[0]))
+        return scored[: int(k)]
 
     def title_index(self, note_type: str, min_len: int = 4) -> tuple[dict[str, list[int]], int]:
         """Map entity title (and its parenthesis-free alias) -> note ids, plus the
