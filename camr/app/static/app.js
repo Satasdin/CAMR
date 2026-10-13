@@ -384,7 +384,7 @@ async function loadLearning() {
     <div class="stat"><div class="k">Sleep</div>
       <p class="small">${sl ? "Sleeping now: tidying, re-indexing and learning to find things faster…" : rep ? `Last slept ${esc((L.last_sleep.at || "").replace("T", " ").slice(0, 16))} UTC:
         removed <b>${rep.tidy?.duplicates_removed ?? 0}</b> duplicates${cur?.learned?.length ? `, looked up <b>${cur.learned.length}</b> names it kept seeing (${cur.learned.map((x) => esc(x.title)).slice(0, 3).join(", ")})` : ""}${ix?.built ? `, indexed <b>${ix.notes.toLocaleString()}</b> notes in ${ix.clusters} clusters (${ix.index_ms} ms vs ${ix.exact_ms} ms per lookup)` : ""}${ad?.trained ? `, ${ad.kept ? `learned to find things better (recall@5 ${Math.round(100 * ad.recall_before["recall@5"])}% → ${Math.round(100 * ad.recall_after["recall@5"])}%)` : "tried to learn retrieval, kept the old way (no gain)"}` : ""}.`
-        : "It hasn't slept yet. Sleep tidies memory, builds an index once memory is large, and learns from answers you liked."}</p>
+        : "It hasn't slept yet. Sleep tidies memory, looks up names it keeps seeing, builds an index once memory passes 100,000 notes, and learns from answers you liked."}</p>
       <button class="ghost" id="sleep-btn" ${sl ? "disabled" : ""}>${sl ? "Sleeping…" : "◐ Sleep now"}</button></div>
     <div class="stat"><div class="k">Knowledge packs</div>
       <p class="muted small">Ready-made memory: notes with their vectors already computed, so a pack plugs in without running a model.</p>

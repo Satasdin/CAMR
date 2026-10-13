@@ -2020,8 +2020,8 @@ def learning_design(c: Chapter) -> None:
         "which reports what it changed: (1) *tidy*: near-duplicate notes from the web and packs (cosine ≥ 0.97) are "
         "merged, keeping the oldest, and the user's own notes are never deleted; (2) *curiosity*: names that public notes "
         "mention repeatedly but that memory has no note about are looked up, so the next multi-step question finds its "
-        "second hop already stored (personal notes are never mined); (3) *index*: once memory is large, a learned index "
-        "is rebuilt; (4) *learn to fetch*: a query adapter is trained on the engine's own experience. The index is an "
+        "second hop already stored (personal notes are never mined); (3) *index*: once memory passes 100,000 notes (the "
+        "size at which it was measured to pay, Section ⟦sec_sleep_results⟧), a learned index is rebuilt; (4) *learn to fetch*: a query adapter is trained on the engine's own experience. The index is an "
         "inverted file (Jégou et al., 2011): spherical k-means learns C centroids and each note is filed under its "
         "nearest one, so a question is compared with the centroids and then only with the notes of the n_probe closest "
         "clusters,")
@@ -2281,16 +2281,16 @@ def sleep_results(c: Chapter) -> None:
         r = idx["real"]
         probes = sorted((k for k in r if k.startswith("ivf_nprobe_")), key=lambda k: int(k.rsplit("_", 1)[1]))
         c.p(f"**The learned index on real memory.** On the {idx['notes']:,}-note store of the retrieval evaluation, "
-            f"with its {idx['questions']:,} real questions, exact search took {r['exact']['ms']:.1f} ms per question "
-            f"and found every gold paragraph for {pct(r['exact']['full_support_recall'])} of them. The index "
-            f"({r['clusters']} clusters, built in {r['build_s']:.1f} s) trades a little of that for speed "
-            f"({c.next_tab()}).")
+            f"with its {idx['questions']:,} real questions, exact search found every gold paragraph for "
+            f"{pct(r['exact']['full_support_recall'])} of them. The index ({r['clusters']} clusters, built in "
+            f"{r['build_s']:.1f} s) was compared at four probe sizes ({c.next_tab()}).")
         c.table("Exact search against the learned index on 38,054 real notes and 1,000 real questions (top 20)",
                 ["Search", "Share of memory read", "ms / question", "Agreement with exact", "Full-support recall"],
                 [["Exact", "100%", f"{r['exact']['ms']:.1f}", "100%", pct(r["exact"]["full_support_recall"])]]
                 + [[f"Index, n_probe = {k.rsplit('_', 1)[1]}", pct(r[k]["share_of_memory_read"]), f"{r[k]['ms']:.1f}",
                     pct(r[k]["agreement_with_exact"]), pct(r[k]["full_support_recall"])] for k in probes],
                 [3.6, 3.0, 2.4, 3.2, 3.2], size=9)
+        c.p(INDEX_REAL_TEXT(r))
         if idx.get("scale") and (FIGS / "index_scaling.png").exists():
             c.p(SCALE_TEXT(idx))
             c.figure(FIGS / "index_scaling.png", "Search time and resident memory as memory grows: exact search "
@@ -2312,6 +2312,16 @@ def sleep_results(c: Chapter) -> None:
         c.p(EAGER_ADAPTER_TEXT(eg))
 
 
+def INDEX_REAL_TEXT(r) -> str:  # noqa: N802
+    p8, p32 = r["ivf_nprobe_8"], r["ivf_nprobe_32"]
+    return (f"**At the size of this store the index does not pay.** Exact search over {38054:,} vectors held in RAM "
+            f"took {r['exact']['ms']:.2f} ms. Probing 8 clusters was faster ({p8['ms']:.2f} ms) but found every gold "
+            f"paragraph for only {pct(p8['full_support_recall'])} of questions against {pct(r['exact']['full_support_recall'])}; "
+            f"probing 32 recovered most of that ({pct(p32['full_support_recall'])}) and was slower than exact search "
+            f"({p32['ms']:.2f} ms). An index trades evidence for speed, and at tens of thousands of notes there is no "
+            "speed to buy.")
+
+
 def SCALE_TEXT(idx) -> str:  # noqa: N802
     rows = {(r["notes"], r["mode"]): r for r in idx["scale"]}
     big = max(n for n, _ in rows)
@@ -2320,14 +2330,20 @@ def SCALE_TEXT(idx) -> str:  # noqa: N802
     es, is_ = rows.get((small, "exact")), rows.get((small, "ivf"))
     if not (e and i and es and is_):
         return ""
-    return (f"**As memory grows.** The store was grown to {big:,} notes with perturbed copies of its own vectors "
-            "(distractors only; every gold paragraph is a real one) and each size was searched in a fresh process. "
-            f"From {small:,} to {big:,} notes, exact search went from {es['ms']:.1f} to {e['ms']:.1f} ms per question and its "
-            f"process from {es['rss_mb_after_queries']:.0f} to {e['rss_mb_after_queries']:.0f} MB, because the whole matrix "
-            f"is held in RAM; through the index it went from {is_['ms']:.1f} to {i['ms']:.1f} ms and from "
-            f"{is_['rss_mb_after_queries']:.0f} to {i['rss_mb_after_queries']:.0f} MB, with full-support recall "
-            f"{pct(i['full_support_recall'])} against {pct(e['full_support_recall'])} for exact search. This is Equation "
-            "⟦eq_ram_n⟧ measured: memory grows on disk, and the part in RAM grows with the clusters a question probes.")
+    mid = sorted({n for n, _ in rows})[1] if len({n for n, _ in rows}) > 2 else big
+    em, im = rows.get((mid, "exact")), rows.get((mid, "ivf"))
+    return (f"**It pays as memory grows.** The store was grown to {big:,} notes with perturbed copies of its own vectors "
+            "(distractors only; every gold paragraph is a real one) and each size was searched in a fresh process with "
+            f"the default probe (8% of the clusters). At {mid:,} notes exact search took {em['ms']:.1f} ms and the index "
+            f"{im['ms']:.1f} ms; at {big:,} notes, {e['ms']:.1f} against {i['ms']:.1f} ms, with the process at "
+            f"{e['rss_mb_after_queries']:,.0f} against {i['rss_mb_after_queries']:,.0f} MB, because exact search holds the "
+            f"whole matrix in RAM. The price is evidence: full-support recall {pct(i['full_support_recall'])} against "
+            f"{pct(e['full_support_recall'])}. One caveat on memory: over 1,000 questions the index's process still grew by "
+            f"{i['rss_growth_mb_from_queries']:.0f} MB, because the operating system keeps the clusters it has read in its "
+            "page cache; those pages can be dropped when memory is needed, unlike the exact search's matrix, but they "
+            "count while they stay. Equation ⟦eq_ram_n⟧ therefore holds per question, not per session. **Decision:** "
+            "sleep builds the index only once memory passes 100,000 notes; below that, exact search is faster and finds "
+            "more, so a personal memory is never indexed.")
 
 
 def EAGER_ADAPTER_TEXT(eg) -> str:  # noqa: N802

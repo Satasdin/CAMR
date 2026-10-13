@@ -9,7 +9,8 @@ engine's own external weights, the things it can learn without a GPU:
    but that memory has no note about are looked up and learned, so the next
    multi-step question finds its second hop already in memory. Only text from public
    sources (web pages, packs) is mined; personal notes never leave the machine.
-3. **Index**: once memory is large, the learned index (``camr.memory.ivf``) is
+3. **Index**: once memory is large (100k notes; below that exact search is faster
+   and more accurate, as measured), the learned index (``camr.memory.ivf``) is
    rebuilt over every note, so a question reads a few clusters, not all memory.
 4. **Learn to fetch**: the query adapter (``camr.memory.adapter``) is trained on
    pairs (question, note that answered it) from the engine's experience. It is kept
@@ -116,7 +117,12 @@ def _scratch():
 
 
 # ---------------------------------------------------------------------- 3. index
-def rebuild_index(engine: MemoryEngine, min_notes: int = 2000, probe_queries: int = 50, k: int = 10) -> dict:
+# Measured (results/sleep/index.json): below ~100k notes exact search in RAM is both faster and more accurate than
+# the index on a 4-core CPU; at 150k-400k notes the index is 1.6-2.2x faster and its process ~30% smaller.
+INDEX_MIN_NOTES = 100_000
+
+
+def rebuild_index(engine: MemoryEngine, min_notes: int = INDEX_MIN_NOTES, probe_queries: int = 50, k: int = 10) -> dict:
     store, nt = engine.store, engine.note_type
     ids, mat = store.all_vectors(nt)
     if len(ids) < min_notes:
@@ -187,7 +193,7 @@ def train_adapter(engine: MemoryEngine, pairs: list[tuple[str, set[int]]], path:
 
 # ---------------------------------------------------------------------- the whole night
 def sleep(engine: MemoryEngine, *, lookup: WebLookup | None = None, pairs: list[tuple[str, set[int]]] | None = None,
-          adapter_path: str | Path | None = None, curiosity_limit: int = 10, index_min_notes: int = 2000) -> dict:
+          adapter_path: str | Path | None = None, curiosity_limit: int = 10, index_min_notes: int = INDEX_MIN_NOTES) -> dict:
     t0 = time.perf_counter()
     report: dict = {"started": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
                     "notes_before": engine.store.count(engine.note_type)}
