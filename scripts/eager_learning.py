@@ -244,6 +244,45 @@ def dev(a) -> None:
     save(OUT / "lookup_dev.json", out)
 
 
+# ------------------------------------------------------------------ dev: how much to read per lookup
+def devtune(a) -> None:
+    """D-21 made lookups return more pages, and the extra text hurt the 0.5B reader. Choose pages per lookup and the
+    token budget on the 60 development questions (never the stream), with the answering model."""
+    import shutil
+    import tempfile
+
+    from camr.eval.scoring import normalize_answer  # noqa: F401
+    from camr.memory.eager import eager_recall
+    from camr.memory.fetch import WebLookup, embedding_rank
+    from camr.models.prompt import answer_template
+
+    rows = list(csv.DictReader(open(ROOT / "data/popqa/test.tsv"), delimiter="\t"))
+    taken = used_ids() | {x["qid"] for x in load_stream()} | {x["subj_id"] for x in load_stream()}
+    rows = [r for r in rows if r["id"] not in taken and r["subj_id"] not in taken]
+    dev_items = random.Random(SEED + 1).sample(rows, a.n_dev)  # the same 60 as `dev`
+    runner = runner_for(a.model)
+    bare, mem = answer_template("single_hop", False), answer_template("single_hop", True)
+    out = {"n": len(dev_items), "model": a.model, "grid": []}
+    for pages in (1, 2, 3):
+        for budget in (128, 512):
+            tmp = Path(tempfile.mkdtemp(prefix="devtune-"))
+            CAMR["token_budget"] = budget
+            engine, store = build_engine(tmp / "store.sqlite")
+            lookup = WebLookup(cache_path=OUT / "web_cache_after_D21.sqlite", patient_s=a.patient, min_interval_s=1.5,
+                               rank=embedding_rank(engine.embedder))
+            correct = 0
+            for r in dev_items:
+                rec, _ = eager_recall(engine, lookup, r["question"], touch=False, max_pages=pages)
+                g = runner.generate(bare.render(r["question"]) if rec.abstained else mem.render(r["question"], rec.context))
+                correct += judge({"answers": json.loads(r["possible_answers"])}, g.text)["correct"]
+            out["grid"].append({"max_pages": pages, "token_budget": budget, "accuracy": correct / len(dev_items)})
+            print(out["grid"][-1], flush=True)
+            store.close()
+            shutil.rmtree(tmp, ignore_errors=True)
+    CAMR["token_budget"] = 512
+    save(OUT / "devtune.json", out)
+
+
 # ------------------------------------------------------------------ pass 1: learn online
 def learn(a) -> None:
     from camr.memory.eager import eager_recall
@@ -252,6 +291,8 @@ def learn(a) -> None:
 
     items = load_stream()
     tag = f"_{a.tag}" if a.tag else ""
+    if a.budget:
+        CAMR["token_budget"] = a.budget
     store_path = OUT / f"store{tag}.sqlite"
     path = OUT / f"learn{tag}.json"
     if a.fresh:
@@ -270,7 +311,7 @@ def learn(a) -> None:
             if item["i"] in done:
                 continue
             t0 = time.perf_counter()
-            recall, learned = eager_recall(engine, lookup, item["question"], touch=False)
+            recall, learned = eager_recall(engine, lookup, item["question"], touch=False, max_pages=a.max_pages)
             prompt = bare.render(item["question"]) if recall.abstained else mem.render(item["question"], recall.context)
             g = runner.generate(prompt)
             ctx = recall.context if not recall.abstained else ""
@@ -303,6 +344,8 @@ def retain(a) -> None:
 
     items = load_stream()
     tag = f"_{a.tag}" if a.tag else ""
+    if a.budget:
+        CAMR["token_budget"] = a.budget
     engine, store = build_engine(OUT / f"store{tag}.sqlite")  # what pass 1 learned; nothing is looked up
     bare, mem = answer_template("single_hop", False), answer_template("single_hop", True)
     path = OUT / f"retain{tag}.json"
@@ -385,7 +428,7 @@ def ram(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["select", "dev", "learn", "retain", "baseline", "ram"])
+    ap.add_argument("part", choices=["select", "dev", "devtune", "learn", "retain", "baseline", "ram"])
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--pairs", type=int, default=30)
     ap.add_argument("--n-dev", type=int, default=60)
@@ -396,5 +439,8 @@ if __name__ == "__main__":
     ap.add_argument("--patient", type=float, default=120.0, help="seconds a lookup may wait out a rate limit")
     ap.add_argument("--offline-replay", action="store_true", help="answer lookups from the saved web cache only")
     ap.add_argument("--tag", default="", help="learn/retain: a separate run (e.g. after_D21) with its own store and cache")
+    ap.add_argument("--max-pages", type=int, default=3, help="learn: pages kept per lookup")
+    ap.add_argument("--budget", type=int, default=0, help="learn: token budget (0 = the configuration's 512)")
     a = ap.parse_args()
-    {"select": select, "dev": dev, "learn": learn, "retain": retain, "baseline": baseline, "ram": ram}[a.part](a)
+    {"select": select, "dev": dev, "devtune": devtune, "learn": learn, "retain": retain, "baseline": baseline,
+     "ram": ram}[a.part](a)
