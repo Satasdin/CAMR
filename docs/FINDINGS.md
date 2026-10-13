@@ -560,7 +560,7 @@ RAM: resident memory of each model's process after one answer, alone (`results/e
 3. The answer was in the fetched text for 52% of questions; when it was, the 0.5B model was right 76% of the time: the lookup, not the reader, sets the ceiling (PopQA's long-tail names are often ambiguous).
 4. Memory grew to 333 notes, 2.7 MB. Times in this run are dominated by rate-limit waits on a shared cloud machine and are not the app's speed.
 5. Defects found and fixed during the stream: D-17 (subject extraction), D-18 (an empty DuckDuckGo reply cached as "nothing known"), D-21 (the fetcher sent no CAMR User-Agent, so Wikimedia refused most requests). The stream was re-run from scratch after D-17/D-18 and repeated after D-21 (`learn_after_D21.json`).
-6. After D-21 every lookup found pages (0 empty vs 9) and pages per question rose from 1.07 to 1.9, but the answer was in the fetched text no more often (52.5% vs 52%) and accuracy fell to 37.5%: more text distracted the 0.5B reader. Pages per lookup and the token budget were then chosen on the 60 development questions (`devtune.json`).
+6. After D-21 every lookup found pages (0 empty vs 9) and pages per question rose from 1.07 to 1.9, but the answer was in the fetched text no more often (52.5% vs 52%) and accuracy fell to 37.5%: more text distracted the 0.5B reader. Pages per lookup and the token budget were then chosen on the 60 development questions (`devtune.json`): 3 pages at 128 tokens 36.7%, 3 at 512 33.3%, 1–2 pages 15–20%. The tuned run on the stream (corrected fetcher, 3 pages, 128 tokens): **43.0% online, 42.5% offline reworded** (0.5B), with 77 context tokens per answer instead of 260 (`learn_tuned.json`, `retain_tuned.json`).
 
 ## F20. Asking to be taught instead of "I don't know" (prompt F)
 
