@@ -238,7 +238,8 @@ def fig_finetune_curves(out: Path) -> Path | None:
     style(axes[0], xlabel="epoch", ylabel="training loss (cross-entropy)", grid="y")
     axes[0].set_title("LoRA training loss", loc="left")
     axes[0].legend(frameon=False, fontsize=7.4)
-    style(axes[1], xlabel="epoch", ylabel="validation accuracy, closed book (%)", grid="y")
+    axes[1].set_ylim(0, 25)  # from zero: the changes are one or two questions out of 60
+    style(axes[1], xlabel="epoch (evaluated after 1, 2, 4 and 8)", ylabel="validation accuracy, closed book (%)", grid="y")
     axes[1].set_title("Validation accuracy (60 PopQA questions)", loc="left")
     fig.suptitle("Fine-tuning Qwen2.5-0.5B-Instruct with LoRA on the stored documents (selection on validation only)",
                  x=0.01, ha="left", fontsize=9.2, fontweight="bold")

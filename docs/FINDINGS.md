@@ -451,7 +451,7 @@ Source: `docs/results/ui_audit.json` (`python scripts/ui_audit.py --axe axe.min.
 - **Before:** axe-core 4.10 reported `color-contrast` (serious) and `page-has-heading-one`; 6 token pairs were below WCAG AA (secondary text 2.3–3.3:1; light-theme accent and success colours).
 - **Fix (D-11, D-12):** per-theme token values; a persistent, visually hidden page heading.
 - **After:** 0 axe violations in both themes at desktop and phone width; every token pair ≥ AA.
-- **Browser tests (Chromium, Playwright):** remember→ask with recall card, empty message, 👍 teaches, theme and panel, phone width without horizontal scroll, keyboard-only path with accessible names: 6/6 pass. Total suite: 111 tests.
+- **Browser tests (Chromium, Playwright):** remember→ask with recall card, empty message, 👍 teaches, theme and panel, phone width without horizontal scroll, keyboard-only path with accessible names: 6/6 pass. Total suite: 115 tests.
 
 ---
 

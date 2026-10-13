@@ -42,7 +42,8 @@ TEXT_WIDTH_CM = 15.9
 
 OMML = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 _ACCENTS = {"^": "\u0302", "~": "\u0303", "¯": "\u0305", "‾": "\u0305", "―": "\u0305", "→": "\u20d7", "˙": "\u0307"}
-_SAFE = {"*": "\u2217", "|": "\u2223"}
+# "|" and U+2223 (\mid) both print as "/" or "∨" in LibreOffice's math import; U+2502 prints as a bar everywhere
+_SAFE = {"*": "\u2217", "|": "\u2502", "\u2223": "\u2502"}
 
 
 def omath(latex: str):
@@ -67,6 +68,15 @@ def omath(latex: str):
             etree.SubElement(pr, q("degHide")).set(q("val"), "1")
             rad.insert(0, pr)
             rad.insert(1, etree.Element(q("deg")))
+    for n in el.iter(q("nary")):  # an empty limit (\sum_{i}) would print as a placeholder box
+        pr = n.find(q("naryPr"))
+        if pr is None:
+            pr = etree.Element(q("naryPr"))
+            n.insert(0, pr)
+        for part, flag in (("sub", "subHide"), ("sup", "supHide")):
+            e = n.find(q(part))
+            if e is not None and not "".join(e.itertext()).strip():
+                etree.SubElement(pr, q(flag)).set(q("val"), "1")
     for t in el.iter(q("t")):
         if t.text in _SAFE:
             t.text = _SAFE[t.text]
@@ -759,7 +769,7 @@ camr app                                                # opens http://127.0.0.1
     # ================================================================ 5.4 Testing
     c.h2("Testing and Evaluation", key="sec_testing")
     c.h3("Test Strategy and Acceptance Criteria")
-    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 111 tests, fully "
+    c.p("Testing combined three levels. **Unit and integration tests** (white-box, pytest, 115 tests, fully "
         "offline) verify each requirement with deterministic test doubles: dry-run models and a hashing embedder. "
         "**System tests** run the real pipeline end to end on real data with real models. **Measurements** "
         "(device profile, latency, memory) verify the non-functional requirements against their thresholds. Each "
@@ -771,7 +781,7 @@ camr app                                                # opens http://127.0.0.1
              "holdout guard (DR-04), byte-identical prompts (NFR-05) and the bootstrap (FR-15)", 15.5)
 
     c.h3("Test Cases, Defects and Retesting", key="sec_tests")
-    c.table("Test cases and results (unit tests: `pytest`, 111 passed; measurements: `camr profile`)",
+    c.table("Test cases and results (unit tests: `pytest`, 115 passed; measurements: `camr profile`)",
             ["Test ID", "Traceability", "Scenario and data", "Expected result", "Actual result and verdict"],
             [["TC-01", "FR-01", "Verbatim and structured policies on fixture passages", "Notes produced; title kept", "As expected. Pass"],
              ["TC-02", "FR-02/03, DR-06", "Empty, duplicate, over-length, injection-like notes", "Rejected with logged reason; provenance on all notes", "As expected. Pass"],
@@ -961,7 +971,7 @@ camr app                                                # opens http://127.0.0.1
         "where it fell short; most importantly, the student required that this chapter report only experiments "
         "that had actually been run and benchmarked with real models, and an earlier draft written before the "
         "results existed was discarded for that reason. The AI-assisted output was checked through the automated "
-        "test suite (111 tests), the per-query logs, the read-only inspector, and the findings log, which names "
+        "test suite (115 tests), the per-query logs, the read-only inspector, and the findings log, which names "
         "the results file behind every reported number, so that each claim can be traced and re-run. The "
         "student made the final decisions and takes full responsibility for the submitted work.")
 
@@ -1357,10 +1367,10 @@ def formal_model(c: Chapter) -> None:
     c.p("Entity bridging then adds, for each of the top three eligible seed notes, up to two notes about other "
         "stored entities whose titles the seed's text mentions. These notes may have low similarity to the question; "
         "they are reached through the seed, which is the second hop of a multi-hop question:")
-    c.eq(r"B(q)=\bigcup_{n\in\text{top}_3E(q)}\text{first}_2\left\{m\in\mathcal{M}:\text{title}(m)\in\text{mentions}(n)\right\}", key="eq_bridge")
+    c.eq(r"B(q)=\left\{m\in\mathcal{M}:\text{title}(m)\in\text{mentions}(n)\text{ for some }n\in\text{top}_3E(q)\right\},\quad\le2\text{ per }n", key="eq_bridge")
     c.p("Finally the budgeter admits notes in rank order, each bridged note directly after its seed, until the "
         "next note would exceed the token budget *B*, and then stops:")
-    c.eq(r"A(q)=\left(n_1,\dots,n_m\right),\quad m=\max\left\{j:\sum_{i=1}^{j}c(n_i)\le B\right\}", key="eq_pack")
+    c.eq(r"A(q)=\left(n_1,\dots,n_m\right),\quad m=\text{max}\left\{j:\sum_{i=1}^{j}c(n_i)\le B\right\}", key="eq_pack")
     c.p("The prompt contains exactly the notes in *A(q)*, so the number of context tokens is at most *B* and is "
         "usually far smaller, because gating removes candidates before the budget binds.")
     c.p("**Worked example (from the pilot's logs).** For *Who was the director of The Loudwater Mystery?* the 20 "
@@ -1377,7 +1387,7 @@ def formal_model(c: Chapter) -> None:
 def metrics_section(c: Chapter) -> None:
     c.p("The scores are defined as follows. Let *p* be the model's answer, *G* the set of accepted gold answers, "
         "and norm(·) the SQuAD normalisation (lower case, punctuation and articles removed, whitespace collapsed):")
-    c.eq(r"\text{EM}(p,G)=\max_{g\in G}\mathbb{1}\left[\text{norm}(p)=\text{norm}(g)\right],\qquad \text{Contains}(p,G)=\max_{g\in G}\mathbb{1}\left[\text{norm}(g)\sqsubseteq\text{norm}(p)\right]", key="eq_em")
+    c.eq(r"\text{EM}(p,G)=\underset{g\in G}{\text{max}}\,\mathbb{1}\left[\text{norm}(p)=\text{norm}(g)\right],\qquad \text{Contains}(p,G)=\underset{g\in G}{\text{max}}\,\mathbb{1}\left[\text{norm}(g)\sqsubseteq\text{norm}(p)\right]", key="eq_em")
     c.eq(r"\text{F}_1(p,g)=\frac{2PR}{P+R},\quad P=\frac{\left|t_p\cap t_g\right|}{\left|t_p\right|},\quad R=\frac{\left|t_p\cap t_g\right|}{\left|t_g\right|}", key="eq_f1")
     c.where([(r"\sqsubseteq", "occurrence as a whole-word substring;"),
              (r"t_p,t_g", "the multisets of normalised tokens of the answer and of the gold answer.")])
@@ -1719,9 +1729,9 @@ def finetune_section(c: Chapter) -> None:
         "fine-tuned on exactly the documents CAMR stores, and the two were compared on the same held-out questions.")
     c.p("**Method.** Low-Rank Adaptation (LoRA; Hu et al., 2022) freezes each weight matrix *W* and learns a "
         "low-rank update, so only a small fraction of parameters is trained:")
-    c.eq(r"W'=W+\frac{\alpha_{\text{LoRA}}}{r}\,BA,\qquad B\in\mathbb{R}^{d\times r},\;A\in\mathbb{R}^{r\times k},\;r\ll\min(d,k)", key="eq_lora")
+    c.eq(r"W'=W+\frac{\alpha_{\text{LoRA}}}{r}\,BA,\qquad B\in\mathbb{R}^{d\times r},\;A\in\mathbb{R}^{r\times k},\;r\ll\text{min}(d,k)", key="eq_lora")
     c.p("The adapters were trained with the causal language-modelling loss over the document tokens *x*₁…*x*_T:")
-    c.eq(r"\mathcal{L}(\theta)=-\frac{1}{T}\sum_{t=1}^{T}\log p_\theta\left(x_t\mid x_{<t}\right)", key="eq_lm")
+    c.eq(r"\mathcal{L}(\theta)=-\frac{1}{T}\sum_{t=1}^{T}\log p_\theta\left(x_t\mid x_1,\dots,x_{t-1}\right)", key="eq_lm")
     g0 = grid[0]
     c.table("Fine-tuning set-up (`scripts/finetune_baseline.py`)",
             ["Setting", "Value"],
