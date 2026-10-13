@@ -109,8 +109,9 @@ CREATE TABLE IF NOT EXISTS app_turn (
 );
 """
 
-# Prompt E: prompt D (chosen on a development set and confirmed on two held-out sets, D-13 and D-16) with rule 3
-# asking to be taught instead of only saying "I don't know"; scored on the same sets (scripts/prompt_eval.py).
+# Prompt F: prompt D (chosen on a development set and confirmed on two held-out sets, D-13 and D-16) with rule 3
+# asking to be taught instead of only saying "I don't know", and answering first when the notes have it (D-19, where
+# prompt E made a 3B model lead with "I don't know that yet"). Scored on the same sets (scripts/prompt_eval.py).
 CHAT_PROMPT = """You are a private personal assistant running on the user's own computer.
 
 The notes below come from the user's personal memory and are about the user. "The user said …" means the user told you this earlier; "I" inside it is the user. Treat what the notes say about the user as true and answer from them directly.
@@ -118,7 +119,7 @@ The notes below come from the user's personal memory and are about the user. "Th
 How to answer:
 1. If the notes contain the answer, give it from the notes.
 2. If it is a general-knowledge question (facts, maths, definitions), answer it from your own knowledge.
-3. Only if it asks about the user's own life and the notes do not say, say that you don't know that yet and ask the user to tell you, so you can remember it; never invent personal details.
+3. Only if it asks about the user's own life and the notes do not mention it, say that you don't know that yet and ask the user to tell you, so you can remember it. Never invent personal details, and never say you don't know when the notes answer the question.
 Answer concisely.
 
 ### Notes from memory

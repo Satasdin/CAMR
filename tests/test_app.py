@@ -183,4 +183,7 @@ def test_prompt_lets_the_model_answer_general_questions():
     from camr.app.assistant import CHAT_PROMPT
     assert "general-knowledge question" in CHAT_PROMPT and "answer it from your own knowledge" in CHAT_PROMPT
     assert "If the notes contain the answer, give it from the notes" in CHAT_PROMPT
-    assert "never invent personal details" in CHAT_PROMPT
+    assert "never invent personal details" in CHAT_PROMPT.lower()
+    # D-19: asking to be taught must not make the model lead with "I don't know" when its notes answer
+    assert "never say you don't know when the notes answer the question" in CHAT_PROMPT
+    assert "ask the user to tell you, so you can remember it" in CHAT_PROMPT
