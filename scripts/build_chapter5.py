@@ -1880,7 +1880,18 @@ def SCENARIO_TEXT(d: dict) -> str:  # noqa: N802 - written from the logged answe
             + SCENARIO_NOTES)
 
 
-SCENARIO_NOTES = ""
+SCENARIO_NOTES = (
+    "In detail, from the logs: (1) the two-note answer was assembled from two notes that similarity found on its own "
+    "(0.72 and 0.62); bridging was not needed, because the question's words matched both, so this scenario shows "
+    "multi-note recall, not bridging (bridging is shown on the benchmark examples of section ⟦sec_examples⟧). (2) The "
+    "model computed 89,200 − 86,950 = 2,250 km from a mileage it had only in memory. (3) After *remember that the "
+    "dentist appointment moved…*, both the old and the new note were recalled (similarity 0.85 and 0.80) and the model "
+    "chose the new one because its wording says the appointment moved; CAMR has no explicit mechanism for superseding a "
+    "fact (recency is off by default), so this relies on the model and is listed as future work. (4) The allergy was "
+    "recalled from chat memory seven turns later, after the six-turn history window had dropped it, while every general "
+    "question in between was answered from the model's own knowledge with no memory recalled. (5) Without memory, the "
+    "model gave a generic rinse time from its own knowledge but could not know the lab technician's name; with the "
+    "taught file it answered both parts.")
 
 
 def rag_definition(c: Chapter) -> None:
