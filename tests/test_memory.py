@@ -318,3 +318,12 @@ def test_entity_gate_withholds_notes_about_a_different_entity():
     assert MemoryEngine._entity_gate(q, right) is False and right[0].eligible
     personal = [sn("Dentist appointment on Thursday 9 October at 14:30.", 0.7)]
     assert MemoryEngine._entity_gate("When is my dentist appointment?", personal) is False  # names no entity
+
+
+def test_entity_names_match_through_possessives():
+    # D-15: "Peck's Bad Girl" in the question did not match "Peck's Bad Girl" in the note
+    from camr.memory.entities import mentions_any, question_entities
+
+    ents = question_entities("Who was the producer of Peck's Bad Girl?")
+    assert mentions_any("Peck's Bad Girl: Peck's Bad Girl is a 1918 American silent comedy film", ents)
+    assert mentions_any("Francesca Caccini's father was Giulio Caccini", question_entities("Who was Francesca Caccini's father?"))

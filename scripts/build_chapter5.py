@@ -840,7 +840,11 @@ camr app                                                # opens http://127.0.0.1
               "Regression test; scenarios re-run. Pass"],
              ["D-14", "Chat memory stored every message, including plain questions; a general question then recalled six "
               "unrelated past questions as *memories*", "Live scenarios", "Only statements are kept as chat memory; "
-              "questions are not", "Regression test; scenarios re-run. Pass"]],
+              "questions are not", "Regression test; scenarios re-run. Pass"],
+             ["D-15", "Entity gate: a possessive in the question (*Peck's Bad Girl*) was normalised differently from the "
+              "same name in a note, so the gate wrongly withheld a correct note", "RAG comparison (section ⟦sec_ragresult⟧)",
+              "One normalisation for question and notes, possessives removed", "Regression test; gate re-evaluated on "
+              "validation, test and retrieval. Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
     c.h3("Application Testing (CAMR Personal)", key="sec_apptest")
@@ -1961,26 +1965,62 @@ def RAG_RETRIEVAL_TEXT(r) -> str:  # noqa: N802
             "RAG with a token cap.")
 
 
-def RAG_ANSWER_TEXT(d) -> str:  # noqa: N802
-    parts = []
-    for model, m in d["models"].items():
-        s = m["summary"]
-        parts.append(f"With {model}, when the answer was in memory, RAG reached {pct(s['rag_answerable']['accuracy'])} and "
-                     f"CAMR {pct(s['camr_answerable']['accuracy'])} (alone: {pct(s['alone']['accuracy'])}), CAMR reading "
-                     f"{s['camr_answerable']['mean_context_words']:.0f} words of notes against RAG's "
-                     f"{s['rag_answerable']['mean_context_words']:.0f}. When the answer was *not* in memory, RAG still "
-                     f"filled the prompt with {s['rag_missing']['mean_context_words']:.0f} words of unrelated notes, and in "
-                     f"{pct(s['rag_missing']['wrong_from_context'])} of questions the model answered with a wrong name taken "
-                     f"from them; CAMR abstained on {pct(s['camr_missing']['abstain_rate'])} and its wrong-from-notes rate was "
-                     f"{pct(s['camr_missing']['wrong_from_context'])}.")
-    return " ".join(parts) + RAG_ANSWER_NOTES
-
-
-RAG_ANSWER_NOTES = ""
+def RAG_ANSWER_TEXT(d) -> str:  # noqa: N802 - written from results/rag_vs_camr/answers.json
+    q, l = d["models"]["qwen2.5:0.5b"]["summary"], d["models"]["llama3.2:3b"]["summary"]
+    return (f"**When the answer is in memory, CAMR matched or beat RAG with about 40% less text.** The 0.5B model reached "
+            f"{pct(q['camr_answerable']['accuracy'])} with CAMR against {pct(q['rag_answerable']['accuracy'])} with RAG, "
+            f"reading {q['camr_answerable']['mean_context_words']:.0f} words of notes instead of "
+            f"{q['rag_answerable']['mean_context_words']:.0f}: the extra chunks RAG always adds were distraction for a weak "
+            f"reader. The 3B model scored the same with both ({pct(l['camr_answerable']['accuracy'])}). "
+            "**When the answer is not in memory, the first version of CAMR failed exactly as RAG did.** With the "
+            "question's own document removed, the store still held notes about other films, people and albums that were "
+            "as similar to the question as the missing note, so the similarity gate abstained on only "
+            f"{pct(q['camr_missing']['abstain_rate'])} of questions. Both systems filled the prompt with unrelated notes, "
+            f"and the 0.5B model answered with a wrong name taken from them {pct(q['rag_missing']['wrong_from_context'])} "
+            f"(RAG) and {pct(q['camr_missing']['wrong_from_context'])} (CAMR) of the time. The irrelevant notes even made "
+            f"the 3B model worse than answering alone ({pct(l['alone']['accuracy'])} alone, "
+            f"{pct(l['rag_missing']['accuracy'])} with RAG, {pct(l['camr_missing']['accuracy'])} with CAMR): they overrode "
+            "facts it already knew. A similarity threshold cannot tell *a different film by a similar director* from "
+            "*this film*.")
 
 
 def ENTITY_GATE_TEXT(d, v) -> str:  # noqa: N802 - written from the logged results
-    return ""
+    tq, tl = d["models"]["qwen2.5:0.5b"]["summary"], d["models"]["llama3.2:3b"]["summary"]
+    vq, vl = v["models"]["qwen2.5:0.5b"]["summary"], v["models"]["llama3.2:3b"]["summary"]
+    rp = ROOT / "results/rag_vs_camr/retrieval.json"
+    ret = ""
+    if rp.exists():
+        rows = {(x["benchmark"], x["method"]): x for x in json.loads(rp.read_text())["rows"]}
+        if ("hotpotqa", "CAMR + entity gate") in rows:
+            h0, h1 = rows[("hotpotqa", "CAMR")], rows[("hotpotqa", "CAMR + entity gate")]
+            w0, w1 = rows[("2wikimultihopqa", "CAMR")], rows[("2wikimultihopqa", "CAMR + entity gate")]
+            ret = (f" On the multi-hop retrieval questions, where the evidence does name the question's entities, the gate "
+                   f"changed full-support recall from {pct(h0['support_all'])} to {pct(h1['support_all'])} on HotpotQA and "
+                   f"from {pct(w0['support_all'])} to {pct(w1['support_all'])} on 2Wiki (abstaining on "
+                   f"{pct(h1['abstain_rate'])} and {pct(w1['abstain_rate'])} of questions).")
+    return ("**Overcoming the hurdle: an entity-anchored gate.** The remedy follows from the failure: if the question "
+            "*names* something (*The Loudwater Mystery*, *Fahrenheit*) and none of the candidate notes mentions that name, "
+            "the notes are about something else, however similar they look, and memory should be withheld. "
+            "`camr.memory.entities` extracts names from the question (runs of capitalised words, quoted titles) and the "
+            "engine abstains when no eligible note mentions any of them; questions that name nothing, such as *when is my "
+            "dentist appointment?*, are unaffected. It needs no model call and adds no measurable time. Because the gate "
+            "was designed after seeing the test questions fail, it was judged first on the 60 *validation* questions of "
+            "the learning split, which played no part in its design (table below). There it changed nothing when the "
+            f"answer was in memory ({pct(vq['camr_eg_answerable']['accuracy'])} and {pct(vl['camr_eg_answerable']['accuracy'])} "
+            f"for the two models, as without it), and when the answer was missing it abstained on "
+            f"{pct(vq['camr_eg_missing']['abstain_rate'])} of questions, cutting wrong answers copied from the notes from "
+            f"{pct(vq['camr_missing']['wrong_from_context'])} to {pct(vq['camr_eg_missing']['wrong_from_context'])} (0.5B) "
+            f"and from {pct(vl['camr_missing']['wrong_from_context'])} to {pct(vl['camr_eg_missing']['wrong_from_context'])} "
+            f"(3B). On the held-out test questions the result held: abstention {pct(tq['camr_eg_missing']['abstain_rate'])}, "
+            f"copied wrong answers {pct(tq['camr_missing']['wrong_from_context'])} → {pct(tq['camr_eg_missing']['wrong_from_context'])} "
+            f"(0.5B) and {pct(tl['camr_missing']['wrong_from_context'])} → {pct(tl['camr_eg_missing']['wrong_from_context'])} "
+            f"(3B), and the 3B model's accuracy without the document recovered from {pct(tl['camr_missing']['accuracy'])} "
+            f"to {pct(tl['camr_eg_missing']['accuracy'])}, close to its {pct(tl['alone']['accuracy'])} alone. The cost was "
+            f"one test question in 60 whose note was wrongly withheld ({pct(tq['camr_answerable']['accuracy'])} → "
+            f"{pct(tq['camr_eg_answerable']['accuracy'])} for 0.5B, {pct(tl['camr_answerable']['accuracy'])} → "
+            f"{pct(tl['camr_eg_answerable']['accuracy'])} for 3B), where the question's wording of the name differed from "
+            "the note's." + ret + " Standard RAG has no step at which this decision could be made; that is the "
+            "difference between retrieving text and deciding whether a small model should read it.")
 
 
 # Interpretation of the 200-question study; written once its results are in (results/hotpot200).

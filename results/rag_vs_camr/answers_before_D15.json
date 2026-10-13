@@ -1,0 +1,4386 @@
+{
+  "k": 5,
+  "n": 30,
+  "camr": {
+    "retrieval_policy": "similarity_only",
+    "weights": {
+      "similarity": 1.0,
+      "recency": 0.0,
+      "importance": 0.0
+    },
+    "k": 20,
+    "min_similarity": 0.5,
+    "similarity_margin": 0.15,
+    "expansion": "entity",
+    "token_budget": 512
+  },
+  "models": {
+    "qwen2.5:0.5b": {
+      "summary": {
+        "alone": {
+          "accuracy": 0.06666666666666667,
+          "mean_context_words": 0,
+          "abstain_rate": 1,
+          "declined": 0,
+          "wrong_from_context": 0,
+          "gold_in_context": 0
+        },
+        "rag_answerable": {
+          "accuracy": 0.7,
+          "mean_context_words": 308.8,
+          "abstain_rate": 0,
+          "declined": 0,
+          "wrong_from_context": 0.2,
+          "gold_in_context": 0.9
+        },
+        "camr_answerable": {
+          "accuracy": 0.8,
+          "mean_context_words": 179.36666666666667,
+          "abstain_rate": 0,
+          "declined": 0,
+          "wrong_from_context": 0.16666666666666666,
+          "gold_in_context": 0.9
+        },
+        "rag_missing": {
+          "accuracy": 0.06666666666666667,
+          "mean_context_words": 311.23333333333335,
+          "abstain_rate": 0,
+          "declined": 0,
+          "wrong_from_context": 0.7666666666666667,
+          "gold_in_context": 0.1
+        },
+        "camr_missing": {
+          "accuracy": 0.1,
+          "mean_context_words": 358,
+          "abstain_rate": 0.03333333333333333,
+          "declined": 0,
+          "wrong_from_context": 0.7333333333333333,
+          "gold_in_context": 0.06666666666666667
+        },
+        "camr_eg_answerable": {
+          "accuracy": 0.7666666666666667,
+          "mean_context_words": 177.16666666666666,
+          "abstain_rate": 0.03333333333333333,
+          "declined": 0,
+          "wrong_from_context": 0.16666666666666666,
+          "gold_in_context": 0.8666666666666667
+        },
+        "camr_eg_missing": {
+          "accuracy": 0.1,
+          "mean_context_words": 59.5,
+          "abstain_rate": 0.8,
+          "declined": 0,
+          "wrong_from_context": 0.13333333333333333,
+          "gold_in_context": 0.03333333333333333
+        }
+      },
+      "per_question": {
+        "alone": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "The Loudwater Mystery was directed by John Sturges.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Eye was produced by Jia Ling.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "J.K. Rowling",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Romance",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 0.0,
+            "answer": "Linda Wachowski",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Liu Yifei",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "Pyotr Ilyich Tchaikovsky",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "Lionel Richie",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "John Travolta",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 0.0,
+            "answer": "The director of Hitlerjunge Quex was Fritz Lang.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "Wu Jing.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Science fiction",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Action.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "J.K. Rowling",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 0.0,
+            "answer": "Yellowstone.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "The father of Aonghus mac Somhairle is his mother.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Steven Spielberg",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Wu Yifan",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "The producer of Peck's Bad Girl was John Peck.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 0.0,
+            "answer": "Mark Twain.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "The Future was composed by Igor Stravinsky.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "Martin Scorsese",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 0.0,
+            "answer": "Berlin",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "John Hughes",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 0.0,
+            "answer": "United States",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "The producer of Serial was David Silver.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Pyotr Ilyich Tchaikovsky",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "John Hughes",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ],
+        "rag_answerable": [
+          {
+            "qid": "5939255",
+            "correct": 1.0,
+            "answer": "Walter West",
+            "context_tokens": 296,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 312,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Eye was produced by the Pang brothers.",
+            "context_tokens": 377,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 1.0,
+            "answer": "Bill W.",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1143620",
+            "correct": 1.0,
+            "answer": "Afrobeat",
+            "context_tokens": 306,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1710487",
+            "correct": 0.0,
+            "answer": "Mike Nichols",
+            "context_tokens": 297,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3269271",
+            "correct": 1.0,
+            "answer": "Luis Llosa",
+            "context_tokens": 309,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "Diphan",
+            "context_tokens": 317,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5946121",
+            "correct": 1.0,
+            "answer": "Maurits Binger and B.E. Doxat-Pratt",
+            "context_tokens": 309,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2313465",
+            "correct": 1.0,
+            "answer": "Luc Besson",
+            "context_tokens": 335,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff",
+            "context_tokens": 291,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "313280",
+            "correct": 1.0,
+            "answer": "Mario Monicelli",
+            "context_tokens": 341,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Fahrenheit is a Mandarin studio album.",
+            "context_tokens": 276,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5955120",
+            "correct": 1.0,
+            "answer": "Reality TV",
+            "context_tokens": 348,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5323509",
+            "correct": 1.0,
+            "answer": "Ted Dekker",
+            "context_tokens": 269,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "307727",
+            "correct": 1.0,
+            "answer": "Helena",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Aonghus mac Somhairle's father was the common ancestor of Clann Somhairle.",
+            "context_tokens": 288,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Andr\u00e9 van Heerden",
+            "context_tokens": 323,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Amaram",
+            "context_tokens": 214,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1160778",
+            "correct": 1.0,
+            "answer": "Samuel Goldwyn",
+            "context_tokens": 391,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen",
+            "context_tokens": 239,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4188191",
+            "correct": 1.0,
+            "answer": "Leonard Cohen",
+            "context_tokens": 331,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3077625",
+            "correct": 1.0,
+            "answer": "Ulrich Seidl",
+            "context_tokens": 283,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover",
+            "context_tokens": 348,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 270,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "Les Alexander",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 306,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 1.0,
+            "answer": "Sarah Koenig",
+            "context_tokens": 313,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Deep Purple",
+            "context_tokens": 316,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 1.0,
+            "answer": "Ben Travers",
+            "context_tokens": 313,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          }
+        ],
+        "camr_answerable": [
+          {
+            "qid": "5939255",
+            "correct": 1.0,
+            "answer": "Walter West",
+            "context_tokens": 41,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 37,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Eye (2002 film) was produced by the Pang brothers.",
+            "context_tokens": 377,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 1.0,
+            "answer": "Bill W.",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1143620",
+            "correct": 1.0,
+            "answer": "Afrobeat",
+            "context_tokens": 419,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1710487",
+            "correct": 1.0,
+            "answer": "Buck Henry",
+            "context_tokens": 96,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3269271",
+            "correct": 1.0,
+            "answer": "Luis Llosa",
+            "context_tokens": 133,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "408993",
+            "correct": 1.0,
+            "answer": "Gopi Sundar",
+            "context_tokens": 365,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5946121",
+            "correct": 1.0,
+            "answer": "Maurits Binger and B.E. Doxat-Pratt",
+            "context_tokens": 253,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2313465",
+            "correct": 1.0,
+            "answer": "Luc Besson",
+            "context_tokens": 170,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff",
+            "context_tokens": 42,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "313280",
+            "correct": 1.0,
+            "answer": "Mario Monicelli",
+            "context_tokens": 56,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4087381",
+            "correct": 1.0,
+            "answer": "Mandopop",
+            "context_tokens": 172,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5955120",
+            "correct": 1.0,
+            "answer": "Reality TV",
+            "context_tokens": 384,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "Christian",
+            "context_tokens": 14,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "307727",
+            "correct": 1.0,
+            "answer": "Helena",
+            "context_tokens": 296,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle mac Giolla Brighde",
+            "context_tokens": 235,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Andr\u00e9 van Heerden",
+            "context_tokens": 66,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2502695",
+            "correct": 1.0,
+            "answer": "Ernst Lubitsch",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1160778",
+            "correct": 1.0,
+            "answer": "Samuel Goldwyn",
+            "context_tokens": 66,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen",
+            "context_tokens": 38,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4188191",
+            "correct": 1.0,
+            "answer": "Leonard Cohen",
+            "context_tokens": 400,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3077625",
+            "correct": 1.0,
+            "answer": "Ulrich Seidl",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover",
+            "context_tokens": 211,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "John J. McLaughlin",
+            "context_tokens": 107,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 1.0,
+            "answer": "Sarah Koenig",
+            "context_tokens": 50,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Deep Purple",
+            "context_tokens": 376,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 1.0,
+            "answer": "Ben Travers",
+            "context_tokens": 60,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          }
+        ],
+        "rag_missing": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "Thomas Ricketts",
+            "context_tokens": 342,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 0.0,
+            "answer": "Basketball",
+            "context_tokens": 231,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "Stanley Kubrick",
+            "context_tokens": 376,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "Jon Stewart",
+            "context_tokens": 282,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Dystopian",
+            "context_tokens": 271,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 0.0,
+            "answer": "Stanley Kubrick",
+            "context_tokens": 353,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Luc Besson",
+            "context_tokens": 346,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "Neil Young",
+            "context_tokens": 345,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "Luis Llosa",
+            "context_tokens": 351,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "Olivier Ducastel and Jacques Martineau",
+            "context_tokens": 318,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 0.0,
+            "answer": "The Great Question",
+            "context_tokens": 269,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "Ronan Farrow",
+            "context_tokens": 331,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Dystopian",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Action",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "Jed Mercurio",
+            "context_tokens": 318,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 0.0,
+            "answer": "Montana's capital is Baku.",
+            "context_tokens": 274,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "John Motley Morehead",
+            "context_tokens": 286,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Roland Emmerich",
+            "context_tokens": 332,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Tom Noonan",
+            "context_tokens": 269,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "Alfred Gough",
+            "context_tokens": 351,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 0.0,
+            "answer": "George Orwell",
+            "context_tokens": 281,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "The Future was composed by John Philip Sousa.",
+            "context_tokens": 313,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "Peter Chan",
+            "context_tokens": 255,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 0.0,
+            "answer": "Addis Ababa",
+            "context_tokens": 287,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Major League Soccer (MLS)",
+            "context_tokens": 256,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "The screenwriter for Parker is Patrick Melton.",
+            "context_tokens": 355,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 306,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Adam Bernstein",
+            "context_tokens": 352,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Dmitri Shostakovich",
+            "context_tokens": 325,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "The screenwriter for Second Best Bed was Paul Lalonde.",
+            "context_tokens": 286,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ],
+        "camr_missing": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "Thomas Ricketts",
+            "context_tokens": 404,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "Stanley Kubrick",
+            "context_tokens": 363,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "Jon Stewart",
+            "context_tokens": 419,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Dystopian",
+            "context_tokens": 350,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 0.0,
+            "answer": "Stanley Kubrick",
+            "context_tokens": 353,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Luc Besson",
+            "context_tokens": 421,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "The composer of Hero is John Philip Sousa.",
+            "context_tokens": 401,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "Stanley Kubrick",
+            "context_tokens": 387,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "Olivier Ducastel and Jacques Martineau",
+            "context_tokens": 403,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 0.0,
+            "answer": "Andr\u00e9 van Heerden",
+            "context_tokens": 418,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "Ronan Farrow",
+            "context_tokens": 387,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Dystopian",
+            "context_tokens": 371,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Action",
+            "context_tokens": 410,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "Jed Mercurio",
+            "context_tokens": 382,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 0.0,
+            "answer": "Baku",
+            "context_tokens": 97,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "John Motley Morehead",
+            "context_tokens": 422,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Roland Emmerich",
+            "context_tokens": 390,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Tom Noonan",
+            "context_tokens": 401,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "Alfred Gough",
+            "context_tokens": 414,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 0.0,
+            "answer": "George Orwell",
+            "context_tokens": 400,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "The Future was composed by John Philip Sousa.",
+            "context_tokens": 369,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "Peter Chan",
+            "context_tokens": 367,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 0.0,
+            "answer": "Addis Ababa",
+            "context_tokens": 403,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "The sport that \u00d6stersunds FK plays is soccer (football).",
+            "context_tokens": 380,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "The screenwriter for Parker is Patrick Melton.",
+            "context_tokens": 355,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Adam Bernstein",
+            "context_tokens": 425,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Dmitri Shostakovich",
+            "context_tokens": 384,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "The screenwriter for Second Best Bed was Paul Lalonde.",
+            "context_tokens": 355,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ],
+        "camr_eg_answerable": [
+          {
+            "qid": "5939255",
+            "correct": 1.0,
+            "answer": "Walter West",
+            "context_tokens": 41,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 37,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Eye (2002 film) was produced by the Pang brothers.",
+            "context_tokens": 377,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 1.0,
+            "answer": "Bill W.",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1143620",
+            "correct": 1.0,
+            "answer": "Afrobeat",
+            "context_tokens": 419,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1710487",
+            "correct": 1.0,
+            "answer": "Buck Henry",
+            "context_tokens": 96,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3269271",
+            "correct": 1.0,
+            "answer": "Luis Llosa",
+            "context_tokens": 133,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "408993",
+            "correct": 1.0,
+            "answer": "Gopi Sundar",
+            "context_tokens": 365,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5946121",
+            "correct": 1.0,
+            "answer": "Maurits Binger and B.E. Doxat-Pratt",
+            "context_tokens": 253,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2313465",
+            "correct": 1.0,
+            "answer": "Luc Besson",
+            "context_tokens": 170,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff",
+            "context_tokens": 42,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "313280",
+            "correct": 1.0,
+            "answer": "Mario Monicelli",
+            "context_tokens": 56,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4087381",
+            "correct": 1.0,
+            "answer": "Mandopop",
+            "context_tokens": 172,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5955120",
+            "correct": 1.0,
+            "answer": "Reality TV",
+            "context_tokens": 384,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "Christian",
+            "context_tokens": 14,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "307727",
+            "correct": 1.0,
+            "answer": "Helena",
+            "context_tokens": 296,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle mac Giolla Brighde",
+            "context_tokens": 235,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Andr\u00e9 van Heerden",
+            "context_tokens": 66,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2502695",
+            "correct": 1.0,
+            "answer": "Ernst Lubitsch",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "The producer of Peck's Bad Girl was John Peck.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen",
+            "context_tokens": 38,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4188191",
+            "correct": 1.0,
+            "answer": "Leonard Cohen",
+            "context_tokens": 400,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3077625",
+            "correct": 1.0,
+            "answer": "Ulrich Seidl",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover",
+            "context_tokens": 211,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "John J. McLaughlin",
+            "context_tokens": 107,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 1.0,
+            "answer": "Sarah Koenig",
+            "context_tokens": 50,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Deep Purple",
+            "context_tokens": 376,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 1.0,
+            "answer": "Ben Travers",
+            "context_tokens": 60,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          }
+        ],
+        "camr_eg_missing": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "The Loudwater Mystery was directed by John Sturges.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Eye was produced by Jia Ling.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "J.K. Rowling",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Romance",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 0.0,
+            "answer": "Linda Wachowski",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Liu Yifei",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "Pyotr Ilyich Tchaikovsky",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "Lionel Richie",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "Olivier Ducastel and Jacques Martineau",
+            "context_tokens": 403,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 0.0,
+            "answer": "The director of Hitlerjunge Quex was Fritz Lang.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "Wu Jing.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Science fiction",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Action.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "Jed Mercurio",
+            "context_tokens": 382,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 0.0,
+            "answer": "Baku",
+            "context_tokens": 97,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "The father of Aonghus mac Somhairle is his mother.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Steven Spielberg",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Wu Yifan",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "The producer of Peck's Bad Girl was John Peck.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 0.0,
+            "answer": "Mark Twain.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "The Future was composed by John Philip Sousa.",
+            "context_tokens": 369,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "Martin Scorsese",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 0.0,
+            "answer": "Berlin",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football (soccer)",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "John Hughes",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Adam Bernstein",
+            "context_tokens": 425,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Pyotr Ilyich Tchaikovsky",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "John Hughes",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ]
+      }
+    },
+    "llama3.2:3b": {
+      "summary": {
+        "alone": {
+          "accuracy": 0.23333333333333334,
+          "mean_context_words": 0,
+          "abstain_rate": 1,
+          "declined": 0,
+          "wrong_from_context": 0,
+          "gold_in_context": 0
+        },
+        "rag_answerable": {
+          "accuracy": 0.7333333333333333,
+          "mean_context_words": 308.8,
+          "abstain_rate": 0,
+          "declined": 0,
+          "wrong_from_context": 0.26666666666666666,
+          "gold_in_context": 0.9
+        },
+        "camr_answerable": {
+          "accuracy": 0.7333333333333333,
+          "mean_context_words": 179.36666666666667,
+          "abstain_rate": 0,
+          "declined": 0.03333333333333333,
+          "wrong_from_context": 0.23333333333333334,
+          "gold_in_context": 0.9
+        },
+        "rag_missing": {
+          "accuracy": 0.13333333333333333,
+          "mean_context_words": 311.23333333333335,
+          "abstain_rate": 0,
+          "declined": 0,
+          "wrong_from_context": 0.2,
+          "gold_in_context": 0.1
+        },
+        "camr_missing": {
+          "accuracy": 0.1,
+          "mean_context_words": 358,
+          "abstain_rate": 0.03333333333333333,
+          "declined": 0,
+          "wrong_from_context": 0.16666666666666666,
+          "gold_in_context": 0.06666666666666667
+        },
+        "camr_eg_answerable": {
+          "accuracy": 0.7,
+          "mean_context_words": 177.16666666666666,
+          "abstain_rate": 0.03333333333333333,
+          "declined": 0.03333333333333333,
+          "wrong_from_context": 0.23333333333333334,
+          "gold_in_context": 0.8666666666666667
+        },
+        "camr_eg_missing": {
+          "accuracy": 0.2,
+          "mean_context_words": 59.5,
+          "abstain_rate": 0.8,
+          "declined": 0,
+          "wrong_from_context": 0.06666666666666667,
+          "gold_in_context": 0.03333333333333333
+        }
+      },
+      "per_question": {
+        "alone": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "William Wyler",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 0.0,
+            "answer": "Table Tennis",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "David R. Ellis",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "Alcoholics Anonymous.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Romantic Comedy.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 1.0,
+            "answer": "Buck Henry.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Mark L. Lester.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "Ludwig van Beethoven",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "Matthew Vaughn",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "Olivier Megaton",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "J. Lee Thompson",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Science Fiction.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Western",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "F. Scott Fitzgerald",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 1.0,
+            "answer": "Helena.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Uwe Boll",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Georg Jacoby",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "David Lean",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "Darius Milhaud",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "Michael L. Wilson",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "Barry Keoghan",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Julia Collin Davison",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Elton John",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "Simon Beck",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ],
+        "rag_answerable": [
+          {
+            "qid": "5939255",
+            "correct": 1.0,
+            "answer": "Walter West",
+            "context_tokens": 296,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football",
+            "context_tokens": 312,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Pang brothers.",
+            "context_tokens": 377,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 1.0,
+            "answer": "Bill W. Wilson",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1143620",
+            "correct": 1.0,
+            "answer": "Afrobeat",
+            "context_tokens": 306,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1710487",
+            "correct": 1.0,
+            "answer": "Buck Henry and Calder Willingham",
+            "context_tokens": 297,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3269271",
+            "correct": 1.0,
+            "answer": "Luis Llosa",
+            "context_tokens": 309,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "408993",
+            "correct": 1.0,
+            "answer": "Gopi Sundar",
+            "context_tokens": 317,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5946121",
+            "correct": 1.0,
+            "answer": "Maurits Binger and B.E. Doxat-Pratt",
+            "context_tokens": 309,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2313465",
+            "correct": 1.0,
+            "answer": "Luc Besson",
+            "context_tokens": 335,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff",
+            "context_tokens": 291,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "313280",
+            "correct": 1.0,
+            "answer": "Mario Monicelli.",
+            "context_tokens": 341,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4087381",
+            "correct": 1.0,
+            "answer": "Mandopop",
+            "context_tokens": 276,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Reality",
+            "context_tokens": 348,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5323509",
+            "correct": 1.0,
+            "answer": "Ted Dekker.",
+            "context_tokens": 269,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "307727",
+            "correct": 1.0,
+            "answer": "Helena.",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle mac Giolla Brighde",
+            "context_tokens": 288,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Andr\u00e9 van Heerden.",
+            "context_tokens": 323,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Friedrich Freksa",
+            "context_tokens": 214,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1160778",
+            "correct": 1.0,
+            "answer": "Samuel Goldwyn",
+            "context_tokens": 391,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen.",
+            "context_tokens": 239,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4188191",
+            "correct": 1.0,
+            "answer": "Leonard Cohen",
+            "context_tokens": 331,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3077625",
+            "correct": 1.0,
+            "answer": "Ulrich Seidl",
+            "context_tokens": 283,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover.",
+            "context_tokens": 348,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football",
+            "context_tokens": 270,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "John J. McLaughlin",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 306,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Julie Snyder",
+            "context_tokens": 313,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Deep Purple.",
+            "context_tokens": 316,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 1.0,
+            "answer": "Ben Travers",
+            "context_tokens": 313,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          }
+        ],
+        "camr_answerable": [
+          {
+            "qid": "5939255",
+            "correct": 1.0,
+            "answer": "Walter West.",
+            "context_tokens": 41,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football.",
+            "context_tokens": 37,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Pang brothers.",
+            "context_tokens": 377,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 1.0,
+            "answer": "Bill W. Wilson",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1143620",
+            "correct": 1.0,
+            "answer": "Afrobeat",
+            "context_tokens": 419,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1710487",
+            "correct": 1.0,
+            "answer": "Buck Henry and Calder Willingham",
+            "context_tokens": 96,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3269271",
+            "correct": 1.0,
+            "answer": "Luis Llosa.",
+            "context_tokens": 133,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "408993",
+            "correct": 1.0,
+            "answer": "Gopi Sundar",
+            "context_tokens": 365,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5946121",
+            "correct": 1.0,
+            "answer": "Maurits Binger and B.E. Doxat-Pratt",
+            "context_tokens": 253,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2313465",
+            "correct": 1.0,
+            "answer": "Luc Besson.",
+            "context_tokens": 170,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff.",
+            "context_tokens": 42,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "313280",
+            "correct": 1.0,
+            "answer": "Mario Monicelli.",
+            "context_tokens": 56,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4087381",
+            "correct": 1.0,
+            "answer": "Mandopop",
+            "context_tokens": 172,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Reality",
+            "context_tokens": 384,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5323509",
+            "correct": 1.0,
+            "answer": "Ted Dekker.",
+            "context_tokens": 14,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "307727",
+            "correct": 1.0,
+            "answer": "Helena.",
+            "context_tokens": 296,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle mac Giolla Brighde",
+            "context_tokens": 235,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Andr\u00e9 van Heerden.",
+            "context_tokens": 66,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Unknown",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": true,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1160778",
+            "correct": 1.0,
+            "answer": "Samuel Goldwyn.",
+            "context_tokens": 66,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen.",
+            "context_tokens": 38,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4188191",
+            "correct": 1.0,
+            "answer": "Leonard Cohen",
+            "context_tokens": 400,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3077625",
+            "correct": 1.0,
+            "answer": "Ulrich Seidl",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover.",
+            "context_tokens": 211,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football.",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "John J. McLaughlin",
+            "context_tokens": 107,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain.",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Julie Snyder",
+            "context_tokens": 50,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Deep Purple.",
+            "context_tokens": 376,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 1.0,
+            "answer": "Ben Travers.",
+            "context_tokens": 60,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          }
+        ],
+        "rag_missing": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "No information available.",
+            "context_tokens": 342,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 0.0,
+            "answer": "I couldn't find any information on a person named David Homol\u00e1\u010d.",
+            "context_tokens": 231,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "There is no information on The Eye in the provided notes.",
+            "context_tokens": 376,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "Jon Stewart",
+            "context_tokens": 282,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Not mentioned.",
+            "context_tokens": 271,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 0.0,
+            "answer": "William Rose.",
+            "context_tokens": 353,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Sam Raimi",
+            "context_tokens": 346,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "David Raksin",
+            "context_tokens": 345,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "There is no information on \"The Other Person\" in the provided notes.",
+            "context_tokens": 351,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "Olivier Ducastel and Jacques Martineau",
+            "context_tokens": 318,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 0.0,
+            "answer": "I couldn't find any information on a film called \"Hitlerjunge Quex\".",
+            "context_tokens": 269,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "I couldn't find any information on a film called \"The Organizer\".",
+            "context_tokens": 331,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Dystopian",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "There is no information about \"The Shot\".",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "Jed Mercurio",
+            "context_tokens": 318,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 0.0,
+            "answer": "Baku",
+            "context_tokens": 274,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle",
+            "context_tokens": 286,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "There is no information on \"Apocalypse II: Revelation\".",
+            "context_tokens": 332,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "No information available.",
+            "context_tokens": 269,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "Not mentioned.",
+            "context_tokens": 351,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen",
+            "context_tokens": 281,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "There is no information on \"The Future\" in the provided notes.",
+            "context_tokens": 313,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "I couldn't find any information on a film called \"Paradise: Hope\".",
+            "context_tokens": 255,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover.",
+            "context_tokens": 287,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football.",
+            "context_tokens": 256,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "No information provided.",
+            "context_tokens": 355,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain",
+            "context_tokens": 306,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Yoshinobu Nishizaki",
+            "context_tokens": 352,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "No information found.",
+            "context_tokens": 325,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "I couldn't find any information on a film called \"Second Best Bed\".",
+            "context_tokens": 286,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ],
+        "camr_missing": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "No information found.",
+            "context_tokens": 404,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 0.0,
+            "answer": "Table Tennis",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "Not mentioned.",
+            "context_tokens": 363,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "Jon Stewart",
+            "context_tokens": 419,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Not mentioned.",
+            "context_tokens": 350,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 0.0,
+            "answer": "William Rose.",
+            "context_tokens": 353,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Sam Raimi",
+            "context_tokens": 421,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "John Philip Sousa",
+            "context_tokens": 401,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "There is no information on \"The Other Person\" in the provided notes.",
+            "context_tokens": 387,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "Olivier Ducastel and Jacques Martineau",
+            "context_tokens": 403,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 0.0,
+            "answer": "No information found.",
+            "context_tokens": 418,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "I couldn't find any information on a film called \"The Organizer\".",
+            "context_tokens": 387,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Dystopian",
+            "context_tokens": 371,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "There is no information on \"The Shot\".",
+            "context_tokens": 410,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "No information available.",
+            "context_tokens": 382,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 0.0,
+            "answer": "Baku",
+            "context_tokens": 97,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle",
+            "context_tokens": 422,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "There is no information on \"Apocalypse II: Revelation\".",
+            "context_tokens": 390,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "No information found.",
+            "context_tokens": 401,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "Not found.",
+            "context_tokens": 414,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen",
+            "context_tokens": 400,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "There is no information about \"The Future\" in the provided notes.",
+            "context_tokens": 369,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "No information found.",
+            "context_tokens": 367,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover.",
+            "context_tokens": 403,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 0.0,
+            "answer": "No information available.",
+            "context_tokens": 380,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "No information provided.",
+            "context_tokens": 355,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain.",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Not mentioned.",
+            "context_tokens": 425,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "No information found.",
+            "context_tokens": 384,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "No information available.",
+            "context_tokens": 355,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ],
+        "camr_eg_answerable": [
+          {
+            "qid": "5939255",
+            "correct": 1.0,
+            "answer": "Walter West.",
+            "context_tokens": 41,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1611841",
+            "correct": 1.0,
+            "answer": "Football.",
+            "context_tokens": 37,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "The Pang brothers.",
+            "context_tokens": 377,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 1.0,
+            "answer": "Bill W. Wilson",
+            "context_tokens": 338,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1143620",
+            "correct": 1.0,
+            "answer": "Afrobeat",
+            "context_tokens": 419,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1710487",
+            "correct": 1.0,
+            "answer": "Buck Henry and Calder Willingham",
+            "context_tokens": 96,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3269271",
+            "correct": 1.0,
+            "answer": "Luis Llosa.",
+            "context_tokens": 133,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "408993",
+            "correct": 1.0,
+            "answer": "Gopi Sundar",
+            "context_tokens": 365,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5946121",
+            "correct": 1.0,
+            "answer": "Maurits Binger and B.E. Doxat-Pratt",
+            "context_tokens": 253,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2313465",
+            "correct": 1.0,
+            "answer": "Luc Besson.",
+            "context_tokens": 170,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff.",
+            "context_tokens": 42,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "313280",
+            "correct": 1.0,
+            "answer": "Mario Monicelli.",
+            "context_tokens": 56,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4087381",
+            "correct": 1.0,
+            "answer": "Mandopop",
+            "context_tokens": 172,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Reality",
+            "context_tokens": 384,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "5323509",
+            "correct": 1.0,
+            "answer": "Ted Dekker.",
+            "context_tokens": 14,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "307727",
+            "correct": 1.0,
+            "answer": "Helena.",
+            "context_tokens": 296,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle mac Giolla Brighde",
+            "context_tokens": 235,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Andr\u00e9 van Heerden.",
+            "context_tokens": 66,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Unknown",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": true,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "David Lean",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen.",
+            "context_tokens": 38,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "4188191",
+            "correct": 1.0,
+            "answer": "Leonard Cohen",
+            "context_tokens": 400,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "3077625",
+            "correct": 1.0,
+            "answer": "Ulrich Seidl",
+            "context_tokens": 304,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover.",
+            "context_tokens": 211,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football.",
+            "context_tokens": 83,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "John J. McLaughlin",
+            "context_tokens": 107,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain.",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Julie Snyder",
+            "context_tokens": 50,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": true
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Deep Purple.",
+            "context_tokens": 376,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 1.0,
+            "answer": "Ben Travers.",
+            "context_tokens": 60,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          }
+        ],
+        "camr_eg_missing": [
+          {
+            "qid": "5939255",
+            "correct": 0.0,
+            "answer": "William Wyler",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1611841",
+            "correct": 0.0,
+            "answer": "Table Tennis",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5075070",
+            "correct": 0.0,
+            "answer": "David R. Ellis",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "6357938",
+            "correct": 0.0,
+            "answer": "Alcoholics Anonymous.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1143620",
+            "correct": 0.0,
+            "answer": "Romantic Comedy.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1710487",
+            "correct": 1.0,
+            "answer": "Buck Henry.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3269271",
+            "correct": 0.0,
+            "answer": "Mark L. Lester.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "408993",
+            "correct": 0.0,
+            "answer": "Ludwig van Beethoven",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5946121",
+            "correct": 0.0,
+            "answer": "Matthew Vaughn",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2313465",
+            "correct": 0.0,
+            "answer": "Olivier Ducastel and Jacques Martineau",
+            "context_tokens": 403,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2964963",
+            "correct": 1.0,
+            "answer": "Hans Steinhoff",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "313280",
+            "correct": 0.0,
+            "answer": "J. Lee Thompson",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4087381",
+            "correct": 0.0,
+            "answer": "Science Fiction.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5955120",
+            "correct": 0.0,
+            "answer": "Western",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5323509",
+            "correct": 0.0,
+            "answer": "No information available.",
+            "context_tokens": 382,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "307727",
+            "correct": 0.0,
+            "answer": "Baku",
+            "context_tokens": 97,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": true,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1281188",
+            "correct": 0.0,
+            "answer": "Somhairle.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3362484",
+            "correct": 0.0,
+            "answer": "Uwe Boll",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2502695",
+            "correct": 0.0,
+            "answer": "Georg Jacoby",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1160778",
+            "correct": 0.0,
+            "answer": "David Lean",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2533106",
+            "correct": 1.0,
+            "answer": "Jane Austen.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "4188191",
+            "correct": 0.0,
+            "answer": "There is no information about \"The Future\" in the provided notes.",
+            "context_tokens": 369,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "3077625",
+            "correct": 0.0,
+            "answer": "Michael L. Wilson",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "1003808",
+            "correct": 1.0,
+            "answer": "Hanover.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2317572",
+            "correct": 1.0,
+            "answer": "Football.",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "2897558",
+            "correct": 0.0,
+            "answer": "Barry Keoghan",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "755565",
+            "correct": 1.0,
+            "answer": "Spain.",
+            "context_tokens": 109,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": true
+          },
+          {
+            "qid": "1376294",
+            "correct": 0.0,
+            "answer": "Not mentioned.",
+            "context_tokens": 425,
+            "abstained": false,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "16598",
+            "correct": 0.0,
+            "answer": "Elton John",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          },
+          {
+            "qid": "5714098",
+            "correct": 0.0,
+            "answer": "Simon Beck",
+            "context_tokens": 0,
+            "abstained": true,
+            "declined": false,
+            "wrong_from_context": false,
+            "gold_in_context": false
+          }
+        ]
+      }
+    }
+  },
+  "split": "test",
+  "camr_entity_gate": {
+    "retrieval_policy": "similarity_only",
+    "weights": {
+      "similarity": 1.0,
+      "recency": 0.0,
+      "importance": 0.0
+    },
+    "k": 20,
+    "min_similarity": 0.5,
+    "similarity_margin": 0.15,
+    "expansion": "entity",
+    "token_budget": 512,
+    "entity_gate": true
+  }
+}

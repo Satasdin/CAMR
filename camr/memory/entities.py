@@ -25,7 +25,10 @@ _QUOTED = re.compile(r"[\"“”']([^\"“”']{3,})[\"“”']")
 
 
 def norm(text: str) -> str:
+    """Lower case, possessives removed ("Peck's" -> "peck"), punctuation to spaces. The same normalisation is
+    applied to the question and to the notes, so a name matches however it is punctuated (defect D-15)."""
     text = unicodedata.normalize("NFKC", text).lower()
+    text = re.sub(r"['’]s\b", "", text)
     return " ".join(re.findall(r"\w+", text, re.UNICODE))
 
 
