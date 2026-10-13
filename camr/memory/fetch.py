@@ -160,7 +160,10 @@ class WebLookup:
                  lang: str = "en", min_interval_s: float = 1.0, timeout: float = 10.0, offline: bool = False,
                  patient_s: float = 0.0, rank=None, user_agent: str = USER_AGENT):
         self.http = session or requests.Session()
-        self.http.headers.setdefault("User-Agent", user_agent)
+        # Wikimedia requires a descriptive User-Agent and throttles generic ones; a Session's default
+        # ("python-requests/x") must be replaced, not kept (defect D-21: setdefault never replaced it)
+        if not str(self.http.headers.get("User-Agent", "")).startswith("CAMR"):
+            self.http.headers["User-Agent"] = user_agent
         self.cache = _Cache(Path(cache_path) if cache_path else None)
         self.wiki = WIKI.format(lang=lang)
         self.min_interval_s = min_interval_s
@@ -178,7 +181,9 @@ class WebLookup:
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------ HTTP
-    def _get(self, url: str, params: dict | None, res: Lookup) -> tuple[int, dict | None]:
+    def _get(self, url: str, params: dict | None, res: Lookup, parse=None) -> tuple[int, dict | None]:
+        """GET with cache, politeness and rate-limit handling. ``parse(text) -> dict`` replaces JSON decoding (and
+        what is cached is its result, e.g. the lead of an HTML page rather than the page)."""
         key = url + ("?" + urllib.parse.urlencode(sorted(params.items())) if params else "")
         hit = self.cache.get(key)
         if hit is not None:
@@ -223,7 +228,7 @@ class WebLookup:
             self._backoff.pop(host, None)
             break
         try:
-            body = r.json()
+            body = parse(r.text) if parse else r.json()
         except ValueError:
             body = None
         if r.status_code in (200, 202, 404) and body is not None:
@@ -239,6 +244,16 @@ class WebLookup:
         status, body = self._get(f"{self.wiki}/api/rest_v1/page/summary/{t}", None, res)
         if status != 200 or not body or body.get("type") != "standard" or not body.get("extract"):
             return None
+        return body
+
+    def page_lead(self, title: str, res: Lookup) -> dict | None:
+        """The lead paragraphs of a Wikipedia article read from its ordinary page (used when the API is rate
+        limited). Only the extracted lead is cached; disambiguation pages give None."""
+        t = urllib.parse.quote(title.strip().replace(" ", "_"), safe="()',")
+        status, body = self._get(f"{self.wiki}/wiki/{t}", None, res, parse=_lead_from_html)
+        if status != 200 or not body or not body.get("extract"):
+            return None
+        body.setdefault("url", f"{self.wiki}/wiki/{t}")
         return body
 
     def duckduckgo(self, query: str, res: Lookup) -> dict | None:
@@ -272,6 +287,10 @@ class WebLookup:
             title = s.get("title", name)
             return WebPage(title=title, url=_page_url(s, self.wiki, title), text=" ".join(s["extract"].split()),
                            source="wikipedia", query=name), []
+        lead = self.page_lead(name[:1].upper() + name[1:], res) if not (ddg and ddg.get("Type") == "D") else None
+        if lead:
+            return WebPage(title=lead.get("title", name), url=lead["url"], text=lead["extract"], source="wikipedia",
+                           query=name), []
         return None, []
 
     # ------------------------------------------------------------ lookup
@@ -349,10 +368,11 @@ class WebLookup:
             for _, (t, _) in ranked[:3]:
                 fetch(t)
             if norm(topic) not in {norm(c.title) for c in candidates}:  # the name itself, from Wikipedia
-                s_ = self.summary(topic[:1].upper() + topic[1:], res)
+                s_ = self.summary(topic[:1].upper() + topic[1:], res) or self.page_lead(topic[:1].upper() + topic[1:],
+                                                                                           res)
                 if s_:
-                    candidates.insert(0, WebPage(title=s_.get("title", topic), url=_page_url(s_, self.wiki, topic),
-                                                 text=" ".join(s_["extract"].split()), source="wikipedia", query=topic))
+                    candidates.insert(0, WebPage(title=s_.get("title", topic), url=s_.get("url") or _page_url(
+                        s_, self.wiki, topic), text=" ".join(s_["extract"].split()), source="wikipedia", query=topic))
         ddg = self.duckduckgo(topic, res)
         for t in _flatten((ddg or {}).get("RelatedTopics") or [])[:limit]:
             url = t.get("FirstURL") or ""
@@ -405,6 +425,33 @@ def embedding_rank(embedder):
         return (d @ q).tolist()
 
     return rank
+
+
+_P = re.compile(r"<p[^>]*>(.*?)</p>", re.S)
+_TAG = re.compile(r"<[^>]+>")
+_REF = re.compile(r"\[(?:\d+|[a-z]|note \d+|citation needed)\]")
+
+
+def _lead_from_html(html: str, max_chars: int = 1200) -> dict:
+    """Title and lead paragraphs of a Wikipedia article page; {} for a disambiguation page."""
+    import html as _html
+
+    title = re.search(r"<title>(.*?) - Wikipedia</title>", html)
+    body = html.split('id="mw-content-text"', 1)[-1]
+    body = re.split(r'<div class="mw-heading|<h2', body, maxsplit=1)[0]  # the lead ends at the first section
+    if 'id="disambigbox"' in html or "may refer to:" in body[:3000]:
+        return {}
+    body = re.sub(r"<(table|style|sup|figure)\b.*?</\1>", " ", body, flags=re.S)
+    paras = []
+    for m in _P.finditer(body):
+        t = _REF.sub("", _html.unescape(_TAG.sub("", m.group(1))))
+        t = " ".join(t.split())
+        if len(t) > 60:
+            paras.append(t)
+        if sum(len(p) for p in paras) > max_chars:
+            break
+    text = " ".join(paras)[:max_chars]
+    return {"title": _html.unescape(title.group(1)) if title else "", "extract": text} if text else {}
 
 
 def _flatten(topics: list[dict]) -> list[dict]:

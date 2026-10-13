@@ -280,3 +280,22 @@ def test_harvest_keeps_pages_about_the_topic_and_drops_the_rest():
     r = WebLookup(FakeWeb(ddg), min_interval_s=0).topic_pages("Solar System", limit=10)
     titles = [p.title for p in r.pages]
     assert "Solar System" in titles and "Jupiter" in titles and "Leonor Watling" not in titles
+
+
+def test_lookups_identify_themselves_to_wikimedia():
+    import requests
+
+    w = WebLookup(requests.Session())
+    assert w.http.headers["User-Agent"].startswith("CAMR/") and "github.com" in w.http.headers["User-Agent"]
+
+
+def test_the_lead_of_an_article_page_is_extracted_and_disambiguation_skipped():
+    from camr.memory.fetch import _lead_from_html
+
+    page = ('<title>Kenya - Wikipedia</title><div id="mw-content-text"><table><p>infobox</p></table>'
+            '<p><b>Kenya</b>, officially the Republic of Kenya, is a country in East Africa.[1] Its capital is '
+            'Nairobi.</p><div class="mw-heading"><h2>History</h2></div><p>Later text.</p></div>')
+    lead = _lead_from_html(page)
+    assert lead["title"] == "Kenya" and "Nairobi" in lead["extract"] and "[1]" not in lead["extract"]
+    assert "Later" not in lead["extract"] and "infobox" not in lead["extract"]
+    assert _lead_from_html('<div id="mw-content-text"><p>Kenya may refer to:</p></div>') == {}
