@@ -45,7 +45,7 @@ That was an extension, not a change. The 1–3B models were all tested. The smal
 ## B. Is this "just RAG"?
 
 **B1. How is CAMR different from retrieval-augmented generation?**
-*Short answer for the viva:* its retrieval core is RAG; the difference is every decision around it, and it was measured head to head against a textbook top-k RAG using the same embedder, store and prompt (F17). On 2WikiMultiHopQA, CAMR got both needed paragraphs into the context for 78.4% of questions with 439 tokens. Top-10 RAG managed 39.2% with 767 tokens. On HotpotQA the two were about equal (70.8% vs 68.2%), and I say so.
+*Short answer for the viva:* its retrieval core is RAG; the difference is every decision around it, and it was measured head to head against a textbook top-k RAG using the same embedder, store and prompt (F17). On 2WikiMultiHopQA, CAMR got both needed paragraphs into the context for 78.4% of questions with 439 tokens. Top-10 RAG managed 39.2% with 767 tokens. On HotpotQA the two were about equal (70.8% vs 68.2%), and I say so. At the answer level, CAMR matched or beat RAG with about 40% less text when the answer was stored (0.5B: 80.0% vs 70.0%).
 
 *Longer answer:*
 The retrieval core is RAG, and that is deliberate: the study measures how far memory can substitute for model size. CAMR differs in four measured ways:
@@ -242,3 +242,15 @@ llama3.2:3b in the released app, with and without memory, on five realistic conv
 - a taught document.
 
 The first run exposed two defects. The model refused general questions such as 17 × 23 (D-13, caused by the prompt), and every chat question was stored as a "memory" (D-14). Both were fixed and the scenarios re-run. Showing that test → defect → fix → retest loop is the point of the section.
+
+**I6. What happens when the answer is not in memory at all? Doesn't CAMR then behave just like RAG?**
+It did, at first, and that was a real finding. With each question's own document removed, the similarity gate abstained on only 0–3% of questions, because the store still held notes about *similar* films and people. The 0.5B model copied a wrong name from those notes 73% of the time, almost as often as with RAG (77%). The irrelevant notes even pushed the 3B model below its closed-book score.
+
+The fix is an **entity-anchored gate**: if the question names something and no candidate note mentions it, abstain. I designed it after seeing the test failures, so I judged it first on 60 validation questions that played no part in its design:
+- **When the answer is stored:** no cost.
+- **When it is missing:** it abstained ~80% of the time, and copied wrong answers fell to 13–15% (0.5B) and 7% (3B).
+- **On the held-out test:** the results held.
+- **On multi-hop retrieval:** it costs 1.2 points on HotpotQA and nothing on 2Wiki.
+
+Its first run also exposed defect D-15 (possessives such as *Peck's* were normalised differently in the question and in the note). That was fixed and re-run. Standard RAG has no step where this decision could be made, which is the clearest single difference between retrieving text and deciding whether a small model should read it.
+
