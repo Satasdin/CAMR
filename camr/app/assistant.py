@@ -9,10 +9,16 @@ This is the deployment scenario of the study, packaged for real use:
   the best read path measured in docs/FINDINGS.md), so knowledge grows with
   *storage*, not with the context window or with compute;
 * the conversation itself becomes memory, so a chat can run far past the
-  model's context window and still recall what was said weeks ago.
+  model's context window and still recall what was said weeks ago;
+* when memory has nothing for a general question, it looks the subject up on the
+  web (if the user allows it), learns the page, and answers from it: it learns
+  instead of saying "I don't know" (``camr.memory.eager``). Questions about the
+  user's own life are never sent anywhere; for those it asks to be taught;
+* knowledge packs install ready-made memory, and sleep consolidates memory while
+  the app is idle (``camr.memory.packs``, ``camr.memory.sleep``).
 
-Nothing leaves the machine.  Feedback is stored locally and only exported when
-the user chooses to (``export_feedback``).
+Only lookups leave the machine, and only the subject of a general question is
+sent. Feedback is stored locally and only exported when the user chooses to.
 
 The class is UI-agnostic; ``camr/app/server.py`` serves the web front end.
 """
@@ -21,6 +27,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
 import threading
 import time
@@ -31,9 +38,14 @@ from typing import Iterator
 import requests
 
 from camr.config import Config, LocalModelConfig
+from camr.memory import packs as packs_mod
+from camr.memory.adapter import QueryAdapter
+from camr.memory.eager import learn_pages
 from camr.memory.embedder import Embedder, OllamaEmbedder
 from camr.memory.engine import MemoryEngine
+from camr.memory.fetch import WebLookup, embedding_rank, is_personal
 from camr.memory.note import Document
+from camr.memory.sleep import sleep as run_sleep
 from camr.memory.store import SQLiteVectorStore
 from camr.models.runner import OllamaRunner
 from camr.models.tokenizer import RegexTokenizer
@@ -53,7 +65,10 @@ KINDS = {
     "file": "your file",
     "chat": "something you said",
     "learned": "an answer you approved",
+    "web": "looked up online",
+    "pack": "from a knowledge pack",
 }
+BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
 
 APP_SCHEMA = """
 CREATE TABLE IF NOT EXISTS app_conversation (
@@ -61,6 +76,20 @@ CREATE TABLE IF NOT EXISTS app_conversation (
     title           TEXT NOT NULL,
     created_at      TIMESTAMP NOT NULL,
     updated_at      TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS app_sleep (
+    sleep_id    INTEGER PRIMARY KEY,
+    at          TIMESTAMP NOT NULL,
+    report_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS app_lookup (
+    lookup_id  INTEGER PRIMARY KEY,
+    at         TIMESTAMP NOT NULL,
+    question   TEXT NOT NULL,
+    queries    TEXT NOT NULL,
+    pages_json TEXT NOT NULL,
+    notes_added INTEGER NOT NULL,
+    ms         REAL
 );
 CREATE TABLE IF NOT EXISTS app_turn (
     turn_id        INTEGER PRIMARY KEY,
@@ -80,7 +109,8 @@ CREATE TABLE IF NOT EXISTS app_turn (
 );
 """
 
-# Chosen on a development set and confirmed on two held-out sets (scripts/prompt_eval.py, D-13 and D-16).
+# Prompt E: prompt D (chosen on a development set and confirmed on two held-out sets, D-13 and D-16) with rule 3
+# asking to be taught instead of only saying "I don't know"; scored on the same sets (scripts/prompt_eval.py).
 CHAT_PROMPT = """You are a private personal assistant running on the user's own computer.
 
 The notes below come from the user's personal memory and are about the user. "The user said …" means the user told you this earlier; "I" inside it is the user. Treat what the notes say about the user as true and answer from them directly.
@@ -88,7 +118,7 @@ The notes below come from the user's personal memory and are about the user. "Th
 How to answer:
 1. If the notes contain the answer, give it from the notes.
 2. If it is a general-knowledge question (facts, maths, definitions), answer it from your own knowledge.
-3. Only if it asks about the user's own life and the notes do not say, reply that you don't know; never invent personal details.
+3. Only if it asks about the user's own life and the notes do not say, say that you don't know that yet and ask the user to tell you, so you can remember it; never invent personal details.
 Answer concisely.
 
 ### Notes from memory
@@ -128,6 +158,7 @@ class Source:
     text: str
     similarity: float
     via_bridge: bool = False
+    url: str = ""
 
 
 @dataclass
@@ -145,6 +176,8 @@ class Turn:
     saved_to_memory: bool = False
     conversation_id: int | None = None
     feedback: int | None = None
+    learned: dict | None = None  # what a web lookup added for this answer (queries, pages, notes)
+    ask_to_teach: bool = False   # a personal question memory cannot answer: the UI offers "Teach me"
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -193,7 +226,7 @@ class Assistant:
     def __init__(self, home: str | Path = DEFAULT_HOME, *, model: str | None = None, host: str = DEFAULT_HOST,
                  token_budget: int = 384, history_turns: int = 6, remember_chat: bool = True,
                  min_similarity: float | None = None, embedder: Embedder | None = None,
-                 session: requests.Session | None = None):
+                 session: requests.Session | None = None, web_lookup: WebLookup | None = None):
         self.home = Path(home).expanduser()
         self.home.mkdir(parents=True, exist_ok=True)
         self.settings_path = self.home / "settings.json"
@@ -204,8 +237,11 @@ class Assistant:
         self.history_turns = int(saved.get("history_turns", history_turns))
         self.remember_chat = bool(saved.get("remember_chat", remember_chat))
         self.embed_model = saved.get("embed_model", DEFAULT_EMBED_MODEL)
+        self.learn_online = bool(saved.get("learn_online", True))
+        self.sleep_when_idle = bool(saved.get("sleep_when_idle", True))
         self._http = session or requests.Session()
         self._lock = threading.RLock()
+        self.jobs: dict[str, dict] = {}  # background work shown in the Learning panel (harvest, sleep)
 
         self.embedder = embedder or OllamaEmbedder(self.embed_model, host=host, session=self._http)
         if min_similarity is None:
@@ -226,11 +262,23 @@ class Assistant:
                                        check_same_thread=False)
         self.store.conn.executescript(APP_SCHEMA)
         cols = {r[1] for r in self.store.conn.execute("PRAGMA table_info(app_turn)")}
-        for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT")):
+        for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT"), ("learned_json", "TEXT"),
+                         ("ask_to_teach", "INTEGER")):
             if col not in cols:  # stores created by the first app version
                 self.store.conn.execute(f"ALTER TABLE app_turn ADD COLUMN {col} {typ}")
         self.engine = MemoryEngine.from_config(self.cfg, store=self.store, embedder=self.embedder,
                                                tokenizer=RegexTokenizer())
+        self.adapter_path = self.store.path.with_suffix(".adapter.npz")
+        if self.adapter_path.exists():
+            try:
+                self.engine.query_adapter = QueryAdapter.load(self.adapter_path)
+            except (OSError, ValueError, KeyError):
+                self.engine.query_adapter = None
+        # CAMR_OFFLINE_WEB=1 (the test suite) answers lookups from the local cache only
+        self.lookup = web_lookup or WebLookup(cache_path=self.home / "web_cache.sqlite", rank=embedding_rank(self.embedder),
+                                              offline=os.environ.get("CAMR_OFFLINE_WEB") == "1")
+        self.last_activity = time.time()
+        self.packs_dir = self.home / "packs"
 
     # ------------------------------------------------------------ settings
     def _load_settings(self) -> dict:
@@ -242,6 +290,7 @@ class Assistant:
     def settings(self) -> dict:
         return {"model": self.model, "token_budget": self.token_budget, "history_turns": self.history_turns,
                 "remember_chat": self.remember_chat, "embed_model": self.embed_model,
+                "learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle,
                 "min_similarity": self.engine.min_similarity}
 
     def warm(self, keep_alive: str = "30m") -> bool:
@@ -262,7 +311,7 @@ class Assistant:
             return False
 
     def save_settings(self, **changes) -> None:
-        allowed = {"model", "token_budget", "history_turns", "remember_chat"}
+        allowed = {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "sleep_when_idle"}
         for k, v in changes.items():
             if k in allowed:
                 setattr(self, k, v)
@@ -333,11 +382,12 @@ class Assistant:
     def transcript(self, conversation_id: int) -> list[dict]:
         rows = self.store.conn.execute(
             "SELECT turn_id, question, answer, notes_used, abstained, grounded, retrieval_ms, generation_ms,"
-            " prompt_tokens, feedback, sources_json FROM app_turn WHERE conversation_id=? ORDER BY turn_id",
-            (conversation_id,)).fetchall()
+            " prompt_tokens, feedback, sources_json, learned_json, ask_to_teach FROM app_turn WHERE conversation_id=?"
+            " ORDER BY turn_id", (conversation_id,)).fetchall()
         return [Turn(turn_id=r[0], question=r[1], answer=r[2], abstained=bool(r[4]), grounded=r[5],
                      retrieval_ms=r[6] or 0.0, generation_ms=r[7] or 0.0, prompt_tokens=r[8], feedback=r[9],
-                     conversation_id=conversation_id,
+                     conversation_id=conversation_id, learned=json.loads(r[11]) if r[11] else None,
+                     ask_to_teach=bool(r[12]),
                      sources=[Source(**s) for s in json.loads(r[10] or "[]")]).as_dict() for r in rows]
 
     # ------------------------------------------------------------ asking
@@ -358,11 +408,15 @@ class Assistant:
         ids = [c.note.source_id for c in admitted]
         meta = {}
         if ids:
-            q = f"SELECT source_id, dataset, title FROM source WHERE source_id IN ({','.join('?' * len(ids))})"
-            meta = {r[0]: (r[1], r[2] or "") for r in self.store.conn.execute(q, ids)}
-        return [Source(note_id=c.note.note_id, kind=meta.get(c.note.source_id, ("note", ""))[0],
-                       title=meta.get(c.note.source_id, ("", ""))[1], text=c.note.text,
-                       similarity=round(c.similarity, 3), via_bridge=c.via is not None) for c in admitted]
+            q = f"SELECT source_id, dataset, title, doc_id FROM source WHERE source_id IN ({','.join('?' * len(ids))})"
+            meta = {r[0]: (r[1], r[2] or "", r[3] or "") for r in self.store.conn.execute(q, ids)}
+        out = []
+        for c in admitted:
+            kind, title, doc = meta.get(c.note.source_id, ("note", "", ""))
+            out.append(Source(note_id=c.note.note_id, kind="pack" if kind.startswith("pack:") else kind, title=title,
+                              text=c.note.text, similarity=round(c.similarity, 3), via_bridge=c.via is not None,
+                              url=doc if doc.startswith("http") else ""))
+        return out
 
     def _runner(self) -> OllamaRunner:
         return OllamaRunner(LocalModelConfig(name=self.model, host=self.host, max_tokens=768, num_ctx=4096),
@@ -411,9 +465,24 @@ class Assistant:
 
         with self._lock:
             recall = self.engine.recall(question)
+        learned = None
+        personal = is_personal(question)
+        if recall.abstained and self.learn_online and not personal:
+            # Eager learning: memory has nothing, so look the subject up, learn it, and recall again.
+            yield {"type": "lookup", "conversation_id": conversation_id}
+            found = self.lookup.lookup(question)
+            added = 0
+            if found.pages:
+                with self._lock:
+                    added = learn_pages(self.engine, found.pages)
+                    recall = self.engine.recall(question)
+            learned = {"queries": found.queries, "notes_added": added, "ms": round(found.ms, 1),
+                       "pages": [{"title": p.title, "url": p.url, "source": p.source} for p in found.pages],
+                       "errors": found.errors}
+            self._log_lookup(question, found, added)
         sources = self._sources(recall)
         yield {"type": "recall", "sources": [asdict(s) for s in sources], "abstained": recall.abstained,
-               "retrieval_ms": round(recall.retrieval_ms, 1), "conversation_id": conversation_id}
+               "retrieval_ms": round(recall.retrieval_ms, 1), "conversation_id": conversation_id, "learned": learned}
         prompt = CHAT_PROMPT.format(notes=recall.context or "(no relevant notes)",
                                     history=self._history(conversation_id), question=question)
         t0, parts, last, first = time.perf_counter(), [], {}, None
@@ -428,8 +497,10 @@ class Assistant:
         turn = Turn(turn_id=None, question=question, answer=answer, sources=sources, abstained=recall.abstained,
                     grounded=grounded_share(answer, recall.context), retrieval_ms=round(recall.retrieval_ms, 1),
                     generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
-                    prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id)
+                    prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id, learned=learned,
+                    ask_to_teach=recall.abstained and personal)
         turn.turn_id = self._log(turn)
+        self.last_activity = time.time()
         if self.remember_chat and not is_question(question):
             # What the user *states* is the user's own knowledge: keep it, so it can be
             # recalled long after it has scrolled out of the context window. Questions are
@@ -444,10 +515,12 @@ class Assistant:
         with self.store.conn:
             cur = self.store.conn.execute(
                 "INSERT INTO app_turn(at, model, question, answer, notes_used, abstained, grounded, retrieval_ms,"
-                " generation_ms, prompt_tokens, conversation_id, sources_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                " generation_ms, prompt_tokens, conversation_id, sources_json, learned_json, ask_to_teach)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (_now(), self.model or "-", turn.question, turn.answer, len(turn.sources), int(turn.abstained),
                  turn.grounded, turn.retrieval_ms, turn.generation_ms, turn.prompt_tokens, turn.conversation_id,
-                 json.dumps([asdict(s) for s in turn.sources])))
+                 json.dumps([asdict(s) for s in turn.sources]), json.dumps(turn.learned) if turn.learned else None,
+                 int(turn.ask_to_teach)))
             if turn.conversation_id is not None:
                 self.store.conn.execute("UPDATE app_conversation SET updated_at=? WHERE conversation_id=?",
                                         (_now(), turn.conversation_id))
@@ -479,18 +552,168 @@ class Assistant:
                                            (turn_id,)).fetchone()
             self.teach(f"Q: {q}\nA: {a}", kind="learned", doc_id=f"learned-{turn_id}")
 
+    # ------------------------------------------------------------ learning: lookups, packs, sleep
+    @_locked
+    def _log_lookup(self, question: str, found, added: int) -> None:
+        with self.store.conn:
+            self.store.conn.execute(
+                "INSERT INTO app_lookup(at, question, queries, pages_json, notes_added, ms) VALUES (?,?,?,?,?,?)",
+                (_now(), question, json.dumps(found.queries), json.dumps(
+                    [{"title": p.title, "url": p.url} for p in found.pages]), added, found.ms))
+
+    def available_packs(self) -> list[dict]:
+        """Packs on disk (bundled with the app, or harvested by the user), with whether each is installed."""
+        installed = {p["name"]: p for p in self.installed_packs()}
+        out = []
+        for folder in (BUNDLED_PACKS, self.packs_dir):
+            for f in sorted(folder.glob("*.camrpack")) if folder.exists() else []:
+                try:
+                    man, _, _ = packs_mod.read_pack(f)
+                except (OSError, ValueError, KeyError):
+                    continue
+                out.append({"name": man.name, "title": man.title, "description": man.description, "notes": man.notes,
+                            "licence": man.licence, "embedder": man.embedder, "file": f.name,
+                            "bundled": folder == BUNDLED_PACKS, "installed": man.name in installed})
+        return out
+
+    @_locked
+    def installed_packs(self) -> list[dict]:
+        return packs_mod.installed_packs(self.engine)
+
+    def _pack_file(self, name: str) -> Path:
+        for folder in (self.packs_dir, BUNDLED_PACKS):
+            for f in folder.glob("*.camrpack") if folder.exists() else []:
+                try:
+                    if packs_mod.read_pack(f)[0].name == name:
+                        return f
+                except (OSError, ValueError, KeyError):
+                    continue
+        raise FileNotFoundError(f"no pack named {name!r}")
+
+    @_locked
+    def install_pack(self, name: str) -> dict:
+        return packs_mod.install_pack(self.engine, self._pack_file(name))
+
+    @_locked
+    def remove_pack(self, name: str) -> int:
+        return packs_mod.uninstall_pack(self.engine, name)
+
+    def harvest(self, topic: str, pages: int = 15) -> dict:
+        """Build a pack about a topic from the web and install it (runs in the background; see ``jobs``)."""
+        if not self.learn_online:
+            raise RuntimeError("turn on 'Look things up online' in Settings to harvest from the web")
+        topic = topic.strip()
+        if not topic:
+            raise ValueError("name a topic to harvest")
+        self.jobs["harvest"] = {"status": "running", "topic": topic, "started": _now()}
+
+        def run():
+            try:
+                path = self.packs_dir / f"{packs_mod.slug(topic)}.camrpack"
+                with self._lock:
+                    man, found = packs_mod.harvest(self.engine, self.lookup, topic, path, pages=pages)
+                    res = packs_mod.install_pack(self.engine, path)
+                self.jobs["harvest"] = {"status": "done", "topic": topic, "pages": len(found), **res, "at": _now()}
+            except Exception as exc:  # surfaced in the Learning panel
+                self.jobs["harvest"] = {"status": "error", "topic": topic, "error": str(exc)}
+
+        threading.Thread(target=run, daemon=True).start()
+        return self.jobs["harvest"]
+
+    @_locked
+    def _experience(self) -> list[tuple[str, set[int]]]:
+        """(question, notes that answered it) from approved or well-grounded answers: what sleep learns from."""
+        rows = self.store.conn.execute(
+            "SELECT question, sources_json FROM app_turn WHERE sources_json IS NOT NULL AND sources_json != '[]'"
+            " AND (feedback = 1 OR grounded >= 0.6)").fetchall()
+        alive = {r[0] for r in self.store.conn.execute("SELECT note_id FROM note")}
+        out = []
+        for q, js in rows:
+            ids = {s["note_id"] for s in json.loads(js)} & alive
+            if ids:
+                out.append((q, ids))
+        return out
+
+    def sleep_now(self, wait: bool = False) -> dict:
+        """Consolidate memory (see camr.memory.sleep). Runs in the background unless ``wait``."""
+        if self.jobs.get("sleep", {}).get("status") == "running":
+            return self.jobs["sleep"]
+        self.jobs["sleep"] = {"status": "running", "started": _now()}
+
+        def run():
+            try:
+                pairs = self._experience()
+                with self._lock:
+                    rep = run_sleep(self.engine, lookup=self.lookup if self.learn_online else None, pairs=pairs,
+                                    adapter_path=self.adapter_path)
+                    with self.store.conn:
+                        self.store.conn.execute("INSERT INTO app_sleep(at, report_json) VALUES (?, ?)",
+                                                (_now(), json.dumps(rep, default=float)))
+                self.jobs["sleep"] = {"status": "done", "report": rep, "at": _now()}
+            except Exception as exc:
+                self.jobs["sleep"] = {"status": "error", "error": str(exc)}
+
+        if wait:
+            run()
+        else:
+            threading.Thread(target=run, daemon=True).start()
+        return self.jobs["sleep"]
+
+    def maybe_sleep(self, idle_s: float = 600.0) -> bool:
+        """Sleep if the user has been away for ``idle_s`` and memory changed since the last sleep."""
+        if not self.sleep_when_idle or time.time() - getattr(self, "last_activity", time.time()) < idle_s:
+            return False
+        with self._lock:
+            last = self.store.conn.execute("SELECT MAX(at) FROM app_sleep").fetchone()[0] or ""
+            newer = self.store.conn.execute("SELECT COUNT(*) FROM source WHERE ingested_at > ?", (last,)).fetchone()[0]
+        if not newer:
+            return False
+        self.sleep_now()
+        return True
+
+    @_locked
+    def learning(self, limit: int = 40) -> dict:
+        """Everything the Learning panel shows."""
+        c = self.store.conn
+        feed = [{"source_id": r[0], "kind": "pack" if r[1].startswith("pack:") else r[1], "title": r[2] or "",
+                 "url": r[3] if (r[3] or "").startswith("http") else "", "added": r[4], "notes": r[5],
+                 "pack": r[1][5:] if r[1].startswith("pack:") else None}
+                for r in c.execute("SELECT s.source_id, s.dataset, s.title, s.doc_id, s.ingested_at, COUNT(n.note_id)"
+                                   " FROM source s LEFT JOIN note n USING(source_id) GROUP BY s.source_id"
+                                   " ORDER BY s.source_id DESC LIMIT ?", (limit,))]
+        lookups = c.execute("SELECT COUNT(*), SUM(notes_added > 0), SUM(notes_added) FROM app_lookup").fetchone()
+        last_sleep = c.execute("SELECT at, report_json FROM app_sleep ORDER BY sleep_id DESC LIMIT 1").fetchone()
+        n = self.store.count()
+        ad = self.engine.query_adapter
+        ivf = self.store.ivf
+        return {
+            "feed": feed,
+            "lookups": {"total": lookups[0] or 0, "learned_from": lookups[1] or 0, "notes": lookups[2] or 0},
+            "packs": self.available_packs(),
+            "jobs": self.jobs,
+            "last_sleep": {"at": last_sleep[0], "report": json.loads(last_sleep[1])} if last_sleep else None,
+            # The engine's external weights: what grows while the model's own weights stay frozen.
+            "weights": {"notes": n, "dim": self.embedder.dim, "memory_parameters": n * self.embedder.dim,
+                        "adapter_parameters": int(ad.U.size + ad.V.size) if ad is not None else 0,
+                        "index_clusters": int(len(ivf.centroids)) if ivf is not None else 0,
+                        "store_mb": round(self.store.path.stat().st_size / 1e6, 2) if self.store.path.exists() else 0.0},
+            "settings": {"learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle},
+        }
+
     # ------------------------------------------------------------ reporting
     @_locked
     def sources(self, kind: str | None = None, search: str = "", limit: int = 200) -> list[dict]:
         sql = ("SELECT s.source_id, s.dataset, s.title, s.ingested_at, COUNT(n.note_id),"
                " GROUP_CONCAT(n.text, ' ') FROM source s LEFT JOIN note n USING(source_id)")
         args: list = []
-        if kind:
+        if kind == "pack":
+            sql += " WHERE s.dataset LIKE 'pack:%'"
+        elif kind:
             sql += " WHERE s.dataset=?"
             args.append(kind)
         sql += " GROUP BY s.source_id ORDER BY s.source_id DESC"
-        rows = [{"source_id": r[0], "kind": r[1], "title": r[2] or "", "added": r[3], "notes": r[4],
-                 "text": r[5] or ""} for r in self.store.conn.execute(sql, args)]
+        rows = [{"source_id": r[0], "kind": "pack" if r[1].startswith("pack:") else r[1], "title": r[2] or "",
+                 "added": r[3], "notes": r[4], "text": r[5] or ""} for r in self.store.conn.execute(sql, args)]
         if search:
             rows = [r for r in rows if search.lower() in (r["title"] + " " + r["text"]).lower()]
         return rows[:limit]
@@ -498,8 +721,8 @@ class Assistant:
     @_locked
     def stats(self) -> dict:
         c = self.store.conn
-        by_kind = dict(c.execute("SELECT s.dataset, COUNT(n.note_id) FROM note n JOIN source s USING(source_id)"
-                                 " GROUP BY s.dataset").fetchall())
+        by_kind = dict(c.execute("SELECT CASE WHEN s.dataset LIKE 'pack:%' THEN 'pack' ELSE s.dataset END AS k,"
+                                 " COUNT(n.note_id) FROM note n JOIN source s USING(source_id) GROUP BY k").fetchall())
         turns, with_mem, up, down = c.execute(
             "SELECT COUNT(*), SUM(notes_used > 0), SUM(feedback = 1), SUM(feedback = -1) FROM app_turn").fetchone()
         growth = c.execute("SELECT substr(ingested_at, 1, 10) AS day, COUNT(*) FROM source GROUP BY day ORDER BY day"

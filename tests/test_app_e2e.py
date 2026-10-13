@@ -153,3 +153,84 @@ def test_keyboard_only_user_can_reach_the_composer_and_send(browser, url):
         .map(e => e.outerHTML.slice(0, 80))""")
     assert unnamed == []
     page.close()
+
+
+# ---------------------------------------------------------------- v0.3: learning
+@pytest.fixture
+def learning_url(tmp_path):
+    from camr.memory.fetch import WebLookup
+    from camr.memory.note import Document
+    from camr.memory.packs import build_pack
+    from test_learning import FakeWeb, ddg_article
+
+    web = FakeWeb({"The Loudwater Mystery": ddg_article("The Loudwater Mystery", "The Loudwater Mystery is a 1921 "
+                                                         "British silent film directed by Walter West.")})
+    app = App(tmp_path, "http://127.0.0.1:11434")
+    app.assistant = Assistant(tmp_path, model="tiny:1b", embedder=HashingEmbedder(384), session=FakeOllama(),
+                              min_similarity=0.3, web_lookup=WebLookup(web, min_interval_s=0))
+    app.ollama_models = lambda: [{"name": "tiny:1b", "size_gb": 1.0, "parameters": "1B", "family": "x",
+                                  "embedding": False}]
+    app.assistant.packs_dir.mkdir(parents=True, exist_ok=True)
+    build_pack(app.assistant.packs_dir / "kenya.camrpack", app.assistant.engine, name="Kenya", title="Kenya basics",
+               description="Two facts about Kenya", docs=[
+                   Document("web", "https://en.wikipedia.org/wiki/Nairobi", "Nairobi is the capital of Kenya.", "Nairobi"),
+                   Document("web", "https://en.wikipedia.org/wiki/Mombasa", "Mombasa is on the coast.", "Mombasa")])
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app))
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{httpd.server_address[1]}"
+    httpd.shutdown()
+    app.assistant.close()
+
+
+def test_unknown_general_question_shows_the_lookup_and_a_link_to_the_source(browser, learning_url):
+    page = browser.new_page(viewport={"width": 1280, "height": 860})
+    page.goto(learning_url)
+    page.wait_for_selector("#input")
+    send(page, "Who directed The Loudwater Mystery?")
+    page.wait_for_selector(".recall.learned", timeout=15000)
+    summary = page.locator(".recall summary").last.inner_text()
+    assert "looked up" in summary and "learned" in summary
+    page.wait_for_function("[...document.querySelectorAll('.answer')].some(a => a.innerText.includes('Walter West'))",
+                           timeout=15000)
+    page.evaluate("document.querySelectorAll('details.recall').forEach(d => d.open = true)")
+    link = page.locator(".mem-card a.src").first
+    assert "wikipedia.org" in link.inner_text() and link.get_attribute("target") == "_blank"
+    page.close()
+
+
+def test_personal_gap_offers_teach_me_which_switches_to_remember_mode(browser, learning_url):
+    page = browser.new_page()
+    page.goto(learning_url)
+    page.wait_for_selector("#input")
+    send(page, "What is my passport number?")
+    page.wait_for_selector("button.act.teach", timeout=15000)
+    page.click("button.act.teach")
+    assert page.locator("#remember-toggle.on").count() == 1
+    assert page.evaluate("document.activeElement.id") == "input"
+    page.close()
+
+
+def test_learning_tab_shows_external_weights_and_installs_a_pack(browser, learning_url):
+    page = browser.new_page(viewport={"width": 1366, "height": 900})
+    page.goto(learning_url)
+    page.wait_for_selector("#input")
+    page.click("#learn-pill")
+    page.wait_for_selector("#panel-learning .weights", timeout=10000)
+    assert "frozen" in page.locator("#panel-learning .weights").inner_text()
+    before = int(page.locator("#mem-badge").inner_text() or 0)
+    page.click("#panel-learning [data-pack=kenya]")
+    page.wait_for_selector("#panel-learning [data-unpack=kenya]", timeout=10000)
+    page.wait_for_function(f"Number(document.querySelector('#mem-badge').textContent) >= {before + 2}", timeout=10000)
+    page.close()
+
+
+def test_turning_learning_off_updates_the_status_pill(browser, learning_url):
+    page = browser.new_page()
+    page.goto(learning_url)
+    page.wait_for_selector("#input")
+    assert "learning on" in page.locator("#learn-pill").inner_text()
+    page.click("#open-settings")
+    page.uncheck("#set-online")
+    page.click("#settings-save")
+    page.wait_for_function("document.querySelector('#learn-pill-text').textContent === 'offline'", timeout=10000)
+    page.close()

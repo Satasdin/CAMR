@@ -4,7 +4,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const app = $("#app"), thread = $("#thread"), input = $("#input");
 const S = { state: null, chats: [], current: null, streaming: null, rememberMode: false, lastSources: null };
-const KIND = { note: "note", file: "file", chat: "said in chat", learned: "approved answer" };
+const KIND = { note: "note", file: "file", chat: "said in chat", learned: "approved answer", web: "looked up online", pack: "knowledge pack" };
 
 // ---------- utilities ----------
 const store = {
@@ -60,7 +60,15 @@ async function refresh() {
   $("#composer").classList.remove("hidden");
   renderStats(st.stats);
   renderModels(st);
+  renderPill(st.settings);
 }
+function renderPill(set) {
+  const on = set?.learn_online;
+  $("#learn-pill").classList.toggle("off", !on);
+  $("#learn-pill-text").textContent = on ? "learning on" : "offline";
+  $("#learn-pill").title = on ? "Looks up general questions it can't answer from memory, then remembers them" : "Answers from memory and the model only";
+}
+$("#learn-pill").onclick = () => openPanel("learning");
 function renderSetup(st) {
   $("#setup").classList.remove("hidden"); $("#composer").classList.add("hidden"); $("#hero").classList.add("hidden");
   thread.innerHTML = "";
@@ -135,8 +143,8 @@ function newChat() {
   app.classList.add("empty"); $("#hero").classList.remove("hidden");
   const n = S.state?.stats?.notes || 0;
   $("#hero-title").textContent = n ? "What do you want to know?" : "What should I remember?";
-  $("#hero-sub").textContent = n ? `${n.toLocaleString()} memories ready. Your model stays the same; what it knows grows with you.`
-    : "Teach me notes and files, or say “remember that…”. Your model stays the same; what it knows grows with you.";
+  $("#hero-sub").textContent = n ? `${n.toLocaleString()} memories ready. Ask me anything: what I don't know yet, I look up and remember.`
+    : "Teach me notes and files, say “remember that…”, or just ask: what I don't know yet, I look up and remember. Your model stays the same; what it knows grows with you.";
   loadChats(); input.focus(); closeMobile();
 }
 async function openChat(id) {
@@ -144,7 +152,7 @@ async function openChat(id) {
   const turns = await api(`/api/conversations/${id}`);
   $("#chat-title").textContent = S.chats.find((c) => c.id === id)?.title || "";
   thread.innerHTML = "";
-  for (const t of turns) { addUser(t.question); const el = addAssistant(); renderRecall(el, t.sources, t.abstained, t.retrieval_ms); finish(el, t); }
+  for (const t of turns) { addUser(t.question); const el = addAssistant(); renderRecall(el, t.sources, t.abstained, t.retrieval_ms, t.learned); finish(el, t); }
   thread.scrollTop = thread.scrollHeight; loadChats(); closeMobile();
 }
 $("#new-chat").onclick = newChat;
@@ -169,20 +177,34 @@ function addAssistant() {
     <div class="answer cursor"></div><div class="actions"></div></div>`;
   thread.appendChild(d); return d;
 }
+function host(u) { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } }
 function memCard(s) {
-  return `<div class="mem-card"><div class="meta"><span class="kind ${s.kind}">${KIND[s.kind] || s.kind}</span>${s.title ? `<span>${esc(s.title)}</span>` : ""}
+  return `<div class="mem-card"><div class="meta"><span class="kind ${s.kind}">${KIND[s.kind] || s.kind}</span>${s.title ? `<span class="t">${esc(s.title)}</span>` : ""}
+    ${s.url ? `<a class="src" href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(s.url)}">${esc(host(s.url))} ↗</a>` : ""}
     ${s.via_bridge ? `<span title="Pulled in because a recalled note names it">↳ linked</span>` : ""}
     <span class="simbar" title="similarity ${s.similarity}"><i style="width:${Math.max(8, Math.round(100 * s.similarity))}%"></i></span></div>
     <div class="txt">${esc(s.text)}</div></div>`;
 }
-function renderRecall(el, sources, abstained, ms) {
-  const r = $(".recall", el); r.classList.remove("thinking");
+function showLookup(el) {
+  const r = $(".recall", el); r.classList.add("thinking", "looking");
+  r.innerHTML = `<summary><span>◎</span> <span class="trace"><s>memory had nothing</s> → <b>looking it up online…</b></span></summary>`;
+}
+function learnedTrace(l) {
+  if (!l) return "";
+  const pages = (l.pages || []).map((p) => esc(p.title)).join(", ");
+  return l.pages?.length ? `<span class="trace"><s>memory had nothing</s> → looked up <b>${pages}</b> → learned <b>${l.notes_added}</b> → </span>`
+    : `<span class="trace"><s>memory had nothing</s> → looked online, found nothing → </span>`;
+}
+function renderRecall(el, sources, abstained, ms, learned) {
+  const r = $(".recall", el); r.classList.remove("thinking", "looking");
   if (!sources || !sources.length) {
     r.classList.add("none");
-    r.innerHTML = `<summary><span>✦</span> ${abstained ? "No matching memories, so this answer comes from the model alone" : "Saved directly to memory"}</summary>`;
+    r.innerHTML = `<summary><span>✦</span> ${learned ? learnedTrace(learned) + "answering from the model alone"
+      : abstained ? "No matching memories, so this answer comes from the model alone" : "Saved directly to memory"}</summary>`;
     return;
   }
-  r.innerHTML = `<summary><span>✦</span> Recalled <b>${sources.length} ${sources.length === 1 ? "memory" : "memories"}</b>
+  r.classList.toggle("learned", !!learned?.notes_added);
+  r.innerHTML = `<summary><span>${learned?.notes_added ? "◎" : "✦"}</span> ${learnedTrace(learned)}Recalled <b>${sources.length} ${sources.length === 1 ? "memory" : "memories"}</b>
     <span class="muted">· ${Math.round(ms || 0)} ms</span><span class="chev">▾</span></summary><div class="mem-cards">${sources.map(memCard).join("")}</div>`;
   S.lastSources = sources; renderRecallPanel();
 }
@@ -198,6 +220,10 @@ function finish(el, t) {
     + (g != null ? `<span class="ground" title="Share of the answer's words found in the memories it read"><span class="meter"><i style="width:${Math.round(100 * g)}%;background:${gcol}"></i></span>grounded ${Math.round(100 * g)}%</span>` : "")
     + (t.generation_ms ? `<span class="timing">${Math.round(t.retrieval_ms)} ms memory · ${t.first_token_ms ? (t.first_token_ms / 1000).toFixed(1) + " s to first word · " : ""}${(t.generation_ms / 1000).toFixed(1)} s answer</span>` : "");
   if (stored) a.insertAdjacentHTML("beforeend", `<div class="saved-note">✦ Stored in memory</div>`);
+  if (t.ask_to_teach) {
+    $(".actions", el).insertAdjacentHTML("afterbegin", `<button class="act teach" title="Tell CAMR, and it will remember">✦ Teach me</button>`);
+    $(".teach", el).onclick = () => { if (!S.rememberMode) $("#remember-toggle").click(); input.placeholder = "Tell me, e.g. “my passport number is …”"; input.focus(); };
+  }
   const up = $(".up", el), down = $(".down", el), copy = $(".copy", el);
   if (copy) copy.onclick = () => { navigator.clipboard?.writeText(t.answer); toast("Copied"); };
   if (up) up.onclick = async () => { await api("/api/feedback", { method: "POST", body: { turn_id: t.turn_id, helpful: true } });
@@ -224,7 +250,8 @@ async function send(text) {
         const line = buf.slice(0, i); buf = buf.slice(i + 2);
         if (!line.startsWith("data: ")) continue;
         const ev = JSON.parse(line.slice(6));
-        if (ev.type === "recall") { conv = ev.conversation_id; renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms); }
+        if (ev.type === "lookup") { conv = ev.conversation_id; showLookup(el); }
+        else if (ev.type === "recall") { conv = ev.conversation_id; renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms, ev.learned); }
         else if (ev.type === "token") { answer += ev.text; $(".answer", el).innerHTML = md(answer); $(".answer", el).classList.add("cursor"); thread.scrollTop = thread.scrollHeight; }
         else if (ev.type === "done") finish(el, ev.turn);
         else if (ev.type === "error") throw new Error(ev.error);
@@ -254,6 +281,7 @@ $("#remember-toggle").onclick = () => {
 };
 $$("#suggestions [data-fill]").forEach((b) => b.onclick = () => { input.value = b.dataset.fill; autosize(); input.focus(); });
 $("#suggestions [data-action=teach]").onclick = () => openTeach();
+$("#suggestions [data-action=learning]").onclick = () => openPanel("learning");
 document.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); newChat(); } });
 
 // ---------- teaching ----------
@@ -290,11 +318,12 @@ function openPanel(tab) { app.classList.add("panel-open"); if (tab) selectTab(ta
 $("#panel-btn").onclick = () => app.classList.toggle("panel-open");
 $("#close-panel").onclick = () => app.classList.remove("panel-open");
 $$("[data-panel=memory]").forEach((b) => b.onclick = () => { openPanel("memory"); closeMobile(); });
+$$("[data-panel=learning]").forEach((b) => b.onclick = () => { openPanel("learning"); closeMobile(); });
 $$(".tab").forEach((t) => t.onclick = () => selectTab(t.dataset.tab));
 function selectTab(name) {
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
-  for (const n of ["recall", "memory", "growth"]) $(`#panel-${n}`).classList.toggle("hidden", n !== name);
-  if (name === "memory") loadMemory(); if (name === "growth") renderGrowth(S.state.stats);
+  for (const n of ["recall", "memory", "learning", "growth"]) $(`#panel-${n}`).classList.toggle("hidden", n !== name);
+  if (name === "memory") loadMemory(); if (name === "growth") renderGrowth(S.state.stats); if (name === "learning") loadLearning();
 }
 function renderRecallPanel() {
   const s = S.lastSources;
@@ -333,9 +362,57 @@ function renderGrowth(st) {
     <p class="muted small">👍 ${st.helpful} · 👎 ${st.not_helpful} · ${st.turns} questions. The model's weights never change: every gain here is memory.</p>`;
 }
 
+// ---------- learning panel ----------
+const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
+async function loadLearning() {
+  const L = await api("/api/learning"); S.learning = L;
+  const w = L.weights, model = S.state.models.find((m) => m.name === S.state.settings.model);
+  const jobs = L.jobs || {}, sl = jobs.sleep?.status === "running", hv = jobs.harvest?.status === "running";
+  $("#learn-badge").classList.toggle("hidden", !sl);
+  const rep = L.last_sleep?.report;
+  const ad = rep?.adapter, ix = rep?.index, cur = rep?.curiosity;
+  $("#panel-learning").innerHTML = `
+    <div class="stat weights"><div class="k">External weights</div>
+      <div class="wrow"><span>Model <b>${esc(model?.parameters || "?")}</b> parameters</span><span class="frozen">frozen</span></div>
+      <div class="wrow"><span>Memory <b>${fmt(w.memory_parameters)}</b> numbers <span class="muted">(${w.notes.toLocaleString()} notes × ${w.dim})</span></span><span class="grows">grows</span></div>
+      <div class="wrow"><span>Learned retrieval <b>${fmt(w.adapter_parameters)}</b>${w.index_clusters ? ` · index of <b>${w.index_clusters}</b> clusters` : ""}</span><span class="grows">${w.adapter_parameters ? "trained" : "after sleep"}</span></div>
+      <p class="muted small">The model computes; memory holds what it knows. Memory lives on disk (${w.store_mb} MB) and only what a question needs is read.</p></div>
+    <div class="stat-grid">
+      <div class="stat"><div class="k">Looked up</div><div class="v">${L.lookups.total}</div><div class="muted small">${L.lookups.learned_from} taught it something</div></div>
+      <div class="stat"><div class="k">Learned online</div><div class="v">${L.lookups.notes}</div><div class="muted small">memories, with links</div></div>
+    </div>
+    <div class="stat"><div class="k">Sleep</div>
+      <p class="small">${sl ? "Sleeping now: tidying, re-indexing and learning to find things faster…" : rep ? `Last slept ${esc((L.last_sleep.at || "").replace("T", " ").slice(0, 16))} UTC:
+        removed <b>${rep.tidy?.duplicates_removed ?? 0}</b> duplicates${cur?.learned?.length ? `, looked up <b>${cur.learned.length}</b> names it kept seeing (${cur.learned.map((x) => esc(x.title)).slice(0, 3).join(", ")})` : ""}${ix?.built ? `, indexed <b>${ix.notes.toLocaleString()}</b> notes in ${ix.clusters} clusters (${ix.index_ms} ms vs ${ix.exact_ms} ms per lookup)` : ""}${ad?.trained ? `, ${ad.kept ? `learned to find things better (recall@5 ${Math.round(100 * ad.recall_before["recall@5"])}% → ${Math.round(100 * ad.recall_after["recall@5"])}%)` : "tried to learn retrieval, kept the old way (no gain)"}` : ""}.`
+        : "It hasn't slept yet. Sleep tidies memory, builds an index once memory is large, and learns from answers you liked."}</p>
+      <button class="ghost" id="sleep-btn" ${sl ? "disabled" : ""}>${sl ? "Sleeping…" : "◐ Sleep now"}</button></div>
+    <div class="stat"><div class="k">Knowledge packs</div>
+      <p class="muted small">Ready-made memory: notes with their vectors already computed, so a pack plugs in without running a model.</p>
+      ${L.packs.map((p) => `<div class="pack-row"><div><b>${esc(p.title)}</b> <span class="muted small">${p.notes} notes · ${esc(p.licence)}</span><div class="muted small">${esc(p.description)}</div></div>
+        ${p.installed ? `<button class="ghost sm" data-unpack="${esc(p.name)}">Remove</button>` : `<button class="primary sm" data-pack="${esc(p.name)}">Install</button>`}</div>`).join("") || `<p class="muted small">No packs on this computer yet. Harvest one below.</p>`}
+      <div class="harvest"><input id="harvest-topic" placeholder="Harvest a topic, e.g. Kenya" aria-label="Topic to harvest" ${hv ? "disabled" : ""}>
+        <button class="ghost sm" id="harvest-btn" ${hv || !L.settings.learn_online ? "disabled" : ""}>${hv ? "Harvesting…" : "Harvest"}</button></div>
+      ${jobs.harvest?.status === "done" ? `<p class="small ok">✓ Harvested “${esc(jobs.harvest.topic)}”: ${jobs.harvest.pages} articles, ${jobs.harvest.notes_added} new memories</p>`
+        : jobs.harvest?.status === "error" ? `<p class="small warn">${esc(jobs.harvest.error)}</p>` : ""}
+      ${L.settings.learn_online ? "" : `<p class="muted small">Turn on “Look things up online” in Settings to harvest.</p>`}</div>
+    <div class="stat"><div class="k" style="margin-bottom:6px">Recently learned</div>
+      ${L.feed.map((f) => `<div class="feed-item"><span class="kind ${f.kind}">${KIND[f.kind] || f.kind}</span>
+        <span class="t">${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.title || host(f.url))}</a>` : esc(f.title || "(untitled)")}</span>
+        <span class="muted small">${esc((f.added || "").slice(0, 10))}</span></div>`).join("") || `<p class="muted small">Nothing yet.</p>`}</div>`;
+  $("#sleep-btn").onclick = async () => { await api("/api/sleep", { method: "POST", body: {} }); toast("Sleeping: CAMR is consolidating its memory"); loadLearning(); };
+  $$("#panel-learning [data-pack]").forEach((b) => b.onclick = async () => { b.disabled = true; const r = await api("/api/packs/install", { method: "POST", body: { name: b.dataset.pack } });
+    toast(`✦ Installed ${r.title}: ${r.notes_added} memories in ${r.seconds} s${r.vectors_reused ? " (no model needed)" : ""}`); loadLearning(); refresh(); });
+  $$("#panel-learning [data-unpack]").forEach((b) => b.onclick = async () => { const r = await api(`/api/packs/${b.dataset.unpack}`, { method: "DELETE" }); toast(`Removed ${r.removed} memories`); loadLearning(); refresh(); });
+  $("#harvest-btn").onclick = async () => { const topic = $("#harvest-topic").value.trim(); if (!topic) return;
+    try { await api("/api/packs/harvest", { method: "POST", body: { topic, pages: 15 } }); toast(`Harvesting “${topic}”…`); } catch (e) { toast(e.message); } loadLearning(); };
+  clearTimeout(loadLearning.t);
+  if ((sl || hv) && !$("#panel-learning").classList.contains("hidden")) loadLearning.t = setTimeout(() => { loadLearning(); refresh(); }, 2000);
+}
+
 // ---------- settings ----------
 $("#open-settings").onclick = () => {
   const s = S.state.settings; $("#set-budget").value = s.token_budget; $("#set-turns").value = s.history_turns; $("#set-chat").checked = s.remember_chat;
+  $("#set-online").checked = s.learn_online; $("#set-sleep").checked = s.sleep_when_idle;
   $("#budget-val").textContent = s.token_budget + " tokens"; $("#turns-val").textContent = s.history_turns;
   $("#about").textContent = `CAMR Personal ${S.state.version} · memory model ${s.embed_model} · abstains below similarity ${s.min_similarity} · data in ${S.state.home}`;
   $("#settings-dlg").showModal(); closeMobile();
@@ -344,7 +421,8 @@ $("#set-budget").oninput = (e) => $("#budget-val").textContent = e.target.value 
 $("#set-turns").oninput = (e) => $("#turns-val").textContent = e.target.value;
 $("#export-text").onchange = (e) => $("#export-link").href = "/api/export?text=" + (e.target.checked ? 1 : 0);
 $("#settings-save").onclick = async () => {
-  await api("/api/settings", { method: "POST", body: { token_budget: +$("#set-budget").value, history_turns: +$("#set-turns").value, remember_chat: $("#set-chat").checked } });
+  await api("/api/settings", { method: "POST", body: { token_budget: +$("#set-budget").value, history_turns: +$("#set-turns").value, remember_chat: $("#set-chat").checked,
+    learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked } });
   toast("Settings saved"); refresh();
 };
 
