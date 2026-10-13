@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import re
 import subprocess
 from pathlib import Path
@@ -863,7 +864,28 @@ camr app                                                # opens http://127.0.0.1
              ["D-15", "Entity gate: a possessive in the question (*Peck's Bad Girl*) was normalised differently from the "
               "same name in a note, so the gate wrongly withheld a correct note", "RAG comparison (section ⟦sec_ragresult⟧)",
               "One normalisation for question and notes, possessives removed", "Regression test; gate re-evaluated on "
-              "validation, test and retrieval. Pass"]],
+              "validation, test and retrieval. Pass"],
+             ["D-17", "Web lookups: a title's leading *The* was stripped mid-sentence (*The Other* looked up as *Other*), "
+              "and titles with lower-case words (*Son contento*) were cut short", "Learning stream, first 20 questions "
+              "(section ⟦sec_learn_results⟧)", "The article is kept unless the name opens the question; the words after "
+              "*of* are also tried", "Unit tests; stream re-run from scratch. Pass"],
+             ["D-18", "Web lookups: an empty reply, which is how DuckDuckGo signals *too fast*, was cached as *nothing "
+              "known*, so 20 later lookups failed for good", "Learning stream, first run (questions 18–24 found "
+              "nothing)", "An empty reply is a rate limit: back off, retry, never cache it; poisoned entries removed",
+              "Unit test; stream re-run from scratch. Pass"],
+             ["D-19", "The first *ask to be taught* prompt (E) made the 3B model lead with *I don't know that yet* "
+              "although its notes held the answer (*which antibiotic am I allergic to?*)", "Prompt evaluation, "
+              "development set", "Prompt F: answer first when the notes answer; ask to be taught only for a missing "
+              "personal fact", "6/6, 7/7, 8/8 on both models; regression test. Pass"],
+             ["D-20", "Topic harvesting drifted: the *Solar System* pack collected actors from a film of that name, and "
+              "the *Kenya* pack lacked the article on Kenya", "Inspection of the first packs", "Keep, and snowball "
+              "from, only pages whose relevance to the topic is ≥ 0.8 of the best seed's", "Unit test; packs rebuilt. "
+              "Pass (a few off-topic pages remain; section ⟦sec_learning⟧)"],
+             ["D-21", "Web lookups did not identify themselves: a session's default agent (*python-requests*) was kept, "
+              "and Wikimedia throttles and blocks generic agents, so most Wikipedia requests failed", "Pack rebuild "
+              "(a direct request with the CAMR agent succeeded where the fetcher's failed)", "The CAMR User-Agent "
+              "replaces a session's default", "Unit test; learning stream repeated after the fix (section "
+              "⟦sec_learn_results⟧). Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
     c.h3("Application Testing (CAMR Personal)", key="sec_apptest")
@@ -908,6 +930,7 @@ camr app                                                # opens http://127.0.0.1
 
     ui_testing(c)
     scenarios_section(c)
+    learning_tests(c)
 
     # ---------------------------------------------------------------- evaluation design
     c.h3("Evaluation Design")
@@ -1196,6 +1219,9 @@ camr app                                                # opens http://127.0.0.1
 
     policy_tuning_results(c)
     finetune_section(c)
+    learning_results(c)
+    token_memory_results(c)
+    sleep_results(c)
 
     c.h3("Cost on the Device (Research Question v)", key="sec_cost")
     t = profile["treatment"]
@@ -2009,6 +2035,311 @@ def learning_design(c: Chapter) -> None:
     c.eq(r"\text{keep }(U,V)\iff R_5^{\text{new}}>R_5^{\text{old}}\ \wedge\ R_1^{\text{new}}\geq R_1^{\text{old}}",
          key="eq_accept")
     c.where([(r"R_k", "recall at k on the 20% of experience pairs held out from training.")])
+
+
+EAGER = ROOT / "results/eager"
+FIGS = FIG / "report"
+
+
+def _j(path: Path):
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def learning_tests(c: Chapter) -> None:
+    """Test cases for the 0.3 learning extensions (unit, application and browser), all run offline."""
+    c.h3("Testing the Learning Extensions", key="sec_learntest")
+    c.p("The learning extensions were tested like the rest of the engine, without the network: the web is a scripted "
+        "fake that can answer, be ambiguous, or rate-limit, and the whole suite sets `CAMR_OFFLINE_WEB=1` so that no "
+        "test can reach the real web. Two kinds of check matter most here: that nothing personal is ever sent, and that "
+        "learning cannot make the engine worse without being noticed.")
+    c.table("Test cases for eager learning, packs and sleep (unit, application and browser tests)",
+            ["Test ID", "Input / action", "Expected", "Result"],
+            [["TC-43", "Subjects of *Who was the director of The Other?*, *…of Son contento?*", "*The Other* keeps its "
+              "article; *Son contento* is tried whole (D-17)", "Pass"],
+             ["TC-44", "*What is my bike lock code?* with lookups on", "Never sent to the web; the reply asks to be "
+              "taught and the UI shows *Teach me*", "Pass"],
+             ["TC-45", "A lookup, repeated; then the same lookup offline", "Second call made no request; offline replay "
+              "returns the same page", "Pass"],
+             ["TC-46", "An empty reply from DuckDuckGo", "Treated as a rate limit; not cached; the next call succeeds "
+              "(D-18)", "Pass"],
+             ["TC-47", "An ambiguous name (*Issues*)", "The meaning closest to the question is fetched first", "Pass"],
+             ["TC-48", "A general question memory cannot answer, then a reworded one", "Looked up, learned, answered "
+              "from the notes; the reworded question is answered from memory with no request", "Pass"],
+             ["TC-49", "Install a pack built with the same embedder; again; remove", "Vectors copied with the embedder "
+              "never called; second install adds nothing; removal deletes exactly its notes", "Pass"],
+             ["TC-50", "A pack containing an instruction-like page; a pack for another embedder", "The page never "
+              "enters; the other pack is re-embedded on install", "Pass"],
+             ["TC-51", "Learned index on 3,000 clustered vectors; a note written after it; a deleted note",
+              "≥ 90% agreement with exact top-10; the new note is found; the deleted one never returned", "Pass"],
+             ["TC-52", "Adapter gradients against finite differences; an adapter trained on a systematic shift",
+              "Error ≤ 10⁻⁹; held-out recall@1 rises by more than 10 points", "Pass"],
+             ["TC-53", "Sleep with too little experience; duplicates among web and personal notes; names in "
+              "personal notes", "No adapter is kept; web copies merged, personal notes untouched; personal names "
+              "never looked up", "Pass"],
+             ["TC-54", "Harvest a topic whose related pages include an off-topic one", "On-topic pages kept, the "
+              "off-topic page dropped (D-20)", "Pass"],
+             ["TC-55", "Every lookup request", "Carries the CAMR User-Agent (D-21)", "Pass"],
+             ["TC-56", "Browser: ask a general question memory cannot answer", "Recall card shows *looked up … → learned "
+              "N → Recalled*; the source links to Wikipedia in a new tab", "Pass"],
+             ["TC-57", "Browser: a personal gap, then *Teach me*", "Composer switches to *Remember* mode and takes focus",
+              "Pass"],
+             ["TC-58", "Browser: Learning tab; install a pack; turn lookups off", "External weights shown; memory count "
+              "rises by the pack's notes; the status pill reads *offline*", "Pass"]],
+            [1.4, 5.0, 7.0, 1.6], size=9)
+
+
+def learning_results(c: Chapter) -> None:
+    learn = _j(EAGER / "learn.json")
+    if not learn:
+        return
+    turns = learn["turns"]
+    n = len(turns)
+    acc = sum(t["correct"] for t in turns) / n
+    retain = _j(EAGER / "retain.json") or {"models": {}}
+    base = {k: _j(EAGER / f"baseline_{k}.json") for k in ("qwen2.5_0.5b", "qwen2.5_1.5b", "llama3.2_3b", "gpt-oss_20b")}
+    para = {k: _j(EAGER / f"baseline_{k}_para.json") for k in ("qwen2.5_0.5b", "llama3.2_3b")}
+    ram = (_j(EAGER / "ram.json") or {}).get("models", {})
+    dev = _j(EAGER / "lookup_dev.json")
+    c.h3("Learning Over Time: a Frozen 0.5B Model That Looks Things Up", key="sec_learn_results")
+    c.p(f"**Design.** A stream of {n} PopQA questions that no earlier experiment had used (30 subjects are asked about "
+        "twice, 40–90 questions apart) was put, in order, to qwen2.5:0.5b with memory that starts **empty** and eager "
+        "learning on (Equation ⟦eq_eager_n⟧; the same BGE embedder, gate, entity gate and 512-token budget as the "
+        "benchmarks). Before the stream ran, the one free choice in the lookup, how to order the meanings of an "
+        f"ambiguous name, was made on 60 other fresh questions: ordering by the embedder's similarity put the answer in "
+        f"the fetched text for {pct(dev['variants']['embedding similarity']['answer_in_fetched_text'])} of them against "
+        f"{pct(dev['variants']['word overlap']['answer_in_fetched_text'])} for shared words. Then, offline, every fact "
+        "was asked again **in different words** (a second template per relation), so what the model gets right in this "
+        "second pass it can only know from what it learned. Closed-book baselines answered the same questions, and the "
+        "resident memory of each model's process was measured (`scripts/eager_learning.py`).")
+    rows = []
+
+    def b(k, para_=False):
+        d = (para if para_ else base).get(k)
+        return pct(d["accuracy"]) if d and "accuracy" in d else "–"
+
+    def gb(model):
+        return f"{ram[model]['rss_mb'] / 1024:.1f}" if model in ram else "–"
+
+    for k, label, model in (("qwen2.5_0.5b", "qwen2.5:0.5b alone", "qwen2.5:0.5b"),
+                            ("qwen2.5_1.5b", "qwen2.5:1.5b alone", "qwen2.5:1.5b"),
+                            ("llama3.2_3b", "llama3.2:3b alone", "llama3.2:3b"),
+                            ("gpt-oss_20b", "gpt-oss:20b alone", "gpt-oss:20b")):
+        if base.get(k):
+            rows.append([label, b(k), b(k, True) if k in para else "–", gb(model)])
+    rows.append(["**qwen2.5:0.5b + eager learning** (memory starts empty)", f"**{pct(acc)}** (online)",
+                 pct(retain["models"]["qwen2.5:0.5b"]["accuracy"]) + " (offline)" if "qwen2.5:0.5b" in retain["models"]
+                 else "–", gb("qwen2.5:0.5b")])
+    if "llama3.2:3b" in retain["models"]:
+        rows.append(["llama3.2:3b reading the memory the 0.5B model learned", "–",
+                     pct(retain["models"]["llama3.2:3b"]["accuracy"]) + " (offline)", gb("llama3.2:3b")])
+    c.table(f"The learning stream: accuracy on {n} new questions and the model process's resident memory",
+            ["System", "As asked", "Reworded", "RAM (GB)"], rows, [7.6, 3.0, 3.0, 2.2], size=9,
+            key="tab_learn")
+    c.p(LEARN_TEXT(learn, retain, base, para))
+    c.figure(FIGS / "learning_curve.png", "The learning stream: running accuracy of the frozen 0.5B model with eager "
+             "learning against closed-book models (left), and the notes it stored (right)", 16.0)
+    if (FIGS / "compete_ram.png").exists() and ram:
+        c.figure(FIGS / "compete_ram.png", "Accuracy against the resident memory of the model process: knowledge comes "
+                 "from memory on disk, not from model size", 13.0)
+    after = _j(EAGER / "learn_after_D21.json")
+    if after and len(after["turns"]) == n:
+        c.p(AFTER_D21_TEXT(learn, after))
+    pe = _j(ROOT / "docs/results/prompt_eval.json")
+    if pe:
+        c.p("**Eager, not evasive, in the application.** The benchmark prompt above asks for a short answer, so the model "
+            "never declined there. In the application the question is what happens when memory cannot help with a "
+            "question about the user. The chat prompt was therefore extended so that such a gap is answered by asking to "
+            f"be taught; {c.next_tab()} scores it on the same development, held-out and fresh cases as Section "
+            "⟦sec_scenarios⟧ (prompt D is the one the application used before).")
+        c.table("Asking to be taught instead of only saying *I don't know*: correct cases and unknown personal facts "
+                "answered with an invitation to teach (development 6, held-out 7, fresh 8 cases; 5 unknown)",
+                ["Prompt", "Model", "Dev", "Held-out", "Fresh", "Asks to be taught"], PROMPT_ROWS(pe),
+                [5.2, 2.6, 1.4, 1.8, 1.6, 2.6], size=9)
+
+
+def token_memory_results(c: Chapter) -> None:
+    tm, ft = _j(ROOT / "results/token_memory/test.json"), _j(ROOT / "results/finetune/test.json")
+    tune = _j(ROOT / "results/token_memory/tune.json")
+    if not tm:
+        return
+    c.h3("External Weights Beside the Model: Token Memory", key="sec_tokenmem")
+    cond, ds, sel = tm["conditions"], tm["datastore"], tm["selected"]
+    lora = ft["conditions"]["lora"]["test_closed"]["accuracy"] if ft else None
+    best_val = max(g["val_accuracy"] for g in tune["grid"])
+    c.p("The kNN-LM of Equation ⟦eq_knnlm_n⟧ was built for the frozen Qwen2.5-0.5B-Instruct from the same 237 documents "
+        f"the LoRA study trained on: {ds['entries']:,} (hidden state, next token) pairs, {ds['mb']:.1f} MB, built in "
+        f"{ds['build_s']:.0f} s on the CPU. The document format (plain text, or the chat format the LoRA study used), the "
+        "mixing weight λ ∈ {0.25, 0.5, 0.75} and the temperature τ ∈ {0.02, 0.05} were chosen on the 60 validation "
+        f"questions; no setting did better than {pct(best_val)} there, and larger λ (leaning more on the memory) did "
+        f"worse. The chosen setting (λ = {sel['lam']}, τ = {sel['tau']}, {sel['fmt']} text) was tested once on the 60 "
+        f"held-out questions ({c.next_tab()}, {c.next_fig()}), in one runtime (transformers, float32, greedy).")
+    rows = [["Frozen 0.5B alone", "–", pct(cond["base"]["accuracy"])]]
+    if lora is not None:
+        rows.append(["Inside: LoRA (Section ⟦sec_finetune⟧)", "8.8 M trained weights", pct(lora)])
+    rows += [["Beside: kNN-LM", f"{ds['entries']:,} entries, {ds['mb']:.0f} MB", pct(cond["knn_lm"]["accuracy"])],
+             ["In the prompt: CAMR", "notes + vectors", pct(cond["camr"]["accuracy"])],
+             ["kNN-LM and CAMR together", "both", pct(cond["knn_lm+camr"]["accuracy"])]]
+    c.table("Three places for a frozen model's knowledge, on the same 237 documents and 60 held-out questions",
+            ["Where the knowledge lives", "External weights", "Held-out accuracy"], rows, [6.5, 5.0, 3.5], size=9)
+    c.figure(FIGS / "token_memory.png", "Held-out accuracy by where the frozen model's knowledge lives", 13.0)
+    c.p(f"**Weights beside the model help no more than weights inside it.** The token memory reached "
+        f"{pct(cond['knn_lm']['accuracy'])} against {pct(cond['base']['accuracy'])} for the model alone"
+        + (f", the same as LoRA ({pct(lora)})" if lora is not None else "") + f", while CAMR reached "
+        f"{pct(cond['camr']['accuracy'])}; adding the token memory to CAMR changed nothing "
+        f"({pct(cond['knn_lm+camr']['accuracy'])}). The reason is visible in Equation ⟦eq_knnlm_n⟧: the memory is "
+        "keyed by the model's state *while reading a document*, and a question puts the model in a different state, so "
+        "the nearest keys rarely continue with the answer. This matches the finding that kNN-LMs help memory-intensive "
+        "language modelling but not knowledge-intensive question answering (Geng et al., 2024). The literal reading of "
+        "*external weights used as memory, with the model's parameters as compute* therefore works best when the "
+        "external weights are notes the model reads (CAMR), not numbers it mixes into its output. (CAMR's "
+        f"{pct(cond['camr']['accuracy'])} here differs from the 71.7% of Section ⟦sec_finetune⟧ for the same prompts "
+        "because this script decodes one question at a time instead of in padded batches.)")
+
+
+def sleep_results(c: Chapter) -> None:
+    idx, ad, eg = _j(ROOT / "results/sleep/index.json"), _j(ROOT / "results/sleep/adapter.json"), \
+        _j(ROOT / "results/sleep/eager.json")
+    if not (idx or ad):
+        return
+    c.h3("What Sleep Buys: a Learned Index and Learning to Fetch", key="sec_sleep_results")
+    if idx:
+        r = idx["real"]
+        probes = sorted((k for k in r if k.startswith("ivf_nprobe_")), key=lambda k: int(k.rsplit("_", 1)[1]))
+        c.p(f"**The learned index on real memory.** On the {idx['notes']:,}-note store of the retrieval evaluation, "
+            f"with its {idx['questions']:,} real questions, exact search took {r['exact']['ms']:.1f} ms per question "
+            f"and found every gold paragraph for {pct(r['exact']['full_support_recall'])} of them. The index "
+            f"({r['clusters']} clusters, built in {r['build_s']:.1f} s) trades a little of that for speed "
+            f"({c.next_tab()}).")
+        c.table("Exact search against the learned index on 38,054 real notes and 1,000 real questions (top 20)",
+                ["Search", "Share of memory read", "ms / question", "Agreement with exact", "Full-support recall"],
+                [["Exact", "100%", f"{r['exact']['ms']:.1f}", "100%", pct(r["exact"]["full_support_recall"])]]
+                + [[f"Index, n_probe = {k.rsplit('_', 1)[1]}", pct(r[k]["share_of_memory_read"]), f"{r[k]['ms']:.1f}",
+                    pct(r[k]["agreement_with_exact"]), pct(r[k]["full_support_recall"])] for k in probes],
+                [3.6, 3.0, 2.4, 3.2, 3.2], size=9)
+        if idx.get("scale"):
+            c.p(SCALE_TEXT(idx))
+            c.figure(FIGS / "index_scaling.png", "Search time and resident memory as memory grows: exact search "
+                     "against the learned index (distractor notes added to the real store)", 15.5)
+    if ad:
+        h, w = ad["hotpotqa"], ad["2wikimultihopqa"]
+        c.p("**Learning to fetch on unseen questions: a negative result.** The query adapter (Equation "
+            "⟦eq_adapter_n⟧) was trained on half of the HotpotQA questions and half of the 2WikiMultiHopQA questions "
+            "(question → its gold paragraphs), the epoch chosen on a validation part of that half, and tested on the "
+            f"other half. The untrained engine already ranked a gold paragraph first for {pct(h['recall_before']['recall@1'])} "
+            f"and {pct(w['recall_before']['recall@1'])} of the test questions, and within the top 5 for "
+            f"{pct(h['recall_before']['recall@5'])} and {pct(w['recall_before']['recall@5'])}. On validation no epoch "
+            "beat the untrained adapter, so the selected adapter is the identity; trained for 40 epochs regardless, it "
+            f"lowered recall@1 to {pct(h['rank_16']['recall_after_40_epochs']['recall@1'])} and "
+            f"{pct(w['rank_16']['recall_after_40_epochs']['recall@1'])} (rank 16). With a strong embedder there is "
+            "little for a small adapter to learn from a few hundred questions, and much to overfit; this is why sleep "
+            "keeps an adapter only when held-out recall rises (Equation ⟦eq_accept_n⟧).")
+    if eg:
+        c.p(EAGER_ADAPTER_TEXT(eg))
+
+
+def SCALE_TEXT(idx) -> str:  # noqa: N802
+    rows = {(r["notes"], r["mode"]): r for r in idx["scale"]}
+    big = max(n for n, _ in rows)
+    e, i = rows.get((big, "exact")), rows.get((big, "ivf"))
+    small = min(n for n, _ in rows)
+    es, is_ = rows.get((small, "exact")), rows.get((small, "ivf"))
+    if not (e and i and es and is_):
+        return ""
+    return (f"**As memory grows.** The store was grown to {big:,} notes with perturbed copies of its own vectors "
+            "(distractors only; every gold paragraph is a real one) and each size was searched in a fresh process. "
+            f"From {small:,} to {big:,} notes, exact search went from {es['ms']:.1f} to {e['ms']:.1f} ms per question and its "
+            f"process from {es['rss_mb_after_queries']:.0f} to {e['rss_mb_after_queries']:.0f} MB, because the whole matrix "
+            f"is held in RAM; through the index it went from {is_['ms']:.1f} to {i['ms']:.1f} ms and from "
+            f"{is_['rss_mb_after_queries']:.0f} to {i['rss_mb_after_queries']:.0f} MB, with full-support recall "
+            f"{pct(i['full_support_recall'])} against {pct(e['full_support_recall'])} for exact search. This is Equation "
+            "⟦eq_ram_n⟧ measured: memory grows on disk, and the part in RAM grows with the clusters a question probes.")
+
+
+def EAGER_ADAPTER_TEXT(eg) -> str:  # noqa: N802
+    b, a = eg["before"], eg["after"]
+    rep = eg["sleep_report"]["adapter"]
+    kept = "kept" if eg["adapter_kept"] else "rejected"
+    return (f"**Learning to fetch from its own experience.** After the learning stream, the engine slept on what it had "
+            f"experienced: pairs (question as first asked → the notes that contained its answer) for "
+            f"{eg['train']} questions, with {eg['test']} held out. Sleep's own acceptance test {kept} the adapter "
+            f"(held-out recall@5 {pct(rep['recall_before']['recall@5'])} → {pct(rep['recall_after']['recall@5'])}). "
+            f"On the reworded questions of the second pass, recall@1 for facts it had learned went from "
+            f"{pct(b['seen_reworded']['recall@1'])} to {pct(a['seen_reworded']['recall@1'])}, and for held-out facts from "
+            f"{pct(b['unseen_reworded']['recall@1'])} to {pct(a['unseen_reworded']['recall@1'])}.")
+
+
+def LEARN_TEXT(learn, retain, base, para) -> str:  # noqa: N802 - written from results/eager
+    t = learn["turns"]
+    n = len(t)
+    acc = sum(x["correct"] for x in t) / n
+    looked = sum(x["looked_up"] for x in t)
+    mem = sum(x["memory_had_it"] for x in t)
+    none = sum(1 for x in t if x["looked_up"] and not x["pages"])
+    gold = sum(x["gold_in_context"] for x in t)
+    acc_gold = sum(x["correct"] for x in t if x["gold_in_context"]) / max(1, gold)
+    sec = [x for x in t if x["pair_role"] == "second"]
+    sec_mem = sum(x["memory_had_it"] for x in sec)
+    b3 = base.get("llama3.2_3b")
+    r05 = retain["models"].get("qwen2.5:0.5b")
+    kept = ""
+    if r05:
+        right1 = {x["i"] for x in t if x["correct"]}
+        kept_n = sum(1 for x in r05["per_question"] if x["i"] in right1 and x["correct"])
+        kept = (f" Offline, in other words, it still answered {kept_n} of the {len(right1)} facts it had got right "
+                f"online ({pct(kept_n / len(right1))}): what it learned stayed learned.")
+    r3 = retain["models"].get("llama3.2:3b")
+    port = (f" The same memory, read by llama3.2:3b, gave {pct(r3['accuracy'])} on the reworded questions against "
+            f"{pct(para['llama3.2_3b']['accuracy'])} for that model alone: memory learned once serves any model."
+            if r3 and para.get("llama3.2_3b") else "")
+    return (f"**The frozen 0.5B model with eager learning answered {pct(acc)} of the stream**, against "
+            f"{pct(base['qwen2.5_0.5b']['accuracy'])} for the same model closed-book"
+            + (f" and {pct(b3['accuracy'])} for a model six times its size" if b3 else "") + ". "
+            f"It looked {looked} questions up, found nothing for {none}, and answered {mem} from what it had already "
+            f"learned without any request; of the 30 subjects asked about twice, {sec_mem} second questions needed no "
+            f"lookup.{kept}{port} Accuracy did not climb along the stream ({pct(sum(x['correct'] for x in t[:n // 2]) / (n // 2))} "
+            f"in the first half, {pct(sum(x['correct'] for x in t[n // 2:]) / (n - n // 2))} in the second), which is "
+            "expected: almost every question is about a new subject, so the gain is from learning each fact when it is "
+            "first needed, and the evidence of learning is the second pass. **Where answers are still lost:** the "
+            f"fetched text contained an accepted answer for {pct(gold / n)} of questions, and when it did the 0.5B model "
+            f"was right {pct(acc_gold)} of the time. The ceiling is therefore set mostly by the lookup (PopQA's "
+            "long-tail subjects are often ambiguous, e.g. *Kill*, *Ram*, *The Other*, and its answer keys are strict), "
+            f"not by the reader. Memory grew to {t[-1]['notes_total']} notes, {t[-1]['store_bytes'] / 1e6:.1f} MB on "
+            "disk. Times per question in this run (median "
+            f"{statistics.median(x['total_ms'] for x in t) / 1000:.0f} s) are dominated by waiting out rate limits on a "
+            "shared cloud machine, not by the engine, and are not reported as the application's speed.")
+
+
+def AFTER_D21_TEXT(before, after) -> str:  # noqa: N802
+    a1 = sum(x["correct"] for x in before["turns"]) / len(before["turns"])
+    a2 = sum(x["correct"] for x in after["turns"]) / len(after["turns"])
+    p1 = sum(len(x["pages"]) for x in before["turns"]) / len(before["turns"])
+    p2 = sum(len(x["pages"]) for x in after["turns"]) / len(after["turns"])
+    return (f"**After defect D-21 was fixed** (Wikipedia had refused most of the fetcher's requests because it did not "
+            "send its User-Agent), the whole stream was run again from an empty memory with the same DuckDuckGo answers "
+            f"replayed from the cache: pages per question rose from {p1:.2f} to {p2:.2f} and accuracy went from "
+            f"{pct(a1)} to {pct(a2)}. The first run is the one reported in ⟦tab_learn⟧, since the stream's design was "
+            "fixed before it.")
+
+
+def PROMPT_ROWS(pe) -> list[list[str]]:  # noqa: N802
+    import importlib.util as _u
+
+    spec = _u.spec_from_file_location("pe_mod", ROOT / "scripts/prompt_eval.py")
+    mod = _u.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    rows = []
+    for name, short in (("D (notes are true)", "D (before)"), ("E (eager: ask to be taught)", "E"),
+                        ("F (eager; answer first; D-19 fix)", "**F (adopted)**")):
+        for model in ("llama3.2:3b", "qwen2.5:1.5b"):
+            e = pe["results"].get(model, {}).get(name)
+            if not e:
+                continue
+            cases = e["dev"] + e["held_out"] + e.get("fresh", [])
+            unk = [x for x in cases if x["kind"] == "unknown"]
+            inv = sum(mod.invites_teaching(x["answer"]) for x in unk)
+            rows.append([short, model, f"{e['dev_correct']}/6", f"{e['held_out_correct']}/7",
+                         f"{e.get('fresh_correct', '–')}/8", f"{inv}/{len(unk)}"])
+    return rows
 
 
 def rag_definition(c: Chapter) -> None:
