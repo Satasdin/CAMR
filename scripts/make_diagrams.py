@@ -105,6 +105,33 @@ composer -> sse [label="message"]; sse -> thread [label="events"]; side -> api; 
 api -> asst; sse -> asst; asst -> ollama [label="embed · generate"]; asst -> store;
 }}'''
 
+DIAGRAMS["rag_vs_camr"] = f'''digraph G {{ rankdir=TB; {BASE} compound=true;
+subgraph cluster_rag {{ label="Standard RAG (retrieve-then-read)"; fontname="Helvetica-Bold"; color="{ORANGE}"; style="rounded"; penwidth=1.4;
+  r_docs [label="Fixed document corpus\\n(indexed once, offline)" shape=cylinder fillcolor="#fdeee6" color="{ORANGE}"];
+  r_q [label="Question" shape=ellipse fillcolor="white"];
+  r_emb [label="Embed question"];
+  r_top [label="Top-k most similar chunks\\n(always k, however weak)"];
+  r_cat [label="Concatenate all k into the prompt"];
+  r_llm [label="Model answers"];
+  r_q -> r_emb -> r_top -> r_cat -> r_llm; r_docs -> r_top [style=dashed];
+}}
+subgraph cluster_camr {{ label="CAMR (capability-adaptive memory)"; fontname="Helvetica-Bold"; color="{GREEN}"; style="rounded"; penwidth=1.4;
+  c_write [label="Write path: documents, chat statements,\\nremember-that, 👍 answers → screen,\\ndeduplicate, provenance" fillcolor="#e8f7f0" color="{GREEN}"];
+  c_store [label="Growing personal memory\\n(one SQLite file)" shape=cylinder fillcolor="#e9f1fb" color="{BLUE}"];
+  c_q [label="Question" shape=ellipse fillcolor="white"];
+  c_route [label="Router: memory budget\\nor cloud? (learned)" fillcolor="#e8f7f0" color="{GREEN}"];
+  c_emb [label="Embed question → top-20 candidates"];
+  c_gate [label="Gate: abstain if best < τ;\\nadmit only within δ of best" fillcolor="#e8f7f0" color="{GREEN}"];
+  c_bridge [label="Entity bridging:\\nfollow named entities (2nd hop)" fillcolor="#e8f7f0" color="{GREEN}"];
+  c_pack [label="Pack under token budget B"];
+  c_llm [label="Model answers"];
+  c_check [label="Grounded in the notes?\\nelse escalate" shape=diamond fillcolor="white"];
+  c_q -> c_route -> c_emb -> c_gate -> c_bridge -> c_pack -> c_llm -> c_check;
+  c_store -> c_emb [style=dashed]; c_write -> c_store;
+  c_llm -> c_write [style=dashed label="what the user says\\nbecomes memory" constraint=false];
+}}
+}}'''
+
 
 def render(out: Path) -> list[Path]:
     out.mkdir(parents=True, exist_ok=True)
