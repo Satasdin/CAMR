@@ -89,13 +89,18 @@ def fig_compete(out: Path) -> Path | None:
             if model in retain["models"]:
                 pts.append((rss.get(model, retain["models"][model]["peak_model_rss_mb"] / 1024),
                             100 * retain["models"][model]["accuracy"], lab, BLUE, "s"))
-    fig, ax = plt.subplots(figsize=(7.8, 4.4), facecolor=SURF)
+    fig, ax = plt.subplots(figsize=(8.2, 4.6), facecolor=SURF)
+    offsets = {"0.5B + eager learning (online)": (9, 8), "0.5B + learned memory, offline,\nreworded": (9, -22),
+               "20B alone": (-58, 8)}
     for gx, gy, label, col, mk in pts:
         ax.scatter([gx], [gy], s=70, color=col, marker=mk, edgecolor=SURF, linewidth=1.5, zorder=3)
-        ax.annotate(label, (gx, gy), xytext=(7, 4), textcoords="offset points", fontsize=7.8, color=INK2)
+        ax.annotate(label, (gx, gy), xytext=offsets.get(label, (7, 4)), textcoords="offset points", fontsize=7.8,
+                    color=INK2)
     ax.set_xscale("log")
+    ax.set_xlim(0.5, 20)
     ax.set_xticks([0.5, 1, 2, 4, 8, 16])
     ax.set_xticklabels(["0.5", "1", "2", "4", "8", "16"])
+    ax.minorticks_off()
     ax.set_ylim(0, max(p[1] for p in pts) + 12)
     style(ax, xlabel="resident memory of the model process (GB, log scale)", ylabel="accuracy (%)")
     ax.set_title("Knowledge from memory, not from size: accuracy against RAM", loc="left")

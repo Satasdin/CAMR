@@ -544,19 +544,23 @@ Sources: `results/finetune/tune/grid.json`, `results/finetune/test.json`, `resul
 
 Source: `results/eager/` (`python scripts/eager_learning.py select|dev|learn|retain|baseline|ram`). 200 PopQA questions no earlier run used (30 subjects asked twice, 40–90 questions apart); qwen2.5:0.5b with memory that starts **empty**, BGE-small, gate τ = 0.50 / δ = 0.15, entity gate, 512-token budget; lookups through DuckDuckGo Instant Answers and Wikipedia (cached, rate-limit aware). The ordering of an ambiguous name's meanings was chosen on 60 other fresh questions (embedding similarity: answer in fetched text 55% vs 35% for shared words).
 
-| System | As asked | Reworded (offline) |
-|---|---|---|
-| qwen2.5:0.5b alone | 10.0% | 10.5% |
-| qwen2.5:1.5b alone | 11.0% | – |
-| llama3.2:3b alone | 19.0% | 18.0% |
-| **qwen2.5:0.5b + eager learning** | **43.5%** (online) | **41.5%** |
-| llama3.2:3b reading the memory the 0.5B model learned | – | 45.0% |
+| System | As asked | Reworded (offline) | Model RAM |
+|---|---|---|---|
+| qwen2.5:0.5b alone | 10.0% | 10.5% | 0.70 GB |
+| qwen2.5:1.5b alone | 11.0% | – | 2.02 GB |
+| llama3.2:3b alone | 19.0% | 18.0% | 4.31 GB |
+| gpt-oss:20b alone | 20.5% | – | 13.24 GB |
+| **qwen2.5:0.5b + eager learning** | **43.5%** (online) | **41.5%** | 0.70 GB (+0.59 GB engine) |
+| llama3.2:3b reading the memory the 0.5B model learned | – | 45.0% | 4.31 GB |
+
+RAM: resident memory of each model's process after one answer, alone (`results/eager/ram.json`). The cloud model (Kimi K3) could not be rerun: its API key had been rotated (HTTP 401).
 
 1. 158 lookups, 9 found nothing, 35 answers came from memory with no request; 25 of the 30 second questions about a subject needed no lookup.
 2. Retention: 79 of the 87 facts answered right online were answered right offline in other words (90.8%).
 3. The answer was in the fetched text for 52% of questions; when it was, the 0.5B model was right 76% of the time: the lookup, not the reader, sets the ceiling (PopQA's long-tail names are often ambiguous).
 4. Memory grew to 333 notes, 2.7 MB. Times in this run are dominated by rate-limit waits on a shared cloud machine and are not the app's speed.
 5. Defects found and fixed during the stream: D-17 (subject extraction), D-18 (an empty DuckDuckGo reply cached as "nothing known"), D-21 (the fetcher sent no CAMR User-Agent, so Wikimedia refused most requests). The stream was re-run from scratch after D-17/D-18 and repeated after D-21 (`learn_after_D21.json`).
+6. After D-21 every lookup found pages (0 empty vs 9) and pages per question rose from 1.07 to 1.9, but the answer was in the fetched text no more often (52.5% vs 52%) and accuracy fell to 37.5%: more text distracted the 0.5B reader. Pages per lookup and the token budget were then chosen on the 60 development questions (`devtune.json`).
 
 ## F20. Asking to be taught instead of "I don't know" (prompt F)
 

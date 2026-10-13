@@ -2389,9 +2389,17 @@ def LEARN_TEXT(learn, retain, base, para) -> str:  # noqa: N802 - written from r
     port = (f" The same memory, read by llama3.2:3b, gave {pct(r3['accuracy'])} on the reworded questions against "
             f"{pct(para['llama3.2_3b']['accuracy'])} for that model alone: memory learned once serves any model."
             if r3 and para.get("llama3.2_3b") else "")
+    b20 = base.get("gpt-oss_20b")
+    ram = (_j(EAGER / "ram.json") or {}).get("models", {})
+    vs20 = ""
+    if b20 and "accuracy" in b20:
+        vs20 = f", and {pct(b20['accuracy'])} for gpt-oss:20b, a model forty times its size"
+        if "gpt-oss:20b" in ram and "qwen2.5:0.5b" in ram:
+            vs20 += (f" whose process held {ram['gpt-oss:20b']['rss_mb'] / 1024:.1f} GB of RAM against "
+                     f"{ram['qwen2.5:0.5b']['rss_mb'] / 1024:.1f} GB")
     return (f"**The frozen 0.5B model with eager learning answered {pct(acc)} of the stream**, against "
             f"{pct(base['qwen2.5_0.5b']['accuracy'])} for the same model closed-book"
-            + (f" and {pct(b3['accuracy'])} for a model six times its size" if b3 else "") + ". "
+            + (f", {pct(b3['accuracy'])} for a model six times its size" if b3 else "") + vs20 + ". "
             f"It looked {looked} questions up, found nothing for {none}, and answered {mem} from what it had already "
             f"learned without any request; of the 30 subjects asked about twice, {sec_mem} second questions needed no "
             f"lookup.{kept}{port} Accuracy did not climb along the stream ({pct(sum(x['correct'] for x in t[:n // 2]) / (n // 2))} "

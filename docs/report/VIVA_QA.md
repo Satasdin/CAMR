@@ -292,7 +292,7 @@ It runs four steps, each reporting what it changed: tidy duplicates, look up nam
 The negative results are reported as such.
 
 **J6. Is the comparison with bigger models fair?**
-It is fair on accuracy, but it is not a like-for-like comparison of systems:
+It is fair on accuracy, but it is not a like-for-like comparison of systems. The numbers: the 0.5B model with eager learning reached 43.5%; gpt-oss:20b closed-book reached 20.5% with a 13.2 GB process against 0.7 GB.
 - Same questions, same scoring, every model greedy.
 - The small model gets the web and memory; the larger ones answer closed-book. That is the point being tested: knowledge from memory instead of size.
 - A 3B model reading the *same* memory reached 45%, so memory helps any model.
