@@ -45,6 +45,9 @@ That was an extension, not a change. The 1–3B models were all tested. The smal
 ## B. Is this "just RAG"?
 
 **B1. How is CAMR different from retrieval-augmented generation?**
+*Short answer for the viva:* its retrieval core is RAG; the difference is every decision around it, and it was measured head to head against a textbook top-k RAG using the same embedder, store and prompt (F17). On 2WikiMultiHopQA, CAMR got both needed paragraphs into the context for 78.4% of questions with 439 tokens. Top-10 RAG managed 39.2% with 767 tokens. On HotpotQA the two were about equal (70.8% vs 68.2%), and I say so. At the answer level, CAMR matched or beat RAG with about 40% less text when the answer was stored (0.5B: 80.0% vs 70.0%).
+
+*Longer answer:*
 The retrieval core is RAG, and that is deliberate: the study measures how far memory can substitute for model size. CAMR differs in four measured ways:
 1. **It is capability-adaptive.**
    - It abstains when nothing is relevant (gating).
@@ -55,7 +58,7 @@ The retrieval core is RAG, and that is deliberate: the study measures how far me
    - The same frozen weights went from 6.7% to 66.7% on long-tail facts as memory grew (F2).
 3. **It is budget-controlled per model and task.**
    - A learned router picks the budget (or escalates to the cloud) per question.
-   - With it, 71% of questions stayed on the device at equal accuracy (F11b).
+   - With it, 75% of questions stayed on the device at equal accuracy (F15).
 4. **It is evaluated as a gap-closing mechanism.**
    - Results are reported as gap closed and residual gap, not as raw accuracy only.
 
@@ -128,7 +131,7 @@ Mathematical reasoning: the residual gap is 83 points, and worked-example memory
 Not for facts. From 1.5B up, every model reached 70–80% with memory, and 14B was no better than 1.5B (F10b). For multi-hop, yes up to about 3B, though family matters: mistral:7b (43.3%) did worse than llama3.2:3b (56.7%).
 
 **E4. Did the learned policy really beat the cloud?**
-No, it matched it. The policy scored 65.3% against 63.9% for always-Kimi, which is within noise. The robust result is equal accuracy with 71% of questions kept on the device and a 4.0× lower mean latency (3.1 s vs 12.6 s) (F11b).
+No, it matched it. After tuning by cross-validation on the training questions only, the router plus cascade scored 66.7% against 63.9% for always-Kimi; the paired 95% interval of the difference (−8.3 to +13.9 points) includes zero. The robust result is equal accuracy with 75% of questions kept on the device and 2.9 s instead of 12.6 s per answer (F15). The first version's escalation threshold had been read off the held-out questions; the tuned version fixes that.
 
 **E5. Why does more memory sometimes lower accuracy?**
 Small models are distracted by extra notes. For the 0.5B model, accuracy on facts at 128 tokens was 76.7%, against 66.7% at 512 and 1,024 (F8). This is why the budget is adaptive.
@@ -204,3 +207,50 @@ Windows x64/ARM64, macOS Apple Silicon/Intel and Linux x64/ARM64. Continuous int
 
 **H2. What is the contribution in one line?**
 Measured evidence that external memory lets 1.5–4B models on a CPU match a frontier cloud model on knowledge-bound questions, together with the residual gap that memory cannot close, released as open-source software that people can use.
+
+---
+
+## I. Tuning, interface testing and live scenarios
+
+**I1. How did you avoid tuning on the test set?**
+Every tunable part was chosen on data kept apart from the test:
+- **Router (λ, features, α, passes, cascade threshold):** 5-fold cross-validation on the 144 training questions only, then a single evaluation on the 72 held-out questions (F15).
+- **Read path (margin δ, budget B):** tuned on one half of the 1,000 retrieval questions, tested once on the other half.
+- **LoRA baseline (format, learning rate, epochs):** chosen on 60 validation questions from the learning split's training set, tested once on 60 held-out questions.
+
+The first study's cascade threshold had been read off the held-out results. The tuned version corrects that, and the result held: 66.7% vs 63.9% for always-Kimi, a difference that is not significant.
+
+**I2. Why did cross-validation pick fewer features?**
+With 144 questions the richer models fit noise. The spread between folds (±0.08 in mean reward) was larger than the differences between feature sets, so the simplest router (task type only) generalised best. More data is needed before the retrieval features can pay off.
+
+**I3. Did tuning the read path change your recommendation?**
+It sharpened it. Judged on retrieval alone with tokens priced at μ = 0.1 per 1,000, the best setting was no margin and B = 1,024: held-out full-support recall rose from 72.8% to 85.6%, but tokens more than doubled. Above μ ≈ 0.20 the original setting (δ = 0.15, B = 512) wins. Retrieval-level tuning ignores the reader, and the end-to-end sweep showed the 0.5B model is hurt by extra notes. So the read path must be tuned to the reader, which is exactly what the learned router does per question.
+
+**I4. How was the interface tested?**
+- **Six end-to-end browser tests** in Chromium (Playwright): remember→ask with the recall card, empty message, 👍 teaching, theme and panel, phone width, keyboard-only use.
+- **An axe-core 4.10 accessibility audit**, in both themes, at desktop and phone size.
+- **A WCAG contrast check** of every design-token pair.
+
+The first audit found real defects: secondary text below AA contrast (as low as 2.3:1) and no page heading. These are D-11 and D-12. After the fixes there were zero violations. Screen readers were *not* tested, and a user study is future work.
+
+**I5. What did the live scenarios show?**
+llama3.2:3b in the released app, with and without memory, on five realistic conversations:
+- two notes needed for one answer;
+- arithmetic on a remembered mileage;
+- a fact that changes;
+- a detail from eight turns earlier;
+- a taught document.
+
+The first run exposed two defects. The model refused general questions such as 17 × 23 (D-13, caused by the prompt), and every chat question was stored as a "memory" (D-14). Both were fixed and the scenarios re-run. Showing that test → defect → fix → retest loop is the point of the section.
+
+**I6. What happens when the answer is not in memory at all? Doesn't CAMR then behave just like RAG?**
+It did, at first, and that was a real finding. With each question's own document removed, the similarity gate abstained on only 0–3% of questions, because the store still held notes about *similar* films and people. The 0.5B model copied a wrong name from those notes 73% of the time, almost as often as with RAG (77%). The irrelevant notes even pushed the 3B model below its closed-book score.
+
+The fix is an **entity-anchored gate**: if the question names something and no candidate note mentions it, abstain. I designed it after seeing the test failures, so I judged it first on 60 validation questions that played no part in its design:
+- **When the answer is stored:** no cost.
+- **When it is missing:** it abstained ~80% of the time, and copied wrong answers fell to 13–15% (0.5B) and 7% (3B).
+- **On the held-out test:** the results held.
+- **On multi-hop retrieval:** it costs 1.2 points on HotpotQA and nothing on 2Wiki.
+
+Its first run also exposed defect D-15 (possessives such as *Peck's* were normalised differently in the question and in the note). That was fixed and re-run. Standard RAG has no step where this decision could be made, which is the clearest single difference between retrieving text and deciding whether a small model should read it.
+

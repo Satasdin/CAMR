@@ -1,0 +1,182 @@
+{
+  "variants": {
+    "RAG top-3": {
+      "retrieval_policy": "similarity_only",
+      "weights": {
+        "similarity": 1.0,
+        "recency": 0.0,
+        "importance": 0.0
+      },
+      "k": 3,
+      "min_similarity": 0.0,
+      "similarity_margin": null,
+      "expansion": "none",
+      "token_budget": 100000
+    },
+    "RAG top-5": {
+      "retrieval_policy": "similarity_only",
+      "weights": {
+        "similarity": 1.0,
+        "recency": 0.0,
+        "importance": 0.0
+      },
+      "k": 5,
+      "min_similarity": 0.0,
+      "similarity_margin": null,
+      "expansion": "none",
+      "token_budget": 100000
+    },
+    "RAG top-10": {
+      "retrieval_policy": "similarity_only",
+      "weights": {
+        "similarity": 1.0,
+        "recency": 0.0,
+        "importance": 0.0
+      },
+      "k": 10,
+      "min_similarity": 0.0,
+      "similarity_margin": null,
+      "expansion": "none",
+      "token_budget": 100000
+    },
+    "CAMR": {
+      "retrieval_policy": "similarity_only",
+      "weights": {
+        "similarity": 1.0,
+        "recency": 0.0,
+        "importance": 0.0
+      },
+      "k": 20,
+      "min_similarity": 0.5,
+      "similarity_margin": 0.15,
+      "expansion": "entity",
+      "token_budget": 512
+    },
+    "CAMR + entity gate": {
+      "retrieval_policy": "similarity_only",
+      "weights": {
+        "similarity": 1.0,
+        "recency": 0.0,
+        "importance": 0.0
+      },
+      "k": 20,
+      "min_similarity": 0.5,
+      "similarity_margin": 0.15,
+      "expansion": "entity",
+      "token_budget": 512,
+      "entity_gate": true
+    }
+  },
+  "rows": [
+    {
+      "benchmark": "hotpotqa",
+      "method": "RAG top-3",
+      "n": 500,
+      "support_all": 0.562,
+      "support_any": 0.964,
+      "context_precision": 0.57,
+      "mean_tokens": 230.804,
+      "mean_notes": 3,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "hotpotqa",
+      "method": "RAG top-5",
+      "n": 500,
+      "support_all": 0.682,
+      "support_any": 0.978,
+      "context_precision": 0.3924,
+      "mean_tokens": 390.608,
+      "mean_notes": 5,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "hotpotqa",
+      "method": "RAG top-10",
+      "n": 500,
+      "support_all": 0.786,
+      "support_any": 0.992,
+      "context_precision": 0.2188,
+      "mean_tokens": 799.792,
+      "mean_notes": 10,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "hotpotqa",
+      "method": "CAMR",
+      "n": 500,
+      "support_all": 0.708,
+      "support_any": 0.97,
+      "context_precision": 0.3909111111111111,
+      "mean_tokens": 419.544,
+      "mean_notes": 5.594,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "2wikimultihopqa",
+      "method": "RAG top-3",
+      "n": 500,
+      "support_all": 0.28,
+      "support_any": 0.996,
+      "context_precision": 0.6033333333333333,
+      "mean_tokens": 216.04,
+      "mean_notes": 3,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "2wikimultihopqa",
+      "method": "RAG top-5",
+      "n": 500,
+      "support_all": 0.342,
+      "support_any": 1.0,
+      "context_precision": 0.41960000000000003,
+      "mean_tokens": 373.006,
+      "mean_notes": 5,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "2wikimultihopqa",
+      "method": "RAG top-10",
+      "n": 500,
+      "support_all": 0.392,
+      "support_any": 1.0,
+      "context_precision": 0.234,
+      "mean_tokens": 766.792,
+      "mean_notes": 10,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "2wikimultihopqa",
+      "method": "CAMR",
+      "n": 500,
+      "support_all": 0.784,
+      "support_any": 0.998,
+      "context_precision": 0.5150963924963925,
+      "mean_tokens": 438.742,
+      "mean_notes": 6.048,
+      "abstain_rate": 0.0
+    },
+    {
+      "benchmark": "hotpotqa",
+      "method": "CAMR + entity gate",
+      "n": 500,
+      "support_all": 0.696,
+      "support_any": 0.952,
+      "context_precision": 0.3929464082838316,
+      "mean_tokens": 410.146,
+      "mean_notes": 5.472,
+      "abstain_rate": 0.022
+    },
+    {
+      "benchmark": "2wikimultihopqa",
+      "method": "CAMR + entity gate",
+      "n": 500,
+      "support_all": 0.784,
+      "support_any": 0.998,
+      "context_precision": 0.5150963924963925,
+      "mean_tokens": 438.742,
+      "mean_notes": 6.048,
+      "abstain_rate": 0.0
+    }
+  ]
+}

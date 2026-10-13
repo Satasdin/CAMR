@@ -1,0 +1,444 @@
+{
+  "model": "llama3.2:3b",
+  "scenarios": {
+    "bridge": {
+      "title": "An answer that needs two notes",
+      "notes": [
+        [
+          "Project CAMR",
+          "Project CAMR is supervised by Dr. Achieng Otieno. Supervisor meetings are every second Tuesday at 10:00, and Chapter 5 is due on 20 October."
+        ],
+        [
+          "Dr. Achieng Otieno",
+          "Dr. Achieng Otieno's office is Room 4.12 on the third floor of the Science Complex. She wants drafts sent by email as a PDF."
+        ]
+      ],
+      "file": null,
+      "expected": [
+        [
+          "4.12"
+        ],
+        [
+          "pdf"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/bridge_without.png",
+        "turns": [
+          {
+            "question": "Which room is my project supervisor's office in, and how does she want drafts sent?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 161.2,
+            "generation_ms": 1395.8
+          }
+        ],
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/bridge_with.png",
+        "turns": [
+          {
+            "question": "Which room is my project supervisor's office in, and how does she want drafts sent?",
+            "answer": "Your project supervisor, Dr. Achieng Otieno, has her office in Room 4.12 on the third floor of the Science Complex. She prefers drafts to be sent to her by email as a PDF.",
+            "abstained": false,
+            "grounded": 0.8,
+            "sources": [
+              "Dr. Achieng Otieno",
+              "Project CAMR"
+            ],
+            "via_bridge": [
+              false,
+              false
+            ],
+            "similarity": [
+              0.72,
+              0.618
+            ],
+            "retrieval_ms": 207.2,
+            "generation_ms": 7873.7
+          }
+        ],
+        "correct": true
+      }
+    },
+    "arithmetic": {
+      "title": "Arithmetic over a remembered fact",
+      "notes": [
+        [
+          "Car service",
+          "The car was serviced at 84,200 km on 20 September. The next oil change is due at 89,200 km."
+        ]
+      ],
+      "file": null,
+      "expected": [
+        [
+          "2,250",
+          "2250",
+          "2 250"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/arithmetic_without.png",
+        "turns": [
+          {
+            "question": "My odometer reads 86,950 km today. How many kilometres until the next oil change?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 162.7,
+            "generation_ms": 2175.3
+          }
+        ],
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/arithmetic_with.png",
+        "turns": [
+          {
+            "question": "My odometer reads 86,950 km today. How many kilometres until the next oil change?",
+            "answer": "To find out when the next oil change is due, subtract the current odometer reading from the next oil change mileage: 89,200 km - 86,950 km = 2,250 km.",
+            "abstained": false,
+            "grounded": 0.55,
+            "sources": [
+              "Car service"
+            ],
+            "via_bridge": [
+              false
+            ],
+            "similarity": [
+              0.842
+            ],
+            "retrieval_ms": 151.8,
+            "generation_ms": 7990.4
+          }
+        ],
+        "correct": true
+      }
+    },
+    "update": {
+      "title": "A fact that changes",
+      "notes": [
+        [
+          "Dentist",
+          "Dentist appointment on Thursday 9 October at 14:30 with Dr. Wanjiru at Upper Hill Dental."
+        ]
+      ],
+      "file": null,
+      "expected": [
+        [
+          "friday"
+        ],
+        [
+          "09:00",
+          "9:00",
+          "9 am",
+          "9am",
+          "9.00"
+        ]
+      ],
+      "with": {
+        "screenshot": "docs/figures/scenarios/update_with.png",
+        "turns": [
+          {
+            "question": "remember that the dentist appointment moved to Friday 10 October at 09:00",
+            "answer": "Got it. I'll remember that.",
+            "abstained": false,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 0.0,
+            "generation_ms": 0.0
+          },
+          {
+            "question": "When is my dentist appointment now?",
+            "answer": "Your dentist appointment is now on Friday, 10 October at 09:00.",
+            "abstained": false,
+            "grounded": 0.8571428571428571,
+            "sources": [
+              "note",
+              "Dentist"
+            ],
+            "via_bridge": [
+              false,
+              false
+            ],
+            "similarity": [
+              0.851,
+              0.797
+            ],
+            "retrieval_ms": 78.2,
+            "generation_ms": 4270.3
+          }
+        ],
+        "correct": true
+      }
+    },
+    "window": {
+      "title": "Remembering beyond the context window",
+      "notes": [],
+      "file": null,
+      "expected": [
+        [
+          "penicillin"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/window_without.png",
+        "turns": [
+          {
+            "question": "I'm allergic to penicillin, please keep that in mind.",
+            "answer": "You're allergic to penicillin.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 150.6,
+            "generation_ms": 2178.4
+          },
+          {
+            "question": "What is 17 × 23?",
+            "answer": "The result of 17 × 23 is 391.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 244.7,
+            "generation_ms": 2767.0
+          },
+          {
+            "question": "Convert 5 miles to kilometres.",
+            "answer": "The result of 5 miles converted to kilometres is 8.047.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 253.7,
+            "generation_ms": 3162.8
+          },
+          {
+            "question": "What's the capital of Australia?",
+            "answer": "The capital of Australia is Canberra.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 409.4,
+            "generation_ms": 1798.9
+          },
+          {
+            "question": "Give me a synonym for quick.",
+            "answer": "A synonym for \"quick\" is fast.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 217.8,
+            "generation_ms": 2361.8
+          },
+          {
+            "question": "What is 15% of 240?",
+            "answer": "The result of 15% of 240 is 36.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 196.0,
+            "generation_ms": 3005.0
+          },
+          {
+            "question": "How many days are in a leap year?",
+            "answer": "There are 366 days in a leap year.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 248.2,
+            "generation_ms": 2179.6
+          },
+          {
+            "question": "Which antibiotic am I allergic to?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 218.4,
+            "generation_ms": 2748.4
+          }
+        ],
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/window_with.png",
+        "turns": [
+          {
+            "question": "I'm allergic to penicillin, please keep that in mind.",
+            "answer": "You're allergic to penicillin.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 122.0,
+            "generation_ms": 1674.9
+          },
+          {
+            "question": "What is 17 × 23?",
+            "answer": "The result of 17 × 23 is 391.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 50.0,
+            "generation_ms": 2418.8
+          },
+          {
+            "question": "Convert 5 miles to kilometres.",
+            "answer": "The result of 5 miles converted to kilometres is 8.047.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 201.8,
+            "generation_ms": 2943.2
+          },
+          {
+            "question": "What's the capital of Australia?",
+            "answer": "The capital of Australia is Canberra.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 236.0,
+            "generation_ms": 1902.3
+          },
+          {
+            "question": "Give me a synonym for quick.",
+            "answer": "A synonym for \"quick\" is fast.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 306.2,
+            "generation_ms": 2060.8
+          },
+          {
+            "question": "What is 15% of 240?",
+            "answer": "The result of 15% of 240 is 36.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 284.7,
+            "generation_ms": 2764.9
+          },
+          {
+            "question": "How many days are in a leap year?",
+            "answer": "There are 366 days in a leap year.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 248.6,
+            "generation_ms": 2242.8
+          },
+          {
+            "question": "Which antibiotic am I allergic to?",
+            "answer": "Penicillin.",
+            "abstained": false,
+            "grounded": 1.0,
+            "sources": [
+              "chat"
+            ],
+            "via_bridge": [
+              false
+            ],
+            "similarity": [
+              0.716
+            ],
+            "retrieval_ms": 151.6,
+            "generation_ms": 2933.6
+          }
+        ],
+        "correct": true
+      }
+    },
+    "document": {
+      "title": "Answering from a taught document",
+      "notes": [],
+      "file": "lab_safety.md",
+      "expected": [
+        [
+          "15 minutes",
+          "fifteen minutes"
+        ],
+        [
+          "kamau"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/document_without.png",
+        "turns": [
+          {
+            "question": "How long should I rinse my eyes after a chemical splash, and who do I report it to?",
+            "answer": "According to the notes, there is no information about the user's personal preferences or habits, so I don't have an answer from the notes.\n\nAs for the general question, the American Chemical Society recommends rinsing the eyes with water for at least 15-20 minutes after a chemical splash. It's also recommended to report the incident to a supervisor, a healthcare professional, or the Occupational Safety and Health Administration (OSHA) if you're in a workplace setting.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 229.0,
+            "generation_ms": 13351.1
+          }
+        ],
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/document_with.png",
+        "turns": [
+          {
+            "question": "How long should I rinse my eyes after a chemical splash, and who do I report it to?",
+            "answer": "You should rinse your eyes for at least 15 minutes after a chemical splash, and you should report every incident, however small, to Mr. Kamau, the lab technician.",
+            "abstained": false,
+            "grounded": 1.0,
+            "sources": [
+              "lab_safety"
+            ],
+            "via_bridge": [
+              false
+            ],
+            "similarity": [
+              0.724
+            ],
+            "retrieval_ms": 94.0,
+            "generation_ms": 7598.1
+          }
+        ],
+        "correct": true
+      }
+    }
+  }
+}

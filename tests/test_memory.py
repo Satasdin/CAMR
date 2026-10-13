@@ -298,3 +298,32 @@ def test_refusal_check_spares_source_text(tokenizer):
     text = "I Can't Get Next to You: \"I Can't Get Next to You\" is a 1969 number-one single recorded by The Temptations."
     assert NoteScreener(tokenizer).screen(CandidateNote(text, "verbatim")).accepted
     assert not NoteScreener(tokenizer, model_generated=True).screen(CandidateNote("I cannot help with that request today.", "structured")).accepted
+
+
+def test_entity_gate_withholds_notes_about_a_different_entity():
+    from camr.memory.engine import MemoryEngine
+    from camr.memory.entities import question_entities
+    from camr.memory.note import Note, ScoredNote
+
+    def sn(text, sim):
+        return ScoredNote(note=Note(note_id=1, source_id=1, note_type="fact", text=text, token_count=10,
+                                    importance=0.5, checksum="x", created_at="2026-01-01T00:00:00+00:00",
+                                    last_accessed_at="2026-01-01T00:00:00+00:00"), similarity=sim)
+
+    q = "Who was the director of The Loudwater Mystery?"
+    assert question_entities(q) == ["loudwater mystery"]
+    other = [sn("Klute: Klute is a 1971 American neo-noir film directed by Alan J. Pakula.", 0.62)]
+    assert MemoryEngine._entity_gate(q, other) is True and not other[0].eligible  # similar, but another film
+    right = [sn("The Loudwater Mystery (film): a 1921 British silent film directed by Walter West.", 0.77)]
+    assert MemoryEngine._entity_gate(q, right) is False and right[0].eligible
+    personal = [sn("Dentist appointment on Thursday 9 October at 14:30.", 0.7)]
+    assert MemoryEngine._entity_gate("When is my dentist appointment?", personal) is False  # names no entity
+
+
+def test_entity_names_match_through_possessives():
+    # D-15: "Peck's Bad Girl" in the question did not match "Peck's Bad Girl" in the note
+    from camr.memory.entities import mentions_any, question_entities
+
+    ents = question_entities("Who was the producer of Peck's Bad Girl?")
+    assert mentions_any("Peck's Bad Girl: Peck's Bad Girl is a 1918 American silent comedy film", ents)
+    assert mentions_any("Francesca Caccini's father was Giulio Caccini", question_entities("Who was Francesca Caccini's father?"))

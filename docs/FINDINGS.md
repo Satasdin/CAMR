@@ -408,6 +408,138 @@ Source: `docs/results/app_latency.json` (`python scripts/app_latency.py`). Real 
 
 ---
 
+## F15. Tuning the engine's learned and tunable parts on validation data only
+
+Sources: `results/learn/tables/policy_tuning.json` (`python scripts/tune_policy.py`), `results/retrieval_eval/tables/gating_tuning.json` (`python scripts/tune_gating.py`).
+
+**Router (5-fold CV on the 144 training questions; the 72 held-out questions scored once).**
+
+| Hyperparameter | First study (by hand) | Selected by CV |
+|---|---|---|
+| Feature set | full (11 features) | **task only** |
+| Ridge λ | 1.0 | 0.01 |
+| LinUCB α / passes | 0.5 / 5 | 1 / 1 |
+| Cascade threshold θ | 0.2 (read off the held-out split) | 0.05 |
+
+| Policy (held-out, n = 72) | Accuracy | Δ vs always-Kimi | Cloud | s / answer |
+|---|---|---|---|---|
+| always Kimi K3 | 63.9% | — | 100% | 12.6 |
+| tuned router | 62.5% | -1.4 (95% CI -13.9 to +11.1) | 17% | 2.3 |
+| tuned LinUCB | 55.6% | -8.3 (95% CI -20.8 to +4.2) | 17% | 2.0 |
+| **tuned router + cascade** | **66.7%** | +2.8 (95% CI -8.3 to +13.9) | 25% | 2.9 |
+
+**Findings**
+1. Cross-validation preferred the simplest router (task type only); the retrieval features did not improve CV reward on 144 questions, and the fold-to-fold spread (±0.08) exceeds the differences between settings.
+2. Properly tuned, the cascade keeps equal accuracy to always-Kimi (difference not significant) with a quarter of the cloud calls and about a fifth of the time. This replaces F11b's threshold, which had been chosen on the held-out split.
+3. LinUCB's best setting was one pass; more passes did not help on 144 questions.
+
+**Read path (δ, B) on a validation half of the 1,000 retrieval questions, tested on the other half.** Objective J = full-support recall − 0.1 × tokens/1000.
+
+| Setting | Full-support recall (held-out) | Tokens | J |
+|---|---|---|---|
+| Selected on validation: δ = None, B = 1024 | 85.6% | 979 | 0.758 |
+| Study default: δ = 0.15, B = 512 | 72.8% | 431 | 0.685 |
+
+4. At μ = 0.1 per 1k tokens more evidence is worth its tokens; above μ ≈ 0.20 the study default wins. Retrieval-level tuning favours large budgets, but the end-to-end budget sweep (F8) showed the 0.5B *reader* is hurt by extra notes: the read path must be tuned to the reader, which is what the learned router does per question.
+
+---
+
+## F16. Interface audit: accessibility and browser tests
+
+Source: `docs/results/ui_audit.json` (`python scripts/ui_audit.py --axe axe.min.js`), `tests/test_app_e2e.py`.
+
+- **Before:** axe-core 4.10 reported `color-contrast` (serious) and `page-has-heading-one`; 6 token pairs were below WCAG AA (secondary text 2.3–3.3:1; light-theme accent and success colours).
+- **Fix (D-11, D-12):** per-theme token values; a persistent, visually hidden page heading.
+- **After:** 0 axe violations in both themes at desktop and phone width; every token pair ≥ AA.
+- **Browser tests (Chromium, Playwright):** remember→ask with recall card, empty message, 👍 teaches, theme and panel, phone width without horizontal scroll, keyboard-only path with accessible names: 6/6 pass. Total suite: 115 tests.
+
+---
+
+## F17. CAMR against standard RAG (same embedder, store and prompt)
+
+Source: `results/rag_vs_camr/retrieval.json` (`python scripts/rag_vs_camr.py retrieval`). Standard RAG = the top-k most similar chunks, always, no threshold, no budget cut. 500 questions per benchmark, 38,054-note store.
+
+| Benchmark | Method | Both gold paragraphs | Context precision | Notes | Tokens |
+|---|---|---|---|---|---|
+| HotpotQA | RAG top-3 | 56.2% | 57.0% | 3.0 | 231 |
+| HotpotQA | RAG top-5 | 68.2% | 39.2% | 5.0 | 391 |
+| HotpotQA | RAG top-10 | 78.6% | 21.9% | 10.0 | 800 |
+| HotpotQA | CAMR | 70.8% | 39.1% | 5.6 | 420 |
+| 2Wiki | RAG top-3 | 28.0% | 60.3% | 3.0 | 216 |
+| 2Wiki | RAG top-5 | 34.2% | 42.0% | 5.0 | 373 |
+| 2Wiki | RAG top-10 | 39.2% | 23.4% | 10.0 | 767 |
+| 2Wiki | CAMR | 78.4% | 51.5% | 6.0 | 439 |
+
+**Findings**
+1. **2Wiki (compositional, second hop named only in the first paragraph):** RAG finds one gold paragraph almost always but both only 28–39% of the time; going from k = 5 to 10 doubles the tokens for +5 points. CAMR reaches 78.4% with 439 tokens: twice the recall of top-10 RAG at 43% fewer tokens, with higher precision. Entity bridging, not more retrieval, finds the second hop.
+2. **HotpotQA (both entities usually named in the question):** CAMR ≈ top-5 RAG (70.8% vs 68.2%, same precision). Here CAMR's read path is essentially RAG with a token cap.
+3. HotpotQA with the entity gate: 69.6% (2.2% abstained); 2Wiki unchanged (78.4%).
+
+**Answer level** (`results/rag_vs_camr/answers*.json`; 60 PopQA questions per split; *missing* = the question's own document removed from the store):
+
+| Split | Model | Condition | Accuracy | Context words | Abstained | Wrong answer copied from the notes |
+|---|---|---|---|---|---|---|
+| test | qwen2.5:0.5b | alone | 6.7% | 0 | 100% | 0.0% |
+| test | qwen2.5:0.5b | rag_answerable | 70.0% | 309 | 0% | 20.0% |
+| test | qwen2.5:0.5b | camr_answerable | 80.0% | 179 | 0% | 16.7% |
+| test | qwen2.5:0.5b | camr_eg_answerable | 80.0% | 179 | 0% | 16.7% |
+| test | qwen2.5:0.5b | rag_missing | 6.7% | 311 | 0% | 76.7% |
+| test | qwen2.5:0.5b | camr_missing | 10.0% | 358 | 3% | 73.3% |
+| test | qwen2.5:0.5b | camr_eg_missing | 10.0% | 60 | 80% | 13.3% |
+| test | llama3.2:3b | alone | 23.3% | 0 | 100% | 0.0% |
+| test | llama3.2:3b | rag_answerable | 73.3% | 309 | 0% | 26.7% |
+| test | llama3.2:3b | camr_answerable | 73.3% | 179 | 0% | 23.3% |
+| test | llama3.2:3b | camr_eg_answerable | 73.3% | 179 | 0% | 23.3% |
+| test | llama3.2:3b | rag_missing | 13.3% | 311 | 0% | 20.0% |
+| test | llama3.2:3b | camr_missing | 10.0% | 358 | 3% | 16.7% |
+| test | llama3.2:3b | camr_eg_missing | 20.0% | 60 | 80% | 6.7% |
+| validation | qwen2.5:0.5b | alone | 11.7% | 0 | 100% | 0.0% |
+| validation | qwen2.5:0.5b | rag_answerable | 61.7% | 302 | 0% | 33.3% |
+| validation | qwen2.5:0.5b | camr_answerable | 68.3% | 164 | 0% | 23.3% |
+| validation | qwen2.5:0.5b | camr_eg_answerable | 68.3% | 164 | 0% | 23.3% |
+| validation | qwen2.5:0.5b | rag_missing | 10.0% | 305 | 0% | 65.0% |
+| validation | qwen2.5:0.5b | camr_missing | 10.0% | 375 | 0% | 73.3% |
+| validation | qwen2.5:0.5b | camr_eg_missing | 13.3% | 69 | 78% | 15.0% |
+| validation | llama3.2:3b | alone | 11.7% | 0 | 100% | 0.0% |
+| validation | llama3.2:3b | rag_answerable | 71.7% | 302 | 0% | 20.0% |
+| validation | llama3.2:3b | camr_answerable | 75.0% | 164 | 0% | 15.0% |
+| validation | llama3.2:3b | camr_eg_answerable | 75.0% | 164 | 0% | 15.0% |
+| validation | llama3.2:3b | rag_missing | 11.7% | 305 | 0% | 23.3% |
+| validation | llama3.2:3b | camr_missing | 11.7% | 375 | 0% | 23.3% |
+| validation | llama3.2:3b | camr_eg_missing | 15.0% | 69 | 78% | 6.7% |
+
+4. **Answer in memory:** CAMR ≥ RAG with ~40% less text (0.5B: 80.0% vs 70.0% on test).
+5. **Answer not in memory:** the similarity gate alone failed like RAG (abstained 0–3%; the 0.5B model copied a wrong name from unrelated notes 73% of the time; the 3B model fell *below* its closed-book score). Notes about similar entities are as similar to the question as the missing one.
+6. **Entity-anchored gate** (abstain when the question names an entity no eligible note mentions), judged first on validation questions that played no part in its design: no cost when the answer is stored; abstains ~80% when it is not; copied wrong answers 73% → 13–15% (0.5B) and 17–23% → 7% (3B); the 3B model recovers to near its closed-book accuracy. Multi-hop retrieval cost: HotpotQA −1.2 pts (2.2% abstained), 2Wiki 0. First run hit defect D-15 (possessives); results above are after the fix.
+
+---
+
+## F18. Fine-tuning compared with memory (LoRA baseline, same documents)
+
+Sources: `results/finetune/tune/grid.json`, `results/finetune/test.json`, `results/finetune/camr_cost.json` (`python scripts/finetune_baseline.py tune|test|camr-cost`). Qwen2.5-0.5B-Instruct, float32 on 4 CPU cores, LoRA r = 16 on all projections (8,798,208 trainable parameters), trained on the 237 PopQA documents CAMR stores; selection on 60 validation questions, one test on 60 held-out questions; one runtime for every condition.
+
+| Format | lr | Validation accuracy (closed book) by epoch | Final train loss |
+|---|---|---|---|
+| chat | 0.0001 | ep1: 11.7% · ep2: 10.0% · ep4: 10.0% · ep8: 11.7% | 0.48 |
+| chat | 0.0003 | ep1: 10.0% · ep2: 11.7% · ep4: 10.0% · ep8: 11.7% | 0.16 |
+| raw | 0.0003 | ep1: 13.3% · ep2: 13.3% · ep4: 8.3% · ep8: 11.7% | 0.19 |
+
+| Held-out (n = 60) | PopQA | GSM8K (n = 48) |
+|---|---|---|
+| Base alone | 10.0% | 45.8% |
+| **Base + CAMR (no training)** | **71.7%** | — |
+| LoRA (raw, lr 0.0003, epoch 1) | 13.3% | 45.8% |
+| LoRA + CAMR | 75.0% | — |
+
+**Findings**
+1. **Memory beat fine-tuning by 58 points** on the same documents. Training loss fell to 0.16–0.48 while validation accuracy never exceeded 13.3%: the adapters learned to reproduce the documents, not to answer questions about them (as Ovadia et al., 2023).
+2. **Cost:** CAMR stored the documents in 6 s (305 notes, 2.6 MB); the selected adapter took 7.5 min of training, the search 3.5 h, and retraining is needed whenever knowledge changes.
+3. No measurable forgetting on GSM8K after one epoch (45.8% before and after).
+4. LoRA + CAMR vs CAMR: 71.7% → 75.0% (+2 questions), within noise.
+5. Training batch 8 exhausted the 14 GB memory limit (OOM-killed at 13.9 GB); micro-batch 2 × 4 accumulation with gradient checkpointing peaked at ~3.7 GB.
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |
