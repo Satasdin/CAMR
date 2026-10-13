@@ -1827,9 +1827,26 @@ def scenarios_section(c: Chapter) -> None:
             f"{len(refused)} general questions it can answer ({'; '.join(refused[:3])}), and for *{leap['question']}* the "
             f"engine recalled {len(leap['sources'])} earlier chat messages as memories, all of them questions. The "
             "first was caused by the chat prompt, which told the model to refuse whenever the notes lacked the answer "
-            "(D-13); the second by storing every message, including questions, as chat memory (D-14). Both were fixed, "
-            "covered by regression tests, and all five scenarios were run again from scratch. The results below are "
-            "from that second run; the first is kept in `docs/results/scenarios_before_fix.json`.")
+            "(D-13); the second by storing every message, including questions, as chat memory (D-14). Both were fixed "
+            "and covered by regression tests. **The second run showed the first fix was incomplete (D-16):** questions "
+            "were no longer stored as memories, but the model still refused some general questions and now refused "
+            "*which antibiotic am I allergic to?* although it had recalled the right memory. A prompt rewrite tested on "
+            "one example had moved the problem rather than solved it. Five candidate prompts were therefore compared "
+            "on a development set of cases and confirmed on two held-out sets (`scripts/prompt_eval.py`, "
+            f"{c.next_tab()}); the one with no failures on either model was adopted, and all five scenarios were run a "
+            "third time. The results below are from that third run; the first two are kept in "
+            "`docs/results/scenarios_before_fix.json` and `scenarios_retest1.json`.")
+        pe = json.loads((ROOT / "docs/results/prompt_eval.json").read_text())
+        rows = []
+        for name in ("O (original)", "A (D-13 fix)", "B (explicit cases)", "C (notes first, short)", "D (notes are true)"):
+            cells = [name]
+            for m in ("llama3.2:3b", "qwen2.5:1.5b"):
+                r = pe["results"][m].get(name, {})
+                f = f" · {r['fresh_correct']}/{pe['fresh_n']}" if "fresh_correct" in r else ""
+                cells.append(f"{r.get('dev_correct', '–')}/{pe['dev_n']} · {r.get('held_out_correct', '–')}/{pe['held_out_n']}{f}")
+            rows.append(cells)
+        c.table("Choosing the chat prompt: cases answered correctly (development · held-out · second held-out)",
+                ["Prompt", "llama3.2:3b", "qwen2.5:1.5b"], rows, [5.0, 5.4, 5.4], size=9)
         if (ROOT / "docs/figures/scenarios/before_fix/window_with.png").exists():
             c.figure(ROOT / "docs/figures/scenarios/before_fix/window_with.png", "First run, before the fixes: general "
                      "questions refused and unrelated chat messages recalled as memories (D-13, D-14)", 9.5)
