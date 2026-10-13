@@ -122,6 +122,323 @@
         ],
         "correct": true
       }
+    },
+    "update": {
+      "title": "A fact that changes",
+      "notes": [
+        [
+          "Dentist",
+          "Dentist appointment on Thursday 9 October at 14:30 with Dr. Wanjiru at Upper Hill Dental."
+        ]
+      ],
+      "file": null,
+      "expected": [
+        [
+          "friday"
+        ],
+        [
+          "09:00",
+          "9:00",
+          "9 am",
+          "9am",
+          "9.00"
+        ]
+      ],
+      "with": {
+        "screenshot": "docs/figures/scenarios/update_with.png",
+        "turns": [
+          {
+            "question": "remember that the dentist appointment moved to Friday 10 October at 09:00",
+            "answer": "Got it. I'll remember that.",
+            "abstained": false,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 0.0,
+            "generation_ms": 0.0
+          },
+          {
+            "question": "When is my dentist appointment now?",
+            "answer": "Your dentist appointment is now on Friday, 10 October at 09:00.",
+            "abstained": false,
+            "grounded": 0.8571428571428571,
+            "sources": [
+              "note",
+              "Dentist"
+            ],
+            "via_bridge": [
+              false,
+              false
+            ],
+            "similarity": [
+              0.851,
+              0.797
+            ],
+            "retrieval_ms": 59.1,
+            "generation_ms": 3423.1
+          }
+        ],
+        "correct": true
+      }
+    },
+    "window": {
+      "title": "Remembering beyond the context window",
+      "notes": [],
+      "file": null,
+      "expected": [
+        [
+          "penicillin"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/window_without.png",
+        "turns": [
+          {
+            "question": "I'm allergic to penicillin, please keep that in mind.",
+            "answer": "I've taken note of your allergy to penicillin. I'll make sure to avoid prescribing or recommending any penicillin-based treatments. Is there anything else I can help you with?",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 107.7,
+            "generation_ms": 6672.6
+          },
+          {
+            "question": "What is 17 × 23?",
+            "answer": "17 × 23 = 391",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 199.7,
+            "generation_ms": 2474.0
+          },
+          {
+            "question": "Convert 5 miles to kilometres.",
+            "answer": "5 miles is equivalent to approximately 8 kilometers.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 221.3,
+            "generation_ms": 2156.8
+          },
+          {
+            "question": "What's the capital of Australia?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 177.4,
+            "generation_ms": 1455.5
+          },
+          {
+            "question": "Give me a synonym for quick.",
+            "answer": "A synonym for \"quick\" is fast.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 195.3,
+            "generation_ms": 1900.0
+          },
+          {
+            "question": "What is 15% of 240?",
+            "answer": "To calculate 15% of 240, I'll multiply 240 by 0.15.\n\n240 × 0.15 = 36",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 205.5,
+            "generation_ms": 4637.5
+          },
+          {
+            "question": "How many days are in a leap year?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 209.2,
+            "generation_ms": 1602.2
+          },
+          {
+            "question": "Which antibiotic am I allergic to?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 190.4,
+            "generation_ms": 2509.0
+          }
+        ],
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/window_with.png",
+        "turns": [
+          {
+            "question": "I'm allergic to penicillin, please keep that in mind.",
+            "answer": "I've taken note of your allergy to penicillin. I'll make sure to avoid prescribing or recommending any penicillin-based treatments. Is there anything else I can help you with?",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 100.8,
+            "generation_ms": 5155.9
+          },
+          {
+            "question": "What is 17 × 23?",
+            "answer": "17 × 23 = 391",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 48.1,
+            "generation_ms": 2099.6
+          },
+          {
+            "question": "Convert 5 miles to kilometres.",
+            "answer": "5 miles is equivalent to approximately 8 kilometers.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 158.4,
+            "generation_ms": 2110.4
+          },
+          {
+            "question": "What's the capital of Australia?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 246.8,
+            "generation_ms": 1454.8
+          },
+          {
+            "question": "Give me a synonym for quick.",
+            "answer": "A synonym for \"quick\" is fast.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 214.2,
+            "generation_ms": 1999.6
+          },
+          {
+            "question": "What is 15% of 240?",
+            "answer": "To calculate 15% of 240, I'll multiply 240 by 0.15.\n\n240 × 0.15 = 36",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 242.1,
+            "generation_ms": 4511.8
+          },
+          {
+            "question": "How many days are in a leap year?",
+            "answer": "I don't know.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 158.8,
+            "generation_ms": 1429.9
+          },
+          {
+            "question": "Which antibiotic am I allergic to?",
+            "answer": "I don't know.",
+            "abstained": false,
+            "grounded": 0.0,
+            "sources": [
+              "chat"
+            ],
+            "via_bridge": [
+              false
+            ],
+            "similarity": [
+              0.716
+            ],
+            "retrieval_ms": 262.8,
+            "generation_ms": 2758.5
+          }
+        ],
+        "correct": false
+      }
+    },
+    "document": {
+      "title": "Answering from a taught document",
+      "notes": [],
+      "file": "lab_safety.md",
+      "expected": [
+        [
+          "15 minutes",
+          "fifteen minutes"
+        ],
+        [
+          "kamau"
+        ]
+      ],
+      "without": {
+        "screenshot": "docs/figures/scenarios/document_without.png",
+        "turns": [
+          {
+            "question": "How long should I rinse my eyes after a chemical splash, and who do I report it to?",
+            "answer": "I don't know the specific guidelines for rinsing eyes after a chemical splash. However, I can suggest that you rinse your eyes with plenty of water for at least 15-20 minutes to remove any remaining chemical residue. \n\nAs for reporting the incident, you should report it to your local emergency services or poison control center immediately. They will guide you on the next steps and provide assistance.",
+            "abstained": true,
+            "grounded": null,
+            "sources": [],
+            "via_bridge": [],
+            "similarity": [],
+            "retrieval_ms": 280.9,
+            "generation_ms": 11857.7
+          }
+        ],
+        "correct": false
+      },
+      "with": {
+        "screenshot": "docs/figures/scenarios/document_with.png",
+        "turns": [
+          {
+            "question": "How long should I rinse my eyes after a chemical splash, and who do I report it to?",
+            "answer": "According to your notes, you should rinse your eyes at the eyewash station for at least 15 minutes after a chemical splash. You should report every incident, however small, to Mr. Kamau, the lab technician.",
+            "abstained": false,
+            "grounded": 0.9047619047619048,
+            "sources": [
+              "lab_safety"
+            ],
+            "via_bridge": [
+              false
+            ],
+            "similarity": [
+              0.724
+            ],
+            "retrieval_ms": 214.9,
+            "generation_ms": 9219.7
+          }
+        ],
+        "correct": true
+      }
     }
   }
 }

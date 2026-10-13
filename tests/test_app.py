@@ -179,6 +179,8 @@ def test_questions_are_not_kept_as_chat_memory(assistant):
 def test_prompt_lets_the_model_answer_general_questions():
     # D-13: the prompt told the model to say "I don't know" whenever the notes lacked the answer,
     # so it refused general questions (17 x 23, the capital of Australia) it could answer
+    # D-16: the first fix still refused some general questions, and refused a question its notes answered
     from camr.app.assistant import CHAT_PROMPT
-    assert "general questions, answer from your own knowledge" in CHAT_PROMPT
-    assert "about the user" in CHAT_PROMPT
+    assert "general-knowledge question" in CHAT_PROMPT and "answer it from your own knowledge" in CHAT_PROMPT
+    assert "If the notes contain the answer, give it from the notes" in CHAT_PROMPT
+    assert "never invent personal details" in CHAT_PROMPT

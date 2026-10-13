@@ -841,6 +841,11 @@ camr app                                                # opens http://127.0.0.1
              ["D-14", "Chat memory stored every message, including plain questions; a general question then recalled six "
               "unrelated past questions as *memories*", "Live scenarios", "Only statements are kept as chat memory; "
               "questions are not", "Regression test; scenarios re-run. Pass"],
+             ["D-16", "The first D-13 fix was incomplete: the 3B model still refused some general questions (the capital "
+              "of Australia) and now refused a question its notes answered (*which antibiotic am I allergic to?*)",
+              "Scenario retest", "Five candidate prompts compared on a development set and two held-out sets of cases "
+              "(`scripts/prompt_eval.py`); the one with no failures on either model adopted", "21/21 cases on both "
+              "models; scenarios re-run. Pass"],
              ["D-15", "Entity gate: a possessive in the question (*Peck's Bad Girl*) was normalised differently from the "
               "same name in a note, so the gate wrongly withheld a correct note", "RAG comparison (section ⟦sec_ragresult⟧)",
               "One normalisation for question and notes, possessives removed", "Regression test; gate re-evaluated on "

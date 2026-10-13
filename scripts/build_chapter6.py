@@ -111,7 +111,7 @@ def build(template: Path, out: Path) -> Path:
               "built switchable and measured (⟦sec_retrieval⟧, ⟦sec_gap⟧)", "Similarity + gating + bridging transfer; Eq. 4.1 does "
               "not; the gap is mostly knowledge and reading", "Met"],
              ["ii. Design a lightweight memory engine (write policy, ranking, token budget)", "Write path, screener, "
-              "single-file store, adaptive read path, budgeter (⟦sec_impl⟧); TC-01–TC-42; D-01–D-15",
+              "single-file store, adaptive read path, budgeter (⟦sec_impl⟧); TC-01–TC-42; D-01–D-16",
               "Implemented and verified; ranking changed on evidence; distilled notes not evaluated at scale",
               "Met, with two recorded deviations (⟦sec_alignment⟧)"],
              ["iii. Develop it on a consumer laptop without a GPU, with an embedded store", "SQLite + sqlite-vec, "
