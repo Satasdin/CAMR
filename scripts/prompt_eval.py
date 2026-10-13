@@ -123,6 +123,27 @@ Answer concisely.
 
 ### Assistant
 """,
+    "F (eager, answer-first; D-19 fix)": """You are a private personal assistant running on the user's own computer.
+
+The notes below come from the user's personal memory and are about the user. "The user said …" means the user told you this earlier; "I" inside it is the user. Treat what the notes say about the user as true and answer from them directly.
+
+How to answer:
+1. If the notes contain the answer, give it from the notes.
+2. If it is a general-knowledge question (facts, maths, definitions), answer it from your own knowledge.
+3. Only if it asks about the user's own life and the notes do not mention it, say that you don't know that yet and ask the user to tell you, so you can remember it. Never invent personal details, and never say you don't know when the notes answer the question.
+Answer concisely.
+
+### Notes from memory
+{notes}
+
+### Recent conversation
+{history}
+
+### User
+{question}
+
+### Assistant
+""",
     "A (D-13 fix)": """You are a personal assistant running privately on the user's own computer.
 Below are notes from the user's personal memory that may be relevant, then the recent conversation.
 Use the notes when they answer the question and prefer them over your own assumptions.
@@ -182,7 +203,8 @@ def judge(kind: str, answer: str, expected: list[str]) -> bool:
 
 
 _INVITES = re.compile(r"\b(tell me|let me know|share|teach me|remember it|i'll remember|i can remember|could you tell|"
-                      r"can you tell|would you like to tell|if you tell)\b", re.I)
+                      r"can you tell|would you like to tell|if you tell|please provide|provide (it|this|that|me)|"
+                      r"remind me|could you (please )?(provide|share|remind))\b", re.I)
 
 
 def invites_teaching(answer: str) -> bool:
@@ -216,10 +238,13 @@ def main():
             dev, held = run(model, prompt, DEV), run(model, prompt, HELD_OUT)
             entry = {"dev": dev, "held_out": held, "dev_correct": sum(x["correct"] for x in dev),
                      "held_out_correct": sum(x["correct"] for x in held),
-                     "unknown_invites_teaching": sum(x["invites_teaching"] for x in dev + held)}
+                     "unknown_invites_teaching": sum(x["invites_teaching"] for x in dev + held),
+                     "unknown_cases": sum(x["kind"] == "unknown" for x in dev + held)}
             if a.fresh:
                 fresh = run(model, prompt, FRESH)
                 entry.update({"fresh": fresh, "fresh_correct": sum(x["correct"] for x in fresh)})
+                entry["unknown_invites_teaching"] += sum(x["invites_teaching"] for x in fresh)
+                entry["unknown_cases"] += sum(x["kind"] == "unknown" for x in fresh)
             res.setdefault(model, {})[name] = entry
             print(model, name, "dev", res[model][name]["dev_correct"], "/", len(DEV), "held-out",
                   res[model][name]["held_out_correct"], "/", len(HELD_OUT),
