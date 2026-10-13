@@ -251,14 +251,15 @@ def learn(a) -> None:
     from camr.models.prompt import answer_template
 
     items = load_stream()
-    store_path = OUT / "store.sqlite"
-    path = OUT / "learn.json"
+    tag = f"_{a.tag}" if a.tag else ""
+    store_path = OUT / f"store{tag}.sqlite"
+    path = OUT / f"learn{tag}.json"
     if a.fresh:
         store_path.unlink(missing_ok=True)
         path.unlink(missing_ok=True)
     engine, store = build_engine(store_path)
     # ambiguous names: ordered by the embedder's similarity to the question (chosen on the dev set, lookup_dev.json)
-    lookup = WebLookup(cache_path=OUT / "web_cache.sqlite", patient_s=a.patient, offline=a.offline_replay,
+    lookup = WebLookup(cache_path=OUT / f"web_cache{tag}.sqlite", patient_s=a.patient, offline=a.offline_replay,
                        rank=embedding_rank(engine.embedder), min_interval_s=1.5)
     runner = runner_for(a.model)
     bare, mem = answer_template("single_hop", False), answer_template("single_hop", True)
@@ -301,9 +302,10 @@ def retain(a) -> None:
     from camr.models.prompt import answer_template
 
     items = load_stream()
-    engine, store = build_engine(OUT / "store.sqlite")  # what pass 1 learned; nothing is looked up
+    tag = f"_{a.tag}" if a.tag else ""
+    engine, store = build_engine(OUT / f"store{tag}.sqlite")  # what pass 1 learned; nothing is looked up
     bare, mem = answer_template("single_hop", False), answer_template("single_hop", True)
-    path = OUT / "retain.json"
+    path = OUT / f"retain{tag}.json"
     out = json.loads(path.read_text()) if path.exists() else {"notes": store.count(), "models": {}}
     for model in a.models.split(","):
         runner = runner_for(model)
@@ -393,5 +395,6 @@ if __name__ == "__main__":
     ap.add_argument("--fresh", action="store_true")
     ap.add_argument("--patient", type=float, default=120.0, help="seconds a lookup may wait out a rate limit")
     ap.add_argument("--offline-replay", action="store_true", help="answer lookups from the saved web cache only")
+    ap.add_argument("--tag", default="", help="learn/retain: a separate run (e.g. after_D21) with its own store and cache")
     a = ap.parse_args()
     {"select": select, "dev": dev, "learn": learn, "retain": retain, "baseline": baseline, "ram": ram}[a.part](a)
