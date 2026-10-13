@@ -540,6 +540,62 @@ Sources: `results/finetune/tune/grid.json`, `results/finetune/test.json`, `resul
 
 ---
 
+## F19. Eager learning: a frozen 0.5B model that looks up what it doesn't know (CAMR 0.3)
+
+Source: `results/eager/` (`python scripts/eager_learning.py select|dev|learn|retain|baseline|ram`). 200 PopQA questions no earlier run used (30 subjects asked twice, 40–90 questions apart); qwen2.5:0.5b with memory that starts **empty**, BGE-small, gate τ = 0.50 / δ = 0.15, entity gate, 512-token budget; lookups through DuckDuckGo Instant Answers and Wikipedia (cached, rate-limit aware). The ordering of an ambiguous name's meanings was chosen on 60 other fresh questions (embedding similarity: answer in fetched text 55% vs 35% for shared words).
+
+| System | As asked | Reworded (offline) |
+|---|---|---|
+| qwen2.5:0.5b alone | 10.0% | 10.5% |
+| qwen2.5:1.5b alone | 11.0% | – |
+| llama3.2:3b alone | 19.0% | 18.0% |
+| **qwen2.5:0.5b + eager learning** | **43.5%** (online) | **41.5%** |
+| llama3.2:3b reading the memory the 0.5B model learned | – | 45.0% |
+
+1. 158 lookups, 9 found nothing, 35 answers came from memory with no request; 25 of the 30 second questions about a subject needed no lookup.
+2. Retention: 79 of the 87 facts answered right online were answered right offline in other words (90.8%).
+3. The answer was in the fetched text for 52% of questions; when it was, the 0.5B model was right 76% of the time: the lookup, not the reader, sets the ceiling (PopQA's long-tail names are often ambiguous).
+4. Memory grew to 333 notes, 2.7 MB. Times in this run are dominated by rate-limit waits on a shared cloud machine and are not the app's speed.
+5. Defects found and fixed during the stream: D-17 (subject extraction), D-18 (an empty DuckDuckGo reply cached as "nothing known"), D-21 (the fetcher sent no CAMR User-Agent, so Wikimedia refused most requests). The stream was re-run from scratch after D-17/D-18 and repeated after D-21 (`learn_after_D21.json`).
+
+## F20. Asking to be taught instead of "I don't know" (prompt F)
+
+Source: `docs/results/prompt_eval.json`. Prompt E (ask to be taught) regressed one development case on llama3.2:3b (it led with "I don't know that yet" though the notes held the answer: **D-19**). Prompt F answers first when the notes answer and asks to be taught only for a missing personal fact: 6/6, 7/7, 8/8 on development, held-out and fresh cases for both llama3.2:3b and qwen2.5:1.5b, and asks to be taught on 9 of 10 unknown personal facts. CAMR Personal 0.3 uses prompt F.
+
+## F21. Token memory (kNN-LM) beside the frozen model, against LoRA and CAMR
+
+Source: `results/token_memory/` (`python scripts/token_memory.py tune|test`). Same 237 documents and 60 validation / 60 held-out questions as F18. Datastore: 22,554 (hidden state, next token) pairs, 40.6 MB, built in 210 s. No λ ∈ {0.25, 0.5, 0.75}, τ ∈ {0.02, 0.05}, format ∈ {raw, chat} beat 13.3% on validation.
+
+| Held-out (n = 60) | Accuracy |
+|---|---|
+| 0.5B alone | 10.0% |
+| LoRA (F18) | 13.3% |
+| kNN-LM | 13.3% |
+| CAMR | 75.0% |
+| kNN-LM + CAMR | 75.0% |
+
+Weights beside the model help no more than weights inside it; notes the model reads do.
+
+## F22. Sleep: learned index, query adapter, tidy and curiosity
+
+Sources: `results/sleep/` (`python scripts/sleep_eval.py index|adapter|eager`).
+
+1. Query adapter on unseen HotpotQA / 2Wiki questions (train half, epoch chosen on a validation part of it, test half): no epoch beat the untrained identity on validation (recall@1 already 88% / 97%, recall@5 97.6% / 100%); trained 40 epochs regardless it lowered recall@1 to 83% / 81%. Sleep keeps an adapter only when held-out recall rises.
+2. Live scenario: after installing the Kenya pack, sleep looked up names the pack mentioned but memory lacked (East Africa, Indian Ocean, …). D-22: names were read across sentence ends; fixed.
+3. Learned-index scaling and the adapter on the stream's own experience: see the chapter (filled from `index.json`, `eager.json`).
+
+## F23. CAMR Personal 0.3 in use: live scenarios, packs, accessibility
+
+Sources: `docs/results/scenarios_v3.json`, `docs/figures/scenarios/{fetch_new,foreign,teach_me,pack_sleep}*.png`, `docs/results/ui_audit.json` (label `v0.3`).
+
+1. Newer than the model: with lookups off the 3B model said it did not know and asked to be told; with lookups on it answered *Spain* from Wikipedia with links, and the reworded follow-up came from memory with no lookup.
+2. A made-up unit (*kazoru*) taught once was applied correctly (4 points × ½ kazoru × 3 h = 6 hours).
+3. A personal gap was answered by asking to be taught, then answered from what the user taught.
+4. Bundled packs (harvested after D-20/D-21, nomic-embed-text vectors): Kenya 24 notes, Solar System 25, Photosynthesis 18; install copies vectors without running a model.
+5. axe-core with the Learning tab open: 0 violations in both themes at both sizes after D-23; every new colour pair passes AA.
+
+---
+
 ## Screenshots and figures
 
 | File | Shows |
