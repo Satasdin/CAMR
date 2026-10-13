@@ -247,7 +247,7 @@ def dev(a) -> None:
 # ------------------------------------------------------------------ pass 1: learn online
 def learn(a) -> None:
     from camr.memory.eager import eager_recall
-    from camr.memory.fetch import WebLookup
+    from camr.memory.fetch import WebLookup, embedding_rank
     from camr.models.prompt import answer_template
 
     items = load_stream()
@@ -257,7 +257,9 @@ def learn(a) -> None:
         store_path.unlink(missing_ok=True)
         path.unlink(missing_ok=True)
     engine, store = build_engine(store_path)
-    lookup = WebLookup(cache_path=OUT / "web_cache.sqlite", patient_s=a.patient, offline=a.offline_replay)
+    # ambiguous names: ordered by the embedder's similarity to the question (chosen on the dev set, lookup_dev.json)
+    lookup = WebLookup(cache_path=OUT / "web_cache.sqlite", patient_s=a.patient, offline=a.offline_replay,
+                       rank=embedding_rank(engine.embedder), min_interval_s=1.5)
     runner = runner_for(a.model)
     bare, mem = answer_template("single_hop", False), answer_template("single_hop", True)
     log = json.loads(path.read_text()) if path.exists() else {"model": a.model, "config": CAMR, "turns": []}
