@@ -254,3 +254,59 @@ The fix is an **entity-anchored gate**: if the question names something and no c
 
 Its first run also exposed defect D-15 (possessives such as *Peck's* were normalised differently in the question and in the note). That was fixed and re-run. Standard RAG has no step where this decision could be made, which is the clearest single difference between retrieving text and deciding whether a small model should read it.
 
+
+## J. Learning beyond what it was taught (CAMR 0.3)
+
+**J1. You say the model's weights never change. Then in what sense does it "learn"?**
+Its *memory* learns. Everything the engine can learn without a GPU is counted as external weights (Equation in Section 5.4.11): the note vectors, a learned index, a query adapter and the router. Only the note vectors grow with use, and they live on disk. In the learning stream, a 0.5B model that started with an empty memory answered 43.5% of 200 new questions by looking up what it did not know. Then, offline and with every question reworded, it still answered 41.5%. It had kept 79 of the 87 facts it had got right online. Closed-book, the same model scores 10% and a 3B model 19%.
+
+**J2. Isn't looking things up on the web just a search engine with extra steps?**
+The lookup is the easy part. What CAMR adds is:
+- **when** to look something up: only when the gate abstains, and never for a question about the user;
+- **what is kept**: the screened write path, with deduplication and the page's link;
+- **reuse without the web**: 25 of the 30 second questions about a subject needed no new lookup, and the reworded pass ran fully offline.
+
+A search engine answers each question from scratch. This assistant gets the answer from memory the second time.
+
+**J3. Why not fine-tune the 0.5B model on what it looks up? Or use "extension weights" plugged into the model?**
+Both were measured on the same 237 documents and 60 held-out questions:
+- Weights **inside** the model (LoRA): 13.3%.
+- Weights **beside** it (a kNN-LM token memory over the model's own hidden states): 13.3%.
+- Notes **in the prompt** (CAMR): 75.0%. Adding the token memory to CAMR changed nothing.
+
+A kNN-LM is keyed by the model's state *while reading a document*. A question puts the model in a different state, so the nearest keys rarely continue with the answer. This matches Geng et al. (2024).
+
+**J4. Doesn't "never say I don't know" encourage hallucination?**
+The aim is to learn, not to guess:
+- A general question it cannot answer is looked up and answered with a cited source.
+- A personal fact it does not have gets *"I don't know that yet. Can you tell me…"* and a Teach me button.
+
+The first version of that prompt (E) regressed one development case (D-19): the model led with "I don't know that yet" although its notes held the answer. Prompt F fixed it. It scores 6/6, 7/7 and 8/8 on the development, held-out and fresh cases for both models, and asks to be taught on 9 of 10 unknown personal facts.
+
+**J5. What does "sleep" actually do, and did it help?**
+It runs four steps, each reporting what it changed: tidy duplicates, look up names it keeps seeing (curiosity), build an index, and try to learn a better query map.
+- **Curiosity** worked in the live scenario: it learned *East Africa* and *Indian Ocean* after the Kenya pack.
+- **The index** pays only at scale. At 38k notes exact search was both faster and more accurate. At 400k notes the index was 1.6× faster with a ~31% smaller process, for 2.9 points of recall. So it is now built only past 100,000 notes.
+- **The adapter** never beat the untrained one, neither on unseen benchmark questions nor on the engine's own experience. The held-out acceptance test rejected it, so retrieval was never made worse.
+
+The negative results are reported as such.
+
+**J6. Is the comparison with bigger models fair?**
+It is fair on accuracy, but it is not a like-for-like comparison of systems:
+- Same questions, same scoring, every model greedy.
+- The small model gets the web and memory; the larger ones answer closed-book. That is the point being tested: knowledge from memory instead of size.
+- A 3B model reading the *same* memory reached 45%, so memory helps any model.
+- Times in the learning run are dominated by rate-limit waits on a shared cloud machine and are not reported as the app's speed.
+- The cloud model could not be rerun: its API key was rotated.
+
+**J7. What went wrong while building it?**
+Seven defects (D-17 to D-23), each fixed with a regression test:
+- D-17: subject extraction.
+- D-18: an empty reply cached as "nothing known".
+- D-19: the over-asking prompt.
+- D-20: topic harvesting drifting off-topic.
+- D-21: no User-Agent, so Wikipedia refused most requests.
+- D-22: names read across sentence ends.
+- D-23: a contrast failure in the new Learning tab.
+
+D-21 mattered most, because the main stream had run with Wikipedia mostly unavailable. The stream was repeated after the fix, and both runs are reported.
