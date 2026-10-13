@@ -831,7 +831,15 @@ camr app                                                # opens http://127.0.0.1
               "accent and success colours were below WCAG AA contrast (2.3–3.3 : 1)", "Accessibility audit "
               "(section ⟦sec_uitest⟧)", "Token values corrected per theme", "Contrast audit and axe-core: 0 failures. Pass"],
              ["D-12", "Interface: no top-level heading once a chat had started (screen-reader navigation)",
-              "axe-core audit", "Persistent, visually hidden page heading", "axe-core: 0 violations. Pass"]],
+              "axe-core audit", "Persistent, visually hidden page heading", "axe-core: 0 violations. Pass"],
+             ["D-13", "CAMR Personal over-refused: with llama3.2:3b it answered *I don't know* to general questions it "
+              "could answer (17 × 23, the capital of Australia), because the prompt told it to refuse whenever the notes "
+              "lacked the answer", "Live scenarios (section ⟦sec_scenarios⟧)", "Prompt limits *I don't know* to "
+              "questions about the user and their notes; general questions use the model's own knowledge",
+              "Regression test; scenarios re-run. Pass"],
+             ["D-14", "Chat memory stored every message, including plain questions; a general question then recalled six "
+              "unrelated past questions as *memories*", "Live scenarios", "Only statements are kept as chat memory; "
+              "questions are not", "Regression test; scenarios re-run. Pass"]],
             [1.2, 4.6, 2.6, 4.0, 3.5], size=9)
 
     c.h3("Application Testing (CAMR Personal)", key="sec_apptest")

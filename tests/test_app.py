@@ -90,7 +90,7 @@ def test_chat_becomes_memory_beyond_the_context_window(assistant):
     assistant.save_settings(history_turns=1)
     assistant.ask("My flight to Kisumu leaves from gate 14 on Friday morning")
     for i in range(3):  # push the first message out of the verbatim window
-        assistant.ask(f"filler question number {i} about nothing in particular")
+        assistant.ask(f"filler message number {i} about nothing in particular")
     assert "gate 14" not in assistant._history()  # scrolled out of the verbatim window…
     turn = assistant.ask("Which gate does my flight to Kisumu leave from on Friday?")
     assert any(s.kind == "chat" and "gate 14" in s.text for s in turn.sources)  # …yet recalled from memory
@@ -167,3 +167,18 @@ def test_ollama_embedder_caches_repeated_questions():
     assert http.calls == base + 1 and (first == again).all()
     emb.encode(["when is the dentist?"])  # documents are never served from the query cache
     assert http.calls == base + 2
+
+
+def test_questions_are_not_kept_as_chat_memory(assistant):
+    # D-14: questions crowded out real memories (six recalled for "how many days are in a leap year?")
+    assert assistant.ask("What is 17 times 23?").saved_to_memory is False
+    assert assistant.ask("Convert 5 miles to kilometres").saved_to_memory is False
+    assert assistant.ask("I am allergic to penicillin, keep that in mind.").saved_to_memory is True
+
+
+def test_prompt_lets_the_model_answer_general_questions():
+    # D-13: the prompt told the model to say "I don't know" whenever the notes lacked the answer,
+    # so it refused general questions (17 x 23, the capital of Australia) it could answer
+    from camr.app.assistant import CHAT_PROMPT
+    assert "general questions, answer from your own knowledge" in CHAT_PROMPT
+    assert "about the user" in CHAT_PROMPT

@@ -83,7 +83,8 @@ CREATE TABLE IF NOT EXISTS app_turn (
 CHAT_PROMPT = """You are a personal assistant running privately on the user's own computer.
 Below are notes from the user's personal memory that may be relevant, then the recent conversation.
 Use the notes when they answer the question and prefer them over your own assumptions.
-If the notes do not contain the answer and you are not sure, say you don't know rather than guessing.
+If the question is about the user, their plans or their notes and the notes do not contain the answer,
+say you don't know rather than guessing. For general questions, answer from your own knowledge.
 Answer concisely.
 
 ### Notes from memory
@@ -97,6 +98,16 @@ Answer concisely.
 
 ### Assistant
 """
+
+# A question is not knowledge about the user, so it is not kept as chat memory (defect D-14).
+_QUESTION = re.compile(r"^\s*(?:what|which|who|whom|whose|when|where|why|how|is|are|was|were|do|does|did|can|could|"
+                       r"would|should|will|shall|may|might|am|have|has|tell me|give me|convert|calculate|explain)\b", re.I)
+
+
+def is_question(text: str) -> bool:
+    text = text.strip()
+    return text.endswith("?") or bool(_QUESTION.match(text))
+
 
 _REMEMBER = re.compile(r"^\s*(?:/remember|remember(?: that)?|note:)\s*[:,-]?\s*(.+)$", re.I | re.S)
 _WORD = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\-.,:]*")
@@ -415,9 +426,10 @@ class Assistant:
                     generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
                     prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id)
         turn.turn_id = self._log(turn)
-        if self.remember_chat:
-            # What the user says is the user's own knowledge: keep it, so it can be
-            # recalled long after it has scrolled out of the context window.
+        if self.remember_chat and not is_question(question):
+            # What the user *states* is the user's own knowledge: keep it, so it can be
+            # recalled long after it has scrolled out of the context window. Questions are
+            # not kept: they carry no knowledge and only crowd out real memories (D-14).
             day = dt.date.today().isoformat()
             turn.saved_to_memory = self.teach(f"On {day} the user said: {question}", kind="chat",
                                               doc_id=f"chat-{turn.turn_id}") > 0
