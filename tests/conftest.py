@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from camr.models.runner import Generation, GenerationError, ModelRunner
 from camr.models.tokenizer import RegexTokenizer
 
 FIXTURES = Path(__file__).parent / "fixtures"
+os.environ.setdefault("CAMR_OFFLINE_WEB", "1")  # the suite never reaches the real web; web tests use a scripted fake
 
 
 class ScriptedRunner(ModelRunner):
