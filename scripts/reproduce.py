@@ -77,8 +77,10 @@ def _verified(set_name: str, tmp: Path) -> tuple[bool, str]:
         return False, f"{committed} missing (run scripts/verified_qa.py answer --set {set_name})"
     exp = json.loads(committed.read_text())
     names = ",".join(exp["variants"])
+    first = next(iter(exp["variants"].values()))
     code, out = run([PY, "scripts/verified_qa.py", "answer", "--set", set_name, "--offline", "--offline-answers",
-                     "--variants", names, "--out", str(tmp)])
+                     "--variants", names, "--out", str(tmp), "--budget", str(first.get("budget", 128)),
+                     "--min-coverage", str(first.get("min_coverage", 1.0))])
     if code != 0:
         return False, "replay failed:\n" + out
     got = json.loads((tmp / f"answers_{set_name}.json").read_text())

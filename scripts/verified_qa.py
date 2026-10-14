@@ -181,6 +181,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
                        rank=embedding_rank(engine.embedder), min_interval_s=1.5, facts=v["facts"])
     readers = readers_for(v["readers"], a.offline_answers)
     ans = VerifiedAnswerer(engine, readers, lookup=lookup, budget=a.budget, fact_reader=v["fact_reader"],
+                           min_coverage=a.min_coverage,
                            compressed=v["compressed"], closed_book=v["closed_book"],
                            template=READ if v["template"] == "read" else QA_MEMORY, cross_check=v.get("cross", False))
     ans_bare = BARE  # noqa: F841  (the closed-book prompt, recorded by its id below)
@@ -204,7 +205,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     n = len(rows)
     ver = [x for x in rows if x["status"] == "verified"]
     stated_wrong = [x for x in rows if not x["first_declined"] and not x["first_correct"]]
-    out = {"variant": name, "settings": v, "n": n, "budget": a.budget,
+    out = {"variant": name, "settings": v, "n": n, "budget": a.budget, "min_coverage": a.min_coverage,
            "verified": {"answered": len(ver) / n, "correct": sum(x["correct"] for x in ver) / n,
                         "wrong": sum(not x["correct"] for x in ver) / n,
                         # wrong about a thing it named unambiguously: the hallucination rate
@@ -228,7 +229,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
 
 def answer(a) -> None:
     items = load_set(a.set)
-    path = RES / f"answers_{a.set}.json"
+    path = RES / f"answers_{a.set}{a.tag}.json"
     out = json.loads(path.read_text()) if path.exists() else {"set": a.set, "variants": {}}
     names = list(VARIANTS) if a.variants == "all" else a.variants.split(",")
     for name in names:
@@ -253,6 +254,8 @@ if __name__ == "__main__":
     ap.add_argument("--offline-answers", action="store_true", help="model answers from the answer cache only")
     ap.add_argument("--variants", default="all")
     ap.add_argument("--budget", type=int, default=128)
+    ap.add_argument("--min-coverage", type=float, default=1.0, help="share of the claim's words one unit must hold")
+    ap.add_argument("--tag", default="", help="a separate results file (answers_<set><tag>.json)")
     ap.add_argument("--out", default=None, help="write results and stores here (caches are still read from "
                                                 "results/verified)")
     a = ap.parse_args()

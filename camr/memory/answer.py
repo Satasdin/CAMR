@@ -90,24 +90,7 @@ class VerifiedAnswerer:
         self.cross = cross_check
 
     def _cross(self, question: str, answer: str, c: str) -> tuple[Verdict, WebPage | None]:
-        """Look the claimed answer up (it is a public name, never anything personal) and check it from its side."""
-        res = Lookup(question=c)
-        page, options = self.lookup.article(c, res)
-        pages = [page] if page else []
-        if not pages and options:  # an ambiguous name: the meanings closest to the question
-            if self.lookup.rank is not None:
-                scores = self.lookup.rank(question, [f"{t}. {d}" for t, d in options])
-                options = [o for _, o in sorted(zip(scores, options), key=lambda x: -x[0])]
-            for title, _ in options[:2]:
-                p = self.lookup.article(title, res)[0]
-                if p:
-                    pages.append(p)
-        for p in pages:
-            v = cross_check(question, answer, page_units(p))
-            if v.supported:
-                learn_pages(self.engine, [p])  # what confirmed it is worth remembering
-                return v, p
-        return Verdict(False, "not confirmed from the answer's side"), None
+        return cross_verify(self.engine, self.lookup, question, answer)
 
     def evidence(self, question: str, *, allow_web: bool = True, touch: bool = False):
         recall, learned = eager_recall(self.engine, self.lookup, question, allow_web=allow_web, touch=touch,
@@ -178,6 +161,31 @@ class VerifiedAnswerer:
             return Answer(question, "", "", "none", "", None, None, attempts, learned, context, ms)
         v, c, by = best
         return Answer(question, c, c, "unverified", by, None, None, attempts, learned, context, ms)
+
+
+def cross_verify(engine: MemoryEngine, lookup: WebLookup, question: str, answer: str) -> tuple[Verdict, WebPage | None]:
+    """Look the claimed answer up (a public name, never anything personal) and check it from its own side; a page
+    that confirms it is learned."""
+    c = claim(answer)
+    if not c:
+        return Verdict(False, "no claim"), None
+    res = Lookup(question=c)
+    page, options = lookup.article(c, res)
+    pages = [page] if page else []
+    if not pages and options:  # an ambiguous name: the meanings closest to the question
+        if lookup.rank is not None:
+            scores = lookup.rank(question, [f"{t}. {d}" for t, d in options])
+            options = [o for _, o in sorted(zip(scores, options), key=lambda x: -x[0])]
+        for title, _ in options[:2]:
+            p = lookup.article(title, res)[0]
+            if p:
+                pages.append(p)
+    for p in pages:
+        v = cross_check(question, answer, page_units(p))
+        if v.supported:
+            learn_pages(engine, [p])  # what confirmed it is worth remembering
+            return v, p
+    return Verdict(False, "not confirmed from the answer's side"), None
 
 
 def page_units(page: WebPage) -> list[Unit]:

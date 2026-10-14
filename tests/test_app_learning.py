@@ -219,3 +219,53 @@ def test_teaching_stops_cleanly_when_the_device_is_full(tmp_path):
     with pytest.raises(RuntimeError, match="at its limit"):
         a.teach("The spare key is under the blue pot.")
     a.close()
+
+
+class ByModel(FakeOllama):
+    """Each model gives its own fixed short answer, streamed or not."""
+
+    def __init__(self, answers):
+        super().__init__()
+        self.answers = answers
+
+    def post(self, url, json=None, stream=False, timeout=None):
+        from test_app import _Resp
+        import json as _j
+
+        if not json["prompt"]:
+            return _Resp(body={"done": True})
+        self.prompts.append((json["model"], json["prompt"]))
+        text = self.answers[json["model"]]
+        if json.get("stream"):
+            return _Resp(lines=[_j.dumps({"response": text, "done": False}).encode(),
+                                _j.dumps({"response": "", "done": True}).encode()])
+        return _Resp(body={"response": text, "prompt_eval_count": 5, "eval_count": 3})
+
+
+def test_a_second_opinion_replaces_an_unconfirmed_answer_only_when_memory_confirms_it(tmp_path, web):
+    s = ByModel({"tiny:1b": "Martin Scorsese", "big:3b": "Walter West"})
+    a = Assistant(tmp_path / "home", model="tiny:1b", embedder=HashingEmbedder(384), session=s, min_similarity=0.3,
+                  web_lookup=WebLookup(web, min_interval_s=0))
+    a.save_settings(check_model="big:3b")
+    t = a.ask("Who directed The Loudwater Mystery?")
+    assert t.answer == "Walter West" and t.verification["by"] == "big:3b"
+    assert t.verification["revised_from"] == "Martin Scorsese"
+    s.answers["big:3b"] = "Fritz Lang"  # a second opinion memory does not confirm changes nothing
+    t = a.ask("Who was the director of The Loudwater Mystery?")
+    assert t.answer == "Martin Scorsese" and t.verification["status"] == "unverified"
+    a.close()
+
+
+def test_an_answer_memory_lacks_is_confirmed_from_its_own_article(tmp_path):
+    web = FakeWeb({"The Loudwater Mystery": ddg_article("The Loudwater Mystery", "The Loudwater Mystery is a 1921 "
+                                                                                 "British silent crime film."),
+                   "Walter West": ddg_article("Walter West", "Walter West was a British film director. He directed "
+                                                             "The Loudwater Mystery in 1921.")})
+    a = Assistant(tmp_path / "home", model="tiny:1b", embedder=HashingEmbedder(384),
+                  session=ByModel({"tiny:1b": "Walter West"}), min_similarity=0.3,
+                  web_lookup=WebLookup(web, min_interval_s=0))
+    t = a.ask("Who directed The Loudwater Mystery?")
+    assert t.verification["status"] == "verified" and t.verification["by"] == "cross-check"
+    assert "He directed The Loudwater Mystery" in t.verification["evidence"]
+    assert t.verification["url"].endswith("/Walter_West")
+    a.close()

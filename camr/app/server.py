@@ -258,7 +258,8 @@ def make_handler(app: App):
             if path == "/api/settings":
                 changed = "model" in data and data["model"] != a.model
                 a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat",
-                                                        "learn_online", "sleep_when_idle", "verified_only")
+                                                        "learn_online", "sleep_when_idle", "verified_only",
+                                                        "check_model")
                                    if k in data})
                 if changed:  # load the newly chosen model now, not on the next question
                     threading.Thread(target=a.warm, daemon=True).start()

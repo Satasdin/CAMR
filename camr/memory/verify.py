@@ -154,7 +154,9 @@ def claim(answer: str) -> str:
 
 def claim_words(question: str, answer: str) -> list[str]:
     q = set(norm(question).split())
-    return [w for w in norm(claim(answer)).split() if w not in q and w not in _FRAME]
+    c = claim(answer)
+    bare = re.sub(r"\s*\([^)]*\)", "", c).strip()  # "Football (soccer)": the parenthesis only clarifies
+    return [w for w in norm(bare or c).split() if w not in q and w not in _FRAME]
 
 
 # ---------------------------------------------------------------------- what the question is about

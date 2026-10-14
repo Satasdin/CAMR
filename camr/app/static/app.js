@@ -211,7 +211,8 @@ function renderRecall(el, sources, abstained, ms, learned) {
 function verifyBadge(v) {
   if (!v) return "";
   if (v.status === "verified") {
-    const how = v.by === "memory" ? "read straight from memory" : "checked against memory";
+    const how = (v.by === "memory" ? "read straight from memory" : v.by === "cross-check" ? "confirmed by the answer's own article"
+      : "checked against memory") + (v.revised_from ? ` (corrected from “${v.revised_from}”)` : "");
     return `<span class="verify ok" title="${esc(how + ": " + (v.evidence || ""))}">✓ Verified · ${esc(v.source || "memory")}</span>`;
   }
   if (v.status === "unverified") return `<span class="verify no" title="${esc(v.reason || "")}">! Not confirmed by memory</span>`;
@@ -424,6 +425,8 @@ async function loadLearning() {
 $("#open-settings").onclick = () => {
   const s = S.state.settings; $("#set-budget").value = s.token_budget; $("#set-turns").value = s.history_turns; $("#set-chat").checked = s.remember_chat;
   $("#set-online").checked = s.learn_online; $("#set-sleep").checked = s.sleep_when_idle; $("#set-verified").checked = !!s.verified_only;
+  $("#set-check").innerHTML = `<option value="">None</option>` + S.state.models.filter((m) => !m.embedding && m.name !== s.model)
+    .map((m) => `<option value="${esc(m.name)}" ${m.name === s.check_model ? "selected" : ""}>${esc(m.name)} (${esc(m.parameters)})</option>`).join("");
   $("#budget-val").textContent = s.token_budget + " tokens"; $("#turns-val").textContent = s.history_turns;
   $("#about").textContent = `CAMR Personal ${S.state.version} · memory model ${s.embed_model} · abstains below similarity ${s.min_similarity} · data in ${S.state.home}`;
   $("#settings-dlg").showModal(); closeMobile();
@@ -433,7 +436,7 @@ $("#set-turns").oninput = (e) => $("#turns-val").textContent = e.target.value;
 $("#export-text").onchange = (e) => $("#export-link").href = "/api/export?text=" + (e.target.checked ? 1 : 0);
 $("#settings-save").onclick = async () => {
   await api("/api/settings", { method: "POST", body: { token_budget: +$("#set-budget").value, history_turns: +$("#set-turns").value, remember_chat: $("#set-chat").checked,
-    learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked, verified_only: $("#set-verified").checked } });
+    learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked, verified_only: $("#set-verified").checked, check_model: $("#set-check").value } });
   toast("Settings saved"); refresh();
 };
 

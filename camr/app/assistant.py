@@ -48,7 +48,10 @@ from camr.memory.fetch import WebLookup, embedding_rank, is_personal
 from camr.memory.note import Document
 from camr.memory.sleep import sleep as run_sleep
 from camr.memory.store import SQLiteVectorStore
-from camr.memory.verify import check, claim, fact_answer, relation_of, units_from_notes
+from camr.memory.answer import BARE as BARE_PROMPT
+from camr.memory.answer import READ as READ_PROMPT
+from camr.memory.answer import cross_verify
+from camr.memory.verify import CROSS, check, claim, compress, fact_answer, relation_of, units_from_notes
 from camr.models.runner import OllamaRunner
 from camr.models.tokenizer import RegexTokenizer
 
@@ -278,6 +281,9 @@ class Assistant:
         # Strict mode: a short factual answer memory does not support is not stated as fact; the assistant says it
         # could not confirm it and gives it only as a lead. Off by default (the answer is labelled instead).
         self.verified_only = bool(saved.get("verified_only", False))
+        # A larger installed model asked for a second opinion when a short factual answer is not confirmed
+        # ("" = none). Its answer is used only if memory, or the answer's own article, confirms it.
+        self.check_model = saved.get("check_model", "") or ""
         self._http = session or requests.Session()
         self._lock = threading.RLock()
         self.jobs: dict[str, dict] = {}  # background work shown in the Learning panel (harvest, sleep)
@@ -332,7 +338,8 @@ class Assistant:
         return {"model": self.model, "token_budget": self.token_budget, "history_turns": self.history_turns,
                 "remember_chat": self.remember_chat, "embed_model": self.embed_model,
                 "learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle,
-                "verified_only": self.verified_only, "min_similarity": self.engine.min_similarity}
+                "verified_only": self.verified_only, "check_model": self.check_model,
+                "min_similarity": self.engine.min_similarity}
 
     def warm(self, keep_alive: str = "30m") -> bool:
         """Load the chat model into memory ahead of the first question.
@@ -353,7 +360,7 @@ class Assistant:
 
     def save_settings(self, **changes) -> None:
         allowed = {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "sleep_when_idle",
-                   "verified_only"}
+                   "verified_only", "check_model"}
         for k, v in changes.items():
             if k in allowed:
                 setattr(self, k, v)
@@ -567,6 +574,10 @@ class Assistant:
         verification = None
         if factual:
             verification = _verification(question, answer, units)
+            if verification["status"] != "verified" and claim(answer) and verification.get("reason") != "no answer given":
+                better = self._second_opinion(question, answer, units)
+                if better is not None:
+                    answer, verification = better
             if self.verified_only and verification["status"] != "verified" and claim(answer):
                 answer = (f"I couldn't confirm this from what I've read, so take it as a lead, not a fact: "
                           f"{claim(answer)} (unverified).")
@@ -585,6 +596,41 @@ class Assistant:
             turn.saved_to_memory = self.teach(f"On {day} the user said: {question}", kind="chat",
                                               doc_id=f"chat-{turn.turn_id}") > 0
         yield {"type": "done", "turn": turn.as_dict()}
+
+    def _second_opinion(self, question: str, answer: str, units) -> tuple[str, dict] | None:
+        """An unconfirmed short answer: ask the second-opinion model (if set) to read the same memory, and check
+        each claim from the answer's own article (if lookups are on). Only a confirmed claim replaces the answer."""
+        claims = [answer]
+        if self.check_model and self.check_model != self.model:
+            runner = OllamaRunner(LocalModelConfig(name=self.check_model, host=self.host, max_tokens=64,
+                                                   num_ctx=4096), session=self._http)
+            if units:
+                shown = compress(question, units, self.embedder, RegexTokenizer(), budget=160)
+                prompt = READ_PROMPT.render(question, "\n".join(u.render() for u in shown))
+            else:
+                prompt = BARE_PROMPT.render(question)
+            try:
+                other = runner.generate(prompt).text.strip()
+            except Exception:  # noqa: BLE001  (a missing or failing second model is no answer, not an error)
+                other = ""
+            if other and claim(other):
+                v = check(question, other, units) if units else None
+                if v is not None and v.supported:
+                    return claim(other), {"status": "verified", "by": self.check_model, "evidence": v.evidence.render(),
+                                          "source": v.evidence.title, "revised_from": claim(answer)}
+                claims.append(other)
+        rel = relation_of(question)
+        if self.learn_online and rel and rel[0] in CROSS:
+            for c in claims:
+                with self._lock:
+                    v, page = cross_verify(self.engine, self.lookup, question, c)
+                if v.supported:
+                    out = {"status": "verified", "by": "cross-check", "evidence": v.evidence.render(),
+                           "source": v.evidence.title, "url": page.url if page else ""}
+                    if claim(c) != claim(answer):
+                        out["revised_from"] = claim(answer)
+                    return claim(c), out
+        return None
 
     @_locked
     def _log(self, turn: Turn) -> int:
