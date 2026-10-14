@@ -88,6 +88,7 @@ def _verified(set_name: str, tmp: Path) -> tuple[bool, str]:
         cmd += ["--relation-cue"] if first.get("relation_cue") else []
         cmd += ["--by-name"] if first.get("by_name") else []
         cmd += ["--hybrid"] if first.get("hybrid") else []
+        cmd += ["--subject-aware"] if first.get("subject_aware") else []
         code, out = run(cmd)
         if code != 0:
             return False, f"{committed.name}: replay failed:\n" + out

@@ -284,3 +284,21 @@ def test_a_cloud_answer_replays_from_the_cache_without_its_key(tmp_path, monkeyp
     cache._conn.commit()
     replay = CachedRunner(ReplayOnlyRunner(cfg), tmp_path / "a.sqlite", offline=True)
     assert replay.key("q") == key and replay.generate("q").text == "Nairobi"
+
+
+def test_memory_similar_but_about_something_else_still_triggers_a_lookup(tmp_path):
+    from camr.memory.eager import eager_recall
+    from camr.memory.fetch import WebLookup
+    from test_learning import FakeWeb, ddg_article, fresh_engine
+
+    engine = fresh_engine(tmp_path)
+    learn_pages(engine, [WebPage("Puntland", "https://en.wikipedia.org/wiki/Puntland", "What is the capital of "
+                                 "Puntland? The capital of Puntland is Garowe, a city far from Spain.", "wikipedia",
+                                 "q")])  # mentions Spain in passing: the entity gate lets it through
+    web = FakeWeb({"capital of Spain": ddg_article("Madrid", "Madrid is the capital of Spain."),
+                   "Spain": ddg_article("Spain", "Spain is a country; its capital is Madrid.")})
+    q = "What is the capital of Spain?"
+    r, learned = eager_recall(engine, WebLookup(web, min_interval_s=0), q, touch=False)
+    assert learned.reason == "memory had it" and "Madrid" not in r.context  # similar, about Puntland
+    r, learned = eager_recall(engine, WebLookup(web, min_interval_s=0), q, touch=False, subject_aware=True)
+    assert learned.looked_up and "Madrid" in r.context

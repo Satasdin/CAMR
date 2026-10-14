@@ -81,12 +81,28 @@ def learn_pages(engine: MemoryEngine, pages: list[WebPage], dataset: str = WEB_D
     return engine.ingest(docs).accepted if docs else 0
 
 
+def knows_subject(engine: MemoryEngine, question: str, recall: RecallResult) -> bool:
+    """Is any note recall found about what the question names? (Notes can be similar to a question without being
+    about its subject: many 'Capital: X' lines look alike to an embedder, none of them about Spain.)"""
+    from camr.memory.verify import Unit, aboutness, subject_names, units_from_notes
+
+    names = subject_names(question)
+    if not names:
+        return True  # nothing to check against
+    notes = [c.note for c in recall.candidates if c.eligible]
+    # by title: a note that only mentions the name in passing ("a club in Spain") is not knowledge about it
+    titles = {u.title for u in units_from_notes(engine.store, notes)}
+    return any(aboutness(Unit(t, ""), names) > 0 for t in titles if t) or not titles
+
+
 def eager_recall(engine: MemoryEngine, lookup: WebLookup | None, question: str, *, allow_web: bool = True,
-                 touch: bool = True, max_pages: int = 3) -> tuple[RecallResult, Learned]:
-    """Recall; on abstention look the question's subject up, learn it, and recall again."""
+                 touch: bool = True, max_pages: int = 3,
+                 subject_aware: bool = False) -> tuple[RecallResult, Learned]:
+    """Recall; on abstention look the question's subject up, learn it, and recall again. ``subject_aware``: also
+    when what recall found is similar to the question but about something else."""
     recall = engine.recall(question, touch=touch)
     learned = Learned()
-    if not recall.abstained:
+    if not recall.abstained and (not subject_aware or knows_subject(engine, question, recall)):
         learned.reason = "memory had it"
         return recall, learned
     if lookup is None or not allow_web:

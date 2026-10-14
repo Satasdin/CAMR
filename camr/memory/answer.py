@@ -76,7 +76,7 @@ class VerifiedAnswerer:
                  budget: int = 128, fact_reader: bool = True, compressed: bool = True, max_pages: int = 3,
                  min_coverage: float = 1.0, closed_book: bool = False, template: PromptTemplate = READ,
                  cross_check: bool = False, typed: bool = False, relation_cue: bool = False,
-                 by_name: bool = False):
+                 by_name: bool = False, subject_aware: bool = False):
         self.engine = engine
         self.readers = readers
         self.lookup = lookup
@@ -92,13 +92,14 @@ class VerifiedAnswerer:
         self.typed = typed
         self.relation_cue = relation_cue
         self.by_name = by_name  # also read what memory holds under the question's names (verify.subject_units)
+        self.subject_aware = subject_aware  # look up when nothing recalled is about the question's subject
 
     def _cross(self, question: str, answer: str, c: str) -> tuple[Verdict, WebPage | None]:
         return cross_verify(self.engine, self.lookup, question, answer)
 
     def evidence(self, question: str, *, allow_web: bool = True, touch: bool = False):
         recall, learned = eager_recall(self.engine, self.lookup, question, allow_web=allow_web, touch=touch,
-                                       max_pages=self.max_pages)
+                                       max_pages=self.max_pages, subject_aware=self.subject_aware)
         notes = [] if recall.abstained else [c.note for c in recall.candidates if c.eligible]
         units = units_from_notes(self.engine.store, notes)
         if self.by_name:  # what memory holds under the question's names, read by name

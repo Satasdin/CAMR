@@ -244,7 +244,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     readers = readers_for(v["readers"], a.offline_answers)
     ans = VerifiedAnswerer(engine, readers, lookup=lookup, budget=a.budget, fact_reader=v["fact_reader"],
                            min_coverage=a.min_coverage, typed=a.typed, relation_cue=a.relation_cue,
-                           by_name=getattr(a, "by_name", False),
+                           by_name=getattr(a, "by_name", False), subject_aware=getattr(a, "subject_aware", False),
                            compressed=v["compressed"], closed_book=v["closed_book"],
                            template=READ if v["template"] == "read" else QA_MEMORY, cross_check=v.get("cross", False))
     ans_bare = BARE  # noqa: F841  (the closed-book prompt, recorded by its id below)
@@ -273,7 +273,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     stated_wrong = [x for x in rows if not x["first_declined"] and not x["first_correct"]]
     out = {"variant": name, "settings": v, "n": n, "budget": a.budget, "min_coverage": a.min_coverage,
            "typed": a.typed, "relation_cue": a.relation_cue, "by_name": getattr(a, "by_name", False),
-           "hybrid": getattr(a, "hybrid", False),
+           "hybrid": getattr(a, "hybrid", False), "subject_aware": getattr(a, "subject_aware", False),
            "verified": {"answered": len(ver) / n, "correct": sum(x["correct"] for x in ver) / n,
                         "wrong": sum(not x["correct"] for x in ver) / n,
                         # wrong about a thing it named unambiguously: the hallucination rate
@@ -453,6 +453,7 @@ if __name__ == "__main__":
     ap.add_argument("--relation-cue", action="store_true", help="a sentence must state the asked relation")
     ap.add_argument("--by-name", action="store_true", help="also read what memory holds under the question's names")
     ap.add_argument("--hybrid", action="store_true", help="hybrid recall: keyword hits join the vector hits")
+    ap.add_argument("--subject-aware", action="store_true", help="look up when nothing recalled is about the subject")
     ap.add_argument("--out", default=None, help="write results and stores here (caches are still read from "
                                                 "results/verified)")
     a = ap.parse_args()
