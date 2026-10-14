@@ -605,7 +605,7 @@ Sources: `camr/memory/verify.py`, `camr/memory/answer.py`, `scripts/verified_qa.
 
 Every short factual answer is checked against what memory read before it is stated: its words must all occur in one sentence or fact line (grounding), that unit must be about what the question names (subject), a labelled fact supports only its own relation, and (strict) the answer must be the kind asked for and a plain sentence must state the relation. A fact line that answers the question is read directly, with no model call. A name that means several things is never silently resolved: the answer says which one it is about, or gives each. What cannot be confirmed is offered only as a lead, marked unverified.
 
-Lookups were improved first: infobox facts as one note each; meanings named exactly as asked, and the name's own article first (D-24, D-29); no searches for "director of X" (D-25) or for fragments of a name already found (D-26); the search page when the search API is rate limited (D-27), the article page when the summary API is (D-30). On the development set the answer was in what was read for **71.0%** of questions (the earlier lookups found it for about 52% of the stream's questions).
+Lookups were improved first: infobox facts as one note each; meanings named exactly as asked, and the name's own article first (D-24, D-29); no searches for "director of X" (D-25) or for fragments of a name already found (D-26); the search page when the search API is rate limited (D-27), the article page when the summary API is (D-30). On the development set the answer was in what was read for **73.0%** of questions, 66.5% on the test stream (the earlier lookups found it for about 52% of the stream's questions); recorded from the frozen cache (`lookup_*.json`).
 
 Development set (200 PopQA questions, ids and subjects disjoint from the stream; everything below was chosen here). Correct and wrong as judged by Kimi K3 where exact matching disagrees (exact matching gives the same ordering, `answers_dev*.json`):
 
@@ -620,13 +620,13 @@ Development set (200 PopQA questions, ids and subjects disjoint from the stream;
 
 The second readers add one point of correct answers and up to 1.5 points of hallucination: the answer is usually not in what memory read, and a larger model reading the same notes cannot find it either. The chosen pipeline runs on the 0.5B model alone. "About another meaning" answers are true statements about a named meaning of a shared name ("Jeff F. King (Damage (2009 film))" when the question meant the 1992 film).
 
-**Test stream** (the 200 questions of F19, answered once with the configuration chosen above; memory starts empty and learns as it goes; every system judged the same way, `judged_test.json`):
+**Test stream** (the 200 questions of F19, answered with the configuration chosen above; memory starts empty and learns as it goes; every system judged the same way, `judged_test.json`). Protocol: the web is fetched once into a cache; every variant then answers from that frozen cache, so all see the same pages and a replay reproduces every answer (F26):
 
 | System | correct | wrong, stated as fact |
 |---|---|---|
-| **0.5B + verified memory (chosen)** | **49.0%** | **4.5%** (and 14.5% true answers about a named other meaning; 32.0% honestly not confirmed) |
+| **0.5B + verified memory (chosen)** | **49.0%** | **4.5%** (and 14.0% true answers about a named other meaning; 32.5% honestly not confirmed) |
 | 0.5B + verified memory, Kimi K3 second reader + cross-check | 51.0% | 5.0% (16.5% another meaning) |
-| Before: 0.5B reads, every answer stated | 46.5% | 51.0% |
+| Before: 0.5B reads, every answer stated | 46.5% | 50.5% |
 | Kimi K3, closed-book (cloud) | 68.0% | 31.0% |
 | gpt-oss 20B, closed-book | 23.0% | 76.0% |
 | llama3.2 3B, closed-book | 20.5% | 79.5% |
