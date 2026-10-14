@@ -598,6 +598,27 @@ Sources: `docs/results/scenarios_v3.json`, `docs/figures/scenarios/{fetch_new,fo
 4. Bundled packs (harvested after D-20/D-21, nomic-embed-text vectors): Kenya 24 notes, Solar System 25, Photosynthesis 18; install copies vectors without running a model.
 5. axe-core with the Learning tab open: 0 violations in both themes at both sizes after D-23; every new colour pair passes AA.
 
+## F24. Answers that are verified or not stated as fact
+
+Sources: `camr/memory/verify.py`, `camr/memory/answer.py`, `scripts/verified_qa.py`, `results/verified/answers_dev*.json`, `results/verified/judged_dev.json`, `results/verified/answers_test*.json`, `results/verified/judged_test.json`.
+
+Every short factual answer is checked against what memory read before it is stated: its words must all occur in one sentence or fact line (grounding), that unit must be about what the question names (subject), a labelled fact supports only its own relation, and (strict) the answer must be the kind asked for and a plain sentence must state the relation. A fact line that answers the question is read directly, with no model call. A name that means several things is never silently resolved: the answer says which one it is about, or gives each. What cannot be confirmed is offered only as a lead, marked unverified.
+
+Lookups were improved first: infobox facts as one note each; meanings named exactly as asked, and the name's own article first (D-24, D-29); no searches for "director of X" (D-25) or for fragments of a name already found (D-26); the search page when the search API is rate limited (D-27), the article page when the summary API is (D-30). On the development set the answer was in what was read for **71.0%** of questions (the earlier lookups found it for about 52% of the stream's questions).
+
+Development set (200 PopQA questions, ids and subjects disjoint from the stream; everything below was chosen here). Correct and wrong as judged by Kimi K3 where exact matching disagrees (exact matching gives the same ordering, `answers_dev*.json`):
+
+| Pipeline | correct | hallucinated | about another meaning (named) | not confirmed |
+|---|---|---|---|---|
+| Before: 0.5B reads, every answer stated | 45.0% | **51.5%** | - | - |
+| Verified, 0.5B, infobox facts | 46.5% | 5.0% | 20.0% | 28.5% |
+| + fact reader and compression | 55.0% | 3.5% | 18.0% | 23.5% |
+| **+ strict checks (chosen)** | **54.0%** | **2.5%** | 17.0% | 26.5% |
+| + 3B second reader | 55.0% | 3.0% | 17.5% | 24.5% |
+| + Kimi K3 second reader and cross-check | 55.0% | 4.0% | 17.5% | 23.5% |
+
+The second readers add one point of correct answers and up to 1.5 points of hallucination: the answer is usually not in what memory read, and a larger model reading the same notes cannot find it either. The chosen pipeline runs on the 0.5B model alone. "About another meaning" answers are true statements about a named meaning of a shared name ("Jeff F. King (Damage (2009 film))" when the question meant the 1992 film).
+
 ## F25. Large data: searchable at once, vectors in the background, within the device's limits
 
 Sources: `results/bulk/ingest.json`, `results/bulk/limits.json`, `scripts/large_data.py`, `camr/memory/bulk.py`, `camr/device.py`.
