@@ -254,12 +254,15 @@ NAMED = {"composer", "screenwriter", "director", "producer", "author", "father",
          "capital", "country", "spouse", "founded", "starring", "publisher", "label", "network", "headquarters"}
 
 
-def type_ok(rel: str | None, answer: str) -> bool:
-    """Does the claim look like the kind of thing the question asks for? (A name for "who directed", not "1980".)"""
+def type_ok(rel: str | None, answer: str, question: str = "") -> bool:
+    """Does the claim look like the kind of thing the question asks for? (A name for "who directed", not "1980" or
+    "former teacher".) Judged on the claim's own words, not the question's words it repeats."""
     c = claim(answer)
     if rel not in NAMED:
         return True
-    return bool(re.search(r"[A-Z]", c)) and not re.fullmatch(r"[\d\s,.\-–]+", c)
+    q = set(norm(question).split())
+    own = [w for w in re.findall(r"[\w'’.-]+", c) if norm(w) and norm(w) not in q and norm(w) not in _FRAME]
+    return any(w[:1].isupper() for w in own) and not re.fullmatch(r"[\d\s,.\-–]+", c)
 
 
 def check(question: str, answer: str, units: list[Unit], *, min_coverage: float = 1.0,
@@ -273,7 +276,7 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
     words = claim_words(question, answer)
     if not words:  # nothing beyond the question's own words: an echo, not an answer
         return Verdict(False, "declined", relation=rel and rel[0], confidence=conf)
-    if typed and not type_ok(rel and rel[0], answer):
+    if typed and not type_ok(rel and rel[0], answer, question):
         return Verdict(False, "wrong kind of answer", words, relation=rel and rel[0], confidence=conf)
     all_units, units = units, evidence_units(units)
     if not units:
@@ -299,6 +302,11 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
     if not supporting:
         return Verdict(False, "another subject", words, cov, unit, rel and rel[0], conf)
     if rel:
+        # a labelled fact line says which relation it holds: "Directed by" is no evidence for a producer
+        own = [u for u in supporting if not u.label or label_matches(u.label, rel[1])]
+        if not own:
+            return Verdict(False, "another relation", words, cov, supporting[0], rel[0], conf)
+        supporting = own
         facts_here = [u for u in units if u.label and top > 0 and level[id(u)] == top]
         has_rel = [u for u in facts_here if label_matches(u.label, rel[1])]
         if has_rel and not any(u in has_rel or not u.label for u in supporting):
@@ -344,6 +352,20 @@ def fact_value(unit: Unit) -> str:
     return unit.text.partition(": ")[2]
 
 
+_DATE_END = re.compile(r"(?:\(\s*age[^)]*\)|\b\d{3,4}\b)\s*,?\s*", re.I)
+
+
+def place_part(value: str) -> str:
+    """'Teri Lynn DeSario, November 27, 1951 (age 74), Miami, Florida' -> 'Miami, Florida': what follows the date
+    in a Born/Died value ('' when nothing does)."""
+    last = None
+    for m in _DATE_END.finditer(value):
+        last = m
+    rest = value[last.end():] if last else ""
+    rest = rest.strip(" ,;")
+    return rest if re.search(r"[A-Z]", rest) else ""
+
+
 def same_name_titles(question: str, units: list[Unit]) -> list[str]:
     """Titles of notes in memory that carry exactly the question's name ('Emma (2020 film)', 'Emma (1996 film)'),
     in the order recall ranked them. Two or more: the name is ambiguous."""
@@ -377,6 +399,11 @@ def facts_by_title(question: str, units: list[Unit]) -> list[Unit]:
     for u in hits:
         if level[id(u)] != top:
             continue
+        if rel[0] in ("birthplace", "deathplace"):  # the place, not the name and date before it
+            place = place_part(fact_value(u))
+            if not place:
+                continue
+            u = Unit(u.title, f"{u.label}: {place}", u.label, u.note_id, u.score)
         cur = per.get(u.title)
         if cur is None or (label_matches(u.label, rel[1][:1]) and not label_matches(cur.label, rel[1][:1])):
             per[u.title] = u  # the relation's main label ("Directed by") over a secondary one

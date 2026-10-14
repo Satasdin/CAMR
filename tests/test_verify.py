@@ -230,3 +230,30 @@ def test_a_remembered_list_of_meanings_marks_an_answer_about_one_of_them(tmp_pat
     assert a.status == "verified" and a.ambiguous == ["Damage (1992 film)"]
     assert a.text == "Jeff F. King (Damage (2009 film))"  # says which Damage, and memory knows there is another
     assert meaning_units(engine.store, "Who directed Damage?")[0].text.lower().startswith("damage may refer to")
+
+
+def test_a_fact_line_is_evidence_only_for_its_own_relation():
+    look = [Unit("Look Around You", "Directed by: Tim Kirkby", "Directed by"),
+            Unit("Look Around You", "Look Around You is a British comedy series.")]
+    assert check("Who was the producer of Look Around You?", "Tim Kirkby", look).reason == "another relation"
+    assert check("Who was the director of Look Around You?", "Tim Kirkby", look).supported
+
+
+def test_born_values_answer_where_only_with_their_place():
+    from camr.memory.verify import fact_answer, place_part
+
+    assert place_part("Teri Lynn DeSario, November 27, 1951 (age 74), Miami, Florida, U.S.") == "Miami, Florida, U.S."
+    assert place_part("Teri Lynn DeSario, November 27, 1951 (age 74)") == ""
+    q = "In what city was Teri DeSario born?"
+    assert fact_answer(q, [Unit("Teri DeSario", "Born: Teri Lynn DeSario, November 27, 1951 (age 74)", "Born")]) is None
+    fa = fact_answer(q, [Unit("Teri DeSario", "Born: Teri Lynn DeSario, November 27, 1951 (age 74), Miami, Florida",
+                              "Born")])
+    assert fa.claim == "Miami, Florida"
+
+
+def test_the_kind_of_answer_is_judged_on_its_own_words():
+    from camr.memory.verify import type_ok
+
+    q = "Who is the father of Amber Marks?"
+    assert not type_ok("father", "Amber Marks' father was former teacher", q)
+    assert type_ok("father", "Howard Marks", q) and type_ok("genre", "rock", "What genre is X?")
