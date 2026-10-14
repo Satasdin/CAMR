@@ -38,9 +38,31 @@ class Learned:
     ingest_ms: float = 0.0
 
 
+def fact_lines(facts: str) -> list[tuple[str, str]]:
+    """'Directed by: Ravi Chopra; Music by: R. D. Burman' -> [('Directed by', 'Ravi Chopra'), ...]."""
+    out = []
+    for part in facts.split("; "):
+        label, sep, value = part.partition(": ")
+        if sep and label.strip() and value.strip():
+            out.append((label.strip(), value.strip()))
+    return out
+
+
+def page_documents(page: WebPage, dataset: str = WEB_DATASET) -> list[Document]:
+    """A page as documents: its lead (chunked by the write path) and one short note per infobox fact.
+
+    An atomic fact note ("The Burning Train: Directed by: Ravi Chopra") is what a question about that fact is
+    closest to, and all a small reader needs to answer it: one line, no distracting paragraphs."""
+    docs = [Document(dataset=dataset, doc_id=page.url, text=page.text, title=page.title)] if page.text else []
+    for label, value in fact_lines(page.facts):
+        docs.append(Document(dataset=dataset, doc_id=f"{page.url}#fact:{label}", text=f"{label}: {value}",
+                             title=page.title))
+    return docs
+
+
 def learn_pages(engine: MemoryEngine, pages: list[WebPage], dataset: str = WEB_DATASET) -> int:
     """Store web pages as notes (the page URL is the source id, so a page is only ever stored once)."""
-    docs = [Document(dataset=dataset, doc_id=p.url, text=p.text, title=p.title) for p in pages if p.text]
+    docs = [d for p in pages for d in page_documents(p, dataset)]
     return engine.ingest(docs).accepted if docs else 0
 
 

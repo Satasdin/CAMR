@@ -103,6 +103,7 @@ class WebPage:
     text: str
     source: str  # "wikipedia" or "wikipedia via duckduckgo"
     query: str   # what was looked up to find it
+    facts: str = ""  # the article's infobox as "Label: value" lines (director, born, capital, ...)
 
 
 @dataclass
@@ -158,7 +159,7 @@ class WebLookup:
 
     def __init__(self, session: requests.Session | None = None, *, cache_path: str | Path | None = None,
                  lang: str = "en", min_interval_s: float = 1.0, timeout: float = 10.0, offline: bool = False,
-                 patient_s: float = 0.0, rank=None, user_agent: str = USER_AGENT):
+                 patient_s: float = 0.0, rank=None, user_agent: str = USER_AGENT, facts: bool = True):
         self.http = session or requests.Session()
         # Wikimedia requires a descriptive User-Agent and throttles generic ones; a Session's default
         # ("python-requests/x") must be replaced, not kept (defect D-21: setdefault never replaced it)
@@ -175,6 +176,9 @@ class WebLookup:
         # How the meanings of an ambiguous name are ordered: None = words shared with the question; or a function
         # (question, [descriptions]) -> scores, e.g. the memory embedder's cosine similarity (``embedding_rank``).
         self.rank = rank
+        # Also read each article's infobox (one more request per page): the facts people ask about most (director,
+        # born, capital, genre) are often there and not in the lead.
+        self.facts = facts
         self._last = 0.0
         self._blocked_until: dict[str, float] = {}  # host -> time it may be asked again (Retry-After)
         self._backoff: dict[str, float] = {}  # host -> next pause after an empty or 429 reply (doubles, max 5 min)
@@ -269,6 +273,14 @@ class WebLookup:
 
     def article(self, name: str, res: Lookup) -> tuple[WebPage | None, list[tuple[str, str]]]:
         """The article a name refers to, or (None, [(title, description), ...]) when the name is ambiguous."""
+        page, options = self._article(name, res)
+        if page is not None and self.facts and not page.facts:
+            lead = self.page_lead(page.title, res)
+            if lead:
+                page.facts = lead.get("facts", "")
+        return page, options
+
+    def _article(self, name: str, res: Lookup) -> tuple[WebPage | None, list[tuple[str, str]]]:
         ddg = self.duckduckgo(name, res)
         if ddg and ddg.get("AbstractText") and "wikipedia.org" in (ddg.get("AbstractURL") or ""):
             title = urllib.parse.unquote(ddg["AbstractURL"].rsplit("/", 1)[-1]).replace("_", " ")
@@ -290,7 +302,7 @@ class WebLookup:
         lead = self.page_lead(name[:1].upper() + name[1:], res) if not (ddg and ddg.get("Type") == "D") else None
         if lead:
             return WebPage(title=lead.get("title", name), url=lead["url"], text=lead["extract"], source="wikipedia",
-                           query=name), []
+                           query=name, facts=lead.get("facts", "")), []
         return None, []
 
     # ------------------------------------------------------------ lookup
@@ -428,15 +440,58 @@ def embedding_rank(embedder):
 
 
 _P = re.compile(r"<p[^>]*>(.*?)</p>", re.S)
-_TAG = re.compile(r"<[^>]+>")
+# a tag whose quoted attributes may contain ">" (Wikipedia's data-mw='{...}' attributes do)
+_TAG = re.compile(r"""<(?:[^>"']|"[^"]*"|'[^']*')*>""")
 _REF = re.compile(r"\[(?:\d+|[a-z]|note \d+|citation needed)\]")
 
 
+_ATTRS = r"""(?:[^>"']|"[^"]*"|'[^']*')*"""  # attributes, whose quoted values may contain ">"
+_ROW = re.compile(rf"<tr\b{_ATTRS}>(.*?)</tr>", re.S)
+_TH = re.compile(rf"<th\b{_ATTRS}>(.*?)</th>", re.S)
+_TD = re.compile(rf"<td\b{_ATTRS}>(.*?)</td>", re.S)
+
+
+def _infobox(html: str) -> str:
+    """The first infobox of an article as 'Label: value' lines. Infoboxes hold the facts people ask about
+    (directed by, born, capital, genre...), which the lead paragraphs often leave out."""
+    import html as _html
+
+    start = html.find('class="infobox')
+    if start < 0:
+        return ""
+    start = html.rfind("<table", 0, start)
+    depth, i = 0, start
+    for m in re.finditer(r"<(/?)table\b", html[start:]):
+        depth += -1 if m.group(1) else 1
+        if depth == 0:
+            i = start + m.end()
+            break
+    box = html[start:i]
+    lines = []
+    for row in _ROW.findall(box):
+        th, td = _TH.search(row), _TD.search(row)
+        if not th or not td:
+            continue
+        def clean(x: str) -> str:
+            x = re.sub(r"<(br|/li|/p)[^>]*>", ", ", x)
+            x = re.sub(r"<(style|sup)\b.*?</\1>", " ", x, flags=re.S)
+            x = _REF.sub("", _html.unescape(_TAG.sub(" ", x)))
+            x = re.sub(r"\(\s*\d{4}-\d{2}-\d{2}\s*\)", "", x)  # "9 February 1970 ( 1970-02-09 )": the ISO copy
+            return " ".join(x.replace(" ,", ",").split()).strip(" ,;")
+        label, value = clean(th.group(1)), clean(td.group(1))
+        if label and value and len(label) <= 40:
+            lines.append(f"{label}: {value[:160]}")
+        if len(lines) >= 24:
+            break
+    return "; ".join(lines)
+
+
 def _lead_from_html(html: str, max_chars: int = 1200) -> dict:
-    """Title and lead paragraphs of a Wikipedia article page; {} for a disambiguation page."""
+    """Title, lead paragraphs and infobox facts of a Wikipedia article page; {} for a disambiguation page."""
     import html as _html
 
     title = re.search(r"<title>(.*?) - Wikipedia</title>", html)
+    facts = _infobox(html)
     body = html.split('id="mw-content-text"', 1)[-1]
     body = re.split(r'<div class="mw-heading|<h2', body, maxsplit=1)[0]  # the lead ends at the first section
     if 'id="disambigbox"' in html or "may refer to:" in body[:3000]:
@@ -451,7 +506,7 @@ def _lead_from_html(html: str, max_chars: int = 1200) -> dict:
         if sum(len(p) for p in paras) > max_chars:
             break
     text = " ".join(paras)[:max_chars]
-    return {"title": _html.unescape(title.group(1)) if title else "", "extract": text} if text else {}
+    return {"title": _html.unescape(title.group(1)) if title else "", "extract": text, "facts": facts} if text else {}
 
 
 def _flatten(topics: list[dict]) -> list[dict]:

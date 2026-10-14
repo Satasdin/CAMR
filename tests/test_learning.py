@@ -11,9 +11,9 @@ import pytest
 
 from camr.memory import MemoryEngine
 from camr.memory.adapter import QueryAdapter, recall_at
-from camr.memory.eager import eager_recall
+from camr.memory.eager import eager_recall, learn_pages
 from camr.memory.embedder import HashingEmbedder
-from camr.memory.fetch import WebLookup, is_personal, subjects
+from camr.memory.fetch import Lookup, WebLookup, is_personal, subjects
 from camr.memory.ivf import IVFIndex
 from camr.memory.note import Document
 from camr.memory.packs import build_pack, install_pack, installed_packs, read_pack, uninstall_pack
@@ -37,8 +37,9 @@ class Resp:
 class FakeWeb:
     """DuckDuckGo and Wikipedia, scripted. ``throttle`` empty replies come first for DuckDuckGo."""
 
-    def __init__(self, ddg: dict, wiki: dict | None = None, throttle: int = 0):
+    def __init__(self, ddg: dict, wiki: dict | None = None, throttle: int = 0, html: dict | None = None):
         self.ddg, self.wiki, self.throttle, self.calls, self.headers = ddg, wiki or {}, throttle, [], {}
+        self.html = html or {}  # title -> article page HTML (for infoboxes)
 
     def get(self, url, params=None, timeout=None):
         self.calls.append((url, params))
@@ -52,6 +53,9 @@ class FakeWeb:
             if title in self.wiki:
                 return Resp(200, {"type": "standard", "title": title, "extract": self.wiki[title]})
             return Resp(404, {"type": "https://mediawiki.org/wiki/HyperSwitch/errors/not_found"})
+        if "/wiki/" in url:
+            title = urllib.parse.unquote(url.rsplit("/", 1)[-1]).replace("_", " ")
+            return Resp(200, text=self.html[title]) if title in self.html else Resp(404, text="<html></html>")
         return Resp(429, text="too many requests", headers={"Retry-After": "30"})
 
 
@@ -308,3 +312,36 @@ def test_curiosity_names_never_run_across_a_sentence_end(tmp_path):
                    Document("web", "u2", "East Africa borders the Indian Ocean. East of Kenya. This is a test.", "Region")])
     names = [n for n, _ in knowledge_gaps(engine)]
     assert "East Africa" in names and not any(". " in n for n in names)  # D-22: no "East of Kenya. This"
+
+
+INFOBOX_PAGE = ('<title>The Burning Train - Wikipedia</title><div id="mw-content-text"><table class="infobox vevent">'
+                '<tr><th colspan="2">The Burning Train</th></tr>'
+                '<tr><th class="infobox-label">Directed by</th><td class="infobox-data">Ravi Chopra</td></tr>'
+                '<tr><th class="infobox-label" data-mw=\'{"parts":[{"a":">"}]}\'>Music by</th>'
+                '<td class="infobox-data"><a href="/wiki/R._D._Burman">R. D. Burman</a><sup>[1]</sup></td></tr>'
+                '<tr><th>Release date</th><td>20 March 1980 ( 1980-03-20 )</td></tr>'
+                '<tr><td>a row without a label</td></tr></table>'
+                '<p><b>The Burning Train</b> is a 1980 Indian Hindi-language disaster film directed by Ravi Chopra.</p>'
+                '</div>')
+
+
+def test_infobox_facts_are_read_as_label_value_pairs():
+    from camr.memory.fetch import _infobox
+
+    facts = _infobox(INFOBOX_PAGE)
+    assert facts == "Directed by: Ravi Chopra; Music by: R. D. Burman; Release date: 20 March 1980"
+
+
+def test_a_looked_up_page_brings_its_infobox_and_each_fact_becomes_a_note(tmp_path):
+    web = FakeWeb({"The Burning Train": ddg_article("The Burning Train", "The Burning Train is a 1980 Indian "
+                                                                         "disaster film.")},
+                  html={"The Burning Train": INFOBOX_PAGE})
+    lookup = WebLookup(web, cache_path=tmp_path / "c.sqlite", min_interval_s=0)
+    page, _ = lookup.article("The Burning Train", Lookup("q"))
+    assert "Directed by: Ravi Chopra" in page.facts
+    engine = fresh_engine(tmp_path)
+    assert learn_pages(engine, [page]) == 4  # the lead and three facts
+    texts = {n for (n,) in engine.store.conn.execute("SELECT text FROM note")}
+    assert "The Burning Train: Directed by: Ravi Chopra" in texts
+    off = WebLookup(FakeWeb({}), cache_path=tmp_path / "c.sqlite", offline=True)  # replayable from the cache
+    assert off.article("The Burning Train", Lookup("q"))[0].facts == page.facts

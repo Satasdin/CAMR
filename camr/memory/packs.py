@@ -154,8 +154,10 @@ def harvest(engine: MemoryEngine, lookup: WebLookup, topic: str, path: str | Pat
 
         lookup.rank = embedding_rank(engine.embedder)
     found = lookup.topic_pages(topic, limit=pages)
-    docs = [Document(dataset="web", doc_id=p.url, text=p.text, title=p.title) for p in found.pages]
+    from camr.memory.eager import page_documents  # (eager imports packs' neighbours; imported late to avoid a cycle)
+
+    docs = [d for p in found.pages for d in page_documents(p)]
     man = build_pack(path, engine, name=topic, title=title or topic.title(),
-                     description=f"{len(docs)} Wikipedia article leads about {topic}, harvested "
+                     description=f"{len(found.pages)} Wikipedia articles about {topic} (leads and infobox facts), harvested "
                                  f"{dt.date.today().isoformat()}", docs=docs)
     return man, found.pages
