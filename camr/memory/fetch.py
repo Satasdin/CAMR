@@ -202,6 +202,7 @@ class WebLookup:
         self._last = 0.0
         self._blocked_until: dict[str, float] = {}  # host -> time it may be asked again (Retry-After)
         self._backoff: dict[str, float] = {}  # host -> next pause after an empty or 429 reply (doubles, max 5 min)
+        self.retry_pause_s = 2.0  # first pause before retrying a connection that failed (0 = no retries)
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------ HTTP
@@ -231,13 +232,18 @@ class WebLookup:
                 wait = self._last + self.min_interval_s - time.time()
                 if wait > 0:
                     time.sleep(wait)
-                try:
-                    r = self.http.get(url, params=params, timeout=self.timeout)
-                except requests.RequestException as exc:
-                    res.errors.append(f"{host}: {type(exc).__name__}")
-                    return 0, None
-                finally:
-                    self._last = time.time()
+                r = None
+                for attempt in range(3):  # a connection reset is usually transient: two retries, 2 s then 4 s
+                    try:
+                        r = self.http.get(url, params=params, timeout=self.timeout)
+                        break
+                    except requests.RequestException as exc:
+                        if attempt == 2 or self.retry_pause_s <= 0:
+                            res.errors.append(f"{host}: {type(exc).__name__}")
+                            self._last = time.time()
+                            return 0, None
+                        time.sleep(self.retry_pause_s * (2 ** attempt))
+                self._last = time.time()
             res.requests += 1
             # Wikimedia answers 429 (Retry-After); DuckDuckGo answers an empty body when asked too fast. Either way:
             # back off, and never cache the non-answer (an empty reply cached as "nothing known" poisons the cache).

@@ -371,3 +371,27 @@ def test_a_name_found_whole_is_not_looked_up_again_in_fragments(tmp_path):
                    "The Baby": ddg_article("The Baby (film)", "The Baby is a 1973 horror film.")})
     res = WebLookup(web, min_interval_s=0).lookup("Who was the producer of The Baby on the Barge?")
     assert [p.title for p in res.pages] == ["The Baby on the Barge"]  # D-26: not "The Baby" too
+
+
+def test_a_reset_connection_is_retried_before_the_page_counts_as_missing():
+    import requests as rq
+
+    class Flaky(FakeWeb):
+        def __init__(self, *a, fails=2, **k):
+            super().__init__(*a, **k)
+            self.fails = fails
+
+        def get(self, url, params=None, timeout=None):
+            if self.fails:
+                self.fails -= 1
+                raise rq.ConnectionError("reset by peer")
+            return super().get(url, params, timeout)
+
+    w = WebLookup(Flaky({"Kenya": ddg_article("Kenya", "Kenya is a country in East Africa.")}), min_interval_s=0)
+    w.retry_pause_s = 0.01
+    page, _ = w.article("Kenya", Lookup("q"))
+    assert page and page.title == "Kenya"
+    w2 = WebLookup(Flaky({"Kenya": ddg_article("Kenya", "x")}, fails=5), min_interval_s=0)
+    w2.retry_pause_s = 0.01
+    res = Lookup("q")
+    assert w2.duckduckgo("Kenya", res) is None and res.errors  # still failing after the retries: recorded
