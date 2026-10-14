@@ -231,8 +231,23 @@ def abstention_like(answer: str | None) -> bool:
     return not (answer or "").strip() or bool(_ABSTAIN.search(answer or ""))
 
 
+# relations whose answer is a person or a place: a name, so it has a capital letter and is not just a number
+NAMED = {"composer", "screenwriter", "director", "producer", "author", "father", "mother", "birthplace", "deathplace",
+         "capital", "country", "spouse", "founded", "starring", "publisher", "label", "network", "headquarters"}
+
+
+def type_ok(rel: str | None, answer: str) -> bool:
+    """Does the claim look like the kind of thing the question asks for? (A name for "who directed", not "1980".)"""
+    c = claim(answer)
+    if rel not in NAMED:
+        return True
+    return bool(re.search(r"[A-Z]", c)) and not re.fullmatch(r"[\d\s,.\-–]+", c)
+
+
 def check(question: str, answer: str, units: list[Unit], *, min_coverage: float = 1.0,
-          logprobs: list[dict] | None = None) -> Verdict:
+          logprobs: list[dict] | None = None, typed: bool = False, relation_cue: bool = False) -> Verdict:
+    """``typed``: a claim of the wrong kind (a year for "who") is not support. ``relation_cue``: a claim found only
+    in an ordinary sentence counts only if that sentence states the asked relation ("directed", "wrote", ...)."""
     rel = relation_of(question)
     conf = claim_confidence(answer, logprobs, question)
     if abstention_like(claim(answer)) or _DECLINE.search(answer):
@@ -240,6 +255,8 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
     words = claim_words(question, answer)
     if not words:  # nothing beyond the question's own words: an echo, not an answer
         return Verdict(False, "declined", relation=rel and rel[0], confidence=conf)
+    if typed and not type_ok(rel and rel[0], answer):
+        return Verdict(False, "wrong kind of answer", words, relation=rel and rel[0], confidence=conf)
     if not units:
         return Verdict(False, "no evidence", words, relation=rel and rel[0], confidence=conf)
     names = subject_names(question)
@@ -273,6 +290,11 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
             if not any(set(words) <= set(norm(u.text).split()) for u in has_rel):
                 return Verdict(False, "another relation", words, cov, supporting[0], rel[0], conf)
         pick = next((u for u in supporting if u in has_rel), supporting[0])
+        if relation_cue and not pick.label and rel[0] in CROSS and not re.search(CROSS[rel[0]], pick.text, re.I):
+            cued = [u for u in supporting if not u.label and re.search(CROSS[rel[0]], u.text, re.I)]
+            if not cued:
+                return Verdict(False, "relation not stated", words, cov, pick, rel[0], conf)
+            pick = cued[0]
     else:
         pick = supporting[0]
     others = [t for t in same_name_titles(question, units) if t != pick.title]

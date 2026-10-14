@@ -180,7 +180,7 @@ def drain_part(a) -> None:
     out = json.loads(path.read_text())
     gov = Governor(store_path, Limits(reserve_disk_mb=a.reserve_disk_mb, reserve_ram_mb=a.reserve_ram_mb,
                                       max_load_per_core=a.max_load))
-    marks = [m for m in (0.25, 0.5, 0.75) if m > _state(engine, store, gov)["embedded_share"]]
+    marks = [m for m in (0.5,) if m > _state(engine, store, gov)["embedded_share"]]
 
     def show(rep):
         st = _state(engine, store, gov)

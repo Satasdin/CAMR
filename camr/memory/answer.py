@@ -75,7 +75,7 @@ class VerifiedAnswerer:
     def __init__(self, engine: MemoryEngine, readers: list[ModelRunner], *, lookup: WebLookup | None = None,
                  budget: int = 128, fact_reader: bool = True, compressed: bool = True, max_pages: int = 3,
                  min_coverage: float = 1.0, closed_book: bool = False, template: PromptTemplate = READ,
-                 cross_check: bool = False):
+                 cross_check: bool = False, typed: bool = False, relation_cue: bool = False):
         self.engine = engine
         self.readers = readers
         self.lookup = lookup
@@ -88,6 +88,8 @@ class VerifiedAnswerer:
         self.template = template
         # when memory cannot confirm a claim, look the claimed answer up and check it from its own side
         self.cross = cross_check
+        self.typed = typed
+        self.relation_cue = relation_cue
 
     def _cross(self, question: str, answer: str, c: str) -> tuple[Verdict, WebPage | None]:
         return cross_verify(self.engine, self.lookup, question, answer)
@@ -128,7 +130,8 @@ class VerifiedAnswerer:
             except GenerationError as exc:
                 attempts.append(Attempt(reader.model_name, "", {}, (time.perf_counter() - t2) * 1000, str(exc)))
                 continue
-            v = check(question, g.text, units, min_coverage=self.min_coverage, logprobs=g.meta.get("logprobs"))
+            v = check(question, g.text, units, min_coverage=self.min_coverage, logprobs=g.meta.get("logprobs"),
+                      typed=self.typed, relation_cue=self.relation_cue)
             attempts.append(Attempt(reader.model_name, g.text.strip()[:300], v.as_dict(),
                                     (time.perf_counter() - t2) * 1000))
             if v.supported:

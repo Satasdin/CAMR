@@ -187,7 +187,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
                        rank=embedding_rank(engine.embedder), min_interval_s=1.5, facts=v["facts"])
     readers = readers_for(v["readers"], a.offline_answers)
     ans = VerifiedAnswerer(engine, readers, lookup=lookup, budget=a.budget, fact_reader=v["fact_reader"],
-                           min_coverage=a.min_coverage,
+                           min_coverage=a.min_coverage, typed=a.typed, relation_cue=a.relation_cue,
                            compressed=v["compressed"], closed_book=v["closed_book"],
                            template=READ if v["template"] == "read" else QA_MEMORY, cross_check=v.get("cross", False))
     ans_bare = BARE  # noqa: F841  (the closed-book prompt, recorded by its id below)
@@ -212,6 +212,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     ver = [x for x in rows if x["status"] == "verified"]
     stated_wrong = [x for x in rows if not x["first_declined"] and not x["first_correct"]]
     out = {"variant": name, "settings": v, "n": n, "budget": a.budget, "min_coverage": a.min_coverage,
+           "typed": a.typed, "relation_cue": a.relation_cue,
            "verified": {"answered": len(ver) / n, "correct": sum(x["correct"] for x in ver) / n,
                         "wrong": sum(not x["correct"] for x in ver) / n,
                         # wrong about a thing it named unambiguously: the hallucination rate
@@ -249,9 +250,39 @@ def answer(a) -> None:
               f"unchecked: correct {st['correct']:.3f} wrong {st['wrong']:.3f} | {res['seconds']}s", flush=True)
 
 
+def report(a) -> None:
+    """The comparison as a table: each variant's verified answers, and what it would have said unchecked; on the
+    test stream, the closed-book models too (their every answer is stated)."""
+    path = RES / f"answers_{a.set}{a.tag}.json"
+    d = json.loads(path.read_text())
+    rows = [("pipeline", "correct", "hallucinated", "other meaning", "unconfirmed", "precision", "unchecked: correct",
+             "unchecked: wrong")]
+    for name, v in d["variants"].items():
+        ver, st = v["verified"], v["stated"]
+        rows.append((name, f"{ver['correct']:.1%}", f"{ver.get('wrong_unambiguous', ver['wrong']):.1%}",
+                     f"{ver.get('wrong_other_meaning', 0):.1%}", f"{ver['unverified'] + (1 - ver['answered'] - ver['unverified']):.1%}",
+                     f"{ver['precision']:.1%}", f"{st['correct']:.1%}", f"{st['wrong']:.1%}"))
+    if a.set == "test":
+        for f in sorted((ROOT / "results/eager").glob("baseline_*.json")):
+            if f.stem.endswith("_para"):
+                continue
+            b = json.loads(f.read_text())
+            pq = b["per_question"]
+            n = len(pq)
+            wrong = sum((not x["correct"]) and not x["declined"] for x in pq) / n
+            rows.append((f"{b['model']} closed-book", f"{sum(x['correct'] for x in pq) / n:.1%}", f"{wrong:.1%}",
+                         "-", f"{sum(x['declined'] for x in pq) / n:.1%}",
+                         f"{sum(x['correct'] for x in pq) / max(1, n - sum(x['declined'] for x in pq)):.1%}", "-", "-"))
+    widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
+    for k, r in enumerate(rows):
+        print("| " + " | ".join(c.ljust(w) for c, w in zip(r, widths)) + " |")
+        if k == 0:
+            print("|" + "|".join("-" * (w + 2) for w in widths) + "|")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["select", "fetch", "answer"])
+    ap.add_argument("part", choices=["select", "fetch", "answer", "report"])
     ap.add_argument("--set", default="dev", choices=["dev", "test"])
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--patient", type=float, default=120.0)
@@ -262,10 +293,12 @@ if __name__ == "__main__":
     ap.add_argument("--budget", type=int, default=128)
     ap.add_argument("--min-coverage", type=float, default=1.0, help="share of the claim's words one unit must hold")
     ap.add_argument("--tag", default="", help="a separate results file (answers_<set><tag>.json)")
+    ap.add_argument("--typed", action="store_true", help="a claim of the wrong kind is not support")
+    ap.add_argument("--relation-cue", action="store_true", help="a sentence must state the asked relation")
     ap.add_argument("--out", default=None, help="write results and stores here (caches are still read from "
                                                 "results/verified)")
     a = ap.parse_args()
     if a.out:
         RES = Path(a.out)
         RES.mkdir(parents=True, exist_ok=True)
-    {"select": select, "fetch": fetch, "answer": answer}[a.part](a)
+    {"select": select, "fetch": fetch, "answer": answer, "report": report}[a.part](a)

@@ -196,3 +196,14 @@ def test_cached_vectors_are_the_same_and_computed_once(tmp_path):
     b = CachedEmbedder(Counting(64), tmp_path / "v.sqlite").encode(["two", "one"])
     assert np.array_equal(a[1], b[0]) and np.array_equal(a[0], a[2]) and calls == [2]
     assert e.name == inner.name and e.encode(["q"], is_query=True).shape == (1, 64)
+
+
+def test_stricter_checks_reject_the_wrong_kind_and_an_unstated_relation():
+    film = [Unit("X (film)", "X is a 1980 film starring Martin Hale."), Unit("X (film)", "X was released in 1980."),
+            Unit("Y (film)", "Y is a 1975 film directed by Ana Silva.")]
+    q = "Who was the director of X?"
+    assert check(q, "Martin Hale", film).supported  # grounded and about X: the loose check passes it
+    assert check(q, "Martin Hale", film, relation_cue=True).reason == "relation not stated"
+    assert check(q, "1980", film, typed=True).reason == "wrong kind of answer"
+    y = "Who was the director of Y?"
+    assert check(y, "Ana Silva", film, typed=True, relation_cue=True).supported
