@@ -30,7 +30,7 @@ from camr.memory.entities import norm, question_entities
 # ---------------------------------------------------------------------- relations
 # (name, what a question asking for it says, the infobox labels that hold it). Ordered: the first match wins, so
 # the more specific relations come first ("who wrote the music" is the composer, not the author).
-RELATIONS: list[tuple[str, re.Pattern, tuple[str, ...]]] = [(n, re.compile(q, re.I), l) for n, q, l in [
+RELATIONS: list[tuple[str, re.Pattern, tuple[str, ...]]] = [(n, re.compile(q, re.I), lab) for n, q, lab in [
     ("composer", r"\bcompos(?:er|ed|itions?)\b|\bmusic (?:by|for|of)\b|\b(?:film )?score\b",
      ("music by", "composer", "composed by", "music", "composers")),
     ("screenwriter", r"\bscreen ?(?:writer|play)s?\b|\bscript\b|\bteleplay\b",

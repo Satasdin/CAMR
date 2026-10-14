@@ -83,6 +83,7 @@ class MemoryEngine:
         expansion_seeds: int = 3,
         expansion_per_seed: int = 2,
         keyword_k: int = 0,
+        per_title: int = 0,
     ):
         self.store = store
         self.embedder = embedder
@@ -102,6 +103,8 @@ class MemoryEngine:
         self.expansion_per_seed = expansion_per_seed
         # notes found by keyword (BM25) added to the vector candidates; 0 = only while some notes wait for vectors
         self.keyword_k = keyword_k
+        # at most this many notes whose sources share a title (e.g. corrections of one rule) enter a context; 0 = any
+        self.per_title = per_title
         self.query_adapter = None  # learned during sleep (camr.memory.adapter); None = the embedder's own vector
 
     @property
@@ -153,6 +156,7 @@ class MemoryEngine:
             expansion_seeds=m.expansion_seeds,
             expansion_per_seed=m.expansion_per_seed,
             keyword_k=m.keyword_k,
+            per_title=m.per_title,
         )
 
     # --------------------------------------------------------- write path
@@ -293,6 +297,8 @@ class MemoryEngine:
         if self.expansion == "entity" and not abstained:
             ranked = self._expand(ranked, qvec, nt)
         t4 = time.perf_counter()
+        if self.per_title:
+            self._limit_per_title(ranked)
         context, used = self.budgeter.pack(ranked)
         t5 = time.perf_counter()
         if touch:
@@ -315,6 +321,23 @@ class MemoryEngine:
             abstained=abstained,
             top_similarity=top_sim,
         )
+
+    def _limit_per_title(self, ranked: list[ScoredNote]) -> None:
+        """Keep the best ``per_title`` notes of each source title eligible: notes that repeat one source (the same
+        rule corrected six times) add little and crowd out the rest; a small model echoes every copy it reads."""
+        ids = sorted({c.note.source_id for c in ranked})
+        if not ids:
+            return
+        marks = ",".join("?" * len(ids))
+        title = dict(self.store.conn.execute(f"SELECT source_id, title FROM source WHERE source_id IN ({marks})", ids))
+        seen: dict[str, int] = {}
+        for c in ranked:
+            t = title.get(c.note.source_id) or ""
+            if not t or not c.eligible:
+                continue
+            seen[t] = seen.get(t, 0) + 1
+            if seen[t] > self.per_title:
+                c.eligible = False
 
     def _with_keyword_hits(self, question: str, qvec, hits: list[tuple[int, float]], kk: int,
                            nt: str) -> tuple[list[tuple[int, float]], dict[int, float]]:

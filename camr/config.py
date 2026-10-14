@@ -93,6 +93,7 @@ class MemoryConfig:
     k: int = 20
     token_budget: int = 512
     keyword_k: int = 0  # notes found by keyword added to the vector candidates (0: only while vectors are pending)
+    per_title: int = 0  # at most this many notes from sources with the same title in a context (0: no limit)
     packing: str = "greedy_stop"  # greedy_stop | greedy_skip
     write_back: bool = False
     graph_layer: bool = False
@@ -254,6 +255,8 @@ class Config:
         _choice("memory.reasoning_memory", m.reasoning_memory, {"facts", "exemplars", "none"})
         if m.similarity_margin is not None and m.similarity_margin < 0:
             raise ConfigError("memory.similarity_margin must be >= 0")
+        if m.per_title < 0:
+            raise ConfigError("memory.per_title must be >= 0")
         for c in self.extra_conditions:
             _choice("extra_conditions[]", c, {"ceiling_rag"})
         _choice("local_model.backend", self.local_model.backend, {"ollama", "dry-run"})

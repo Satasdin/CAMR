@@ -41,7 +41,8 @@ from typing import Callable
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "results/math"
-SEED = 31
+DEV_SEED = 31    # the draw the method was developed on (looked at, changed against)
+SEED = 47        # a fresh draw, run once the method was frozen: the reported numbers
 
 
 # ---------------------------------------------------------------------- the families
@@ -320,7 +321,12 @@ FAMILIES = [
 
 
 def problems(seed: int = SEED, train: int = 6, test: int = 6, derived: int = 4) -> dict:
-    """Train, held-out (same words), rephrased held-out (other words) and derived problems; no two share numbers."""
+    """Train, held-out (same words), rephrased held-out (other words) and derived problems; no two share numbers.
+    Any draw but the development one also shares no problem (in either wording) with the development draw."""
+    avoid: set[str] = set()
+    if seed != DEV_SEED:
+        for items in problems(DEV_SEED, train, test, derived).values():
+            avoid |= {it["question"] for it in items}
     g = random.Random(seed)
     out = {"train": [], "test": [], "rephrased": [], "derived": []}
     for f in FAMILIES:
@@ -330,7 +336,7 @@ def problems(seed: int = SEED, train: int = 6, test: int = 6, derived: int = 4) 
             for _ in range(500):
                 x = f.params(g)
                 k = json.dumps(x, sort_keys=True)
-                if k not in seen:
+                if k not in seen and f.ask(x, 0) not in avoid and f.ask(x, 1) not in avoid:
                     seen.add(k)
                     return x
             raise RuntimeError(f"{f.key}: not enough distinct problems")
@@ -342,7 +348,13 @@ def problems(seed: int = SEED, train: int = 6, test: int = 6, derived: int = 4) 
                 out[split].append({"family": f.key, "invented": f.invented, "question": f.ask(x, wording),
                                    "answer": float(ans), "steps": steps, "expr": f.expr(x)})
         for _ in range(derived):
-            q, ans = f.derive(g)
+            for _ in range(500):
+                q, ans = f.derive(g)
+                if seed == DEV_SEED or (q not in avoid and q not in seen):  # the development draw stays as it was
+                    seen.add(q)
+                    break
+            else:
+                raise RuntimeError(f"{f.key}: not enough distinct derived problems")
             out["derived"].append({"family": f.key, "invented": f.invented, "question": q, "answer": float(ans)})
     return out
 
@@ -355,10 +367,15 @@ _FUNCS = {"sqrt": math.sqrt, "comb": math.comb, "factorial": math.factorial, "ro
           "C": math.comb}
 
 
-def calculate(expr: str) -> float | None:
-    """Evaluate an arithmetic expression safely (numbers, + - * / ** ( ), sqrt, comb, factorial, round)."""
+def _clean(expr: str) -> str:
     expr = expr.strip().rstrip(".").replace("^", "**").replace("×", "*").replace("÷", "/").replace("$", "")
-    expr = re.sub(r"(?<=\d),(?=\d{3}\b)", "", expr)  # 1,200 -> 1200
+    return re.sub(r"(?<=\d),(?=\d{3}\b)", "", expr)  # 1,200 -> 1200
+
+
+def calculate(expr: str, x: float | None = None) -> float | None:
+    """Evaluate an arithmetic expression safely (numbers, + - * / ** ( ), sqrt, comb, factorial, round), with
+    ``x`` standing for a given value when one is passed."""
+    expr = _clean(expr)
     if not expr or len(expr) > 300:
         return None
 
@@ -367,6 +384,8 @@ def calculate(expr: str) -> float | None:
             return ev(node.body)
         if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
             return node.value
+        if isinstance(node, ast.Name) and node.id == "x" and x is not None:
+            return x
         if isinstance(node, ast.BinOp) and type(node.op) in _OPS:
             left, right = ev(node.left), ev(node.right)
             if isinstance(node.op, ast.Pow) and abs(right) > 100:
@@ -385,6 +404,62 @@ def calculate(expr: str) -> float | None:
         return None
 
 
+
+def solve(lhs: str, rhs: str) -> float | None:
+    """The x that makes lhs = rhs (the model writes the formula forward with x for the unknown; the calculator
+    does the algebra). Scans for sign changes, then bisects; the smallest non-negative root wins (amounts, speeds
+    and counts are not negative), else the root nearest zero."""
+    def f(v):
+        a, b = calculate(lhs, v), calculate(rhs, v)
+        return None if a is None or b is None or not (math.isfinite(a) and math.isfinite(b)) else a - b
+
+    grid = sorted({0.0} | {s * 10 ** (e / 20) for e in range(-60, 141) for s in (1, -1)})
+    roots, prev = [], None
+    for v in grid:
+        fv = f(v)
+        if fv is None:
+            prev = None
+            continue
+        if fv == 0:
+            roots.append(v)
+        elif prev is not None and (prev[1] < 0) != (fv < 0):
+            lo, hi, flo = prev[0], v, prev[1]
+            for _ in range(200):
+                mid = (lo + hi) / 2
+                fm = f(mid)
+                if fm is None:
+                    break
+                if (fm < 0) == (flo < 0):
+                    lo, flo = mid, fm
+                else:
+                    hi = mid
+            fm = f((lo + hi) / 2)
+            if fm is not None and abs(fm) <= 1e-6 * max(1.0, abs(calculate(rhs, (lo + hi) / 2) or 1.0)):
+                roots.append((lo + hi) / 2)
+        prev = (v, fv)
+    if not roots:
+        return None
+    pos = [r for r in roots if r >= 0]
+    return min(pos) if pos else min(roots, key=abs)
+
+
+_NUM = re.compile(r"(?<![\w.])\d[\d,]*(?:\.\d+)?")
+
+
+def numbers(text: str) -> list[float]:
+    return [float(m.replace(",", "")) for m in _NUM.findall(text.replace("$", " ")) if m.replace(",", "")]
+
+
+def grounded(expr: str, question: str) -> bool:
+    """Does the expression use the problem's own numbers? Every number the question gives must appear in it (a
+    percentage may appear as a fraction). An expression that leaves one out was usually copied from a worked
+    example with its numbers, the failure that looks like learning but is memorisation."""
+    have = numbers(_clean(expr))
+    for q in numbers(question):
+        if not any(math.isclose(h, v, rel_tol=1e-9, abs_tol=1e-9) for h in have for v in (q, q / 100)):
+            return False
+    return True
+
 REASON_BARE = ("Solve the problem. Show brief working, then give the final numeric answer on the last line in the form "
                "'#### <number>'.\n\nProblem: {question}\n")
 REASON_MEM = ("Use the notes below if they are relevant. Solve the problem. Show brief working, then give the final "
@@ -393,7 +468,9 @@ REASON_MEM = ("Use the notes below if they are relevant. Solve the problem. Show
 _CALC = ("Solve the problem. Write the formula you use in one short line of plain text (no LaTeX), then on the last "
          "line write '#### ' followed by ONE arithmetic expression with the numbers put in, for example "
          "'#### 2*(3+4)**2/5'. Use only numbers, + - * / ** and parentheses (sqrt(x) and comb(n, k) are allowed). Do "
-         "not work the arithmetic out: a calculator will evaluate the expression.")
+         "not work the arithmetic out: a calculator will evaluate the expression. If the problem gives the result "
+         "and asks for a value that goes into the formula, write the formula as an equation with x for the unknown, "
+         "for example '#### 3*x + 4 = 19': the calculator solves it.")
 CALC_BARE = _CALC + "\n\nProblem: {question}\n"
 CALC_MEM = "Use the notes below if they are relevant. " + _CALC + "\n\nNotes:\n{context}\n\nProblem: {question}\n"
 
@@ -409,26 +486,50 @@ def plain(text: str) -> str:
     return text
 
 
-def final_value(text: str, mode: str) -> float | None:
-    """The answer a generation gives. In calc mode: the expression after the last '####', evaluated by the calculator
-    (an expression followed by '= <its value>' is trusted for the expression, not for the model's arithmetic);
-    otherwise, or if no expression evaluates, the last number."""
+def _line_value(line: str) -> tuple[float | None, str]:
+    """The value of one '####' line and the expression it came from. An equation in x is solved; otherwise the
+    parts between '=' are tried left to right ("A = 800*(1+4/100)**4 = 960.00": the expression is trusted, not the
+    model's own arithmetic)."""
+    parts = [p for p in line.split("=") if p.strip()]
+    if len(parts) == 2 and re.search(r"(?<![A-Za-z_])x(?![A-Za-z_(])", line):
+        return solve(parts[0], parts[1]), line
+    for part in parts:
+        part = re.sub(r"^\s*[A-Za-z_][A-Za-z_ ]*$", "", part)
+        if not re.search(r"\d", part):
+            continue
+        v = calculate(part)
+        if v is not None:
+            return v, part
+    return None, ""
+
+
+def read_answer(text: str, mode: str, question: str = "") -> tuple[float | None, bool]:
+    """The answer a generation gives, and whether it is grounded in the problem's own numbers.
+
+    In calc mode, every '####' line is a candidate: the last one built from the problem's numbers wins (a small
+    model sometimes also writes out the worked example it read); if none is, the last one that evaluates, marked
+    ungrounded. Otherwise, or if no expression evaluates, the last number (ungrounded in calc mode)."""
     from camr.eval.scoring import final_number
 
     text = plain(text)
-    tail = text.rsplit("####", 1)[1] if "####" in text else ""
-    if mode == "calc" and tail.strip():
-        line = tail.strip().splitlines()[0]
-        parts = [p for p in line.split("=") if p.strip()]
-        for part in parts:  # left to right: "A = 800*(1+4/100)**4 = 960.00" -> the expression first
-            part = re.sub(r"^\s*[A-Za-z_][A-Za-z_ ]*$", "", part)
-            if not re.search(r"\d", part):
-                continue
-            v = calculate(part)
-            if v is not None:
-                return v
+    if mode == "calc" and "####" in text:
+        found = []
+        for chunk in text.split("####")[1:]:
+            line = chunk.strip().splitlines()[0] if chunk.strip() else ""
+            v, expr = _line_value(line)
+            if v is not None and math.isfinite(v):
+                found.append((v, grounded(expr, question) if question else False))
+        for v, ok in reversed(found):
+            if ok:
+                return v, True
+        if found:
+            return found[-1][0], False
     n = final_number(text)
-    return float(n) if n is not None else None
+    return (float(n) if n is not None else None), mode != "calc" and n is not None
+
+
+def final_value(text: str, mode: str, question: str = "") -> float | None:
+    return read_answer(text, mode, question)[0]
 
 
 def correct(pred: float | None, gold: float) -> bool:
@@ -446,6 +547,7 @@ def engine_at(path: Path):
     spec.loader.exec_module(el)
     engine, store = el.build_engine(path)
     engine.embedder = CachedEmbedder(engine.embedder, OUT / "vectors.sqlite")
+    engine.per_title = 1  # one note per rule: its best worked example, not six near-copies
     return engine, store
 
 
@@ -460,7 +562,33 @@ def runner(model: str, offline: bool):
     r = el.runner_for(model)
     if hasattr(r, "cfg") and hasattr(r.cfg, "max_tokens") and not model.startswith(("kimi", "gpt-oss")):
         r.cfg.max_tokens = 256  # room for brief working (reasoning models keep their own budget)
-    return CachedRunner(r, OUT / "answers.sqlite", offline=offline)
+    return CachedRunner(RepeatGuard(r), OUT / "answers.sqlite", offline=offline)
+
+
+class RepeatGuard:
+    """Ollama stops a generation that keeps repeating one token ("token repeat limit reached") with an error; that is
+    a (deterministic) failed answer, not a broken run: it becomes an empty answer, cached like any other."""
+
+    def __init__(self, runner):
+        self.runner = runner
+        self.model_name = runner.model_name
+        self.model_version = getattr(runner, "model_version", None)
+        self.is_remote = getattr(runner, "is_remote", False)
+
+    def payload(self, prompt: str) -> dict:
+        return self.runner.payload(prompt) if hasattr(self.runner, "payload") else {"prompt": prompt}
+
+    def generate(self, prompt: str):
+        from camr.models.runner import Generation, GenerationError
+
+        try:
+            return self.runner.generate(prompt)
+        except GenerationError as exc:
+            body = getattr(getattr(exc.__cause__, "response", None), "text", "") or ""
+            if "repeat limit" not in body:
+                raise
+            return Generation(text="", prompt_tokens=None, generated_tokens=None, latency_ms=0.0,
+                              model=self.model_name, meta={"error": "token repeat limit reached"})
 
 
 def correction_note(f: Family, item: dict) -> str:
@@ -478,9 +606,9 @@ def ask(run, engine, item: dict, mode: str, with_memory: bool) -> dict:
     else:
         prompt = (CALC_BARE if mode == "calc" else REASON_BARE).format(question=item["question"])
     g = run.generate(prompt)
-    pred = final_value(g.text, mode)
+    pred, ok = read_answer(g.text, mode, item["question"])
     return {"family": item["family"], "invented": item["invented"], "question": item["question"],
-            "gold": item["answer"], "pred": pred, "correct": correct(pred, item["answer"]),
+            "gold": item["answer"], "pred": pred, "correct": correct(pred, item["answer"]), "grounded": ok,
             "used_memory": bool(ctx), "answer": g.text.strip()[-400:]}
 
 
@@ -490,13 +618,17 @@ def accuracy(rows: list[dict], invented: bool | None = None) -> float:
 
 
 def summary(rows: list[dict]) -> dict:
-    return {"all": accuracy(rows), "known": accuracy(rows, False), "invented": accuracy(rows, True), "n": len(rows)}
+    """Accuracy (all, known formulas, invented formulas), and how far the grounding check can be trusted: the share
+    of answers built from the problem's own numbers, and the accuracy of those."""
+    g = [r for r in rows if r.get("grounded")]
+    return {"all": accuracy(rows), "known": accuracy(rows, False), "invented": accuracy(rows, True), "n": len(rows),
+            "grounded": round(len(g) / max(1, len(rows)), 4), "grounded_correct": accuracy(g) if g else None}
 
 
 def run_part(a) -> None:
     from camr.memory.note import Document
 
-    data = problems()
+    data = problems(seed=a.seed)
     fams = {f.key: f for f in FAMILIES}
     tag = f"{a.model.replace(':', '_')}_{a.mode}"
     out_dir = Path(a.out) if a.out else OUT
@@ -506,7 +638,7 @@ def run_part(a) -> None:
         f.unlink()
     engine, store = engine_at(store_path)
     run = runner(a.model, a.offline_answers)
-    out = {"model": a.model, "mode": a.mode, "seed": SEED, "sizes": {k: len(v) for k, v in data.items()}}
+    out = {"model": a.model, "mode": a.mode, "seed": a.seed, "sizes": {k: len(v) for k, v in data.items()}}
     t0 = time.perf_counter()
 
     def evaluate(split: str, with_memory: bool = True) -> list[dict]:
@@ -588,7 +720,7 @@ def ablate_part(a) -> None:
     copying the example."""
     from camr.memory.note import Document
 
-    data = problems()
+    data = problems(seed=a.seed)
     fams = {f.key: f for f in FAMILIES}
     first = {}
     for it in data["train"]:
@@ -602,7 +734,7 @@ def ablate_part(a) -> None:
     tag = f"{a.model.replace(':', '_')}_{a.mode}"
     out_dir = Path(a.out) if a.out else OUT
     run = runner(a.model, a.offline_answers)
-    out = {"model": a.model, "mode": a.mode, "corrections_per_family": 1, "variants": {}}
+    out = {"model": a.model, "mode": a.mode, "seed": a.seed, "corrections_per_family": 1, "variants": {}}
     for i, (name, note) in enumerate(variants.items()):
         store_path = out_dir / "stores" / f"ablate_{tag}_{i}.sqlite"
         store_path.parent.mkdir(parents=True, exist_ok=True)
@@ -684,9 +816,10 @@ if __name__ == "__main__":
     ap.add_argument("--control", type=int, default=30, help="GSM8K problems for the interference check (0: none)")
     ap.add_argument("--offline-answers", action="store_true")
     ap.add_argument("--out", default="", help="where results and scratch stores go (default results/math)")
+    ap.add_argument("--seed", type=int, default=SEED, help=f"problem draw ({DEV_SEED}: development, {SEED}: reported)")
     a = ap.parse_args()
     if a.part == "problems":
-        d = problems()
+        d = problems(seed=a.seed)
         for s, items in d.items():
             print(s, len(items), "e.g.", items[0]["question"], "->", items[0]["answer"])
         sys.exit(0)

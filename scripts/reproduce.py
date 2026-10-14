@@ -194,7 +194,7 @@ def check_math(tmp: Path) -> tuple[bool, str]:
         exp = json.loads(committed.read_text())
         part = "run" if committed.stem.startswith("run_") else "ablate"
         cmd = [PY, "scripts/math_learning.py", part, "--model", exp["model"], "--mode", exp["mode"],
-               "--offline-answers", "--out", str(tmp)]
+               "--seed", str(exp["seed"]), "--offline-answers", "--out", str(tmp)]
         if part == "run":
             cmd += ["--curve-at", ",".join(str(c["round"]) for c in exp["curve"][1:]),
                     "--control", str(exp.get("control_gsm8k", {}).get("n", 0))]

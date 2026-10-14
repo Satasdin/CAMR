@@ -72,9 +72,9 @@ def evaluate(tok, model, items: list[dict], prompt_for, max_new: int = 200) -> l
     texts = generate(tok, model, [prompt_for(it) for it in items], max_new=max_new)
     rows = []
     for it, t in zip(items, texts):
-        pred = ml.final_value(t, "calc")
+        pred, ok = ml.read_answer(t, "calc", it["question"])
         rows.append({"family": it["family"], "invented": it["invented"], "question": it["question"],
-                     "gold": it["answer"], "pred": pred, "correct": ml.correct(pred, it["answer"]),
+                     "gold": it["answer"], "pred": pred, "correct": ml.correct(pred, it["answer"]), "grounded": ok,
                      "answer": t.strip()[-300:]})
     return rows
 
@@ -147,7 +147,7 @@ def run(a) -> None:
     gsm_items = [{"family": "gsm8k", "invented": False, "question": x["question"],
                   "answer": float(x["answer"].rsplit("####", 1)[1].replace(",", "").strip())} for x in gsm]
     tok, model = load()
-    out = {"base_model": BASE, "fit": len(fit), "val": len(val), "test": len(data["test"]), "lr": a.lr,
+    out = {"base_model": BASE, "seed": ml.SEED, "fit": len(fit), "val": len(val), "test": len(data["test"]), "lr": a.lr,
            "rank": a.rank, "conditions": {}}
     t0 = time.perf_counter()
     bare = lambda it: ml.CALC_BARE.format(question=it["question"])  # noqa: E731

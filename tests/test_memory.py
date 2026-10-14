@@ -327,3 +327,21 @@ def test_entity_names_match_through_possessives():
     ents = question_entities("Who was the producer of Peck's Bad Girl?")
     assert mentions_any("Peck's Bad Girl: Peck's Bad Girl is a 1918 American silent comedy film", ents)
     assert mentions_any("Francesca Caccini's father was Giulio Caccini", question_entities("Who was Francesca Caccini's father?"))
+
+
+def test_per_title_keeps_only_the_best_notes_of_a_repeated_source(engine):
+    rule = "The zorbit of a and b is three a minus two b plus a times b."
+    docs = [Document("t", f"zorbit-{i}", f"{rule} Worked example {i}: {i} zorbit {i + 1} gives {3 * i - 2 * (i + 1) + i * (i + 1)}.",
+                     "Correction: zorbit") for i in range(2, 7)]
+    docs.append(Document("t", "glim", "One glim is seven trell and one trell is twelve pom, so a glim is 84 pom.",
+                         "Correction: glim"))
+    engine.ingest(docs)
+    engine.min_similarity, engine.similarity_margin, engine.entity_gate = 0.0, None, False
+    q = "What is 4 zorbit 9 using the zorbit rule?"
+    every = engine.recall(q, touch=False)
+    assert every.context.count("Correction: zorbit") > 1
+    engine.per_title = 1
+    one = engine.recall(q, touch=False)
+    assert one.context.count("Correction: zorbit") == 1
+    best = next(c for c in every.candidates if c.admitted and "zorbit" in c.note.text)
+    assert best.note.text in one.context  # the best-ranked copy is the one kept
