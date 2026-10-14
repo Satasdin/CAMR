@@ -72,24 +72,29 @@ def check_tests(tmp: Path) -> tuple[bool, str]:
 
 
 def _verified(set_name: str, tmp: Path) -> tuple[bool, str]:
-    committed = ROOT / f"results/verified/answers_{set_name}.json"
-    if not committed.exists():
-        return False, f"{committed} missing (run scripts/verified_qa.py answer --set {set_name})"
-    exp = json.loads(committed.read_text())
-    names = ",".join(exp["variants"])
-    first = next(iter(exp["variants"].values()))
-    code, out = run([PY, "scripts/verified_qa.py", "answer", "--set", set_name, "--offline", "--offline-answers",
-                     "--variants", names, "--out", str(tmp), "--budget", str(first.get("budget", 128)),
-                     "--min-coverage", str(first.get("min_coverage", 1.0))])
-    if code != 0:
-        return False, "replay failed:\n" + out
-    got = json.loads((tmp / f"answers_{set_name}.json").read_text())
-    d = _diff(_verified_summary(exp), _verified_summary(got))
-    if d:
-        return False, "\n".join(d[:12])
-    lines = [f"{n}: correct {v['verified']['correct']:.3f}, wrong {v['verified']['wrong']:.3f}"
-             for n, v in got["variants"].items()]
-    return True, f"{len(got['variants'])} variants identical; " + "; ".join(lines[-2:])
+    """Replay every committed results file of a set (answers_<set>.json, answers_<set>_<tag>.json), offline."""
+    files = sorted((ROOT / "results/verified").glob(f"answers_{set_name}*.json"))
+    if not files:
+        return False, f"no results for {set_name} (run scripts/verified_qa.py answer --set {set_name})"
+    lines = []
+    for committed in files:
+        tag = committed.stem[len(f"answers_{set_name}"):]
+        exp = json.loads(committed.read_text())
+        first = next(iter(exp["variants"].values()))
+        cmd = [PY, "scripts/verified_qa.py", "answer", "--set", set_name, "--offline", "--offline-answers",
+               "--variants", ",".join(exp["variants"]), "--out", str(tmp), "--tag", tag,
+               "--budget", str(first.get("budget", 128)), "--min-coverage", str(first.get("min_coverage", 1.0))]
+        cmd += ["--typed"] if first.get("typed") else []
+        cmd += ["--relation-cue"] if first.get("relation_cue") else []
+        code, out = run(cmd)
+        if code != 0:
+            return False, f"{committed.name}: replay failed:\n" + out
+        got = json.loads((tmp / committed.name).read_text())
+        d = _diff(_verified_summary(exp), _verified_summary(got))
+        if d:
+            return False, f"{committed.name} differs:\n" + "\n".join(d[:12])
+        lines.append(f"{committed.name}: {len(got['variants'])} variants identical")
+    return True, "; ".join(lines)
 
 
 def check_verified_dev(tmp: Path):
