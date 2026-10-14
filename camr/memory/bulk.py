@@ -94,6 +94,7 @@ class BulkReport:
     detail: str = ""
     finished: bool = False
     room_for_notes: int | None = None  # how many more notes fit above the disk reserve
+    pending_vectors: int = 0  # notes still waiting for their vector (deferred embedding)
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -101,7 +102,11 @@ class BulkReport:
 
 def bulk_ingest(engine: MemoryEngine, docs: Iterable[Document], *, governor: Governor | None = None,
                 batch_docs: int = 512, checkpoint: str | Path | None = None, limit: int | None = None,
+                defer_embedding: bool = False,
                 progress: Callable[[BulkReport], None] | None = None) -> BulkReport:
+    """Ingest a stream of documents in batches. With ``defer_embedding`` notes are stored without vectors: the
+    collection is searchable by keyword at once, and ``drain`` (or recall, for the notes a question reaches) adds
+    the vectors later. Embedding is the slow part on a CPU (tens of notes a second against thousands)."""
     rep = BulkReport()
     ckpt = Path(checkpoint) if checkpoint else None
     state = json.loads(ckpt.read_text()) if ckpt and ckpt.exists() else {"consumed": 0}
@@ -113,7 +118,7 @@ def bulk_ingest(engine: MemoryEngine, docs: Iterable[Document], *, governor: Gov
     gov = governor
     rep.store_mb_before = gov.store_mb() if gov else 0.0
     seen = engine.store.checksums(engine.note_type)  # held across batches: duplicates stay out, no re-reads
-    est = 4200.0  # bytes per note until measured
+    est = 1500.0 if defer_embedding else 4200.0  # bytes per note until measured
     notes_per_doc = 1.5
     t0 = time.perf_counter()
     consumed = rep.resumed_from
@@ -131,7 +136,7 @@ def bulk_ingest(engine: MemoryEngine, docs: Iterable[Document], *, governor: Gov
             rep.finished = True
             break
         mb0 = gov.store_mb() if gov else 0.0
-        s = engine.ingest(batch, seen=seen)
+        s = engine.ingest(batch, seen=seen, defer_embedding=defer_embedding)
         rep.documents += s.documents
         rep.skipped_existing += s.skipped_existing
         rep.notes_added += s.accepted
@@ -162,4 +167,51 @@ def bulk_ingest(engine: MemoryEngine, docs: Iterable[Document], *, governor: Gov
         free = gov._probe(gov.store_path.parent).disk_free_mb - gov.limits.reserve_disk_mb
         rep.room_for_notes = max(0, int(free * 1024 * 1024 / (rep.bytes_per_note or est)))
     rep.peak_rss_mb = round(max(rep.peak_rss_mb, process_rss_mb()), 1)
+    rep.pending_vectors = engine.store.pending_count(engine.note_type)
+    return rep
+
+
+@dataclass
+class DrainReport:
+    embedded: int = 0
+    remaining: int = 0
+    seconds: float = 0.0
+    notes_per_s: float = 0.0
+    waited_s: float = 0.0     # time spent waiting for the CPU to be free
+    stopped: str | None = None
+    detail: str = ""
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+
+def drain(engine: MemoryEngine, *, governor: Governor | None = None, batch: int = 256,
+          max_seconds: float | None = None, polite: bool = True,
+          progress: Callable[[DrainReport], None] | None = None) -> DrainReport:
+    """Embed the notes waiting for vectors, a batch at a time: pausing while other work keeps the CPU busy
+    (``polite``), stopping at the device's limits or after ``max_seconds``. Resumable: the queue is the state."""
+    rep = DrainReport()
+    t0 = time.perf_counter()
+    per_note = 3200 / (1024 * 1024)  # MB a vector adds (blob + index)
+    while True:
+        if max_seconds is not None and time.perf_counter() - t0 >= max_seconds:
+            rep.stopped, rep.detail = "time", f"{max_seconds:.0f} s budget"
+            break
+        if governor:
+            st = governor.check(upcoming_mb=batch * per_note)
+            if not st.ok:
+                rep.stopped, rep.detail = st.reason, st.detail
+                break
+            if polite:
+                rep.waited_s += governor.wait_until_idle(max_wait_s=60.0)
+        n = engine.embed_pending(limit=batch, batch=batch)
+        if not n:
+            break
+        rep.embedded += n
+        rep.seconds = time.perf_counter() - t0
+        if progress:
+            progress(rep)
+    rep.seconds = round(time.perf_counter() - t0, 2)
+    rep.notes_per_s = round(rep.embedded / rep.seconds, 1) if rep.seconds else 0.0
+    rep.remaining = engine.store.pending_count(engine.note_type)
     return rep

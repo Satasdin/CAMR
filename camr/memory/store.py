@@ -75,6 +75,13 @@ class StoreError(RuntimeError):
     pass
 
 
+# words too common to find anything by (keyword search)
+_STOP = {"the", "a", "an", "of", "in", "on", "at", "by", "is", "was", "were", "are", "be", "been", "and", "or", "to",
+         "for", "with", "as", "from", "it", "its", "this", "that", "who", "whom", "whose", "which", "what", "when",
+         "where", "why", "how", "did", "does", "do", "has", "have", "had", "he", "she", "his", "her", "they", "their",
+         "there", "than", "then", "also", "into", "about", "after", "before", "same", "both", "either"}
+
+
 class MemoryStore(ABC):
     """Abstract persistence interface (Figure 4.3)."""
 
@@ -152,10 +159,29 @@ class SQLiteVectorStore(MemoryStore):
             self.conn.enable_load_extension(False)
 
     def _migrate(self) -> None:
-        """Add columns introduced after a store file was first created."""
+        """Add columns and tables introduced after a store file was first created."""
         cols = {r[1] for r in self.conn.execute("PRAGMA table_info(source)")}
         if "title" not in cols:
             self.conn.execute("ALTER TABLE source ADD COLUMN title TEXT")
+        # Notes waiting for their vector (ingested with deferred embedding); searchable by keyword meanwhile.
+        self.conn.execute("CREATE TABLE IF NOT EXISTS embed_queue (note_id INTEGER PRIMARY KEY"
+                          " REFERENCES note(note_id) ON DELETE CASCADE)")
+        # A keyword index over every note, kept in step with the note table by triggers (so every path that adds
+        # or deletes notes, sleep and packs included, keeps it right).
+        has_fts = self.conn.execute("SELECT 1 FROM sqlite_master WHERE name='note_fts'").fetchone()
+        if not has_fts:
+            self.conn.executescript("""
+                CREATE VIRTUAL TABLE note_fts USING fts5(text, content='note', content_rowid='note_id',
+                                                         tokenize='unicode61 remove_diacritics 2');
+                CREATE TRIGGER IF NOT EXISTS note_fts_ai AFTER INSERT ON note BEGIN
+                    INSERT INTO note_fts(rowid, text) VALUES (new.note_id, new.text); END;
+                CREATE TRIGGER IF NOT EXISTS note_fts_ad AFTER DELETE ON note BEGIN
+                    INSERT INTO note_fts(note_fts, rowid, text) VALUES ('delete', old.note_id, old.text); END;
+                CREATE TRIGGER IF NOT EXISTS note_fts_au AFTER UPDATE OF text ON note BEGIN
+                    INSERT INTO note_fts(note_fts, rowid, text) VALUES ('delete', old.note_id, old.text);
+                    INSERT INTO note_fts(rowid, text) VALUES (new.note_id, new.text); END;
+                INSERT INTO note_fts(note_fts) VALUES ('rebuild');
+            """)
 
     def _init_meta(self, embedder_name: str) -> None:
         cur = dict(self.conn.execute("SELECT key, value FROM meta").fetchall())
@@ -266,10 +292,11 @@ class SQLiteVectorStore(MemoryStore):
         importance: float,
         checksum: str,
         created_at: str,
-        embedding: np.ndarray,
+        embedding: np.ndarray | None,
     ) -> int:
-        vec = as_float32(embedding)
-        if vec.shape != (self.dim,):
+        """Insert a note; ``embedding=None`` defers its vector (it joins the embedding queue)."""
+        vec = None if embedding is None else as_float32(embedding)
+        if vec is not None and vec.shape != (self.dim,):
             raise StoreError(f"embedding has shape {vec.shape}, store expects ({self.dim},)")
         cur = self.conn.execute(
             "INSERT INTO note(source_id, note_type, text, token_count, importance, created_at,"
@@ -277,6 +304,9 @@ class SQLiteVectorStore(MemoryStore):
             (source_id, note_type, text, token_count, importance, created_at, created_at, checksum),
         )
         note_id = int(cur.lastrowid)
+        if vec is None:
+            self.conn.execute("INSERT INTO embed_queue(note_id) VALUES (?)", (note_id,))
+            return note_id
         blob = vec.tobytes()
         self.conn.execute("INSERT INTO note_embedding(note_id, embedding) VALUES (?, ?)", (note_id, blob))
         if self.use_vec:
@@ -284,6 +314,58 @@ class SQLiteVectorStore(MemoryStore):
                 "INSERT INTO note_vec(rowid, note_type, embedding) VALUES (?, ?, ?)", (note_id, note_type, blob)
             )
         return note_id
+
+    # ------------------------------------------------------- deferred vectors
+    def pending_count(self, note_type: str | None = None) -> int:
+        if note_type:
+            return self.conn.execute("SELECT COUNT(*) FROM embed_queue q JOIN note n USING(note_id)"
+                                     " WHERE n.note_type=?", (note_type,)).fetchone()[0]
+        return self.conn.execute("SELECT COUNT(*) FROM embed_queue").fetchone()[0]
+
+    def has_pending(self, note_type: str) -> bool:
+        return self.conn.execute("SELECT 1 FROM embed_queue q JOIN note n USING(note_id) WHERE n.note_type=? LIMIT 1",
+                                 (note_type,)).fetchone() is not None
+
+    def pending(self, limit: int, note_ids: Iterable[int] | None = None) -> list[tuple[int, str, str]]:
+        """(note_id, note_type, text) of notes waiting for a vector: the given ones, or the oldest ``limit``."""
+        if note_ids is not None:
+            ids = list(note_ids)
+            if not ids:
+                return []
+            marks = ",".join("?" * len(ids))
+            rows = self.conn.execute(f"SELECT n.note_id, n.note_type, n.text FROM embed_queue q JOIN note n"
+                                     f" USING(note_id) WHERE q.note_id IN ({marks})", ids)
+        else:
+            rows = self.conn.execute("SELECT n.note_id, n.note_type, n.text FROM embed_queue q JOIN note n"
+                                     " USING(note_id) ORDER BY q.note_id LIMIT ?", (int(limit),))
+        return [(int(r[0]), r[1], r[2]) for r in rows]
+
+    def set_embeddings(self, rows: list[tuple[int, str, np.ndarray]]) -> None:
+        """Give queued notes their vectors: (note_id, note_type, vector)."""
+        with self.transaction() as c:
+            for note_id, note_type, vec in rows:
+                blob = as_float32(vec).tobytes()
+                c.execute("INSERT OR REPLACE INTO note_embedding(note_id, embedding) VALUES (?, ?)", (note_id, blob))
+                if self.use_vec:
+                    c.execute("DELETE FROM note_vec WHERE rowid=?", (note_id,))
+                    c.execute("INSERT INTO note_vec(rowid, note_type, embedding) VALUES (?, ?, ?)",
+                              (note_id, note_type, blob))
+                c.execute("DELETE FROM embed_queue WHERE note_id=?", (note_id,))
+
+    # ---------------------------------------------------------- keywords
+    def keyword(self, text: str, k: int, note_type: str) -> list[tuple[int, float]]:
+        """Top-k (note_id, BM25 score, higher is better) for the words of ``text`` (any of them)."""
+        words = [w for w in re.findall(r"\w+", text.lower()) if len(w) > 1 and w not in _STOP][:24]
+        if not words:
+            return []
+        query = " OR ".join(f'"{w}"' for w in dict.fromkeys(words))
+        try:
+            rows = self.conn.execute(
+                "SELECT f.rowid, bm25(note_fts) AS s FROM note_fts f JOIN note n ON n.note_id = f.rowid"
+                " WHERE note_fts MATCH ? AND n.note_type = ? ORDER BY s LIMIT ?", (query, note_type, int(k))).fetchall()
+        except sqlite3.OperationalError:
+            return []
+        return [(int(r[0]), -float(r[1])) for r in rows]
 
     def delete_source(self, source_id: int) -> int:
         """Forget a source: its notes, their vectors and its rejection log. Returns notes removed."""

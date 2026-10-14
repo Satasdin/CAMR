@@ -59,6 +59,39 @@ def process_rss_mb(pid: int | str = "self") -> float:
         return 0.0
 
 
+def _cpu_times() -> tuple[float, float] | None:
+    """(busy, total) CPU jiffies of the whole machine."""
+    try:
+        with open("/proc/stat") as f:
+            vals = [float(x) for x in f.readline().split()[1:]]
+    except OSError:
+        return None
+    idle = vals[3] + (vals[4] if len(vals) > 4 else 0.0)
+    return sum(vals) - idle, sum(vals)
+
+
+def _self_jiffies() -> float | None:
+    try:
+        with open("/proc/self/stat") as f:
+            parts = f.read().rsplit(")", 1)[1].split()
+        return float(parts[11]) + float(parts[12])  # utime + stime
+    except (OSError, IndexError, ValueError):
+        return None
+
+
+def others_cpu_share(window_s: float = 0.5) -> float | None:
+    """Share of all CPU capacity used by other processes over a short window (0..1); None without /proc."""
+    a, sa = _cpu_times(), _self_jiffies()
+    if a is None or sa is None:
+        return None
+    time.sleep(window_s)
+    b, sb = _cpu_times(), _self_jiffies()
+    total = b[1] - a[1]
+    if total <= 0:
+        return 0.0
+    return max(0.0, (b[0] - a[0]) - (sb - sa)) / total
+
+
 def _ram() -> tuple[float, float]:
     info = _meminfo()
     if info:
@@ -196,7 +229,11 @@ class Governor:
         return Status(True)
 
     def busy(self) -> bool:
-        """True while the CPU is busy with other work (background jobs should wait)."""
+        """True while the CPU is busy with *other* work (background jobs should wait). Measured over a short
+        window as the machine's CPU time minus this process's own; the load average where /proc is missing."""
+        share = others_cpu_share() if self._probe is probe else None
+        if share is not None:
+            return share > self.limits.max_load_per_core
         dev = self._probe(self.store_path.parent)
         return dev.load_1m is not None and dev.load_1m / max(1, dev.cpu_count) > self.limits.max_load_per_core
 

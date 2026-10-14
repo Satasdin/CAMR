@@ -220,10 +220,16 @@ def claim_confidence(answer: str, logprobs: list[dict] | None, question: str = "
     return sum(vals) / len(vals) if vals else None
 
 
+_ABSTAIN = re.compile(r"^\s*(unknown|i\s+don'?t\s+know|i\s+do\s+not\s+know|not\s+sure|no\s+answer|n/?a|none|cannot\s+be"
+                      r"\s+determined|i'?m\s+not\s+sure|i\s+cannot|i\s+can'?t)\b", re.I)
+
+
+def abstention_like(answer: str | None) -> bool:
+    return not (answer or "").strip() or bool(_ABSTAIN.search(answer or ""))
+
+
 def check(question: str, answer: str, units: list[Unit], *, min_coverage: float = 1.0,
           logprobs: list[dict] | None = None) -> Verdict:
-    from camr.eval.escalation import abstention_like
-
     rel = relation_of(question)
     conf = claim_confidence(answer, logprobs, question)
     if abstention_like(claim(answer)) or _DECLINE.search(answer):

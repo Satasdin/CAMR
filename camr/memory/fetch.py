@@ -54,6 +54,10 @@ _RELATION_HEADS = {"director", "producer", "composer", "screenwriter", "writer",
                    "headquarters", "publisher", "editor", "illustrator", "narrator", "star", "lyricist", "architect",
                    "designer", "developer", "manufacturer", "inventor", "parent", "parents", "child", "children",
                    "sibling", "brother", "sister", "leader", "president", "mayor", "head", "member", "cast"}
+_VERBS = {"wrote", "write", "writes", "directed", "direct", "produced", "composed", "invented", "invent", "discovered",
+          "discover", "founded", "found", "painted", "created", "create", "built", "designed", "played", "sang",
+          "won", "owns", "owned", "starred", "developed", "made", "make", "makes", "killed", "led", "ruled",
+          "married", "named", "published", "released", "recorded", "sung", "plays", "stars", "leads", "rules"}
 _LEAD_WORDS = {"what", "who", "whom", "whose", "which", "when", "where", "why", "how", "is", "are", "was", "were",
                "do", "does", "did", "can", "could", "would", "should", "will", "tell", "name", "in", "the", "a", "an"}
 
@@ -94,8 +98,11 @@ def subjects(question: str, limit: int = 4) -> list[str]:
     relation_phrase = bool(re.match(r"(\w+) of ", stripped)) and stripped.split()[0].lower() in _RELATION_HEADS
     if relation_phrase and not out:  # "who is the director of emma" (no capitals): look up "emma"
         out.append(stripped.split(" of ", 1)[1])
-    elif stripped and stripped.lower() != q.lower() and len(stripped.split()) <= 6 and not relation_phrase:
-        out.append(stripped)
+    elif stripped and stripped.lower() != q.lower() and len(stripped.split()) <= 6 and not relation_phrase and not out:
+        verb, _, rest = stripped.partition(" ")
+        if verb.lower() in _VERBS and rest:  # "who wrote the odyssey": the odyssey
+            out.append(re.sub(r"^(?:the|a|an) ", "", rest) if len(rest.split()) > 1 else rest)
+        out.append(stripped)  # only without a name: "genre is Covers" finds "Video game genre" (D-28)
     elif not out and q:
         out.append(q)
     seen, uniq = set(), []
@@ -351,7 +358,8 @@ class WebLookup:
             res.queries.append(query)
             page, options = self.article(query, res)
             if add(page):
-                if base_title(page.title) == base_title(query):
+                t, nq = base_title(page.title), base_title(query)
+                if t == nq or t.startswith(nq + " "):  # "..., BWV 18" is still the name's own article
                     found_names.append(norm(query))
                 continue
             if options:  # ambiguous: meanings named exactly what was asked first (D-24), then the closest to the question

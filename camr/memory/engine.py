@@ -80,6 +80,7 @@ class MemoryEngine:
         expansion: str = "none",
         expansion_seeds: int = 3,
         expansion_per_seed: int = 2,
+        keyword_k: int = 0,
     ):
         self.store = store
         self.embedder = embedder
@@ -97,6 +98,8 @@ class MemoryEngine:
         self.expansion = expansion
         self.expansion_seeds = expansion_seeds
         self.expansion_per_seed = expansion_per_seed
+        # notes found by keyword (BM25) added to the vector candidates; 0 = only while some notes wait for vectors
+        self.keyword_k = keyword_k
         self.query_adapter = None  # learned during sleep (camr.memory.adapter); None = the embedder's own vector
 
     @property
@@ -147,14 +150,18 @@ class MemoryEngine:
             expansion=m.expansion,
             expansion_seeds=m.expansion_seeds,
             expansion_per_seed=m.expansion_per_seed,
+            keyword_k=m.keyword_k,
         )
 
     # --------------------------------------------------------- write path
-    def ingest(self, documents: Iterable[Document], progress: bool = False, seen: set[str] | None = None) -> IngestSummary:
+    def ingest(self, documents: Iterable[Document], progress: bool = False, seen: set[str] | None = None,
+               defer_embedding: bool = False) -> IngestSummary:
         """Distil -> screen -> (timestamp, importance) -> embed -> commit (Figure 4.4).
 
         ``seen`` (the checksums already stored) can be passed by a caller ingesting in many calls, so it is read
-        from the store once rather than once per call; it is updated in place."""
+        from the store once rather than once per call; it is updated in place. ``defer_embedding`` stores notes
+        without vectors (keyword-searchable at once; ``embed_pending`` gives them vectors later, and recall
+        embeds the ones a question reaches)."""
         summary = IngestSummary(self.note_type)
         t_start = time.perf_counter()
         seen = self.store.checksums(self.note_type) if seen is None else seen
@@ -162,16 +169,29 @@ class MemoryEngine:
         for doc in documents:
             batch.append(doc)
             if len(batch) >= self.batch_size:
-                self._ingest_batch(batch, seen, summary)
+                self._ingest_batch(batch, seen, summary, defer_embedding)
                 batch = []
                 if progress:
                     log.info("ingested %d documents (%d notes)", summary.documents, summary.accepted)
         if batch:
-            self._ingest_batch(batch, seen, summary)
+            self._ingest_batch(batch, seen, summary, defer_embedding)
         summary.elapsed_s = time.perf_counter() - t_start
         return summary
 
-    def _ingest_batch(self, docs: list[Document], seen: set[str], summary: IngestSummary) -> None:
+    def embed_pending(self, limit: int | None = None, batch: int = 256) -> int:
+        """Give up to ``limit`` queued notes their vectors (all of them when None). Returns notes embedded."""
+        done = 0
+        while limit is None or done < limit:
+            rows = self.store.pending(batch if limit is None else min(batch, limit - done))
+            if not rows:
+                break
+            vecs = self.embedder.encode([t for _, _, t in rows])
+            self.store.set_embeddings([(i, nt, v) for (i, nt, _), v in zip(rows, vecs)])
+            done += len(rows)
+        return done
+
+    def _ingest_batch(self, docs: list[Document], seen: set[str], summary: IngestSummary,
+                      defer_embedding: bool = False) -> None:
         plans = []
         texts: list[str] = []
         for doc in docs:
@@ -200,7 +220,7 @@ class MemoryEngine:
 
         # Screening precedes embedding: rejected candidates never cost embedding time.
         t0 = time.perf_counter()
-        vectors = self.embedder.encode(texts) if texts else None
+        vectors = self.embedder.encode(texts) if texts and not defer_embedding else None
         summary.embed_ms += (time.perf_counter() - t0) * 1000
 
         for doc, accepted, rejected in plans:
@@ -217,7 +237,7 @@ class MemoryEngine:
                         importance=importance,
                         checksum=verdict.checksum,
                         created_at=created,
-                        embedding=vectors[idx],
+                        embedding=None if vectors is None else vectors[idx],
                     )
                 for cand, verdict in rejected:
                     self.store.log_rejection(source_id, self.note_type, verdict.reason, cand.text, at)
@@ -247,6 +267,9 @@ class MemoryEngine:
             qvec = self.query_adapter.apply(qvec)
         t1 = time.perf_counter()
         hits = self.store.knn(qvec, self.k, nt)
+        kk = self.keyword_k or (self.k if self.store.has_pending(nt) else 0)
+        if kk:
+            hits = self._with_keyword_hits(question, qvec, hits, kk, nt)
         notes = self.store.get_notes(i for i, _ in hits)
         t2 = time.perf_counter()
         candidates = [ScoredNote(note=notes[i], similarity=s) for i, s in hits if i in notes]
@@ -281,6 +304,34 @@ class MemoryEngine:
             abstained=abstained,
             top_similarity=top_sim,
         )
+
+    def _with_keyword_hits(self, question: str, qvec, hits: list[tuple[int, float]], kk: int,
+                           nt: str) -> list[tuple[int, float]]:
+        """Add the notes the question's words find (BM25) to the vector hits, with their true cosine similarity.
+        A keyword hit still waiting for its vector is embedded now (and stored, unless the store is read-only):
+        the notes a question reaches are the first to get vectors."""
+        have = {i for i, _ in hits}
+        extra = [i for i, _ in self.store.keyword(question, kk, nt) if i not in have]
+        if not extra:
+            return hits
+        waiting = self.store.pending(0, extra)
+        if waiting:
+            vecs = self.embedder.encode([t for _, _, t in waiting])
+            if self.store.readonly:
+                fresh = {i: v for (i, _, _), v in zip(waiting, vecs)}
+            else:
+                self.store.set_embeddings([(i, t, v) for (i, t, _), v in zip(waiting, vecs)])
+                fresh = {}
+        else:
+            fresh = {}
+        sims = self.store.similarities(qvec, [i for i in extra if i not in fresh])
+        import numpy as np
+
+        for i, v in fresh.items():
+            sims[i] = float(np.dot(qvec, v) / ((np.linalg.norm(qvec) * np.linalg.norm(v)) or 1.0))
+        merged = hits + [(i, s) for i, s in sims.items()]
+        merged.sort(key=lambda t: (-round(t[1], 7), t[0]))
+        return merged
 
     def _gate(self, ranked: list[ScoredNote], top_sim: float | None) -> bool:
         """Capability-adaptive gating.  Returns True when memory is withheld entirely.

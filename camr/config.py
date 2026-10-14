@@ -92,6 +92,7 @@ class MemoryConfig:
     normalise_similarity: bool = True
     k: int = 20
     token_budget: int = 512
+    keyword_k: int = 0  # notes found by keyword added to the vector candidates (0: only while vectors are pending)
     packing: str = "greedy_stop"  # greedy_stop | greedy_skip
     write_back: bool = False
     graph_layer: bool = False
