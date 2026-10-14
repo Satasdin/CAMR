@@ -40,17 +40,20 @@ def fig_curve(out: Path) -> Path | None:
     for key, d in rs.items():
         xs = [c["round"] for c in d["curve"]]
         ys = [100 * c["test"]["all"] for c in d["curve"]]
-        a1.plot(xs, ys, color=COLOR[key], linewidth=2, marker="o", markersize=5, label=LABEL[key])
+        a1.plot(xs, ys, color=COLOR[key], linewidth=2, marker="o", markersize=5, label=f"{LABEL[key]}: all")
+        inv = [100 * c["test"]["invented"] for c in d["curve"]]
+        a1.plot(xs, inv, color=COLOR[key], linewidth=1.4, linestyle="--", marker="s", markersize=4,
+                label=f"{LABEL[key]}: invented formulas")
         a1.annotate(f"{ys[-1]:.0f}%", (xs[-1], ys[-1]), xytext=(6, 0), textcoords="offset points", va="center",
                     fontsize=8, color=INK2)
-    a1.set_ylim(0, 100)
+    a1.set_ylim(0, 105)
     a1.set_xticks(sorted({c["round"] for d in rs.values() for c in d["curve"]}))
     style(a1, xlabel="training rounds (one problem per formula per round; corrected only when wrong)",
           ylabel="held-out accuracy, %", grid="y")
-    a1.set_title("New problems, never shown: accuracy as corrections accumulate", loc="left")
-    a1.legend(frameon=False, fontsize=8, loc="upper left")
-    splits = [("train", "seen (corrected)"), ("test", "unseen"), ("rephrased", "unseen, reworded"),
-              ("derived", "derived (inverted)")]
+    a1.set_title("Held-out accuracy as corrections accumulate", loc="left")
+    a1.legend(frameon=False, fontsize=7.5, loc="lower right")
+    splits = [("train", "seen\n(corrected)"), ("test", "unseen"), ("rephrased", "unseen,\nreworded"),
+              ("derived", "derived\n(inverted, nested)")]
     w = 0.8 / len(rs)
     for i, (key, d) in enumerate(rs.items()):
         xs = [j + (i - (len(rs) - 1) / 2) * w for j in range(len(splits))]
@@ -62,6 +65,7 @@ def fig_curve(out: Path) -> Path | None:
     a2.set_ylim(0, 105)
     style(a2, ylabel="accuracy after learning, %", grid="y")
     a2.set_title("After learning: seen vs unseen problems", loc="left")
+    a2.legend(frameon=False, fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
     fig.tight_layout()
     return save(fig, out, "math_learning_curve.png")
 
@@ -110,10 +114,39 @@ def fig_lora(out: Path) -> Path | None:
     return save(fig, out, "math_lora_vs_memory.png")
 
 
+
+def fig_ablation(out: Path, model: str = "qwen2.5_0.5b_calc") -> Path | None:
+    """Which part of a correction carries the learning: one correction per formula, stored as the worked example
+    alone, the rule alone, or both; against no correction at all."""
+    ab, run = MATH / f"ablate_{model}.json", MATH / f"run_{model}.json"
+    if not ab.exists() or not run.exists():
+        return None
+    a, r = json.loads(ab.read_text()), json.loads(run.read_text())
+    conds = [("no correction", r["before"], GREY), ("worked example only", a["variants"]["worked example only"], ORANGE),
+             ("rule only", a["variants"]["rule only"], BLUE),
+             ("rule + worked example", a["variants"]["rule + worked example"], GREEN)]
+    splits = [("test", "new problems"), ("rephrased", "reworded"), ("derived", "derived (inverted, nested)")]
+    fig, ax = plt.subplots(figsize=(8.4, 3.8), facecolor=SURF)
+    w = 0.8 / len(conds)
+    for i, (name, v, col) in enumerate(conds):
+        xs = [j + (i - (len(conds) - 1) / 2) * w for j in range(len(splits))]
+        vals = [100 * v[s]["all"] for s, _ in splits]
+        ax.bar(xs, vals, width=w - 0.03, color=col, edgecolor=SURF, linewidth=1, label=name)
+        for x, val in zip(xs, vals):
+            ax.text(x, val + 1.2, f"{val:.0f}", ha="center", fontsize=7, color=INK2)
+    ax.set_xticks(range(len(splits)), [n for _, n in splits])
+    ax.set_ylim(0, 70)
+    style(ax, ylabel="accuracy, %", grid="y")
+    ax.set_title(f"{LABEL.get(model, model)}: one correction per formula, stored three ways", loc="left")
+    ax.legend(frameon=False, fontsize=8, loc="upper right")
+    fig.tight_layout()
+    return save(fig, out, "math_ablation.png")
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="docs/figures/report")
     o = Path(ap.parse_args().out)
     o.mkdir(parents=True, exist_ok=True)
     fig_curve(o)
+    fig_ablation(o)
     fig_lora(o)
