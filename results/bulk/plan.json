@@ -1,0 +1,91 @@
+{
+ "device": {
+  "ram_total_mb": 16093.2,
+  "ram_available_mb": 15019.4,
+  "cpu_count": 4,
+  "load_1m": 0.1650390625,
+  "disk_total_mb": 258019.6,
+  "disk_free_mb": 1228.9,
+  "path": "/home/user/CAMR/results/bulk",
+  "embed_texts_per_s": 230.5,
+  "search_ms": {
+   "10000": 0.41,
+   "100000": 3.16
+  },
+  "gen_tokens_per_s": 50.7,
+  "prefill_tokens_per_s": 284.9,
+  "at": 1791984317.9985626
+ },
+ "plans": {
+  "1000 notes, 1500 ms": {
+   "search": "exact",
+   "nprobe": null,
+   "token_budget": 256,
+   "expected_ms": 1454.8,
+   "max_notes_on_disk": 51155,
+   "exact_ram_mb": 1.5,
+   "why": [
+    "token budget 256: reading at 285 tok/s and answering at 51 tok/s is ~1455 ms (target 1500 ms)"
+   ]
+  },
+  "1000 notes, 4000 ms": {
+   "search": "exact",
+   "nprobe": null,
+   "token_budget": 512,
+   "expected_ms": 2353.3,
+   "max_notes_on_disk": 51155,
+   "exact_ram_mb": 1.5,
+   "why": [
+    "token budget 512: reading at 285 tok/s and answering at 51 tok/s is ~2353 ms (target 4000 ms)"
+   ]
+  },
+  "195735 notes, 1500 ms": {
+   "search": "index",
+   "nprobe": 8,
+   "token_budget": 256,
+   "expected_ms": 1456.3,
+   "max_notes_on_disk": 51155,
+   "exact_ram_mb": 286.7,
+   "why": [
+    "195735 notes: the learned index (exact search would hold 287 MB of vectors)",
+    "token budget 256: reading at 285 tok/s and answering at 51 tok/s is ~1456 ms (target 1500 ms)"
+   ]
+  },
+  "195735 notes, 4000 ms": {
+   "search": "index",
+   "nprobe": 8,
+   "token_budget": 512,
+   "expected_ms": 2354.9,
+   "max_notes_on_disk": 51155,
+   "exact_ram_mb": 286.7,
+   "why": [
+    "195735 notes: the learned index (exact search would hold 287 MB of vectors)",
+    "token budget 512: reading at 285 tok/s and answering at 51 tok/s is ~2355 ms (target 4000 ms)"
+   ]
+  },
+  "1000000 notes, 1500 ms": {
+   "search": "index",
+   "nprobe": 8,
+   "token_budget": 256,
+   "expected_ms": 1462.6,
+   "max_notes_on_disk": 51155,
+   "exact_ram_mb": 1464.8,
+   "why": [
+    "1000000 notes: the learned index (exact search would hold 1465 MB of vectors)",
+    "token budget 256: reading at 285 tok/s and answering at 51 tok/s is ~1463 ms (target 1500 ms)"
+   ]
+  },
+  "1000000 notes, 4000 ms": {
+   "search": "index",
+   "nprobe": 8,
+   "token_budget": 512,
+   "expected_ms": 2361.2,
+   "max_notes_on_disk": 51155,
+   "exact_ram_mb": 1464.8,
+   "why": [
+    "1000000 notes: the learned index (exact search would hold 1465 MB of vectors)",
+    "token budget 512: reading at 285 tok/s and answering at 51 tok/s is ~2361 ms (target 4000 ms)"
+   ]
+  }
+ }
+}
