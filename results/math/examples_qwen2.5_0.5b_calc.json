@@ -1,0 +1,247 @@
+{
+ "model": "qwen2.5:0.5b",
+ "mode": "calc",
+ "seed": 47,
+ "examples": [
+  {
+   "split": "test",
+   "family": "geometric series",
+   "invented": false,
+   "question": "What is the sum of the first 7 terms of the geometric sequence with first term 3 and ratio 2?",
+   "gold": 381.0,
+   "before": {
+    "pred": 41.0,
+    "answer": "= 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*12 + 5 = 39\n#### 3*"
+   },
+   "memory": "- Correction: geometric series: Sum of a geometric series: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms. Example: What is the sum of the first 4 terms of the geometric sequence with first term 2 and ratio 3? Working: S = 2 * (3**4 - 1) / (3 - 1) = 80. Answer: 80.\n- Correction: arithmetic series: Sum of an arithmetic series: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms. Example: What is the sum of the first 29 terms of the arithmetic sequence that starts at 11 and goes up by 7 each time? Working: S = 29/2 * (2*11 + (29-1)*7) = 3161. Answer: 3161.",
+   "after": {
+    "pred": 381.0,
+    "answer": "#### 3 * (2**7 - 1) / (2 - 1) = 1280"
+   }
+  },
+  {
+   "split": "test",
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "What is the kinetic energy, in joules, of a 8 kg object moving at 23 m/s?",
+   "gold": 2116.0,
+   "before": {
+    "pred": 1058.0,
+    "answer": "#### 0.5 * 8 * 23 ** 2 / 2"
+   },
+   "memory": "- Correction: kinetic energy: Kinetic energy: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules. Example: What is the kinetic energy, in joules, of a 4 kg object moving at 15 m/s? Working: KE = 0.5 * 4 * 15**2 = 450. Answer: 450.",
+   "after": {
+    "pred": 2116.0,
+    "answer": "#### 1/2 * 8 * 23**2 = 1008"
+   }
+  },
+  {
+   "split": "test",
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 5 zorbit 7?",
+   "gold": 36.0,
+   "before": {
+    "pred": 40.0,
+    "answer": "#### 5 * 7 + 5 = 35 + 5 = 40\n#### 40 / 2 = 20"
+   },
+   "memory": "- Correction: zorbit: The zorbit operation: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product). Example: What is 7 zorbit 11? Working: 7 zorbit 11 = 3*7 - 2*11 + 7*11 = 76. Answer: 76.",
+   "after": {
+    "pred": 36.0,
+    "answer": "#### 5 zorbit 7 = 3*5 - 2*7 + 5*7 = 10."
+   }
+  },
+  {
+   "split": "test",
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 42 glim?",
+   "gold": 3528.0,
+   "before": {
+    "pred": 509.0,
+    "answer": "#### 42 * 12 + 5 = 517"
+   },
+   "memory": "- Correction: glim units: Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom. Example: How many pom are in 17 glim? Working: 17 glim * 7 trell/glim * 12 pom/trell = 1428 pom. Answer: 1428.",
+   "after": {
+    "pred": 3528.0,
+    "answer": "#### 42 * 84 = 3528 pom"
+   }
+  },
+  {
+   "split": "test",
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $900 with 5 items?",
+   "gold": 48.5,
+   "before": {
+    "pred": 5500.0,
+    "answer": "#### 900 * 5 + 1000 = 14000\n#### 14000 / 5 = 2800"
+   },
+   "memory": "- Correction: Kessler fee: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order. Example: What is the Kessler fee on an order of $120 with 7 items? Working: fee = 0.04 * 120 + 2.50 * 7 = 22.3. Answer: 22.3.",
+   "after": {
+    "pred": 48.5,
+    "answer": "#### 0.04 * 900 + 2.50 * 5 = 39.5"
+   }
+  },
+  {
+   "split": "test",
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 15 and h = 10?",
+   "gold": 55.0,
+   "before": {
+    "pred": 155.0,
+    "answer": "#### 15*10 + 5 = 165"
+   },
+   "memory": "- Correction: Vantor score: The Vantor score of a crop: V = 2w + h**2/4, where w is its width index and h its height index. Example: What is the Vantor score of a crop with w = 9 and h = 6? Working: V = 2*9 + 6**2/4 = 27. Answer: 27.",
+   "after": {
+    "pred": 55.0,
+    "answer": "#### 2*15 + 10**2/4 = 27"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "combinations",
+   "invented": false,
+   "question": "A club of 11 members picks a 2-person team. How many different teams are possible?",
+   "gold": 55.0,
+   "before": {
+    "pred": 114.0,
+    "answer": "#### 11 choose 2 = 55\n#### 2*55 + 4 = 114"
+   },
+   "memory": "- Correction: combinations: Combinations: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!). Example: In how many ways can 2 people be chosen from a group of 12? Working: C(12, 2) = 12! / (2! * 10!) = 66. Answer: 66.\n- Correction: glim units: Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom. Example: How many pom are in 16 glim? Working: 16 glim * 7 trell/glim * 12 pom/trell = 1344 pom. Answer: 1344.\n- Correction: Kessler fee: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order. Example: What is the Kessler fee on an order of $120 with 7 items? Working: fee = 0.04 * 120 + 2.50 * 7 =",
+   "after": {
+    "pred": 55.0,
+    "answer": "#### 11 choose 2 = 11 * 10 / 2 = 55."
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "A 12 kg cart rolls at 21 metres per second. How many joules of kinetic energy does it have?",
+   "gold": 2646.0,
+   "before": {
+    "pred": 126.0,
+    "answer": "#### 1/2 * 12 * 21 = 126\n\n#### 126 * 9.81 = 1199.36"
+   },
+   "memory": "- Correction: kinetic energy: Kinetic energy: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules. Example: What is the kinetic energy, in joules, of a 4 kg object moving at 15 m/s? Working: KE = 0.5 * 4 * 15**2 = 450. Answer: 450.",
+   "after": {
+    "pred": 2646.0,
+    "answer": "#### 1/2 * 12 * 21**2 = 1692.0000000000001\n\n#### 1/2 * 12 * 21**2 = 1692.0000000000001"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "zorbit",
+   "invented": true,
+   "question": "Compute the zorbit of 4 and 12 (in that order).",
+   "gold": 36.0,
+   "before": {
+    "pred": 53.0,
+    "answer": "#### 4 * 12 + 5 = 59"
+   },
+   "memory": "- Correction: zorbit: The zorbit operation: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product). Example: What is 12 zorbit 12? Working: 12 zorbit 12 = 3*12 - 2*12 + 12*12 = 156. Answer: 156.",
+   "after": {
+    "pred": 36.0,
+    "answer": "#### 3*4 - 2*12 + 4*12 = 156"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "glim units",
+   "invented": true,
+   "question": "Convert 28 glims into poms.",
+   "gold": 2352.0,
+   "before": {
+    "pred": 336.0,
+    "answer": "#### 28 * 12 = 336\n#### 336 / 5 = 67.2"
+   },
+   "memory": "- Correction: glim units: Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom. Example: How many pom are in 13 glim? Working: 13 glim * 7 trell/glim * 12 pom/trell = 1092 pom. Answer: 1092.",
+   "after": {
+    "pred": 2352.0,
+    "answer": "#### 28 * 84 = 2352 pom"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "An order totals $250 and contains 8 items. Work out its Kessler fee in dollars.",
+   "gold": 30.0,
+   "before": {
+    "pred": 31.25,
+    "answer": "#### 250 = 8 * Kessler fee\n#### Kessler fee = 250 / 8\n#### Kessler fee = 31.25"
+   },
+   "memory": "- Correction: Kessler fee: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order. Example: What is the Kessler fee on an order of $120 with 7 items? Working: fee = 0.04 * 120 + 2.50 * 7 = 22.3. Answer: 22.3.",
+   "after": {
+    "pred": 30.0,
+    "answer": " 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n#### 10.5\n####"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "Vantor score",
+   "invented": true,
+   "question": "A crop's width index is 22 and its height index is 4. Find its Vantor score.",
+   "gold": 48.0,
+   "before": {
+    "pred": 92.0,
+    "answer": "#### 22 * 4 + 4 = 96\n#### 96 / 2 = 48"
+   },
+   "memory": "- Correction: Vantor score: The Vantor score of a crop: V = 2w + h**2/4, where w is its width index and h its height index. Example: What is the Vantor score of a crop with w = 14 and h = 2? Working: V = 2*14 + 2**2/4 = 29. Answer: 29.",
+   "after": {
+    "pred": 48.0,
+    "answer": "#### V = 2*22 + 4**2/4 = 29."
+   }
+  },
+  {
+   "split": "derived",
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "An object of mass 12 kg has a kinetic energy of 1536 J. How fast is it moving, in m/s?",
+   "gold": 16.0,
+   "before": {
+    "pred": 118.72,
+    "answer": "#### 12 * 9.81 + 1536 / 1536 = 9.81"
+   },
+   "memory": "- Correction: kinetic energy: Kinetic energy: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules. Example: What is the kinetic energy, in joules, of a 4 kg object moving at 15 m/s? Working: KE = 0.5 * 4 * 15**2 = 450. Answer: 450.",
+   "after": {
+    "pred": 16.0,
+    "answer": "#### 1536 = 1/2 * 12 * v**2\n\n#### 3072 = 12 * v**2\n\n#### v = sqrt(3072 / 12) = 25.333333333333332 m/s"
+   }
+  },
+  {
+   "split": "derived",
+   "family": "glim units",
+   "invented": true,
+   "question": "A crate holds 408 pom. How many glims is that, as a decimal to two places?",
+   "gold": 4.86,
+   "before": {
+    "pred": 34.0,
+    "answer": "#### 408 / 12 = 34.00"
+   },
+   "memory": "- Correction: glim units: Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom. Example: How many pom are in 46 glim? Working: 46 glim * 7 trell/glim * 12 pom/trell = 3864 pom. Answer: 3864.",
+   "after": {
+    "pred": 4.857142857142857,
+    "answer": "8 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84 = 5. ### 408 / 84"
+   }
+  },
+  {
+   "split": "derived",
+   "family": "Vantor score",
+   "invented": true,
+   "question": "A crop has a Vantor score of 16 and h = 4. What is its w?",
+   "gold": 6.0,
+   "before": {
+    "pred": 4.0,
+    "answer": "#### 16 = 4*w\n#### 4*w = 16\n#### w = 4 * 4\n#### w = 16"
+   },
+   "memory": "- Correction: Vantor score: The Vantor score of a crop: V = 2w + h**2/4, where w is its width index and h its height index. Example: What is the Vantor score of a crop with w = 35 and h = 4? Working: V = 2*35 + 4**2/4 = 74. Answer: 74.",
+   "after": {
+    "pred": 6.0,
+    "answer": "#### 2*w + 4**2/4 = 16\n#### 2*w + 4 = 16\n#### 2*w = 12\n#### w = 6"
+   }
+  }
+ ]
+}

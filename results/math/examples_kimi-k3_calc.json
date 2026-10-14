@@ -1,0 +1,199 @@
+{
+ "model": "kimi-k3",
+ "mode": "calc",
+ "seed": 47,
+ "examples": [
+  {
+   "split": "test",
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 11 zorbit 10?",
+   "gold": 123.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: zorbit: The zorbit operation: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product). Example: What is 12 zorbit 12? Working: 12 zorbit 12 = 3*12 - 2*12 + 12*12 = 156. Answer: 156.",
+   "after": {
+    "pred": 123.0,
+    "answer": "Formula: a zorbit b = 3a - 2b + a*b\n#### 3*11 - 2*10 + 11*10"
+   }
+  },
+  {
+   "split": "test",
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 38 glim?",
+   "gold": 3192.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: glim units: Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom. Example: How many pom are in 17 glim? Working: 17 glim * 7 trell/glim * 12 pom/trell = 1428 pom. Answer: 1428.",
+   "after": {
+    "pred": 3192.0,
+    "answer": "Formula: pom = glim * 7 * 12\n\n#### 38*7*12"
+   }
+  },
+  {
+   "split": "test",
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $900 with 5 items?",
+   "gold": 48.5,
+   "before": {
+    "pred": 5.0,
+    "answer": "The Kessler fee rate and per-item charge are not provided.\n#### 900*r + 5*c"
+   },
+   "memory": "- Correction: Kessler fee: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order. Example: What is the Kessler fee on an order of $120 with 7 items? Working: fee = 0.04 * 120 + 2.50 * 7 = 22.3. Answer: 22.3.",
+   "after": {
+    "pred": 48.5,
+    "answer": "fee = 0.04 * order + 2.50 * items\n#### 0.04*900 + 2.50*5"
+   }
+  },
+  {
+   "split": "test",
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 15 and h = 10?",
+   "gold": 55.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: Vantor score: The Vantor score of a crop: V = 2w + h**2/4, where w is its width index and h its height index. Example: What is the Vantor score of a crop with w = 35 and h = 4? Working: V = 2*35 + 4**2/4 = 74. Answer: 74.",
+   "after": {
+    "pred": 55.0,
+    "answer": "V = 2w + h**2/4\n#### 2*15 + 10**2/4"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "zorbit",
+   "invented": true,
+   "question": "Compute the zorbit of 4 and 12 (in that order).",
+   "gold": 36.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: zorbit: The zorbit operation: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product). Example: What is 12 zorbit 12? Working: 12 zorbit 12 = 3*12 - 2*12 + 12*12 = 156. Answer: 156.",
+   "after": {
+    "pred": 36.0,
+    "answer": "a zorbit b = 3a - 2b + a*b\n#### 3*4 - 2*12 + 4*12"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "glim units",
+   "invented": true,
+   "question": "Convert 37 glims into poms.",
+   "gold": 3108.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: glim units: Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom. Example: How many pom are in 17 glim? Working: 17 glim * 7 trell/glim * 12 pom/trell = 1428 pom. Answer: 1428.",
+   "after": {
+    "pred": 3108.0,
+    "answer": "poms = glims * 7 * 12\n#### 37*7*12"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "An order totals $120 and contains 3 items. Work out its Kessler fee in dollars.",
+   "gold": 12.3,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: Kessler fee: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order. Example: What is the Kessler fee on an order of $120 with 7 items? Working: fee = 0.04 * 120 + 2.50 * 7 = 22.3. Answer: 22.3.",
+   "after": {
+    "pred": 12.3,
+    "answer": "fee = 0.04 * order + 2.50 * items\n#### 0.04*120 + 2.50*3"
+   }
+  },
+  {
+   "split": "rephrased",
+   "family": "Vantor score",
+   "invented": true,
+   "question": "A crop's width index is 22 and its height index is 4. Find its Vantor score.",
+   "gold": 48.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: Vantor score: The Vantor score of a crop: V = 2w + h**2/4, where w is its width index and h its height index. Example: What is the Vantor score of a crop with w = 35 and h = 4? Working: V = 2*35 + 4**2/4 = 74. Answer: 74.",
+   "after": {
+    "pred": 48.0,
+    "answer": "V = 2w + h**2/4\n#### 2*22 + 4**2/4"
+   }
+  },
+  {
+   "split": "derived",
+   "family": "zorbit",
+   "invented": true,
+   "question": "Using the zorbit operation, what is (4 zorbit 4) zorbit 4?",
+   "gold": 132.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: zorbit: The zorbit operation: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product). Example: What is 12 zorbit 12? Working: 12 zorbit 12 = 3*12 - 2*12 + 12*12 = 156. Answer: 156.",
+   "after": {
+    "pred": 132.0,
+    "answer": "a zorbit b = 3a - 2b + a*b\n#### 3*(3*4 - 2*4 + 4*4) - 2*4 + (3*4 - 2*4 + 4*4)*4"
+   }
+  },
+  {
+   "split": "derived",
+   "family": "glim units",
+   "invented": true,
+   "question": "A crate holds 408 pom. How many glims is that, as a decimal to two places?",
+   "gold": 4.86,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: glim units: Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom. Example: How many pom are in 17 glim? Working: 17 glim * 7 trell/glim * 12 pom/trell = 1428 pom. Answer: 1428.",
+   "after": {
+    "pred": 4.857142857142857,
+    "answer": "glims = pom / 84\n#### 408 / 84"
+   }
+  },
+  {
+   "split": "derived",
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "An order of 6 items was charged a Kessler fee of $30.20. What was the order amount in dollars?",
+   "gold": 380.0,
+   "before": {
+    "pred": null,
+    "answer": ""
+   },
+   "memory": "- Correction: Kessler fee: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order. Example: What is the Kessler fee on an order of $120 with 7 items? Working: fee = 0.04 * 120 + 2.50 * 7 = 22.3. Answer: 22.3.",
+   "after": {
+    "pred": 380.0,
+    "answer": "fee = 0.04 * order amount + 2.50 * number of items\n#### 0.04*x + 2.50*6 = 30.20"
+   }
+  },
+  {
+   "split": "derived",
+   "family": "Vantor score",
+   "invented": true,
+   "question": "A crop has a Vantor score of 16 and h = 4. What is its w?",
+   "gold": 6.0,
+   "before": {
+    "pred": 4.0,
+    "answer": "Formula: w = Vantor score / h\n#### 16 / 4"
+   },
+   "memory": "- Correction: Vantor score: The Vantor score of a crop: V = 2w + h**2/4, where w is its width index and h its height index. Example: What is the Vantor score of a crop with w = 35 and h = 4? Working: V = 2*35 + 4**2/4 = 74. Answer: 74.",
+   "after": {
+    "pred": 6.0,
+    "answer": "V = 2w + h**2/4, solve for w with V = 16, h = 4\n#### 2*x + 4**2/4 = 16"
+   }
+  }
+ ]
+}
