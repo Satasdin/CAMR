@@ -207,3 +207,26 @@ def test_stricter_checks_reject_the_wrong_kind_and_an_unstated_relation():
     assert check(q, "1980", film, typed=True).reason == "wrong kind of answer"
     y = "Who was the director of Y?"
     assert check(y, "Ana Silva", film, typed=True, relation_cue=True).supported
+
+
+def test_a_remembered_list_of_meanings_marks_an_answer_about_one_of_them(tmp_path):
+    from camr.memory.eager import learn_meanings
+    from camr.memory.fetch import WebLookup
+    from camr.memory.verify import meaning_units
+    from test_learning import FakeWeb, fresh_engine
+
+    web = FakeWeb({"Damage": {"Type": "D", "AbstractText": "", "RelatedTopics": [
+        {"FirstURL": "https://duckduckgo.com/Damage_(2009_film)", "Text": "Damage (2009 film) A film by Jeff F. King"},
+        {"FirstURL": "https://duckduckgo.com/Damage_(1992_film)", "Text": "Damage (1992 film) A film by Louis Malle"}]},
+        "Damage (2009 film)": {"AbstractText": "Damage is a 2009 action film. The director of Damage was Jeff F. "
+                                               "King, who directed it in Canada.",
+                               "AbstractURL": "https://en.wikipedia.org/wiki/Damage_(2009_film)", "Type": "A"}})
+    res = WebLookup(web, min_interval_s=0).lookup("Who was the director of Damage?")
+    assert res.meanings["Damage"] == ["Damage (2009 film)", "Damage (1992 film)"]
+    engine = fresh_engine(tmp_path)
+    learn_pages(engine, res.pages)
+    learn_meanings(engine, res.meanings)
+    a = VerifiedAnswerer(engine, [Scripted("small", "Jeff F. King")]).answer("Who was the director of Damage?")
+    assert a.status == "verified" and a.ambiguous == ["Damage (1992 film)"]
+    assert a.text == "Jeff F. King (Damage (2009 film))"  # says which Damage, and memory knows there is another
+    assert meaning_units(engine.store, "Who directed Damage?")[0].text.lower().startswith("damage may refer to")

@@ -23,8 +23,8 @@ from camr.memory.engine import MemoryEngine
 from camr.memory.fetch import WebLookup
 from camr.memory.eager import learn_pages
 from camr.memory.fetch import Lookup, WebPage
-from camr.memory.verify import (CROSS, Unit, Verdict, check, claim, compress, cross_check, fact_answer, relation_of,
-                                sentences, units_from_notes)
+from camr.memory.verify import (CROSS, Unit, Verdict, check, claim, compress, cross_check, fact_answer,
+                                meaning_units, relation_of, sentences, units_from_notes)
 from camr.models.prompt import PromptTemplate
 from camr.models.runner import GenerationError, ModelRunner
 
@@ -98,7 +98,10 @@ class VerifiedAnswerer:
         recall, learned = eager_recall(self.engine, self.lookup, question, allow_web=allow_web, touch=touch,
                                        max_pages=self.max_pages)
         notes = [] if recall.abstained else [c.note for c in recall.candidates if c.eligible]
-        return recall, learned, units_from_notes(self.engine.store, notes)
+        units = units_from_notes(self.engine.store, notes)
+        if units:  # what memory knows a shared name may mean, read by name
+            units += meaning_units(self.engine.store, question)
+        return recall, learned, units
 
     def answer(self, question: str, *, allow_web: bool = True, touch: bool = False) -> Answer:
         t0 = time.perf_counter()

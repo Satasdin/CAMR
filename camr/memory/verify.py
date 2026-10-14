@@ -124,9 +124,27 @@ def units_from_notes(store, notes) -> list[Unit]:
         if "#fact:" in doc_id:
             label, _, value = body.partition(": ")
             out.append(Unit(title, body, label=label, note_id=n.note_id))
+        elif doc_id.startswith("meanings:"):
+            out.append(Unit(title, body, label=MEANINGS, note_id=n.note_id))
         else:
             out += [Unit(title, s, note_id=n.note_id) for s in sentences(body)]
     return out
+
+
+MEANINGS = "(meanings)"  # the label of a note listing what a shared name may refer to
+
+
+def meaning_units(store, question: str) -> list[Unit]:
+    """What memory knows the question's names may refer to, read by name (camr.memory.eager.learn_meanings)."""
+    names = subject_names(question)
+    keys = list(dict.fromkeys([n for n in names] + [re.sub(r"^(?:the|a|an) ", "", n) for n in names]))
+    return [Unit(f"{name} (disambiguation)", f"{name} may refer to: " + "; ".join(titles), label=MEANINGS)
+            for name, titles in store.meanings(keys).items()]
+
+
+def evidence_units(units: list[Unit]) -> list[Unit]:
+    """Units that can support a claim (a list of meanings cannot)."""
+    return [u for u in units if u.label != MEANINGS]
 
 
 # ---------------------------------------------------------------------- the claim in an answer
@@ -257,6 +275,7 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
         return Verdict(False, "declined", relation=rel and rel[0], confidence=conf)
     if typed and not type_ok(rel and rel[0], answer):
         return Verdict(False, "wrong kind of answer", words, relation=rel and rel[0], confidence=conf)
+    all_units, units = units, evidence_units(units)
     if not units:
         return Verdict(False, "no evidence", words, relation=rel and rel[0], confidence=conf)
     names = subject_names(question)
@@ -297,7 +316,7 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
             pick = cued[0]
     else:
         pick = supporting[0]
-    others = [t for t in same_name_titles(question, units) if t != pick.title]
+    others = [t for t in same_name_titles(question, all_units) if t != pick.title]
     return Verdict(True, "supported", words, cov, pick, rel and rel[0], conf, others)
 
 
@@ -331,7 +350,11 @@ def same_name_titles(question: str, units: list[Unit]) -> list[str]:
     names = subject_names(question)
     out: list[str] = []
     for u in units:
-        if u.title and u.title not in out and aboutness(u, names) == 2:
+        if u.label == MEANINGS:
+            if aboutness(u, names) == 2:  # "Damage (disambiguation)": every listed meaning shares the name
+                listed = u.text.partition(": ")[2].split("; ")
+                out += [t for t in listed if t and t not in out]
+        elif u.title and u.title not in out and aboutness(u, names) == 2:
             out.append(u.title)
     return out
 
@@ -345,7 +368,7 @@ def facts_by_title(question: str, units: list[Unit]) -> list[Unit]:
     names = subject_names(question)
     if not names:
         return []
-    hits = [u for u in units if u.label and label_matches(u.label, rel[1])]
+    hits = [u for u in units if u.label and u.label != MEANINGS and label_matches(u.label, rel[1])]
     level = {id(u): aboutness(u, names) for u in hits}
     top = max(level.values(), default=0)
     if top == 0:
@@ -367,6 +390,7 @@ def compress(question: str, units: list[Unit], embedder, tokenizer, budget: int 
     with a bonus for a fact line holding the asked relation and for units about the question's subject."""
     import numpy as np
 
+    units = evidence_units(units)
     if not units:
         return []
     rel = relation_of(question)

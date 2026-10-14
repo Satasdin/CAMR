@@ -18,6 +18,7 @@ import time
 from dataclasses import dataclass, field
 
 from camr.memory.engine import MemoryEngine
+from camr.memory.entities import norm
 from camr.memory.fetch import WebLookup, WebPage, is_personal
 from camr.memory.note import Document, RecallResult
 
@@ -60,6 +61,14 @@ def page_documents(page: WebPage, dataset: str = WEB_DATASET) -> list[Document]:
     return docs
 
 
+def learn_meanings(engine: MemoryEngine, meanings: dict[str, list[str]]) -> None:
+    """Remember what a shared name may refer to ('Damage': 'Damage (1992 film)', 'Damage (2009 film)', ...), so an
+    answer about one meaning is never taken for the only one (camr.memory.verify.same_name_titles)."""
+    for name, titles in meanings.items():
+        if titles:
+            engine.store.set_meanings(norm(name), titles)
+
+
 def learn_pages(engine: MemoryEngine, pages: list[WebPage], dataset: str = WEB_DATASET) -> int:
     """Store web pages as notes (the page URL is the source id, so a page is only ever stored once)."""
     docs = [d for p in pages for d in page_documents(p, dataset)]
@@ -87,6 +96,7 @@ def eager_recall(engine: MemoryEngine, lookup: WebLookup | None, question: str, 
     if found.pages:
         t0 = time.perf_counter()
         learned.notes_added = learn_pages(engine, found.pages)
+        learn_meanings(engine, found.meanings)
         learned.ingest_ms = (time.perf_counter() - t0) * 1000
         recall = engine.recall(question, touch=touch)
     return recall, learned

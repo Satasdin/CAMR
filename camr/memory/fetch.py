@@ -130,6 +130,8 @@ class Lookup:
     queries: list[str] = field(default_factory=list)
     pages: list[WebPage] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    # names found to be ambiguous: name -> the titles of what it may refer to (from a disambiguation list)
+    meanings: dict[str, list[str]] = field(default_factory=dict)
     requests: int = 0
     cached: int = 0
     ms: float = 0.0
@@ -370,6 +372,7 @@ class WebLookup:
                 named = base_title(query)
                 ranked = [o for _, o in sorted(zip(scores, options), key=lambda x: (base_title(x[1][0]) != named,
                                                                                     -x[0]))]
+                res.meanings[query] = [t for t, _ in options][:40]  # remembered: the name means several things
                 for title, _ in ranked[:2]:
                     add(self.article(title, res)[0])
                 continue

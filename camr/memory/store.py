@@ -163,6 +163,9 @@ class SQLiteVectorStore(MemoryStore):
         cols = {r[1] for r in self.conn.execute("PRAGMA table_info(source)")}
         if "title" not in cols:
             self.conn.execute("ALTER TABLE source ADD COLUMN title TEXT")
+        # What a shared name may refer to (from a disambiguation list): read by name, never searched.
+        self.conn.execute("CREATE TABLE IF NOT EXISTS meaning (name TEXT PRIMARY KEY, titles TEXT NOT NULL,"
+                          " at TIMESTAMP)")
         # Notes waiting for their vector (ingested with deferred embedding); searchable by keyword meanwhile.
         self.conn.execute("CREATE TABLE IF NOT EXISTS embed_queue (note_id INTEGER PRIMARY KEY"
                           " REFERENCES note(note_id) ON DELETE CASCADE)")
@@ -351,6 +354,27 @@ class SQLiteVectorStore(MemoryStore):
                     c.execute("INSERT INTO note_vec(rowid, note_type, embedding) VALUES (?, ?, ?)",
                               (note_id, note_type, blob))
                 c.execute("DELETE FROM embed_queue WHERE note_id=?", (note_id,))
+
+    # ---------------------------------------------------------- shared names
+    def set_meanings(self, name: str, titles: list[str]) -> None:
+        import json
+        import time as _t
+
+        with self.transaction() as c:
+            c.execute("INSERT OR REPLACE INTO meaning VALUES (?, ?, ?)", (name, json.dumps(titles), _t.time()))
+
+    def meanings(self, names: Iterable[str]) -> dict[str, list[str]]:
+        import json
+
+        names = list(dict.fromkeys(names))
+        if not names:
+            return {}
+        try:
+            rows = self.conn.execute(f"SELECT name, titles FROM meaning WHERE name IN ({','.join('?' * len(names))})",
+                                     names).fetchall()
+        except sqlite3.OperationalError:  # a read-only store from before this table
+            return {}
+        return {r[0]: json.loads(r[1]) for r in rows}
 
     # ---------------------------------------------------------- keywords
     def keyword(self, text: str, k: int, note_type: str) -> list[tuple[int, float]]:

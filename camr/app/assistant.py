@@ -41,7 +41,7 @@ from camr.config import Config, LocalModelConfig
 from camr.device import Governor, Limits, index_threshold, probe
 from camr.memory import packs as packs_mod
 from camr.memory.adapter import QueryAdapter
-from camr.memory.eager import learn_pages
+from camr.memory.eager import learn_meanings, learn_pages
 from camr.memory.embedder import Embedder, OllamaEmbedder
 from camr.memory.engine import MemoryEngine
 from camr.memory.fetch import WebLookup, embedding_rank, is_personal
@@ -51,7 +51,8 @@ from camr.memory.store import SQLiteVectorStore
 from camr.memory.answer import BARE as BARE_PROMPT
 from camr.memory.answer import READ as READ_PROMPT
 from camr.memory.answer import cross_verify
-from camr.memory.verify import CROSS, check, claim, compress, fact_answer, relation_of, units_from_notes
+from camr.memory.verify import (CROSS, check, claim, compress, fact_answer, meaning_units, relation_of,
+                                units_from_notes)
 from camr.models.runner import OllamaRunner
 from camr.models.tokenizer import RegexTokenizer
 
@@ -532,6 +533,7 @@ class Assistant:
             if found.pages:
                 with self._lock:
                     added = learn_pages(self.engine, found.pages)
+                    learn_meanings(self.engine, found.meanings)
                     recall = self.engine.recall(question)
             learned = {"queries": found.queries, "notes_added": added, "ms": round(found.ms, 1),
                        "pages": [{"title": p.title, "url": p.url, "source": p.source} for p in found.pages],
@@ -545,6 +547,8 @@ class Assistant:
         if factual and not recall.abstained:
             with self._lock:
                 units = units_from_notes(self.store, [c.note for c in recall.candidates if c.eligible])
+                if units:
+                    units += meaning_units(self.store, question)
         fact = fact_answer(question, units) if units else None
         if fact is not None:
             # memory holds the fact as a labelled line about the question's subject: answered from memory, at once
