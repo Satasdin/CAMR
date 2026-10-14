@@ -267,7 +267,14 @@ class WebLookup:
     def summary(self, title: str, res: Lookup) -> dict | None:
         """Lead section of a Wikipedia article (redirects followed); None for missing or disambiguation pages."""
         t = urllib.parse.quote(title.strip().replace(" ", "_"), safe="()',")
-        status, body = self._get(f"{self.wiki}/api/rest_v1/page/summary/{t}", None, res)
+        status, body = self._get(f"{self.wiki}/api/rest_v1/page/summary/{t}", None, res,
+                                 patient=min(self.patient_s, 5.0))
+        if status in (0, 429):  # the API is limiting this address: read the article page instead (D-30)
+            lead = self.page_lead(title, res)
+            if lead:
+                return {"type": "standard", "title": lead.get("title") or title, "extract": lead["extract"],
+                        "content_urls": {"desktop": {"page": lead["url"]}}, "facts": lead.get("facts", "")}
+            return None
         if status != 200 or not body or body.get("type") != "standard" or not body.get("extract"):
             return None
         return body
@@ -305,11 +312,15 @@ class WebLookup:
     def article(self, name: str, res: Lookup) -> tuple[WebPage | None, list[tuple[str, str]]]:
         """The article a name refers to, or (None, [(title, description), ...]) when the name is ambiguous."""
         page, options = self._article(name, res)
-        if page is not None and self.facts and not page.facts:
+        if page is not None:
+            self._add_facts(page, res)
+        return page, options
+
+    def _add_facts(self, page: WebPage, res: Lookup) -> None:
+        if self.facts and not page.facts:
             lead = self.page_lead(page.title, res)
             if lead:
                 page.facts = lead.get("facts", "")
-        return page, options
 
     def _article(self, name: str, res: Lookup) -> tuple[WebPage | None, list[tuple[str, str]]]:
         ddg = self.duckduckgo(name, res)
@@ -329,7 +340,7 @@ class WebLookup:
         if s:
             title = s.get("title", name)
             return WebPage(title=title, url=_page_url(s, self.wiki, title), text=" ".join(s["extract"].split()),
-                           source="wikipedia", query=name), []
+                           source="wikipedia", query=name, facts=s.get("facts", "")), []
         lead = self.page_lead(name[:1].upper() + name[1:], res) if not (ddg and ddg.get("Type") == "D") else None
         if lead:
             return WebPage(title=lead.get("title", name), url=lead["url"], text=lead["extract"], source="wikipedia",
@@ -373,6 +384,15 @@ class WebLookup:
                 ranked = [o for _, o in sorted(zip(scores, options), key=lambda x: (base_title(x[1][0]) != named,
                                                                                     -x[0]))]
                 res.meanings[query] = [t for t, _ in options][:40]  # remembered: the name means several things
+                # the name's own article first, when it has one: a list for "Spain" need not include the country
+                # (D-29), and its qualified meanings all match the name exactly ("Spain (poem)")
+                primary = self.summary(query[:1].upper() + query[1:], res)
+                if primary:
+                    t = primary.get("title", query)
+                    if add(WebPage(title=t, url=_page_url(primary, self.wiki, t), text=" ".join(primary["extract"].split()),
+                                   source="wikipedia", query=query, facts=primary.get("facts", ""))):
+                        self._add_facts(res.pages[-1], res)
+                        res.meanings[query] = [t] + [x for x in res.meanings[query] if x != t]
                 for title, _ in ranked[:2]:
                     add(self.article(title, res)[0])
                 continue

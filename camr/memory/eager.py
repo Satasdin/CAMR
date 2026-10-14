@@ -14,6 +14,7 @@ assistant asks to be taught instead.
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 
@@ -44,9 +45,14 @@ def fact_lines(facts: str) -> list[tuple[str, str]]:
     out = []
     for part in facts.split("; "):
         label, sep, value = part.partition(": ")
-        if sep and label.strip() and value.strip():
-            out.append((label.strip(), value.strip()))
+        value = _COORD.sub("", value.replace("\ufeff", " ")).strip(" ,/")
+        if sep and label.strip() and value:
+            out.append((label.strip(), " ".join(value.split())))
     return out
+
+
+# map coordinates trailing a value: "Madrid, 40°26′N 3°42′W / 40.433°N 3.700°W" -> "Madrid"
+_COORD = re.compile(r"[,\s]*\d{1,3}(?:\.\d+)?°.*$")
 
 
 def page_documents(page: WebPage, dataset: str = WEB_DATASET) -> list[Document]:
