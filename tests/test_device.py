@@ -134,3 +134,12 @@ def test_draining_waits_for_a_busy_cpu_and_stops_at_limits(tmp_path):
     rep = drain(engine, batch=64, max_seconds=0.0)
     assert rep.stopped == "time"
     assert drain(engine, batch=64).remaining == 0
+
+
+def test_the_index_switches_on_sooner_on_a_device_with_little_spare_ram():
+    from camr.device import index_threshold
+
+    roomy = DeviceProfile(64_000, 48_000, 16, 0.1, 1e6, 5e5, "/")
+    tight = DeviceProfile(4_000, 1_200, 2, 0.1, 1e5, 2e3, "/")
+    assert index_threshold(roomy, 384) == 100_000
+    assert 20_000 <= index_threshold(tight, 768) < 100_000

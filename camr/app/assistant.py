@@ -38,7 +38,7 @@ from typing import Iterator
 import requests
 
 from camr.config import Config, LocalModelConfig
-from camr.device import Governor, Limits, probe
+from camr.device import Governor, Limits, index_threshold, probe
 from camr.memory import packs as packs_mod
 from camr.memory.adapter import QueryAdapter
 from camr.memory.eager import learn_pages
@@ -727,7 +727,9 @@ class Assistant:
                         vec = drain(self.engine, governor=self.governor, max_seconds=300).as_dict()
                 with self._lock:
                     rep = run_sleep(self.engine, lookup=self.lookup if self.learn_online else None, pairs=pairs,
-                                    adapter_path=self.adapter_path)
+                                    adapter_path=self.adapter_path,
+                                    index_min_notes=index_threshold(probe(self.store.path.parent), self.embedder.dim,
+                                                                    self.governor.limits))
                     if vec is not None:
                         rep["vectors"] = vec
                     with self.store.conn:

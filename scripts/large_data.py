@@ -204,6 +204,65 @@ def drain_part(a) -> None:
             break
 
 
+def scale(a) -> None:
+    """With every vector in: retrieval quality and speed as memory grows (the measured questions' paragraphs come
+    first, so a smaller memory is a prefix of the larger one), exact search against the learned index."""
+    import numpy as np
+
+    from camr.device import process_rss_mb
+    from camr.memory.ivf import IVFIndex
+
+    engine, store = engine_at(OUT / "store.sqlite")
+    if store.pending_count():
+        raise SystemExit(f"{store.pending_count()} notes still wait for vectors: run `drain` first")
+    q = json.loads(QUESTIONS.read_text())
+    items = q["items"][: a.measure]
+    ids, mat = store.all_vectors(engine.note_type)
+    unit = mat / np.maximum(np.linalg.norm(mat, axis=1, keepdims=True), 1e-12)
+    titles = dict(store.conn.execute("SELECT n.note_id, s.title FROM note n JOIN source s USING(source_id)"))
+    qv = engine.embedder.encode([it["question"] for it in items], is_query=True)
+    qv = qv / np.linalg.norm(qv, axis=1, keepdims=True)
+    first = store.conn.execute("SELECT COUNT(*) FROM note n JOIN source s USING(source_id) WHERE s.source_id <= ?",
+                               (q["paragraphs_first"],)).fetchone()[0]
+    out = {"notes_total": int(len(ids)), "points": []}
+
+    def score(top_ids) -> tuple[float, float]:
+        hit = full = 0.0
+        for it, row in zip(items, top_ids):
+            got = {titles.get(int(i)) for i in row}
+            share = sum(t in got for t in it["gold_titles"]) / len(it["gold_titles"])
+            hit += share
+            full += share == 1.0
+        return round(hit / len(items), 4), round(full / len(items), 4)
+
+    for n in sorted({first, 25_000, 50_000, 100_000, len(ids)}):
+        if n > len(ids):
+            continue
+        sub = unit[:n]
+        t0 = time.perf_counter()
+        top = np.argsort(-(qv @ sub.T), axis=1)[:, :10]
+        ms = (time.perf_counter() - t0) * 1000 / len(items)
+        r, f = score(ids[top])
+        out["points"].append({"notes": int(n), "search": "exact", "recall@10": r, "all_gold@10": f,
+                              "ms_per_question": round(ms, 2), "vectors_mb": round(sub.nbytes / 2**20, 1)})
+        print(out["points"][-1], flush=True)
+    t0 = time.perf_counter()
+    idx = IVFIndex.build(OUT / "scale.ivf", ids, mat, engine.note_type)
+    build_s = time.perf_counter() - t0
+    for nprobe in (4, 8, 16, 32):
+        idx.nprobe = nprobe
+        t0 = time.perf_counter()
+        top = [[i for i, _ in idx.search(v, 10)] for v in qv]
+        ms = (time.perf_counter() - t0) * 1000 / len(items)
+        r, f = score(top)
+        out["points"].append({"notes": int(len(ids)), "search": f"index nprobe={nprobe}", "recall@10": r,
+                              "all_gold@10": f, "ms_per_question": round(ms, 2), "clusters": int(len(idx.centroids)),
+                              "build_s": round(build_s, 1), "rss_mb": round(process_rss_mb(), 1)})
+        print(out["points"][-1], flush=True)
+    shutil.rmtree(OUT / "scale.ivf", ignore_errors=True)
+    save(OUT / "scale.json", out)
+
+
 def limits(a) -> None:
     """Each limit, hit on purpose with the real corpus and the real disk: the job stops, says why, and resumes."""
     from camr.device import Governor, Limits, probe
@@ -263,7 +322,7 @@ def plan_part(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["corpus", "ingest", "drain", "limits", "plan"])
+    ap.add_argument("part", choices=["corpus", "ingest", "drain", "scale", "limits", "plan"])
     ap.add_argument("--questions", type=int, default=600)
     ap.add_argument("--measure", type=int, default=600)
     ap.add_argument("--fresh", action="store_true")
@@ -273,4 +332,5 @@ if __name__ == "__main__":
     ap.add_argument("--max-seconds", type=float, default=None, help="drain: stop after this long (resumable)")
     ap.add_argument("--max-load", type=float, default=0.5, help="drain: yield while others use this CPU share")
     a = ap.parse_args()
-    {"corpus": corpus, "ingest": ingest, "drain": drain_part, "limits": limits, "plan": plan_part}[a.part](a)
+    {"corpus": corpus, "ingest": ingest, "drain": drain_part, "scale": scale, "limits": limits,
+     "plan": plan_part}[a.part](a)
