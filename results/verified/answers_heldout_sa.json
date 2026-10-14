@@ -1,0 +1,4849 @@
+{
+ "set": "heldout",
+ "variants": {
+  "facts+compress+reader": {
+   "variant": "facts+compress+reader",
+   "settings": {
+    "facts": true,
+    "compressed": true,
+    "fact_reader": true,
+    "template": "read",
+    "readers": [
+     "qwen2.5:0.5b"
+    ],
+    "closed_book": true
+   },
+   "n": 200,
+   "budget": 128,
+   "min_coverage": 1.0,
+   "typed": true,
+   "relation_cue": true,
+   "by_name": false,
+   "hybrid": false,
+   "subject_aware": true,
+   "verified": {
+    "answered": 0.81,
+    "correct": 0.585,
+    "wrong": 0.225,
+    "wrong_unambiguous": 0.04,
+    "wrong_other_meaning": 0.185,
+    "ambiguous": 0.435,
+    "correct_unambiguous": 0.335,
+    "precision": 0.7222222222222222,
+    "by_memory": 0.7,
+    "unverified": 0.185,
+    "unverified_lead_correct": 0.025
+   },
+   "stated": {
+    "correct": 0.61,
+    "wrong": 0.385
+   },
+   "seconds": 805.2,
+   "notes": 3462,
+   "answers_cached": 13,
+   "answers_new": 47,
+   "per_question": [
+    {
+     "i": 0,
+     "prop": "author",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "al-Ghazali",
+     "text": "al-Ghazali",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "al-Ghazali",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "al-Ghazali",
+       "correct": true,
+       "supported": false,
+       "reason": "wrong kind of answer",
+       "confidence": -0.773
+      }
+     ],
+     "evidence": null,
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 27.2673899999063,
+      "compress": 2682.235569000113,
+      "total": 5388.8080429987895
+     }
+    },
+    {
+     "i": 1,
+     "prop": "screenwriter",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "The screenwriter for \"For Better or Worse\" is David Fincher",
+     "text": "The screenwriter for \"For Better or Worse\" is David Fincher",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "The screenwriter for \"For Better or Worse\" is David Fincher.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "The screenwriter for \"For Better or Worse\" is David Fincher.",
+       "correct": false,
+       "supported": false,
+       "reason": "not in memory",
+       "confidence": -2.085
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 18.022244001258514,
+      "compress": 0.27708400011761114,
+      "total": 7722.348807001254
+     }
+    },
+    {
+     "i": 2,
+     "prop": "screenwriter",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "The screenwriter for Boring was Steven Spielberg",
+     "text": "The screenwriter for Boring was Steven Spielberg",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "The screenwriter for Boring was Steven Spielberg.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "The screenwriter for Boring was Steven Spielberg.",
+       "correct": false,
+       "supported": false,
+       "reason": "not in memory",
+       "confidence": -1.613
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 9.06964999921911,
+      "compress": 281.60092800135317,
+      "total": 979.9524770005519
+     }
+    },
+    {
+     "i": 3,
+     "prop": "father",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Vallabhbhai Patel, Jhaverben Patel",
+     "text": "Vallabhbhai Patel, Jhaverben Patel",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Vallabhbhai Patel, Jhaverben Patel",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Dahyabhai Patel: Parents: Vallabhbhai Patel, Jhaverben Patel",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 248.56670599911013,
+      "total": 248.81433900009142
+     }
+    },
+    {
+     "i": 4,
+     "prop": "author",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Jorge Luis Borges is the author of \"The Disk",
+     "text": "Jorge Luis Borges is the author of \"The Disk",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Jorge Luis Borges is the author of \"The Disk\".",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Jorge Luis Borges is the author of \"The Disk\".",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.0
+      }
+     ],
+     "evidence": "The Disk: \"The Disk\" is a 1975 short story written by Argentine writer Jorge Luis Borges.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 67.32282499979192,
+      "compress": 19.00001000103657,
+      "total": 770.3823820011166
+     }
+    },
+    {
+     "i": 5,
+     "prop": "father",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Mohan Raman (father)",
+     "text": "Mohan Raman (father)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Mohan Raman (father)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Vidyullekha Raman: Parent: Mohan Raman (father)",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 443.09165500089875,
+      "total": 443.2999020009447
+     }
+    },
+    {
+     "i": 6,
+     "prop": "sport",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Football (soccer)",
+     "text": "Football (soccer)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Football (soccer)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Football (soccer)",
+       "correct": true,
+       "supported": false,
+       "reason": "not in memory",
+       "confidence": -0.342
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 105.74187200109009,
+      "compress": 0.9775730013643624,
+      "total": 991.7684810006904
+     }
+    },
+    {
+     "i": 7,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Toss (2009 film): Ramesh Khatkar; Toss (2007 film): Priyadarshini Ram",
+     "text": "Toss (2009 film): Ramesh Khatkar; Toss (2007 film): Priyadarshini Ram",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Toss (2009 film): Ramesh Khatkar; Toss (2007 film): Priyadarshini Ram",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Toss (2009 film): Directed by: Ramesh Khatkar | Toss (2007 film): Directed by: Priyadarshini Ram",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 299.21506400023645,
+      "total": 299.57273400032136
+     }
+    },
+    {
+     "i": 8,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Chris Gerolmo",
+     "text": "Chris Gerolmo",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Chris Gerolmo",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Mississippi Burning: Written by: Chris Gerolmo",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 71.9230359991343,
+      "total": 72.27824999972654
+     }
+    },
+    {
+     "i": 9,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Rash (novel): Pete Hautman; Rash (film): Nicholas Hansen",
+     "text": "Rash (novel): Pete Hautman; Rash (film): Nicholas Hansen",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Rash (novel): Pete Hautman; Rash (film): Nicholas Hansen",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Rash (novel): Author: Pete Hautman | Rash (film): Written by: Nicholas Hansen",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 81.19135599918081,
+      "total": 81.5430139991804
+     }
+    },
+    {
+     "i": 10,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Alexander Payne, Nat Faxon, Jim Rash",
+     "text": "Alexander Payne, Nat Faxon, Jim Rash (The Descendants)",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Alexander Payne, Nat Faxon, Jim Rash",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Descendants: Screenplay by: Alexander Payne, Nat Faxon, Jim Rash",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 110.69677399973443,
+      "total": 111.24676899999031
+     }
+    },
+    {
+     "i": 11,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Mystery",
+     "text": "Mystery",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Mystery",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Hidden Staircase: Genre: Mystery",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 87.67253600126423,
+      "total": 88.01597700039565
+     }
+    },
+    {
+     "i": 12,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Happy (Pharrell Williams song): Pharrell Williams; Happy (2011 film): Tom Shadyac, Frances Reid , Eiji Han Shimizu, Roko Belic",
+     "text": "Happy (Pharrell Williams song): Pharrell Williams; Happy (2011 film): Tom Shadyac, Frances Reid , Eiji Han Shimizu, Roko Belic",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Happy (Pharrell Williams song): Pharrell Williams; Happy (2011 film): Tom Shadyac, Frances Reid , Eiji Han Shimizu, Roko Belic",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Happy (Pharrell Williams song): Producer: Pharrell Williams | Happy (2011 film): Produced by: Tom Shadyac, Frances Reid , Eiji Han Shimizu, Roko Belic",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 113.77435400027025,
+      "total": 114.2085319988837
+     }
+    },
+    {
+     "i": 13,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Stranger (2010 film): Jack Nasser; The Stranger (1946 film): S. P. Eagle",
+     "text": "The Stranger (2010 film): Jack Nasser; The Stranger (1946 film): S. P. Eagle",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Stranger (2010 film): Jack Nasser; The Stranger (1946 film): S. P. Eagle",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Stranger (2010 film): Produced by: Jack Nasser | The Stranger (1946 film): Produced by: S. P. Eagle",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 199.60292499854404,
+      "total": 200.10700799866754
+     }
+    },
+    {
+     "i": 14,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Opening Night (novel): Ngaio Marsh; Opening Night (2016 film): Gerry De Leon, Greg Lisi",
+     "text": "Opening Night (novel): Ngaio Marsh; Opening Night (2016 film): Gerry De Leon, Greg Lisi",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Opening Night (novel): Ngaio Marsh; Opening Night (2016 film): Gerry De Leon, Greg Lisi",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Opening Night (novel): Author: Ngaio Marsh | Opening Night (2016 film): Written by: Gerry De Leon, Greg Lisi",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 135.81346799946914,
+      "total": 136.2186930000462
+     }
+    },
+    {
+     "i": 15,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "David Wain, Ken Marino",
+     "text": "David Wain, Ken Marino (The Ten (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "David Wain, Ken Marino",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Ten (film): Written by: David Wain, Ken Marino",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 140.6465339987335,
+      "total": 141.0086579999188
+     }
+    },
+    {
+     "i": 16,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Tim Fywell",
+     "text": "Tim Fywell (Affinity (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Tim Fywell",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Affinity (film): Directed by: Tim Fywell",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 100.15413200017065,
+      "total": 100.44616300001508
+     }
+    },
+    {
+     "i": 17,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Bastak",
+     "text": "Bastak",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Bastak",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Bastak County: Capital: Bastak",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 75.99204100006318,
+      "total": 76.99134799986496
+     }
+    },
+    {
+     "i": 18,
+     "prop": "capital of",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Hanover",
+     "text": "Hanover (Hanover Region)",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Hanover",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Hanover Region: Capital: Hanover",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 217.22090899856994,
+      "total": 217.74311099943588
+     }
+    },
+    {
+     "i": 19,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Family Tree (film): Vivi Friedman; Family Tree (1999 film): Duane Clark",
+     "text": "The Family Tree (film): Vivi Friedman; Family Tree (1999 film): Duane Clark",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Family Tree (film): Vivi Friedman; Family Tree (1999 film): Duane Clark",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Family Tree (film): Directed by: Vivi Friedman | Family Tree (1999 film): Directed by: Duane Clark",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 172.39608300042164,
+      "total": 172.72658000001684
+     }
+    },
+    {
+     "i": 20,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Paris (de facto)",
+     "text": "Paris (de facto)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Paris (de facto)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "France: Capital and largest city: Paris (de facto)",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 236.6085909998219,
+      "total": 237.20244300056947
+     }
+    },
+    {
+     "i": 21,
+     "prop": "screenwriter",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Time is written by Andrew Davies (screenwriter)",
+     "text": "Time is written by Andrew Davies (screenwriter)",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Time is written by Andrew Davies (screenwriter).",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Time is written by Andrew Davies (screenwriter).",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.486
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 47.6178990011249,
+      "compress": 227.6206850001472,
+      "total": 921.4922549999756
+     }
+    },
+    {
+     "i": 22,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Steven Collins, Joe Halpin, Steven Seagal",
+     "text": "Steven Collins, Joe Halpin, Steven Seagal (Shadow Man (2006 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Steven Collins, Joe Halpin, Steven Seagal",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Shadow Man (2006 film): Written by: Steven Collins, Joe Halpin, Steven Seagal",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 321.06299599945487,
+      "total": 321.5619689999585
+     }
+    },
+    {
+     "i": 23,
+     "prop": "country",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Australia",
+     "text": "Australia (Springwood High School (New South Wales))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Australia",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Australia",
+       "correct": false,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.166
+      }
+     ],
+     "evidence": "Springwood High School (New South Wales): Springwood High School is a government-funded co-educational comprehensive secondary day school, located on Grose Road, Faulconbridge, in the Blue Mountains region of New South Wales, Australia.",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 184.94276499950502,
+      "compress": 49.575622000702424,
+      "total": 4790.700382998693
+     }
+    },
+    {
+     "i": 24,
+     "prop": "producer",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "The producer of The Switch was Nicholas Hansen",
+     "text": "The producer of The Switch was Nicholas Hansen",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "The producer of The Switch was Nicholas Hansen.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "The producer of The Switch was Nicholas Hansen.",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.279
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 21.79582200005825,
+      "compress": 2078.2463519990415,
+      "total": 11591.864865000389
+     }
+    },
+    {
+     "i": 25,
+     "prop": "religion",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Roman Catholic Church",
+     "text": "Roman Catholic Church",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Roman Catholic Church",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Kevin C. Rhoades: Denomination: Roman Catholic Church",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2965.9885429991846,
+      "total": 2966.2050339993584
+     }
+    },
+    {
+     "i": 26,
+     "prop": "place of birth",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Belarmino Mario Chipongue was born in Belo Horizonte, Brazil",
+     "text": "Belarmino Mario Chipongue was born in Belo Horizonte, Brazil",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Belarmino Mario Chipongue was born in Belo Horizonte, Brazil.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Belarmino Mario Chipongue was born in Belo Horizonte, Brazil.",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -0.026
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2340.078817000176,
+      "compress": 0.0015630012057954445,
+      "total": 2340.4733520001173
+     }
+    },
+    {
+     "i": 27,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Lawrence B. Marcus",
+     "text": "Lawrence B. Marcus (Going Home (1971 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Lawrence B. Marcus",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Going Home (1971 film): Screenplay by: Lawrence B. Marcus",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2099.086898000678,
+      "total": 2100.979422000819
+     }
+    },
+    {
+     "i": 28,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Country",
+     "text": "Country (Slow Down (Lacy J. Dalton song))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Country",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Slow Down (Lacy J. Dalton song): Genre: Country",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 397.94495400019514,
+      "total": 398.1755759996304
+     }
+    },
+    {
+     "i": 29,
+     "prop": "screenwriter",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "John Hughes",
+     "text": "John Hughes",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "John Hughes",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "John Hughes",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -2.194
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1.9424059992161347,
+      "compress": 0.0015800014807609841,
+      "total": 2.1560690001933835
+     }
+    },
+    {
+     "i": 30,
+     "prop": "father",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Poseidon",
+     "text": "Poseidon",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Poseidon",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Poseidon",
+       "correct": false,
+       "supported": false,
+       "reason": "relation not stated",
+       "confidence": -0.138
+      }
+     ],
+     "evidence": null,
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 14.59537799928512,
+      "compress": 2607.88502899959,
+      "total": 11591.092026999831
+     }
+    },
+    {
+     "i": 31,
+     "prop": "father",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Jacob (father), Zilpah (mother)",
+     "text": "Jacob (father), Zilpah (mother) (Asher)",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Jacob (father), Zilpah (mother)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Asher: Parents: Jacob (father), Zilpah (mother)",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 960.6146319983964,
+      "total": 960.8238579985482
+     }
+    },
+    {
+     "i": 32,
+     "prop": "place of birth",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Santa Barbara",
+     "text": "Santa Barbara",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Santa Barbara",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Santa Barbara",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.002
+      }
+     ],
+     "evidence": "Dakota Collins: Place of birth: Santa Barbara, California, United States",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 841.456535999896,
+      "compress": 0.7949810005811742,
+      "total": 8419.412656001441
+     }
+    },
+    {
+     "i": 33,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Hugh Leonard, Tim Hayes",
+     "text": "Hugh Leonard, Tim Hayes",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Hugh Leonard, Tim Hayes",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Widows' Peak: Written by: Hugh Leonard, Tim Hayes",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2170.3083630000037,
+      "total": 2170.635370001037
+     }
+    },
+    {
+     "i": 34,
+     "prop": "country",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Ireland",
+     "text": "Ireland",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Ireland",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Ireland",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.116
+      }
+     ],
+     "evidence": "National Asset Management Agency: The National Asset Management Agency is a body created by the Government of Ireland in late 2009 in response to the Irish financial crisis and the deflation of the Irish property bubble.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2235.684241000854,
+      "compress": 1859.867547000249,
+      "total": 10088.768278001226
+     }
+    },
+    {
+     "i": 35,
+     "prop": "occupation",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Teacher, opinion writer",
+     "text": "Teacher, opinion writer",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Teacher, opinion writer",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Hermann Ahlwardt: Occupations: Teacher, opinion writer",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1378.6827589992754,
+      "total": 1378.822004999165
+     }
+    },
+    {
+     "i": 36,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "St. John's",
+     "text": "St. John's",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "St. John's",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Newfoundland and Labrador: Capital, (and largest city): St. John's",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 4109.809898000094,
+      "total": 4110.620939
+     }
+    },
+    {
+     "i": 37,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Henri-Georges Clouzot, Jerome Geronimi, (adaptation dialogue)",
+     "text": "Henri-Georges Clouzot, Jerome Geronimi, (adaptation dialogue)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Henri-Georges Clouzot, Jerome Geronimi, (adaptation dialogue)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Les Espions: Written by: Henri-Georges Clouzot, Jerome Geronimi, (adaptation dialogue)",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2254.031477999888,
+      "total": 2254.421868999998
+     }
+    },
+    {
+     "i": 38,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Fiction",
+     "text": "Fiction",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Fiction",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Fiction",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -1.153
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 1.845290000346722,
+      "compress": 0.0014969991752877831,
+      "total": 2.12981100048637
+     }
+    },
+    {
+     "i": 39,
+     "prop": "sport",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Ice hockey",
+     "text": "Ice hockey",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Ice hockey",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Ice hockey",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.315
+      }
+     ],
+     "evidence": "St. Louis Blues: The St. Louis Blues are a professional ice hockey team based in St. Louis.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1444.6184740008903,
+      "compress": 1705.7317300004797,
+      "total": 6294.977454999753
+     }
+    },
+    {
+     "i": 40,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Lucio Fulci",
+     "text": "Lucio Fulci (Demonia (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Lucio Fulci",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Demonia (film): Directed by: Lucio Fulci",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2702.804616999856,
+      "total": 2703.143718999854
+     }
+    },
+    {
+     "i": 41,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Ahn Byeong-ki",
+     "text": "Ahn Byeong-ki (Phone (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Ahn Byeong-ki",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Phone (film): Produced by: Ahn Byeong-ki",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 3245.6084069999633,
+      "total": 3245.99356500039
+     }
+    },
+    {
+     "i": 42,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Singles (EP): Cameron Winter; Singles (1992 film): Cameron Crowe, Richard Hashimoto",
+     "text": "Singles (EP): Cameron Winter; Singles (1992 film): Cameron Crowe, Richard Hashimoto",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Singles (EP): Cameron Winter; Singles (1992 film): Cameron Crowe, Richard Hashimoto",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Singles (EP): Producer: Cameron Winter | Singles (1992 film): Produced by: Cameron Crowe, Richard Hashimoto",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 7831.218114000876,
+      "total": 7831.7103080007655
+     }
+    },
+    {
+     "i": 43,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Rick Bieber, Jason Ehlers, Brent Boyd",
+     "text": "Rick Bieber, Jason Ehlers, Brent Boyd (Crazy (2007 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Rick Bieber, Jason Ehlers, Brent Boyd",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Crazy (2007 film): Written by: Rick Bieber, Jason Ehlers, Brent Boyd",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2392.836201999671,
+      "total": 2393.433649000144
+     }
+    },
+    {
+     "i": 44,
+     "prop": "religion",
+     "status": "none",
+     "by": "",
+     "claim": "",
+     "text": "",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Lutheran Theological Seminary at Philadelphia is a Lutheran seminary.",
+     "first_correct": false,
+     "first_declined": true,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Lutheran Theological Seminary at Philadelphia is a Lutheran seminary.",
+       "correct": false,
+       "supported": false,
+       "reason": "declined",
+       "confidence": -0.511
+      }
+     ],
+     "evidence": null,
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 463.131231999796,
+      "compress": 2221.474713000134,
+      "total": 26431.80385499909
+     }
+    },
+    {
+     "i": 45,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "James Patrick Kelly",
+     "text": "James Patrick Kelly (Burn (novella))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "James Patrick Kelly",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Burn (novella): Author: James Patrick Kelly",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 3032.3714630012546,
+      "total": 3032.850122999662
+     }
+    },
+    {
+     "i": 46,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Exposure (Peet novel): Mal Peet; Exposure (Bilott book): Robert Bilott",
+     "text": "Exposure (Peet novel): Mal Peet; Exposure (Bilott book): Robert Bilott",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Exposure (Peet novel): Mal Peet; Exposure (Bilott book): Robert Bilott",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Exposure (Peet novel): Author: Mal Peet | Exposure (Bilott book): Author: Robert Bilott",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1976.0665699996025,
+      "total": 1976.7424049987312
+     }
+    },
+    {
+     "i": 47,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Martin Short, Michael Short, Paul Flaherty",
+     "text": "Martin Short, Michael Short, Paul Flaherty",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Martin Short, Michael Short, Paul Flaherty",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Jiminy Glick in Lalawood: Written by: Martin Short, Michael Short, Paul Flaherty",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2581.5456210002594,
+      "total": 2582.094897001298
+     }
+    },
+    {
+     "i": 48,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Hugo Pierre Leclercq",
+     "text": "Hugo Pierre Leclercq (Adventure (Madeon album))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Hugo Pierre Leclercq",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Adventure (Madeon album): Producer: Hugo Pierre Leclercq",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 6664.328300999841,
+      "total": 6664.711333000014
+     }
+    },
+    {
+     "i": 49,
+     "prop": "composer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Charlie Clouser",
+     "text": "Charlie Clouser",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Charlie Clouser",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Saw IV: Music by: Charlie Clouser",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2298.8855020012124,
+      "total": 2299.2021620011656
+     }
+    },
+    {
+     "i": 50,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Science fiction",
+     "text": "Science fiction",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Science fiction",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Science fiction",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.429
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 10.93865800066851,
+      "compress": 495.0468209990504,
+      "total": 3267.9380850004236
+     }
+    },
+    {
+     "i": 51,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Oil and Watercolor",
+     "text": "Oil and Watercolor",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Oil and Watercolor.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Oil and Watercolor.",
+       "correct": false,
+       "supported": false,
+       "reason": "not in memory",
+       "confidence": -0.921
+      }
+     ],
+     "evidence": null,
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 37.43206699982693,
+      "compress": 1257.945760999064,
+      "total": 18059.440367000207
+     }
+    },
+    {
+     "i": 52,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Improvisational comedy",
+     "text": "Improvisational comedy",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Improvisational comedy",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Improvisational comedy",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.001
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2300.1551720008138,
+      "compress": 1147.9336969987344,
+      "total": 6424.097842000265
+     }
+    },
+    {
+     "i": 53,
+     "prop": "country",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Iran",
+     "text": "Iran",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Iran",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Ab Bahri: Country: Iran",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2243.975205999959,
+      "total": 2244.1623069989873
+     }
+    },
+    {
+     "i": 54,
+     "prop": "country",
+     "status": "verified",
+     "by": "memory",
+     "claim": "United Kingdom",
+     "text": "United Kingdom (The European (newspaper))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "United Kingdom",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The European (newspaper): Country: United Kingdom",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2080.5707420004182,
+      "total": 2081.21340300022
+     }
+    },
+    {
+     "i": 55,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Gregg Hoffman, Oren Koules, Mark Burg",
+     "text": "Gregg Hoffman, Oren Koules, Mark Burg",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Gregg Hoffman, Oren Koules, Mark Burg",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Saw II: Produced by: Gregg Hoffman, Oren Koules, Mark Burg",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1163.0643049993523,
+      "total": 1163.4629259988287
+     }
+    },
+    {
+     "i": 56,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Manuel Summers",
+     "text": "Manuel Summers",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Manuel Summers",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Girl in Mourning: Directed by: Manuel Summers",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 491.8593559996225,
+      "total": 492.21078299888177
+     }
+    },
+    {
+     "i": 57,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Stephen Chbosky",
+     "text": "Stephen Chbosky (Rent (film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Stephen Chbosky",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Rent (film): Screenplay by: Stephen Chbosky",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1138.779966000584,
+      "total": 1139.1836800012243
+     }
+    },
+    {
+     "i": 58,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Family Tree (film): Vivi Friedman; Family Tree (1999 film): Duane Clark",
+     "text": "The Family Tree (film): Vivi Friedman; Family Tree (1999 film): Duane Clark",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Family Tree (film): Vivi Friedman; Family Tree (1999 film): Duane Clark",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Family Tree (film): Directed by: Vivi Friedman | Family Tree (1999 film): Directed by: Duane Clark",
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 2.2361449991876725,
+      "total": 2.7883049988304265
+     }
+    },
+    {
+     "i": 59,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Fighter (2011 film): Ravi Kinnagi; Fighter (2000 film): Amir Bar-Lev",
+     "text": "Fighter (2011 film): Ravi Kinnagi; Fighter (2000 film): Amir Bar-Lev",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Fighter (2011 film): Ravi Kinnagi; Fighter (2000 film): Amir Bar-Lev",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Fighter (2011 film): Directed by: Ravi Kinnagi | Fighter (2000 film): Directed by: Amir Bar-Lev",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2045.3911419990618,
+      "total": 2045.7397799982573
+     }
+    },
+    {
+     "i": 60,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Trash (2011 film): Richard Lalonde; Trash (1970 film): Andy Warhol",
+     "text": "Trash (2011 film): Richard Lalonde; Trash (1970 film): Andy Warhol",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Trash (2011 film): Richard Lalonde; Trash (1970 film): Andy Warhol",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Trash (2011 film): Produced by: Richard Lalonde | Trash (1970 film): Produced by: Andy Warhol",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2459.4960829999764,
+      "total": 2459.952435001469
+     }
+    },
+    {
+     "i": 61,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Ric Flair, Keith Elliot Greenberg",
+     "text": "Ric Flair, Keith Elliot Greenberg",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Ric Flair, Keith Elliot Greenberg",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "To Be the Man: Author: Ric Flair, Keith Elliot Greenberg",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1735.5446490000759,
+      "total": 1735.813262001102
+     }
+    },
+    {
+     "i": 62,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Miles Doleac",
+     "text": "Miles Doleac (Demons (2017 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Miles Doleac",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Demons (2017 film): Written by: Miles Doleac",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1736.2821970000368,
+      "total": 1736.8670319992816
+     }
+    },
+    {
+     "i": 63,
+     "prop": "country",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Serbia",
+     "text": "Serbia",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Serbia",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Majdanpek: Country: Serbia",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1811.4247630001046,
+      "total": 1811.707574999673
+     }
+    },
+    {
+     "i": 64,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Blues, pop, jazz, gospel",
+     "text": "Blues, pop, jazz, gospel",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Blues, pop, jazz, gospel",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Della Reese: Genres: Blues, pop, jazz, gospel",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 986.8456639997021,
+      "total": 987.0333180006128
+     }
+    },
+    {
+     "i": 65,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Lewis John Carlino, Howard Koch",
+     "text": "Lewis John Carlino, Howard Koch (The Fox (1967 film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Lewis John Carlino, Howard Koch",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Fox (1967 film): Screenplay by: Lewis John Carlino, Howard Koch",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 5056.266694000442,
+      "total": 5056.7856680008845
+     }
+    },
+    {
+     "i": 66,
+     "prop": "place of birth",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Rafael Reyes (artist): Cotija de la Paz, Michoacán, Mexico; Rafael Reyes: Santa Rosa de Viterbo, Boyacá, Republic of New Granada",
+     "text": "Rafael Reyes (artist): Cotija de la Paz, Michoacán, Mexico; Rafael Reyes: Santa Rosa de Viterbo, Boyacá, Republic of New Granada",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Rafael Reyes (artist): Cotija de la Paz, Michoacán, Mexico; Rafael Reyes: Santa Rosa de Viterbo, Boyacá, Republic of New Granada",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Rafael Reyes (artist): Born: Cotija de la Paz, Michoacán, Mexico | Rafael Reyes: Born: Santa Rosa de Viterbo, Boyacá, Republic of New Granada",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1459.0839079992293,
+      "total": 1459.502051000527
+     }
+    },
+    {
+     "i": 67,
+     "prop": "capital of",
+     "status": "verified",
+     "by": "memory",
+     "claim": "996,264",
+     "text": "996,264 (Stockholm)",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "996,264",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Stockholm: • Capital city: 996,264",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2155.6958540004416,
+      "total": 2156.1699459998636
+     }
+    },
+    {
+     "i": 68,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Nuuk",
+     "text": "Nuuk",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Nuuk",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Greenland: Capital and largest city: Nuuk",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 4910.710427000595,
+      "total": 4912.159544999668
+     }
+    },
+    {
+     "i": 69,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Neo-psychedelia, Garage rock, Pop",
+     "text": "Neo-psychedelia, Garage rock, Pop",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Neo-psychedelia, Garage rock, Pop",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Brain Slaves: Genres: Neo-psychedelia, Garage rock, Pop",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2048.315234000256,
+      "total": 2048.4755150009732
+     }
+    },
+    {
+     "i": 70,
+     "prop": "capital of",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Kuala Lumpur is the capital city of Malaysia",
+     "text": "Kuala Lumpur is the capital city of Malaysia",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Kuala Lumpur is the capital city of Malaysia.",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Kuala Lumpur is the capital city of Malaysia.",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.281
+      }
+     ],
+     "evidence": "Kuala Lumpur: Kuala Lumpur, officially the Federal Territory of Kuala Lumpur, is the capital city and a federal territory of Malaysia.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2759.3288560001383,
+      "compress": 1772.763937999116,
+      "total": 19374.320457998692
+     }
+    },
+    {
+     "i": 71,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Fantasy",
+     "text": "Fantasy",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Fantasy",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Fantasy",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.081
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2408.7721640007658,
+      "compress": 2147.073607000493,
+      "total": 13659.404652000376
+     }
+    },
+    {
+     "i": 72,
+     "prop": "composer",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Katy Perry",
+     "text": "Katy Perry",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Katy Perry",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Katy Perry",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.0
+      }
+     ],
+     "evidence": "California Gurls: \"California Gurls\" is a song by American singer Katy Perry from her third studio album, Teenage Dream.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2201.654886999677,
+      "compress": 1933.621429001505,
+      "total": 15848.66904699993
+     }
+    },
+    {
+     "i": 73,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Gift (band): Synthpop, electronic, alternative rock; The Gift (Croggon novel): Fantasy",
+     "text": "The Gift (band): Synthpop, electronic, alternative rock; The Gift (Croggon novel): Fantasy",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Gift (band): Synthpop, electronic, alternative rock; The Gift (Croggon novel): Fantasy",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Gift (band): Genres: Synthpop, electronic, alternative rock | The Gift (Croggon novel): Genre: Fantasy",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2347.4145069994847,
+      "total": 2347.721719999754
+     }
+    },
+    {
+     "i": 74,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Kyoto (1868–1869), Tokyo (1869–1947)",
+     "text": "Kyoto (1868–1869), Tokyo (1869–1947)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Kyoto (1868–1869), Tokyo (1869–1947)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Empire of Japan: Capital: Kyoto (1868–1869), Tokyo (1869–1947)",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1852.075505999892,
+      "total": 1852.7875660001882
+     }
+    },
+    {
+     "i": 75,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Mela (2000 film): Dharmesh Darshan; Mela (1980 film): K. G. George",
+     "text": "Mela (2000 film): Dharmesh Darshan; Mela (1980 film): K. G. George",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Mela (2000 film): Dharmesh Darshan; Mela (1980 film): K. G. George",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Mela (2000 film): Directed by: Dharmesh Darshan | Mela (1980 film): Directed by: K. G. George",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 3139.170180998917,
+      "total": 3139.5031719985127
+     }
+    },
+    {
+     "i": 76,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The First Time (2012 film): Jonathan Kasdan; The First Time (1981 film): Charlie Loventhal",
+     "text": "The First Time (2012 film): Jonathan Kasdan; The First Time (1981 film): Charlie Loventhal",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "The First Time (2012 film): Jonathan Kasdan; The First Time (1981 film): Charlie Loventhal",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The First Time (2012 film): Directed by: Jonathan Kasdan | The First Time (1981 film): Directed by: Charlie Loventhal",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1380.339837000065,
+      "total": 1380.7854400001816
+     }
+    },
+    {
+     "i": 77,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Fake (1953 film): Bridget Boland , Patrick Kirwan; The Fake (2013 film): Yeon Sang-ho",
+     "text": "The Fake (1953 film): Bridget Boland , Patrick Kirwan; The Fake (2013 film): Yeon Sang-ho",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Fake (1953 film): Bridget Boland , Patrick Kirwan; The Fake (2013 film): Yeon Sang-ho",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Fake (1953 film): Written by: Bridget Boland , Patrick Kirwan | The Fake (2013 film): Written by: Yeon Sang-ho",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1142.985538001085,
+      "total": 1143.5199980005564
+     }
+    },
+    {
+     "i": 78,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Rachel Rose",
+     "text": "Rachel Rose (The Last Day (2026 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Rachel Rose",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Last Day (2026 film): Screenplay by: Rachel Rose",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2487.8477020010905,
+      "total": 2488.4428180012037
+     }
+    },
+    {
+     "i": 79,
+     "prop": "capital of",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Perak",
+     "text": "Perak",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Perak",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Perak",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.658
+      }
+     ],
+     "evidence": "Ipoh: Ipoh is the capital city of the Malaysian state of Perak.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2488.202970000202,
+      "compress": 1900.0276500009932,
+      "total": 9933.92609500006
+     }
+    },
+    {
+     "i": 80,
+     "prop": "mother",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Anne McCaffrey, Horace Wright Johnson",
+     "text": "Anne McCaffrey, Horace Wright Johnson",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Anne McCaffrey, Horace Wright Johnson",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Todd McCaffrey: Parent(s): Anne McCaffrey, Horace Wright Johnson",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2153.3508180000354,
+      "total": 2153.5857409999153
+     }
+    },
+    {
+     "i": 81,
+     "prop": "occupation",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Screenwriter and Comic Book Writer",
+     "text": "Screenwriter and Comic Book Writer",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Screenwriter and Comic Book Writer",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Screenwriter and Comic Book Writer",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.149
+      }
+     ],
+     "evidence": "Martin Shapiro: Martin Shapiro is an American screenwriter and comic book writer.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 255.0060220000887,
+      "compress": 1182.3705890001293,
+      "total": 4737.280319999627
+     }
+    },
+    {
+     "i": 82,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Stephen King",
+     "text": "Stephen King",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Stephen King",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Dolores Claiborne: Author: Stephen King",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2258.409011999902,
+      "total": 2258.763526999246
+     }
+    },
+    {
+     "i": 83,
+     "prop": "occupation",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "diplomat",
+     "text": "diplomat",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "diplomat",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "diplomat",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.47
+      }
+     ],
+     "evidence": "Sven Alkalaj: Sven Alkalaj is a Bosnian diplomat who has served as Bosnia and Herzegovina's ambassador to the United States since June 2023.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 807.1089740005846,
+      "compress": 1854.950139999346,
+      "total": 6273.490958001275
+     }
+    },
+    {
+     "i": 84,
+     "prop": "country",
+     "status": "verified",
+     "by": "memory",
+     "claim": "United Kingdom",
+     "text": "United Kingdom (Patterson (radio series))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "United Kingdom",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Patterson (radio series): Country of origin: United Kingdom",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 5581.617613999697,
+      "total": 5581.82510900042
+     }
+    },
+    {
+     "i": 85,
+     "prop": "occupation",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Actor, filmmaker",
+     "text": "Actor, filmmaker",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Actor, filmmaker",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Zhu Houren: Occupations: Actor, filmmaker",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2111.7755089999264,
+      "total": 2112.1946010007377
+     }
+    },
+    {
+     "i": 86,
+     "prop": "producer",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Lois Lowry",
+     "text": "Lois Lowry",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Lois Lowry",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Lois Lowry",
+       "correct": false,
+       "supported": false,
+       "reason": "relation not stated",
+       "confidence": -0.12
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2155.354725999132,
+      "compress": 2010.7165459994576,
+      "total": 18965.570220998416
+     }
+    },
+    {
+     "i": 87,
+     "prop": "country",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Spain",
+     "text": "Spain",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Spain",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Almedina: Country: Spain",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2329.495985999529,
+      "total": 2329.656433999844
+     }
+    },
+    {
+     "i": 88,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Country",
+     "text": "Country (Deal (Tom T. Hall song))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Country",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Deal (Tom T. Hall song): Genre: Country",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2010.08206699953,
+      "total": 2010.8172239997657
+     }
+    },
+    {
+     "i": 89,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Smokey Robinson",
+     "text": "Smokey Robinson",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Smokey Robinson",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Don't Mess with Bill: Producer: Smokey Robinson",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 576.5478939993045,
+      "total": 576.7552880006406
+     }
+    },
+    {
+     "i": 90,
+     "prop": "father",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Bob Dylan, Sara Lownds",
+     "text": "Bob Dylan, Sara Lownds",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Bob Dylan, Sara Lownds",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Jesse Dylan: Parent(s): Bob Dylan, Sara Lownds",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 384.2751660013164,
+      "total": 384.4745710011921
+     }
+    },
+    {
+     "i": 91,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Amitabh Bachchan",
+     "text": "Amitabh Bachchan",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Amitabh Bachchan",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Viruddh... Family Comes First: Produced by: Amitabh Bachchan",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 779.4650239993643,
+      "total": 779.7967719998269
+     }
+    },
+    {
+     "i": 92,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Jean-Pierre Mocky",
+     "text": "Jean-Pierre Mocky",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Jean-Pierre Mocky",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Le Mentor: Directed by: Jean-Pierre Mocky",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 482.96112100069877,
+      "total": 483.36841400123376
+     }
+    },
+    {
+     "i": 93,
+     "prop": "author",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "J.R.R. Tolkien",
+     "text": "J.R.R. Tolkien",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "J.R.R. Tolkien",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "J.R.R. Tolkien",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -0.468
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 7.194646999778342,
+      "compress": 0.002373999450355768,
+      "total": 7.778559000144014
+     }
+    },
+    {
+     "i": 94,
+     "prop": "producer",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Le Gang was produced by Adel Productions",
+     "text": "Le Gang was produced by Adel Productions",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Le Gang was produced by Adel Productions.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Le Gang was produced by Adel Productions.",
+       "correct": false,
+       "supported": false,
+       "reason": "another relation",
+       "confidence": -0.0
+      }
+     ],
+     "evidence": null,
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2112.969364001401,
+      "compress": 0.8821999999781838,
+      "total": 4994.234756000878
+     }
+    },
+    {
+     "i": 95,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Ali Smith",
+     "text": "Ali Smith",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Ali Smith",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "How to Be Both: Author: Ali Smith",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2189.836301999094,
+      "total": 2190.0516909990984
+     }
+    },
+    {
+     "i": 96,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "John Grisham",
+     "text": "John Grisham",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "John Grisham",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Broker: Author: John Grisham",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2080.7129770000756,
+      "total": 2080.9649090006133
+     }
+    },
+    {
+     "i": 97,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Ian Maxtone-Graham, Billy Kimball",
+     "text": "Ian Maxtone-Graham, Billy Kimball",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Ian Maxtone-Graham, Billy Kimball",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "24 Minutes: Written by: Ian Maxtone-Graham, Billy Kimball",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 130.80433599861863,
+      "total": 131.08101199941302
+     }
+    },
+    {
+     "i": 98,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Paolo Bacigalupi",
+     "text": "Paolo Bacigalupi",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Paolo Bacigalupi",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Ship Breaker: Author: Paolo Bacigalupi",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 708.7864989989612,
+      "total": 709.1047379999509
+     }
+    },
+    {
+     "i": 99,
+     "prop": "father",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Bethuel",
+     "text": "Bethuel (Rebecca (biblical figure))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Bethuel",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Rebecca (biblical figure): Father: Bethuel",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2255.664184000125,
+      "total": 2256.090728000345
+     }
+    },
+    {
+     "i": 100,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Q-pop",
+     "text": "Q-pop",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Q-pop",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Q-pop",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.183
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2708.086604001437,
+      "compress": 1532.7394760006428,
+      "total": 6304.611169000054
+     }
+    },
+    {
+     "i": 101,
+     "prop": "mother",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Isaac (father), Rebecca (mother)",
+     "text": "Isaac (father), Rebecca (mother) (Jacob)",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Isaac (father), Rebecca (mother)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Jacob: Parents: Isaac (father), Rebecca (mother)",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2439.212735000183,
+      "total": 2439.7933500004
+     }
+    },
+    {
+     "i": 102,
+     "prop": "composer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Harris Jayaraj",
+     "text": "Harris Jayaraj",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Harris Jayaraj",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Minnale: Music by: Harris Jayaraj",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1283.9071199996397,
+      "total": 1284.1723169985926
+     }
+    },
+    {
+     "i": 103,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Emo, post-hardcore, melodic hardcore",
+     "text": "Emo, post-hardcore, melodic hardcore (The Take (Welsh band))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Emo, post-hardcore, melodic hardcore",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Take (Welsh band): Genres: Emo, post-hardcore, melodic hardcore",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2298.4156040001835,
+      "total": 2298.706982999647
+     }
+    },
+    {
+     "i": 104,
+     "prop": "country",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Peru",
+     "text": "Peru",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Peru",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Uñón District: Country: Peru",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2171.7429960008303,
+      "total": 2172.0551140006137
+     }
+    },
+    {
+     "i": 105,
+     "prop": "composer",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Arrigo Boito",
+     "text": "Arrigo Boito (Nerone (Boito))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Arrigo Boito",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Arrigo Boito",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.014
+      }
+     ],
+     "evidence": "Nerone (Boito): Nerone is an opera in four acts composed by Arrigo Boito, to a libretto in Italian written by the composer.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 80.74346499961393,
+      "compress": 1839.646079000886,
+      "total": 5420.4853720002575
+     }
+    },
+    {
+     "i": 106,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Abbas Kiarostami",
+     "text": "Abbas Kiarostami",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Abbas Kiarostami",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Rang-ha: Written by: Abbas Kiarostami",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2167.912193999655,
+      "total": 2168.1500329996197
+     }
+    },
+    {
+     "i": 107,
+     "prop": "composer",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Arnold Schoenberg",
+     "text": "Arnold Schoenberg",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Arnold Schoenberg",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Arnold Schoenberg",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.009
+      }
+     ],
+     "evidence": "Zwei Klavierstücke (Schoenberg): 33, also known as Zwei Stücke, or in English as Two Piano Pieces and Two Pieces, is a composition for piano by Austrian composer Arnold Schoenberg.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 947.7022720002424,
+      "compress": 1902.3061640000378,
+      "total": 17647.767599000872
+     }
+    },
+    {
+     "i": 108,
+     "prop": "sport",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Football (soccer)",
+     "text": "Football (soccer)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Football (soccer)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Football (soccer)",
+       "correct": true,
+       "supported": false,
+       "reason": "not in memory",
+       "confidence": -0.441
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2018.7581370009866,
+      "compress": 0.8083400007308228,
+      "total": 5595.647145000839
+     }
+    },
+    {
+     "i": 109,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Jane (2017 film): Brett Morgen, Bryan Burk, Tony Gerber, James Smith; Jane (1915 film): Oliver Morosco",
+     "text": "Jane (2017 film): Brett Morgen, Bryan Burk, Tony Gerber, James Smith; Jane (1915 film): Oliver Morosco",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Jane (2017 film): Brett Morgen, Bryan Burk, Tony Gerber, James Smith; Jane (1915 film): Oliver Morosco",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Jane (2017 film): Produced by: Brett Morgen, Bryan Burk, Tony Gerber, James Smith | Jane (1915 film): Produced by: Oliver Morosco",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 4479.609822999919,
+      "total": 4480.013630998656
+     }
+    },
+    {
+     "i": 110,
+     "prop": "producer",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "The producer of Show Me was Steven Spielberg",
+     "text": "The producer of Show Me was Steven Spielberg",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "The producer of Show Me was Steven Spielberg.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "The producer of Show Me was Steven Spielberg.",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -1.547
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 2.6053310011775466,
+      "compress": 0.0015529985830653459,
+      "total": 2.9022100006841356
+     }
+    },
+    {
+     "i": 111,
+     "prop": "composer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Carousel (musical): Richard Rodgers; Carousel (ballet): Richard Rodgers, arranged by William David Brohn",
+     "text": "Carousel (musical): Richard Rodgers; Carousel (ballet): Richard Rodgers, arranged by William David Brohn",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Carousel (musical): Richard Rodgers; Carousel (ballet): Richard Rodgers, arranged by William David Brohn",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Carousel (musical): Music: Richard Rodgers | Carousel (ballet): Music: Richard Rodgers, arranged by William David Brohn",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2296.4300620005815,
+      "total": 2296.83649800063
+     }
+    },
+    {
+     "i": 112,
+     "prop": "mother",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Queen Hethum II, King of Armenia",
+     "text": "Queen Hethum II, King of Armenia",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Queen Hethum II, King of Armenia.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Queen Hethum II, King of Armenia.",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -1.331
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 4914.799502001188,
+      "compress": 0.0016819994925754145,
+      "total": 4915.31594800108
+     }
+    },
+    {
+     "i": 113,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Gabriel Okara",
+     "text": "Gabriel Okara (The Voice (novel))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Gabriel Okara",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Voice (novel): Author: Gabriel Okara",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1063.389264001671,
+      "total": 1063.8326610005606
+     }
+    },
+    {
+     "i": 114,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Stan Winston, Mick Garris",
+     "text": "Stan Winston, Mick Garris",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Stan Winston, Mick Garris",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Michael Jackson's Ghosts: Screenplay by: Stan Winston, Mick Garris",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2160.315426001034,
+      "total": 2160.6811010005913
+     }
+    },
+    {
+     "i": 115,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Claude Zidi",
+     "text": "Claude Zidi (La Zizanie (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Claude Zidi",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "La Zizanie (film): Directed by: Claude Zidi",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2035.3952940004092,
+      "total": 2035.7844360005402
+     }
+    },
+    {
+     "i": 116,
+     "prop": "screenwriter",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "The St. Valentine's Day Massacre was written by John Cassavetes",
+     "text": "The St. Valentine's Day Massacre was written by John Cassavetes",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "The St. Valentine's Day Massacre was written by John Cassavetes.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "The St. Valentine's Day Massacre was written by John Cassavetes.",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -2.763
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 379.08392700046534,
+      "compress": 0.0018280006770510226,
+      "total": 379.5716500007984
+     }
+    },
+    {
+     "i": 117,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Takamatsu Castle",
+     "text": "Takamatsu Castle",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Takamatsu Castle",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Takamatsu Domain: Capital: Takamatsu Castle",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2211.4244690001215,
+      "total": 2211.8052859987074
+     }
+    },
+    {
+     "i": 118,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Patrick White",
+     "text": "Patrick White",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Patrick White",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Vivisector: Author: Patrick White",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1736.1847020001733,
+      "total": 1736.4192789991648
+     }
+    },
+    {
+     "i": 119,
+     "prop": "composer",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Gian Carlo Menotti",
+     "text": "Gian Carlo Menotti (The Hero (opera))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Gian Carlo Menotti",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Gian Carlo Menotti",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.0
+      }
+     ],
+     "evidence": "The Hero (opera): The Hero is a three-act opera by Italian-American composer Gian Carlo Menotti commissioned by the Opera Company of Philadelphia, to celebrate the United States Bicentennial.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1272.3223699995287,
+      "compress": 1839.5929769994837,
+      "total": 20720.08989099959
+     }
+    },
+    {
+     "i": 120,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Janet Evanovich",
+     "text": "Janet Evanovich",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Janet Evanovich",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Plum Spooky: Author: Janet Evanovich",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2127.359260999583,
+      "total": 2127.5503509987175
+     }
+    },
+    {
+     "i": 121,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Hardcore punk, punk rock",
+     "text": "Hardcore punk, punk rock",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Hardcore punk, punk rock",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Freeze: Genres: Hardcore punk, punk rock",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2040.7353900009184,
+      "total": 2040.9545430011349
+     }
+    },
+    {
+     "i": 122,
+     "prop": "father",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Kim Jong-nam (father), Ri Hye-kyong (mother)",
+     "text": "Kim Jong-nam (father), Ri Hye-kyong (mother)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Kim Jong-nam (father), Ri Hye-kyong (mother)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Kim Han-sol: Parents: Kim Jong-nam (father), Ri Hye-kyong (mother)",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 338.310705999902,
+      "total": 338.54896100092446
+     }
+    },
+    {
+     "i": 123,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Leaving (EP): Skrillex; Leaving (2009 film): Stéphane Parthenay, Michel Seydoux, Fabienne Vonier",
+     "text": "Leaving (EP): Skrillex; Leaving (2009 film): Stéphane Parthenay, Michel Seydoux, Fabienne Vonier",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Leaving (EP): Skrillex; Leaving (2009 film): Stéphane Parthenay, Michel Seydoux, Fabienne Vonier",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Leaving (EP): Producer: Skrillex | Leaving (2009 film): Produced by: Stéphane Parthenay, Michel Seydoux, Fabienne Vonier",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2360.2676020000217,
+      "total": 2360.713547001069
+     }
+    },
+    {
+     "i": 124,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Robert Zemeckis, Bob Gale",
+     "text": "Robert Zemeckis, Bob Gale (1941 (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Robert Zemeckis, Bob Gale",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "1941 (film): Screenplay by: Robert Zemeckis, Bob Gale",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 6587.650178000331,
+      "total": 6588.068601999112
+     }
+    },
+    {
+     "i": 125,
+     "prop": "director",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Duane Clark",
+     "text": "Duane Clark",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Duane Clark",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Duane Clark",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.0
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 3.5752769999817247,
+      "compress": 2392.2474209994107,
+      "total": 14684.124818000782
+     }
+    },
+    {
+     "i": 126,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Francine Rivers",
+     "text": "Francine Rivers",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Francine Rivers",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Her Mother's Hope: Author: Francine Rivers",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2458.407656999043,
+      "total": 2458.694488999754
+     }
+    },
+    {
+     "i": 127,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Brand New (band): Alternative rock, emo, indie rock , post-hardcore, pop-punk (early); Brand New (Ben Rector song): Pop rock",
+     "text": "Brand New (band): Alternative rock, emo, indie rock , post-hardcore, pop-punk (early); Brand New (Ben Rector song): Pop rock",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Brand New (band): Alternative rock, emo, indie rock , post-hardcore, pop-punk (early); Brand New (Ben Rector song): Pop rock",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Brand New (band): Genres: Alternative rock, emo, indie rock , post-hardcore, pop-punk (early) | Brand New (Ben Rector song): Genre: Pop rock",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2304.9074379996455,
+      "total": 2305.1768860004813
+     }
+    },
+    {
+     "i": 128,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Banipal and Benhur Ablakhad",
+     "text": "Banipal and Benhur Ablakhad (Dig (2022 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Banipal and Benhur Ablakhad",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Dig (2022 film): Written by: Banipal and Benhur Ablakhad",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2167.4601240010816,
+      "total": 2167.91178800122
+     }
+    },
+    {
+     "i": 129,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Trevor Horn",
+     "text": "Trevor Horn (The Beginning (Seal song))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Trevor Horn",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Beginning (Seal song): Producer: Trevor Horn",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 859.0866729991831,
+      "total": 859.5749500000238
+     }
+    },
+    {
+     "i": 130,
+     "prop": "sport",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Football (soccer)",
+     "text": "Football (soccer)",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Football (soccer)",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Football (soccer)",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.553
+      }
+     ],
+     "evidence": "Maximiliano Cuberas: Maximiliano Pablo Cuberas Escalas is an Argentine football coach and former player who played as a centre-back.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2326.775663001172,
+      "compress": 1177.968976999182,
+      "total": 6823.876604001271
+     }
+    },
+    {
+     "i": 131,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Players (2025 film): Sarah Galea-Davis; The Players (2020 film): Filippo Bologna, Stefano Mordini",
+     "text": "The Players (2025 film): Sarah Galea-Davis; The Players (2020 film): Filippo Bologna, Stefano Mordini",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Players (2025 film): Sarah Galea-Davis; The Players (2020 film): Filippo Bologna, Stefano Mordini",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Players (2025 film): Written by: Sarah Galea-Davis | The Players (2020 film): Written by: Filippo Bologna, Stefano Mordini",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2535.3840780007886,
+      "total": 2536.1681610011146
+     }
+    },
+    {
+     "i": 132,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Maniowy",
+     "text": "Maniowy",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Maniowy",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Gmina Czorsztyn: Seat: Maniowy",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2607.758541998919,
+      "total": 2608.2756539999536
+     }
+    },
+    {
+     "i": 133,
+     "prop": "mother",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Julia Barr",
+     "text": "Julia Barr",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Julia Barr",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Allison Hirschlag: Parent: Julia Barr",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1672.1936490012013,
+      "total": 1672.4052070003381
+     }
+    },
+    {
+     "i": 134,
+     "prop": "composer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Hans Zimmer",
+     "text": "Hans Zimmer (The Last Days)",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Hans Zimmer",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Last Days: Music by: Hans Zimmer",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 3727.0530089990643,
+      "total": 3727.6172549991315
+     }
+    },
+    {
+     "i": 135,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Ram Gopal Varma",
+     "text": "Ram Gopal Varma (Mast (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Ram Gopal Varma",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Mast (film): Produced by: Ram Gopal Varma",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2251.6895919998205,
+      "total": 2252.164654999433
+     }
+    },
+    {
+     "i": 136,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Sofia",
+     "text": "Sofia",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Sofia",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Kingdom of Bulgaria: Capital and largest city: Sofia",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1167.6497230000678,
+      "total": 1168.5012620000634
+     }
+    },
+    {
+     "i": 137,
+     "prop": "mother",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Princess Victoria of Saxe-Coburg-Saalfeld",
+     "text": "Princess Victoria of Saxe-Coburg-Saalfeld (Queen Victoria)",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Princess Victoria of Saxe-Coburg-Saalfeld",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Queen Victoria: Mother: Princess Victoria of Saxe-Coburg-Saalfeld",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2210.389648000273,
+      "total": 2210.7105670002056
+     }
+    },
+    {
+     "i": 138,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "C.J. Holland",
+     "text": "C.J. Holland",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "C.J. Holland",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Hide and Q: Story by: C.J. Holland",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 171.4292859996931,
+      "total": 171.73539999930654
+     }
+    },
+    {
+     "i": 139,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Robert B. Parker",
+     "text": "Robert B. Parker (Chance (Parker novel))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Robert B. Parker",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Chance (Parker novel): Author: Robert B. Parker",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2165.47031600021,
+      "total": 2165.762063001239
+     }
+    },
+    {
+     "i": 140,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Action",
+     "text": "Action",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Action",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Action",
+       "correct": true,
+       "supported": false,
+       "reason": "not in memory",
+       "confidence": -1.484
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2230.1207009986683,
+      "compress": 2039.9762960005319,
+      "total": 7233.459573999426
+     }
+    },
+    {
+     "i": 141,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Alternative rock, post-grunge",
+     "text": "Alternative rock, post-grunge (These Days (Foo Fighters song))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Alternative rock, post-grunge",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "These Days (Foo Fighters song): Genre: Alternative rock, post-grunge",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2476.234526000553,
+      "total": 2476.582277000489
+     }
+    },
+    {
+     "i": 142,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "pop music",
+     "text": "pop music (SIG (band))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "pop music",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "SIG (band): Genre: pop music",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2198.13221000004,
+      "total": 2198.3351380004024
+     }
+    },
+    {
+     "i": 143,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The End (2024 film): Joshua Oppenheimer, Rasmus Heisterberg; The End (1978 film): Jerry Belson",
+     "text": "The End (2024 film): Joshua Oppenheimer, Rasmus Heisterberg; The End (1978 film): Jerry Belson",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The End (2024 film): Joshua Oppenheimer, Rasmus Heisterberg; The End (1978 film): Jerry Belson",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The End (2024 film): Written by: Joshua Oppenheimer, Rasmus Heisterberg | The End (1978 film): Written by: Jerry Belson",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 7726.99263100003,
+      "total": 7727.72733200145
+     }
+    },
+    {
+     "i": 144,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Saint (novel): Burl Barer, based upon the character by Leslie Charteris, and the screenplay by Jonathan Hensleigh and Wesley Strick; The Saint (radio program): Louis Vittes, Dick Powell",
+     "text": "The Saint (novel): Burl Barer, based upon the character by Leslie Charteris, and the screenplay by Jonathan Hensleigh and Wesley Strick; The Saint (radio program): Louis Vittes, Dick Powell",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "The Saint (novel): Burl Barer, based upon the character by Leslie Charteris, and the screenplay by Jonathan Hensleigh and Wesley Strick; The Saint (radio program): Louis Vittes, Dick Powell",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Saint (novel): Author: Burl Barer, based upon the character by Leslie Charteris, and the screenplay by Jonathan Hensleigh and Wesley Strick | The Saint (radio program): Written by: Louis Vittes, Dick Powell",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1318.3966779997718,
+      "total": 1318.827582999802
+     }
+    },
+    {
+     "i": 145,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Alain Sarde, Philippe Setbon, Jean-Luc Godard",
+     "text": "Alain Sarde, Philippe Setbon, Jean-Luc Godard",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Alain Sarde, Philippe Setbon, Jean-Luc Godard",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Détective: Written by: Alain Sarde, Philippe Setbon, Jean-Luc Godard",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2094.94543800065,
+      "total": 2095.2881640005216
+     }
+    },
+    {
+     "i": 146,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Fantasy",
+     "text": "Fantasy",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Fantasy",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Fantasy",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.012
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2151.730077999673,
+      "compress": 1711.1101029986457,
+      "total": 12454.739978998987
+     }
+    },
+    {
+     "i": 147,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Luc Besson, Robert Mark Kamen",
+     "text": "Luc Besson, Robert Mark Kamen (Taken (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Luc Besson, Robert Mark Kamen",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Taken (film): Written by: Luc Besson, Robert Mark Kamen",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2841.265717999704,
+      "total": 2841.8912349989114
+     }
+    },
+    {
+     "i": 148,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Castle (1997 Austrian film): Michael Haneke; The Castle (1994 film): Aleksei Balabanov",
+     "text": "The Castle (1997 Austrian film): Michael Haneke; The Castle (1994 film): Aleksei Balabanov",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Castle (1997 Austrian film): Michael Haneke; The Castle (1994 film): Aleksei Balabanov",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Castle (1997 Austrian film): Directed by: Michael Haneke | The Castle (1994 film): Directed by: Aleksei Balabanov",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1471.0917880001944,
+      "total": 1471.4955020008347
+     }
+    },
+    {
+     "i": 149,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Walter Reisch",
+     "text": "Walter Reisch (Episode (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Walter Reisch",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Episode (film): Directed by: Walter Reisch",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 4627.797894998366,
+      "total": 4628.132715999527
+     }
+    },
+    {
+     "i": 150,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Blackened death metal, death metal",
+     "text": "Blackened death metal, death metal (Hate (band))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Blackened death metal, death metal",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Hate (band): Genres: Blackened death metal, death metal",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 6789.562718000525,
+      "total": 6790.099641000779
+     }
+    },
+    {
+     "i": 151,
+     "prop": "producer",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Amitabh Bachchan",
+     "text": "Amitabh Bachchan",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Amitabh Bachchan",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Amitabh Bachchan",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.178
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1861.9879090001632,
+      "compress": 2110.2800109983946,
+      "total": 6800.278217000596
+     }
+    },
+    {
+     "i": 152,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "The Test is a Young adult, survival, and Dystopian genre novel",
+     "text": "The Test is a Young adult, survival, and Dystopian genre novel",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "The Test is a Young adult, survival, and Dystopian genre novel.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "The Test is a Young adult, survival, and Dystopian genre novel.",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.137
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 82.0648999997502,
+      "compress": 1889.5895939986076,
+      "total": 32844.15137200085
+     }
+    },
+    {
+     "i": 153,
+     "prop": "country",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Sweden",
+     "text": "Sweden",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Sweden",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Sweden",
+       "correct": true,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -0.304
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 4798.268622000251,
+      "compress": 0.0019760009308811277,
+      "total": 4802.733514001375
+     }
+    },
+    {
+     "i": 154,
+     "prop": "mother",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Hethum II",
+     "text": "Hethum II",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Hethum II",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Hethum II",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.166
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1345.3741460016317,
+      "compress": 1931.0489439994853,
+      "total": 18073.036007001065
+     }
+    },
+    {
+     "i": 155,
+     "prop": "country",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "United States",
+     "text": "United States",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "United States",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "United States",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.305
+      }
+     ],
+     "evidence": "American Booksellers Association: The American Booksellers Association is a non-profit trade association founded in 1900 that promotes independent bookstores in the United States.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2256.332390001262,
+      "compress": 1858.3490950004489,
+      "total": 13225.834176000717
+     }
+    },
+    {
+     "i": 156,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Anant Singh, Brian Cox, Michael Leahy, Joel Soisson",
+     "text": "Anant Singh, Brian Cox, Michael Leahy, Joel Soisson (Pulse (2006 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Anant Singh, Brian Cox, Michael Leahy, Joel Soisson",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Pulse (2006 film): Produced by: Anant Singh, Brian Cox, Michael Leahy, Joel Soisson",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2819.265775000531,
+      "total": 2819.6911920003913
+     }
+    },
+    {
+     "i": 157,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Saw II: Leigh Whannell, Darren Lynn Bousman; Saw IV: Patrick Melton, Marcus Dunstan",
+     "text": "Saw II: Leigh Whannell, Darren Lynn Bousman; Saw IV: Patrick Melton, Marcus Dunstan",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Saw II: Leigh Whannell, Darren Lynn Bousman; Saw IV: Patrick Melton, Marcus Dunstan",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Saw II: Written by: Leigh Whannell, Darren Lynn Bousman | Saw IV: Screenplay by: Patrick Melton, Marcus Dunstan",
+     "gold_shown": true,
+     "looked_up": false,
+     "ms": {
+      "recall": 4.513932999543613,
+      "total": 5.351243999029975
+     }
+    },
+    {
+     "i": 158,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Philip Rosenthal",
+     "text": "Philip Rosenthal (Italy (Everybody Loves Raymond))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Philip Rosenthal",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Italy (Everybody Loves Raymond): Written by: Philip Rosenthal",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2820.5014529994514,
+      "total": 2821.1910629997874
+     }
+    },
+    {
+     "i": 159,
+     "prop": "capital",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Tallinn",
+     "text": "Tallinn",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Tallinn",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Estonia: Capital and largest city: Tallinn",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 3257.533150001109,
+      "total": 3258.706319000339
+     }
+    },
+    {
+     "i": 160,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Saul Bellow",
+     "text": "Saul Bellow",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Saul Bellow",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "A Theft: Author: Saul Bellow",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2113.850869998714,
+      "total": 2114.119623998704
+     }
+    },
+    {
+     "i": 161,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Jean-Luc Godard",
+     "text": "Jean-Luc Godard (Alphaville (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Jean-Luc Godard",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Alphaville (film): Directed by: Jean-Luc Godard",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2483.283251998728,
+      "total": 2483.637084000293
+     }
+    },
+    {
+     "i": 162,
+     "prop": "genre",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Black metal",
+     "text": "Black metal",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Black metal",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Black metal",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.417
+      }
+     ],
+     "evidence": "Satanic Slaughter: Satanic Slaughter was a Swedish black metal band.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 35.9128519994556,
+      "compress": 0.2793889998429222,
+      "total": 3262.0839169994724
+     }
+    },
+    {
+     "i": 163,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Company (Littell novel): Robert Littell; The Company (Ehrlichman novel): John Ehrlichman",
+     "text": "The Company (Littell novel): Robert Littell; The Company (Ehrlichman novel): John Ehrlichman",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "The Company (Littell novel): Robert Littell; The Company (Ehrlichman novel): John Ehrlichman",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Company (Littell novel): Author: Robert Littell | The Company (Ehrlichman novel): Author: John Ehrlichman",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 4694.137722999585,
+      "total": 4694.632622999052
+     }
+    },
+    {
+     "i": 164,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Stranger (2010 film): Quinn Scott; The Stranger (1946 film): Anthony Veiller , John Huston , (uncredited), Orson Welles, (uncredited)",
+     "text": "The Stranger (2010 film): Quinn Scott; The Stranger (1946 film): Anthony Veiller , John Huston , (uncredited), Orson Welles, (uncredited)",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Stranger (2010 film): Quinn Scott; The Stranger (1946 film): Anthony Veiller , John Huston , (uncredited), Orson Welles, (uncredited)",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Stranger (2010 film): Written by: Quinn Scott | The Stranger (1946 film): Written by: Anthony Veiller , John Huston , (uncredited), Orson Welles, (uncredited)",
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 5.064918999778456,
+      "total": 5.983971999739879
+     }
+    },
+    {
+     "i": 165,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Impact (1963 film): Peter Maxwell; Impact (1949 film): Arthur Lubin",
+     "text": "Impact (1963 film): Peter Maxwell; Impact (1949 film): Arthur Lubin",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Impact (1963 film): Peter Maxwell; Impact (1949 film): Arthur Lubin",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Impact (1963 film): Directed by: Peter Maxwell | Impact (1949 film): Directed by: Arthur Lubin",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1750.966564999544,
+      "total": 1751.3612999991892
+     }
+    },
+    {
+     "i": 166,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Boney Kapoor",
+     "text": "Boney Kapoor",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Boney Kapoor",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "No Entry: Produced by: Boney Kapoor",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1223.8713210008427,
+      "total": 1224.142147000748
+     }
+    },
+    {
+     "i": 167,
+     "prop": "religion",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Christianity",
+     "text": "Christianity",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Christianity",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Christianity",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -0.282
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2223.173460999533,
+      "compress": 0.0019649996829684824,
+      "total": 2223.5365609994915
+     }
+    },
+    {
+     "i": 168,
+     "prop": "author",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Mal Peet",
+     "text": "Mal Peet",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Mal Peet",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Mal Peet",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.24
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 889.0642279984604,
+      "compress": 2104.6272489984403,
+      "total": 14839.915439999459
+     }
+    },
+    {
+     "i": 169,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Tomorrow (2018 film): Stuart Brennan, Sebastian Street; Tomorrow (1972 film): Story:, William Faulkner, Screenplay & Play:, Horton Foote",
+     "text": "Tomorrow (2018 film): Stuart Brennan, Sebastian Street; Tomorrow (1972 film): Story:, William Faulkner, Screenplay & Play:, Horton Foote",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Tomorrow (2018 film): Stuart Brennan, Sebastian Street; Tomorrow (1972 film): Story:, William Faulkner, Screenplay & Play:, Horton Foote",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Tomorrow (2018 film): Written by: Stuart Brennan, Sebastian Street | Tomorrow (1972 film): Written by: Story:, William Faulkner, Screenplay & Play:, Horton Foote",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2728.455226000733,
+      "total": 2729.001359999529
+     }
+    },
+    {
+     "i": 170,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Amanda McBaine, Jesse Moss, Simon Chinn, Jonathan Chinn, Will Cohen",
+     "text": "Amanda McBaine, Jesse Moss, Simon Chinn, Jonathan Chinn, Will Cohen (The Mission (2023 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Amanda McBaine, Jesse Moss, Simon Chinn, Jonathan Chinn, Will Cohen",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Mission (2023 film): Produced by: Amanda McBaine, Jesse Moss, Simon Chinn, Jonathan Chinn, Will Cohen",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 641.5502959989681,
+      "total": 642.1028779986955
+     }
+    },
+    {
+     "i": 171,
+     "prop": "place of birth",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Ghent",
+     "text": "Ghent",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Ghent",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Ghent",
+       "correct": false,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.11
+      }
+     ],
+     "evidence": "Maarten van Severen: Maarten Van Severen started out studying architecture in Ghent, designing furniture from 1986 onward.",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 38.5742759990535,
+      "compress": 253.48265399952652,
+      "total": 12124.06176100012
+     }
+    },
+    {
+     "i": 172,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Pierre Tchernia",
+     "text": "Pierre Tchernia",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Pierre Tchernia",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Holes: Directed by: Pierre Tchernia",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 950.3166579997924,
+      "total": 950.5154540001968
+     }
+    },
+    {
+     "i": 173,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Paul Andrew Williams",
+     "text": "Paul Andrew Williams",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Paul Andrew Williams",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Song for Marion: Directed by: Paul Andrew Williams",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2107.560881000609,
+      "total": 2107.8045459998975
+     }
+    },
+    {
+     "i": 174,
+     "prop": "occupation",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "German actress",
+     "text": "German actress",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "German actress.",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "German actress.",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.592
+      }
+     ],
+     "evidence": "Charlotte von Hagn: Charlotte von Hagn was a German actress of the Biedermeier-era.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 35.48063100060972,
+      "compress": 0.2631600000313483,
+      "total": 5921.719070000108
+     }
+    },
+    {
+     "i": 175,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "John Meredyth Lucas",
+     "text": "John Meredyth Lucas",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "John Meredyth Lucas",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Elaan of Troyius: Written by: John Meredyth Lucas",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1554.081854999822,
+      "total": 1554.5452469996235
+     }
+    },
+    {
+     "i": 176,
+     "prop": "genre",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Take That: Pop, pop rock, dance-pop; Take That (Wiley song): Electro house",
+     "text": "Take That: Pop, pop rock, dance-pop; Take That (Wiley song): Electro house",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Take That: Pop, pop rock, dance-pop; Take That (Wiley song): Electro house",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Take That: Genres: Pop, pop rock, dance-pop | Take That (Wiley song): Genre: Electro house",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 1980.1445430002786,
+      "total": 1980.4782829996839
+     }
+    },
+    {
+     "i": 177,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Matthew Weiner",
+     "text": "Matthew Weiner",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Matthew Weiner",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Are You Here: Written by: Matthew Weiner",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2326.9777030000114,
+      "total": 2327.331442000286
+     }
+    },
+    {
+     "i": 178,
+     "prop": "father",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "The father of James I of Aragon is his mother, Isabella of France",
+     "text": "The father of James I of Aragon is his mother, Isabella of France",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "The father of James I of Aragon is his mother, Isabella of France.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "The father of James I of Aragon is his mother, Isabella of France.",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -0.829
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 3.1487920005019987,
+      "compress": 0.0014300003385869786,
+      "total": 3.493823000098928
+     }
+    },
+    {
+     "i": 179,
+     "prop": "mother",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Zeus and Leto",
+     "text": "Zeus and Leto (Apollo)",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Zeus and Leto",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Apollo: Parents: Zeus and Leto",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 532.796995001263,
+      "total": 533.191311000337
+     }
+    },
+    {
+     "i": 180,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Hard Time (film): David S. Cass Sr., Steve Wesley; Hard Time (comics): Steve Gerber , Mary Skrenes",
+     "text": "Hard Time (film): David S. Cass Sr., Steve Wesley; Hard Time (comics): Steve Gerber , Mary Skrenes",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Hard Time (film): David S. Cass Sr., Steve Wesley; Hard Time (comics): Steve Gerber , Mary Skrenes",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Hard Time (film): Written by: David S. Cass Sr., Steve Wesley | Hard Time (comics): Written by: Steve Gerber , Mary Skrenes",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2023.9640260006126,
+      "total": 2024.7319810005138
+     }
+    },
+    {
+     "i": 181,
+     "prop": "capital of",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Hamilton is the capital of Ontario, Canada",
+     "text": "Hamilton is the capital of Ontario, Canada",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Hamilton is the capital of Ontario, Canada.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Hamilton is the capital of Ontario, Canada.",
+       "correct": false,
+       "supported": false,
+       "reason": "relation not stated",
+       "confidence": -0.168
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 1381.1576459993375,
+      "compress": 2225.9050789998582,
+      "total": 13368.671772999733
+     }
+    },
+    {
+     "i": 182,
+     "prop": "composer",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "John Philip Sousa",
+     "text": "John Philip Sousa (The Washington Post (march))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "John Philip Sousa",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "John Philip Sousa",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.085
+      }
+     ],
+     "evidence": "The Washington Post (march): \"The Washington Post\" is a march composed by John Philip Sousa in 1889.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2433.9307520003786,
+      "compress": 1876.627620000363,
+      "total": 9710.959290001483
+     }
+    },
+    {
+     "i": 183,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "The Show (2020 film): Mitch Jenkins; The Show (2017 film): Giancarlo Esposito",
+     "text": "The Show (2020 film): Mitch Jenkins; The Show (2017 film): Giancarlo Esposito",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "The Show (2020 film): Mitch Jenkins; The Show (2017 film): Giancarlo Esposito",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Show (2020 film): Directed by: Mitch Jenkins | The Show (2017 film): Directed by: Giancarlo Esposito",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 5086.7322940011945,
+      "total": 5087.572268001168
+     }
+    },
+    {
+     "i": 184,
+     "prop": "screenwriter",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "John Steinbeck",
+     "text": "John Steinbeck",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "John Steinbeck",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "John Steinbeck",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -2.147
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": false,
+     "ms": {
+      "recall": 5.286830999466474,
+      "compress": 0.0018899991118814796,
+      "total": 5.654222999510239
+     }
+    },
+    {
+     "i": 185,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Katie Roiphe",
+     "text": "Katie Roiphe (The Morning After (book))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Katie Roiphe",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Morning After (book): Author: Katie Roiphe",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2292.307357000027,
+      "total": 2292.668493999372
+     }
+    },
+    {
+     "i": 186,
+     "prop": "sport",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Boxing",
+     "text": "Boxing",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Boxing",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Boxing",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.429
+      }
+     ],
+     "evidence": "Katie Taylor: Credited with raising the profile of women's boxing in Ireland and around the world, Taylor has been described as one of Ireland's greatest ever athletes and is considered by many to be",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2468.3154209997156,
+      "compress": 526.4048249991902,
+      "total": 11993.70384499889
+     }
+    },
+    {
+     "i": 187,
+     "prop": "genre",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Science fiction",
+     "text": "Science fiction",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Science fiction.",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Science fiction.",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -0.749
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2646.410604000266,
+      "compress": 0.00246299896389246,
+      "total": 2648.2705710004666
+     }
+    },
+    {
+     "i": 188,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Love You (film): John Derek; Love You (TV series): Ming-chang Chen",
+     "text": "Love You (film): John Derek; Love You (TV series): Ming-chang Chen",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Love You (film): John Derek; Love You (TV series): Ming-chang Chen",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Love You (film): Directed by: John Derek | Love You (TV series): Directed by: Ming-chang Chen",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2489.6955200001685,
+      "total": 2489.989837999019
+     }
+    },
+    {
+     "i": 189,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Thursday (film): Skip Woods; A Thursday: Behzad Khambata",
+     "text": "Thursday (film): Skip Woods; A Thursday: Behzad Khambata",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Thursday (film): Skip Woods; A Thursday: Behzad Khambata",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Thursday (film): Written by: Skip Woods | A Thursday: Written by: Behzad Khambata",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2693.102782001006,
+      "total": 2693.549822000932
+     }
+    },
+    {
+     "i": 190,
+     "prop": "producer",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Ivor Novello, Miles Mander",
+     "text": "Ivor Novello, Miles Mander",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Ivor Novello, Miles Mander",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Man Without Desire: Produced by: Ivor Novello, Miles Mander",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 447.3576719992707,
+      "total": 447.6688579998154
+     }
+    },
+    {
+     "i": 191,
+     "prop": "religion",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Roman Catholic",
+     "text": "Roman Catholic",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Roman Catholic",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Giacomo Biffi: Denomination: Roman Catholic",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 895.3033190009592,
+      "total": 895.580989001246
+     }
+    },
+    {
+     "i": 192,
+     "prop": "country",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Finland",
+     "text": "Finland",
+     "ambiguous": false,
+     "correct": true,
+     "first_answer": "Finland",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Finland",
+       "correct": true,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.012
+      }
+     ],
+     "evidence": "Hernesaari Heliport: Hernesaari Heliport is located at Hernesaari, in Helsinki, Finland.",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2083.1168389995582,
+      "compress": 1972.9344799998216,
+      "total": 8200.320858999476
+     }
+    },
+    {
+     "i": 193,
+     "prop": "author",
+     "status": "verified",
+     "by": "memory",
+     "claim": "José Luis Duró, José Antonio Nieves Conde, José María Pérez Lozano, Manuel Sebares",
+     "text": "José Luis Duró, José Antonio Nieves Conde, José María Pérez Lozano, Manuel Sebares (The Tenant (1957 film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "José Luis Duró, José Antonio Nieves Conde, José María Pérez Lozano, Manuel Sebares",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Tenant (1957 film): Written by: José Luis Duró, José Antonio Nieves Conde, José María Pérez Lozano, Manuel Sebares",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2173.9067479993537,
+      "total": 2174.477433998618
+     }
+    },
+    {
+     "i": 194,
+     "prop": "father",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Abu Talib ibn Abd al-Muttalib",
+     "text": "Abu Talib ibn Abd al-Muttalib (Ali)",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Abu Talib ibn Abd al-Muttalib",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Ali: Father: Abu Talib ibn Abd al-Muttalib",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 3913.5865609987377,
+      "total": 3914.6601389984426
+     }
+    },
+    {
+     "i": 195,
+     "prop": "director",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Andrew Bujalski",
+     "text": "Andrew Bujalski (Results (film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Andrew Bujalski",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "Results (film): Directed by: Andrew Bujalski",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 2302.864136001517,
+      "total": 2303.151815000092
+     }
+    },
+    {
+     "i": 196,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Liana Marabini",
+     "text": "Liana Marabini (Mothers (2017 Italian film))",
+     "ambiguous": true,
+     "correct": false,
+     "first_answer": "Liana Marabini",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Liana Marabini",
+       "correct": false,
+       "supported": true,
+       "reason": "supported",
+       "confidence": -0.013
+      }
+     ],
+     "evidence": "Mothers (2017 Italian film): Mothers is an Italian film written and directed by Liana Marabini.",
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2195.636304999425,
+      "compress": 2043.558897999901,
+      "total": 8828.245929998957
+     }
+    },
+    {
+     "i": 197,
+     "prop": "screenwriter",
+     "status": "verified",
+     "by": "memory",
+     "claim": "Michael Tolkin",
+     "text": "Michael Tolkin (The Player (1992 film))",
+     "ambiguous": true,
+     "correct": true,
+     "first_answer": "Michael Tolkin",
+     "first_correct": true,
+     "first_declined": false,
+     "attempts": [],
+     "evidence": "The Player (1992 film): Screenplay by: Michael Tolkin",
+     "gold_shown": true,
+     "looked_up": true,
+     "ms": {
+      "recall": 4798.292391998984,
+      "total": 4798.971911999615
+     }
+    },
+    {
+     "i": 198,
+     "prop": "producer",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Steven Spielberg",
+     "text": "Steven Spielberg",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Steven Spielberg",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Steven Spielberg",
+       "correct": false,
+       "supported": false,
+       "reason": "no evidence",
+       "confidence": -1.375
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2579.8183269998844,
+      "compress": 0.0018430000636726618,
+      "total": 2580.1230870001746
+     }
+    },
+    {
+     "i": 199,
+     "prop": "author",
+     "status": "unverified",
+     "by": "qwen2.5:0.5b",
+     "claim": "Paolo Bacigalupi",
+     "text": "Paolo Bacigalupi",
+     "ambiguous": false,
+     "correct": false,
+     "first_answer": "Paolo Bacigalupi",
+     "first_correct": false,
+     "first_declined": false,
+     "attempts": [
+      {
+       "by": "qwen2.5:0.5b",
+       "answer": "Paolo Bacigalupi",
+       "correct": false,
+       "supported": false,
+       "reason": "another subject",
+       "confidence": -0.052
+      }
+     ],
+     "evidence": null,
+     "gold_shown": false,
+     "looked_up": true,
+     "ms": {
+      "recall": 2228.898504999961,
+      "compress": 1810.9418809999625,
+      "total": 26832.039426999472
+     }
+    }
+   ]
+  }
+ }
+}
