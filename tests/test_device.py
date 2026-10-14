@@ -90,7 +90,8 @@ def test_the_read_plan_adapts_to_the_device():
     b = plan(slow, notes=20_000, dim=384, limits=Limits(latency_target_ms=2500, reserve_ram_mb=768))
     assert a.search == "exact" and a.token_budget == 512
     assert b.token_budget < a.token_budget and b.expected_ms <= 2500 + 1e-6 or b.token_budget == 64
-    assert plan(fast, notes=250_000, dim=384).search == "index"
+    assert plan(fast, notes=250_000, dim=384).search == "exact"  # in RAM, exact is as fast at equal recall
+    assert plan(fast, notes=1_500_000, dim=384).search == "index"
     assert plan(slow, notes=80_000, dim=768).search == "index"  # 234 MB of vectors would crowd its RAM
     assert b.max_notes_on_disk < a.max_notes_on_disk
 
@@ -141,5 +142,5 @@ def test_the_index_switches_on_sooner_on_a_device_with_little_spare_ram():
 
     roomy = DeviceProfile(64_000, 48_000, 16, 0.1, 1e6, 5e5, "/")
     tight = DeviceProfile(4_000, 1_200, 2, 0.1, 1e5, 2e3, "/")
-    assert index_threshold(roomy, 384) == 100_000
+    assert index_threshold(roomy, 384) == 1_000_000
     assert 20_000 <= index_threshold(tight, 768) < 100_000

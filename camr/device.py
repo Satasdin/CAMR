@@ -258,7 +258,7 @@ class ReadPlan:
 
 
 def plan(profile: DeviceProfile, *, notes: int, dim: int, limits: Limits | None = None, answer_tokens: int = 16,
-         bytes_per_note: float = 4200.0, index_min_notes: int = 100_000, budgets=(512, 256, 128, 64)) -> ReadPlan:
+         bytes_per_note: float = 4200.0, index_min_notes: int = 1_000_000, budgets=(512, 256, 128, 64)) -> ReadPlan:
     """How to read memory on this device: exact search or the index, and how much to read, to meet the latency
     target. Needs a calibrated profile (search and generation speeds); falls back to safe defaults without one."""
     lim = limits or Limits()
@@ -266,12 +266,11 @@ def plan(profile: DeviceProfile, *, notes: int, dim: int, limits: Limits | None 
     exact_ram = notes * dim * 4 / MB
     search_ms = _search_ms(profile, notes)
     use_index = notes >= index_min_notes or exact_ram > 0.25 * max(1.0, profile.ram_available_mb - lim.reserve_ram_mb)
-    if use_index:
-        why.append(f"{notes} notes: the learned index (exact search would hold {exact_ram:.0f} MB of vectors)")
-        search_ms = max(1.0, search_ms / 4)  # measured 1.6-2.2x faster at 150k-400k notes; nprobe trades the rest
     nprobe = None
     if use_index:
-        nprobe = 8 if search_ms < 0.2 * lim.latency_target_ms else 4
+        why.append(f"{notes} notes: the learned index, vectors read from disk (exact search would hold "
+                   f"{exact_ram:.0f} MB of them in RAM)")
+        nprobe = max(4, int(round(0.25 * notes ** 0.5)))  # a quarter of its clusters: recall within ~1 point
     gen = profile.gen_tokens_per_s or 20.0
     pre = profile.prefill_tokens_per_s or 200.0
     budget = budgets[-1]
@@ -296,10 +295,11 @@ def _search_ms(profile: DeviceProfile, notes: int) -> float:
     return t0 * notes / n0  # exact search is linear in the number of notes
 
 
-def index_threshold(profile: DeviceProfile, dim: int, limits: Limits | None = None, default: int = 100_000,
+def index_threshold(profile: DeviceProfile, dim: int, limits: Limits | None = None, default: int = 1_000_000,
                     floor: int = 20_000) -> int:
-    """How many notes before memory should be searched through the learned index on this device: the measured
-    crossover (100k notes), or sooner when exact search's vectors would take over a quarter of the spare RAM."""
+    """How many notes before memory should be searched through the learned index on this device: a million (in RAM
+    exact search is as fast at equal recall, results/bulk/scale.json), or sooner when exact search's vectors would
+    take over a quarter of the spare RAM (the index reads them from disk)."""
     lim = limits or Limits()
     spare = max(0.0, profile.ram_available_mb - lim.reserve_ram_mb)
     fits = int(0.25 * spare * MB / (dim * 4)) if spare else default

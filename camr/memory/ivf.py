@@ -95,7 +95,9 @@ class IVFIndex:
         np.save(root / "ids.npy", np.asarray(ids, dtype=np.int64)[order])
         np.save(root / "centroids.npy", cent)
         np.save(root / "offsets.npy", offsets)
-        probe = nprobe or max(4, int(round(k * 0.08)))
+        # a quarter of the clusters: on 196k real paragraphs and 600 real questions, 25% of clusters kept recall@10
+        # within 1.3 points of exact search (74.1% vs 75.4%); 8% of them lost 9 points (results/bulk/scale.json)
+        probe = nprobe or max(4, int(round(k * 0.25)))
         meta = {"note_type": note_type, "max_note_id": int(np.max(ids)) if n else 0, "built_at": time.time(),
                 "clusters": k, "notes": n, "nprobe": probe}
         (root / "meta.json").write_text(json.dumps(meta, indent=1))

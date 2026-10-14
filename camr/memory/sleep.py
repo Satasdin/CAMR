@@ -117,9 +117,12 @@ def _scratch():
 
 
 # ---------------------------------------------------------------------- 3. index
-# Measured (results/sleep/index.json): below ~100k notes exact search in RAM is both faster and more accurate than
-# the index on a 4-core CPU; at 150k-400k notes the index is 1.6-2.2x faster and its process ~30% smaller.
-INDEX_MIN_NOTES = 100_000
+# Measured on 196k real paragraphs with 600 real questions (results/bulk/scale.json): exact search in RAM takes
+# 10.7 ms a question (287 MB of vectors) and the index, at the probe that keeps recall within 1.3 points (a quarter
+# of its clusters), takes as long. The earlier speed-up (results/sleep/index.json) was measured with queries that
+# were near copies of stored notes, which the index finds easily; real questions are not. So exact search stays up
+# to a million notes, and the index is for a device whose spare RAM cannot hold the vectors (device.index_threshold).
+INDEX_MIN_NOTES = 1_000_000
 
 
 def rebuild_index(engine: MemoryEngine, min_notes: int = INDEX_MIN_NOTES, probe_queries: int = 50, k: int = 10) -> dict:
