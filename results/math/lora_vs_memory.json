@@ -1,0 +1,3809 @@
+{
+ "base_model": "Qwen/Qwen2.5-0.5B-Instruct",
+ "seed": 47,
+ "fit": 40,
+ "val": 20,
+ "test": 60,
+ "lr": 0.0003,
+ "rank": 16,
+ "conditions": {
+  "base": {
+   "train": {
+    "all": 0.275,
+    "known": 0.4583,
+    "invented": 0.0,
+    "n": 40,
+    "grounded": 0.35,
+    "grounded_correct": 0.2857
+   },
+   "test": {
+    "all": 0.2333,
+    "known": 0.3889,
+    "invented": 0.0,
+    "n": 60,
+    "grounded": 0.3,
+    "grounded_correct": 0.2222
+   },
+   "rephrased": {
+    "all": 0.2667,
+    "known": 0.4167,
+    "invented": 0.0417,
+    "n": 60,
+    "grounded": 0.45,
+    "grounded_correct": 0.2963
+   },
+   "derived": {
+    "all": 0.075,
+    "known": 0.125,
+    "invented": 0.0,
+    "n": 40,
+    "grounded": 0.3,
+    "grounded_correct": 0.0
+   },
+   "gsm8k": {
+    "all": 0.1333,
+    "known": 0.1333,
+    "invented": 0.0,
+    "n": 30,
+    "grounded": 0.3333,
+    "grounded_correct": 0.1
+   },
+   "gap": 0.0417,
+   "memorisation": {
+    "wrong_answers": 85,
+    "equal_to_a_training_answer": 0
+   }
+  },
+  "memory": {
+   "train": {
+    "all": 0.85,
+    "known": 0.75,
+    "invented": 1.0,
+    "n": 40,
+    "grounded": 0.5,
+    "grounded_correct": 0.9
+   },
+   "test": {
+    "all": 0.5,
+    "known": 0.4444,
+    "invented": 0.5833,
+    "n": 60,
+    "grounded": 0.5667,
+    "grounded_correct": 0.7647
+   },
+   "rephrased": {
+    "all": 0.3167,
+    "known": 0.2778,
+    "invented": 0.375,
+    "n": 60,
+    "grounded": 0.2,
+    "grounded_correct": 0.8333
+   },
+   "derived": {
+    "all": 0.25,
+    "known": 0.2083,
+    "invented": 0.3125,
+    "n": 40,
+    "grounded": 0.3,
+    "grounded_correct": 0.4167
+   },
+   "gsm8k": {
+    "all": 0.1333,
+    "known": 0.1333,
+    "invented": 0.0,
+    "n": 30,
+    "grounded": 0.3,
+    "grounded_correct": 0.1111
+   },
+   "gap": 0.35,
+   "memorisation": {
+    "wrong_answers": 71,
+    "equal_to_a_training_answer": 16
+   }
+  },
+  "lora (epoch 6, chosen on validation)": {
+   "train": {
+    "all": 0.95,
+    "known": 0.9167,
+    "invented": 1.0,
+    "n": 40,
+    "grounded": 1.0,
+    "grounded_correct": 0.95
+   },
+   "test": {
+    "all": 0.8833,
+    "known": 0.8056,
+    "invented": 1.0,
+    "n": 60,
+    "grounded": 0.9833,
+    "grounded_correct": 0.8983
+   },
+   "rephrased": {
+    "all": 0.4833,
+    "known": 0.6667,
+    "invented": 0.2083,
+    "n": 60,
+    "grounded": 0.8,
+    "grounded_correct": 0.5
+   },
+   "derived": {
+    "all": 0.175,
+    "known": 0.2917,
+    "invented": 0.0,
+    "n": 40,
+    "grounded": 0.575,
+    "grounded_correct": 0.3043
+   },
+   "gsm8k": {
+    "all": 0.0,
+    "known": 0.0,
+    "invented": 0.0,
+    "n": 30,
+    "grounded": 0.3,
+    "grounded_correct": 0.0
+   },
+   "gap": 0.0667,
+   "memorisation": {
+    "wrong_answers": 38,
+    "equal_to_a_training_answer": 0
+   }
+  }
+ },
+ "rows": {
+  "base": {
+   "train": [
+    [
+     "$1500 is deposited at 3% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     1791.0784447935002,
+     true,
+     "#### 1500 * (1 + 0.03)^6 = 1578.59"
+    ],
+    [
+     "$2500 is deposited at 6% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     3759.0756474784016,
+     true,
+     "#### 2500 * (1 + 0.06)^7 = 2895.16"
+    ],
+    [
+     "$1500 is deposited at 5% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     2110.650633984376,
+     true,
+     "#### 1500 * (1 + 0.05)^7 = 1688.125"
+    ],
+    [
+     "$2000 is deposited at 6% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     3007.260517982721,
+     true,
+     "#### 2000 * (1 + 0.06)^7 = 2332.82"
+    ],
+    [
+     "What is the sum of the first 14 terms of the arithmetic sequence that starts at 15 and goes up by 7 each time?",
+     14.0,
+     false,
+     "\\( n = 14 \\).\n\nSubstitute these values into the formula:\n\n\\[ S_{14} = \\frac{14}{2} [2 \\cdot 15 + (14-1) \\cdot 7] \\]\n\\[ S_{14} = 7 [30 + 13 \\cdot 7] \\]\n\\[ S_{14}"
+    ],
+    [
+     "What is the sum of the first 21 terms of the arithmetic sequence that starts at 9 and goes up by 3 each time?",
+     2.0,
+     false,
+     "( d = 3 \\).\n\nSubstituting these values into the formula, we get:\n\n\\[ S_{21} = \\frac{21}{2} \\left(2 \\cdot 9 + (21-1) \\cdot 3\\right) \\]\n\\[ S_{21} = \\frac{21}{2} \\"
+    ],
+    [
+     "What is the sum of the first 29 terms of the arithmetic sequence that starts at 11 and goes up by 7 each time?",
+     7.0,
+     false,
+     "nd the sum of the first 29 terms (\\( n = 29 \\)).\n\nSubstitute these values into the formula:\n\n\\[ S_{29} = \\frac{29}{2} \\left(2 \\cdot 11 + (29-1) \\cdot 7\\right) \\"
+    ],
+    [
+     "What is the sum of the first 15 terms of the arithmetic sequence that starts at 15 and goes up by 6 each time?",
+     30.0,
+     false,
+     "la:\n\n\\[ S_{15} = \\frac{15}{2} [2 \\cdot 15 + (15-1) \\cdot 6] \\]\n\nCalculate step-by-step:\n\n1. Calculate the middle term inside the brackets:\n   \\[ 2 \\cdot 15 = 30"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 5 and ratio 2?",
+     4.0,
+     false,
+     "\\]\n\\[ S_4 = 5 \\frac{1-16}{-1} \\]\n\\[ S_4 = 5 \\frac{-15}{-1} \\]\n\\[ S_4 = 5 \\times 15 \\]\n\\[ S_4 = 75 \\]\n\nSo, the sum of the first 4 terms of the geometric sequence"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 2 and ratio 3?",
+     4.0,
+     false,
+     ":\n\n\\[ S_4 = 2 \\frac{1-3^4}{1-3} \\]\n\nFirst, calculate \\( 3^4 \\):\n\n\\[ 3^4 = 81 \\]\n\nThen substitute back into the formula:\n\n\\[ S_4 = 2 \\frac{1-81}{1-3} \\]\n\\[ S_4 ="
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 3 and ratio 2?",
+     3.0,
+     false,
+     "1 - 2^8}{1 - 2} \\]\n\nFirst, calculate \\( 2^8 \\):\n\n\\[ 2^8 = 256 \\]\n\nThen substitute back into the formula:\n\n\\[ S_8 = 3 \\frac{1 - 256}{1 - 2} \\]\n\\[ S_8 = 3 \\frac{-"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 5 and ratio 2?",
+     5.0,
+     false,
+     "1 - 2^7}{1 - 2} \\]\n\nFirst, calculate \\( 2^7 \\):\n\n\\[ 2^7 = 128 \\]\n\nThen substitute back into the formula:\n\n\\[ S_7 = 5 \\frac{1 - 128}{1 - 2} \\]\n\\[ S_7 = 5 \\frac{-"
+    ],
+    [
+     "A triangle has sides 5 cm, 18 cm and 19 cm. What is its area in square centimetres, to two decimal places?",
+     3.42,
+     false,
+     "s \\text{height} \\]\n\nGiven:\n- Base = 19 cm\n- Height = 18 cm\n\nSo,\n\n\\[ \\text{Area} = \\frac{1}{2} \\times 19 \\times 18 \\]\n\n#### 19*18 + 10 = 342\n\n#### 342/100 = 3.42"
+    ],
+    [
+     "A triangle has sides 19 cm, 13 cm and 14 cm. What is its area in square centimetres, to two decimal places?",
+     18.72,
+     false,
+     "1.00\n\n#### 19 \\times 14 = 266\n\n#### 1/2 \\times 266 = 133\n\n#### 133 \\times 14 = 1872\n\n#### 1872 / 100 = 18.72\n\nTherefore, the answer is 18.72 square centimeters."
+    ],
+    [
+     "A triangle has sides 8 cm, 14 cm and 8 cm. What is its area in square centimetres, to two decimal places?",
+     4.0,
+     false,
+     "m} \\]\n\nNow, substitute \\( s \\), \\( a \\), \\( b \\), and \\( c \\) into the formula:\n\n\\[ \\text{Area} = \\frac{\\sqrt{(16(16-8)(16-14)(16-8)}}}{4} \\]\n\\[ \\text{Area} = \\"
+    ],
+    [
+     "A triangle has sides 10 cm, 18 cm and 15 cm. What is its area in square centimetres, to two decimal places?",
+     150.0,
+     false,
+     "en:\n- Base = 10 cm\n- Height = 15 cm\n\nSo,\n\\[ \\text{Area} = \\frac{1}{2} \\times 10 \\times 15 = 75 \\text{ square centimeters} \\]\n\n#### 75.00\n#### 10 \\times 15 = 150"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 10?",
+     120.0,
+     true,
+     "#### 10 choose 3 = 120"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 8?",
+     56.0,
+     true,
+     "#### 8 choose 3 = 56"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 15?",
+     450.0,
+     false,
+     "#### 15 choose 3 = 450"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 13?",
+     715.0,
+     true,
+     "#### 13 choose 4 = 715"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 15 m/s?",
+     450.0,
+     true,
+     " 225 \\]\n\nPerform the multiplication inside the fraction:\n\n\\[ K = 2 \\times 225 \\]\n\nFinally, perform the multiplication:\n\n\\[ K = 450 \\]\n\nSo, the kinetic energy of"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 2 kg object moving at 23 m/s?",
+     529.0,
+     true,
+     "= 529 \\]\n\nNow multiply by half the mass:\n\n\\[ K = \\frac{1}{2} \\times 2 \\times 529 = 529 \\text{ J} \\]\n\nSo, the kinetic energy of the object is:\n\n\\[ \\boxed{529} \\]"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 5 kg object moving at 6 m/s?",
+     90.0,
+     true,
+     "{2} \\times 5 \\times 36 \\]\n\nPerform the multiplication first:\n\n\\[ K = \\frac{1}{2} \\times 180 \\]\n\nThen perform the division:\n\n\\[ K = 90 \\]\n\nSo, the kinetic energy"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 20 kg object moving at 12 m/s?",
+     1440.0,
+     true,
+     " divide by 2:\n\n\\[ K = \\frac{1}{2} \\times 20 \\times 144 \\]\n\nPerform the multiplication first:\n\n\\[ K = 10 \\times 144 \\]\n\nThen perform the division:\n\n\\[ K = 1440 \\"
+    ],
+    [
+     "What is 12 zorbit 12?",
+     144.0,
+     false,
+     "#### 12^2 = 144"
+    ],
+    [
+     "What is 7 zorbit 11?",
+     80.0,
+     false,
+     "#### 7*zorb(11) = 80"
+    ],
+    [
+     "What is 12 zorbit 5?",
+     1.096262279352954,
+     false,
+     "#### 12*z**5 = 19"
+    ],
+    [
+     "What is 11 zorbit 4?",
+     176.0,
+     false,
+     "#### 11 * 4**2 = 176"
+    ],
+    [
+     "How many pom are in 17 glim?",
+     1020.0,
+     false,
+     "#### 17 * 60 = 1020"
+    ],
+    [
+     "How many pom are in 13 glim?",
+     780.0,
+     false,
+     "#### 13 * 60 = 780"
+    ],
+    [
+     "How many pom are in 25 glim?",
+     1500.0,
+     false,
+     "#### 25 * 60 = 1500"
+    ],
+    [
+     "How many pom are in 16 glim?",
+     35.712812921102035,
+     false,
+     "#### 16 * sqrt(3) + 8 = 16**2"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 7 items?",
+     840.0,
+     false,
+     "#### 120 * 7 * (Kessler fee per item) = 840"
+    ],
+    [
+     "What is the Kessler fee on an order of $1250 with 8 items?",
+     11250.0,
+     false,
+     "#### 1250 * 8 + 1250 = 10000"
+    ],
+    [
+     "What is the Kessler fee on an order of $900 with 9 items?",
+     7953.75,
+     false,
+     "#### 900 * 8.75 + 9 * 8.75 = 8625"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 9 items?",
+     1080.111111111111,
+     false,
+     "#### 120 * 9 + 120 * 8 * 7 / (120 * 9 * 8 * 7) = 60"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 35 and h = 4?",
+     0.8,
+     false,
+     "Vantor score = sqrt(w^2 + h^2) * 0.8"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 38 and h = 10?",
+     2.0,
+     false,
+     "Vantor score = sqrt(w^2 + h^2) * (w + h) / 2"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 9 and h = 6?",
+     2.0,
+     false,
+     "Vantor score = sqrt(w^2 + h^2) * (w + h) / 2"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 5 and h = 6?",
+     2.0,
+     false,
+     "Vantor score = sqrt(w^2 + h^2) * (w + h) / 2"
+    ]
+   ],
+   "test": [
+    [
+     "$1500 is deposited at 6% interest compounded yearly. How much is in the account after 8 years (to the cent)?",
+     2390.7721117962633,
+     true,
+     "#### 1500 * (1 + 0.06)^8 = 1751.17"
+    ],
+    [
+     "$2500 is deposited at 3% interest compounded yearly. How much is in the account after 9 years (to the cent)?",
+     3261.9329595731124,
+     true,
+     "#### 2500 * (1 + 0.03)^9 = 2678.43"
+    ],
+    [
+     "$1500 is deposited at 7% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     2251.0955277735006,
+     true,
+     "#### 1500 * (1 + 0.07)^6 = 1800.55"
+    ],
+    [
+     "$1200 is deposited at 4% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     1.0,
+     false,
+     "1200 \\)\n- \\( r = 0.04 \\)\n- \\( n = 1 \\) (since the interest is compounded yearly)\n- \\( t = 7 \\)\n\nPlugging these values into the formula:\n\n\\[ A = 1200 \\left(1 + \\"
+    ],
+    [
+     "$2500 is deposited at 5% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     3350.239101562501,
+     true,
+     "#### 2500 * (1 + 0.05)^6 = 2876.18"
+    ],
+    [
+     "$1200 is deposited at 3% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     1.0,
+     false,
+     "1200 \\)\n- \\( r = 0.03 \\)\n- \\( n = 1 \\) (since the interest is compounded yearly)\n- \\( t = 7 \\)\n\nPlugging these values into the formula:\n\n\\[ A = 1200 \\left(1 + \\"
+    ],
+    [
+     "What is the sum of the first 16 terms of the arithmetic sequence that starts at 6 and goes up by 8 each time?",
+     16.0,
+     false,
+     "\\( d = 8 \\).\n\nSubstitute these values into the formula:\n\n\\[ S_{16} = \\frac{16}{2} [2 \\cdot 6 + (16-1) \\cdot 8] \\]\n\\[ S_{16} = 8 [12 + 15 \\cdot 8] \\]\n\\[ S_{16} ="
+    ],
+    [
+     "What is the sum of the first 27 terms of the arithmetic sequence that starts at 13 and goes up by 5 each time?",
+     5.0,
+     false,
+     "hese values into the formula:\n\n\\[ S_{27} = \\frac{27}{2} \\left(2 \\cdot 13 + (27-1) \\cdot 5\\right) \\]\n\nFirst, calculate the expression inside the parentheses:\n\n\\["
+    ],
+    [
+     "What is the sum of the first 20 terms of the arithmetic sequence that starts at 3 and goes up by 5 each time?",
+     6.0,
+     false,
+     " \\( d = 5 \\).\n\nSubstituting these values into the formula, we get:\n\n\\[ S_{20} = \\frac{20}{2} \\left(2 \\cdot 3 + (20-1) \\cdot 5\\right) \\]\n\\[ S_{20} = 10 \\left(6 +"
+    ],
+    [
+     "What is the sum of the first 27 terms of the arithmetic sequence that starts at 9 and goes up by 6 each time?",
+     6.0,
+     false,
+     "of the first 27 terms (\\( n = 27 \\)).\n\nSubstitute these values into the formula:\n\n\\[ S_{27} = \\frac{27}{2} \\left(2 \\cdot 9 + (27-1) \\cdot 6\\right) \\]\n\nCalculate"
+    ],
+    [
+     "What is the sum of the first 22 terms of the arithmetic sequence that starts at 10 and goes up by 4 each time?",
+     21.0,
+     false,
+     " 4 \\).\n\nSubstituting these values into the formula, we get:\n\n\\[ S_{22} = \\frac{22}{2} \\left(2 \\cdot 10 + (22-1) \\cdot 4\\right) \\]\n\\[ S_{22} = 11 \\left(20 + 21 \\"
+    ],
+    [
+     "What is the sum of the first 25 terms of the arithmetic sequence that starts at 2 and goes up by 4 each time?",
+     4.0,
+     false,
+     "irst 25 terms (\\( S_{25} \\)).\n\nSubstitute these values into the formula:\n\n\\[ S_{25} = \\frac{25}{2} \\left(2 \\cdot 2 + (25-1) \\cdot 4\\right) \\]\n\nNow calculate the"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 3 and ratio 2?",
+     3.0,
+     false,
+     "1 - 2^7}{1 - 2} \\]\n\nFirst, calculate \\( 2^7 \\):\n\n\\[ 2^7 = 128 \\]\n\nThen substitute back into the formula:\n\n\\[ S_7 = 3 \\frac{1 - 128}{1 - 2} \\]\n\\[ S_7 = 3 \\frac{-"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 2 and ratio 2?",
+     15.0,
+     false,
+     "tuting these values into the formula:\n\n\\[ S_4 = 2 \\frac{1-(2)^4}{1-2} \\]\n\\[ S_4 = 2 \\frac{1-16}{-1} \\]\n\\[ S_4 = 2 \\frac{-15}{-1} \\]\n\\[ S_4 = 2 \\times 15 \\]\n\\[ S"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 5 and ratio 3?",
+     5.0,
+     false,
+     "rac{1 - 3^8}{1 - 3} \\]\n\nFirst, calculate \\( 3^8 \\):\n\n\\[ 3^8 = 6561 \\]\n\nThen substitute back into the formula:\n\n\\[ S_8 = 5 \\frac{1 - 6561}{1 - 3} \\]\n\\[ S_8 = 5 \\"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 2 and ratio 2?",
+     -2.0,
+     false,
+     "la, we get:\n\n\\[ S_7 = 2 \\frac{1-2^7}{1-2} \\]\n\nFirst, calculate \\( 2^7 \\):\n\n\\[ 2^7 = 128 \\]\n\nThen substitute back into the formula:\n\n\\[ S_7 = 2 \\frac{1-128}{1-2}"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 2 and ratio 3?",
+     2.0,
+     false,
+     "frac{1 - 3^7}{1 - 3} \\]\n\nFirst, calculate \\( 3^7 \\):\n\n\\[ 3^7 = 2187 \\]\n\nNow substitute back into the formula:\n\n\\[ S_7 = 2 \\frac{1 - 2187}{1 - 3} \\]\n\\[ S_7 = 2 \\"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 2 and ratio 3?",
+     2.0,
+     false,
+     "frac{1 - 3^8}{1 - 3} \\]\n\nFirst, calculate \\( 3^8 \\):\n\n\\[ 3^8 = 6561 \\]\n\nNow substitute back into the formula:\n\n\\[ S_8 = 2 \\frac{1 - 6561}{1 - 3} \\]\n\\[ S_8 = 2 \\"
+    ],
+    [
+     "A triangle has sides 17 cm, 19 cm and 10 cm. What is its area in square centimetres, to two decimal places?",
+     2295.0,
+     false,
+     "- Base = 17 cm\n- Height = 10 cm\n\nSo,\n\n\\[ \\text{Area} = \\frac{1}{2} \\times 17 \\times 10 = 85 \\text{ square centimeters} \\]\n\n#### 85\n#### 85 * 10 + 85 * 17 = 1655"
+    ],
+    [
+     "A triangle has sides 19 cm, 10 cm and 17 cm. What is its area in square centimetres, to two decimal places?",
+     882.0,
+     false,
+     "t{base} \\times \\text{height} \\]\n\nGiven:\n- Base = 19 cm\n- Height = 17 cm\n\nSo,\n\n\\[ \\text{Area} = \\frac{1}{2} \\times 19 \\times 17 \\]\n\n#### 863\n\n#### 863 + 19 = 882"
+    ],
+    [
+     "A triangle has sides 5 cm, 9 cm and 7 cm. What is its area in square centimetres, to two decimal places?",
+     22.5,
+     false,
+     "ac{1}{2} \\times 45 = 22.5 \\]\n\n### Result:\nThe area of the triangle is 22.5 square centimeters. To two decimal places, we round 22.5 to 22.50 square centimeters."
+    ],
+    [
+     "A triangle has sides 17 cm, 5 cm and 17 cm. What is its area in square centimetres, to two decimal places?",
+     42.5,
+     false,
+     "mes 17 \\times 5 \\]\n\nCalculating this gives us:\n\n\\[ A = \\frac{85}{2} \\approx 42.50 \\]\n\nTo two decimal places, the area is approximately 42.50 square centimeters."
+    ],
+    [
+     "A triangle has sides 20 cm, 19 cm and 16 cm. What is its area in square centimetres, to two decimal places?",
+     608.0,
+     false,
+     "ext{height} \\]\n\nGiven:\n- Base = 16 cm\n- Height = 19 cm\n\nSo,\n\n\\[ \\text{Area} = \\frac{1}{2} \\times 16 \\times 19 \\]\n\n#### 88\n\n#### 16 \\times 19 + 16 \\times 19 = 88"
+    ],
+    [
+     "A triangle has sides 7 cm, 18 cm and 18 cm. What is its area in square centimetres, to two decimal places?",
+     4.0,
+     false,
+     "} = 20 \\text{ cm} \\]\n\nNow, substitute \\( s \\) back into the formula:\n\n\\[ \\text{Area} = \\frac{\\sqrt{(20(20-7)(20-18)(20-18))}}{4} \\]\n\\[ \\text{Area} = \\frac{\\sqrt"
+    ],
+    [
+     "In how many ways can 5 people be chosen from a group of 14?",
+     2002.0,
+     true,
+     "#### 14 choose 5 = 2002"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 13?",
+     78.0,
+     true,
+     "#### 13 choose 2 = 78"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 8?",
+     70.0,
+     true,
+     "#### 8 choose 4 = 70"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 15?",
+     105.0,
+     true,
+     "#### 15 choose 2 = 105"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 9?",
+     126.0,
+     true,
+     "#### 9 choose 4 = 126"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 8?",
+     28.0,
+     true,
+     "#### 8 choose 2 = 28"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 8 kg object moving at 23 m/s?",
+     2.0,
+     false,
+     "} \\times 8 \\times 529 \\]\n\nNext, perform the multiplication inside the equation:\n\n\\[ K = 4 \\times 529 \\]\n\nFinally, multiply to find the kinetic energy:\n\n\\[ K = 2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 20 m/s?",
+     800.0,
+     true,
+     "0 \\]\n\nPerform the multiplication inside the fraction:\n\n\\[ K = 2 \\times 400 \\]\n\nFinally, perform the final multiplication:\n\n\\[ K = 800 \\]\n\nSo, the kinetic energy"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 12 kg object moving at 14 m/s?",
+     2352.0,
+     false,
+     "n:\n\n\\[ K = \\frac{1}{2} \\times 12 \\times 196 \\]\n\nNext, perform the multiplication inside the equation:\n\n\\[ K = \\frac{1}{2} \\times 2352 \\]\n\nFinally, multiply by \\"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 5 m/s?",
+     50.0,
+     true,
+     "\\( 5^2 \\):\n   \\[ 5^2 = 25 \\]\n\n2. Multiply by 4:\n   \\[ 4 \\times 25 = 100 \\]\n\n3. Divide by 2:\n   \\[ \\frac{100}{2} = 50 \\]\n\nSo, the kinetic energy is:\n\n\\[ K = 50 \\"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 12 kg object moving at 17 m/s?",
+     1734.0,
+     true,
+     "\\times 12 \\times 289 \\]\n\nPerform the multiplication inside the fraction:\n\n\\[ K = 6 \\times 289 \\]\n\nFinally, perform the final multiplication:\n\n\\[ K = 1734 \\]\n\nSo"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 8 kg object moving at 6 m/s?",
+     144.0,
+     true,
+     "6^2 = 36 \\]\n\n2. Multiply the results from steps 1 and 2:\n   \\[ 8 \\times 36 = 288 \\]\n\n3. Divide by 2 to find the kinetic energy:\n   \\[ K = \\frac{288}{2} = 144 \\]"
+    ],
+    [
+     "What is 11 zorbit 10?",
+     1.056175506315376,
+     false,
+     "#### 11*z**10 = 19"
+    ],
+    [
+     "What is 5 zorbit 7?",
+     3.2121054675381666,
+     false,
+     "#### 5*z**7 = 17640"
+    ],
+    [
+     "What is 11 zorbit 11?",
+     8.845464072540306,
+     false,
+     "#### 11*z**11 = 11**11"
+    ],
+    [
+     "What is 12 zorbit 10?",
+     1.047025443507919,
+     false,
+     "#### 12*z**10 = 19"
+    ],
+    [
+     "What is 7 zorbit 10?",
+     28.87940465131866,
+     false,
+     "#### 7*z**10 = 7^10 * 10**7"
+    ],
+    [
+     "What is 4 zorbit 7?",
+     2.208179027347625,
+     false,
+     "#### 4*z**7 = 1024"
+    ],
+    [
+     "How many pom are in 38 glim?",
+     2280.0,
+     false,
+     "#### 38 * 60 = 2280"
+    ],
+    [
+     "How many pom are in 32 glim?",
+     1920.0,
+     false,
+     "#### 32 * 60 = 1920"
+    ],
+    [
+     "How many pom are in 3 glim?",
+     41.0,
+     false,
+     "#### 3*12 + 5 = 39"
+    ],
+    [
+     "How many pom are in 2 glim?",
+     4.0,
+     false,
+     "#### 2*glim = 2 glim + 4 pom"
+    ],
+    [
+     "How many pom are in 42 glim?",
+     2520.0,
+     false,
+     "#### 42 * 60 = 2520"
+    ],
+    [
+     "How many pom are in 19 glim?",
+     50.54030511288038,
+     false,
+     "#### 19 * sqrt(6) + 4 = 19"
+    ],
+    [
+     "What is the Kessler fee on an order of $900 with 5 items?",
+     4500.0,
+     false,
+     "#### 900 * 5 * (Kessler fee per item) = 4500"
+    ],
+    [
+     "What is the Kessler fee on an order of $640 with 5 items?",
+     16000.0,
+     false,
+     "#### 640 * 5 * comb(5, 4) = 6400"
+    ],
+    [
+     "What is the Kessler fee on an order of $380 with 9 items?",
+     4420.0,
+     false,
+     "#### 380 * 9 + 1000 = 12700"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 4 items?",
+     2400.0,
+     false,
+     "#### 120 * 4 + 120 * 4 * 4 = 7680"
+    ],
+    [
+     "What is the Kessler fee on an order of $1600 with 5 items?",
+     8000.0,
+     false,
+     "#### 1600 * 5 * (Kessler fee per item) = 8000"
+    ],
+    [
+     "What is the Kessler fee on an order of $1600 with 4 items?",
+     19200.0,
+     false,
+     "#### 1600 * 4 * (Kessler fee per item) = 19200"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 15 and h = 10?",
+     null,
+     false,
+     "Vantor score = sqrt(w*h)"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 12 and h = 4?",
+     2.0,
+     false,
+     "Vantor score = sqrt(w^2 + h^2)"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 18 and h = 12?",
+     0.75,
+     false,
+     "Vantor score = sqrt(w^2 + h^2) * 0.75"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 37 and h = 4?",
+     2.0,
+     false,
+     "Vantor score = sqrt(w^2 + h^2)"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 22 and h = 6?",
+     0.8,
+     false,
+     "Vantor score = sqrt(w^2 + h^2) * 0.8"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 32 and h = 2?",
+     2.0,
+     false,
+     "Vantor score = sqrt(w^2 + h^2)"
+    ]
+   ],
+   "rephrased": [
+    [
+     "What does a deposit of $1500 grow to in 8 years if it earns 8% a year, compounded annually? Give the amount to the cent.",
+     2776.395315422824,
+     true,
+     "#### 1500 * (1 + 0.08)^8 = 1671.06"
+    ],
+    [
+     "What does a deposit of $1500 grow to in 5 years if it earns 7% a year, compounded annually? Give the amount to the cent.",
+     2103.8275960500005,
+     true,
+     "#### 1500 * (1 + 0.07)^5 = 1680.7\n\nThe amount to the cent after 5 years is 1680.7."
+    ],
+    [
+     "What does a deposit of $2500 grow to in 9 years if it earns 7% a year, compounded annually? Give the amount to the cent.",
+     4596.148031050388,
+     true,
+     "#### 2500 * (1 + 0.07)^9 = 2863.45"
+    ],
+    [
+     "What does a deposit of $1200 grow to in 9 years if it earns 4% a year, compounded annually? Give the amount to the cent.",
+     1707.9741749057819,
+     true,
+     "#### 1200 * (1 + 0.04)^9 = 1286.72"
+    ],
+    [
+     "What does a deposit of $4500 grow to in 3 years if it earns 8% a year, compounded annually? Give the amount to the cent.",
+     5668.704000000001,
+     true,
+     "#### 4500 * (1 + 0.08)^3 = 5067.64"
+    ],
+    [
+     "What does a deposit of $1200 grow to in 3 years if it earns 5% a year, compounded annually? Give the amount to the cent.",
+     1389.15,
+     true,
+     "#### 1200 * (1 + 0.05)^3 = 1386.14"
+    ],
+    [
+     "A sequence begins 12, 15, 18, ... (adding 3 each time). Add up its first 10 terms.",
+     162.0,
+     false,
+     "#### 12 + 15 + 18 + ... + 12 + 15 + 18 + ... + 12 + 15 + 18 = 162"
+    ],
+    [
+     "A sequence begins 6, 15, 24, ... (adding 9 each time). Add up its first 21 terms.",
+     939.0,
+     false,
+     "#### 21*(6+15+24) - 6 = 780"
+    ],
+    [
+     "A sequence begins 7, 9, 11, ... (adding 2 each time). Add up its first 27 terms.",
+     10860.0,
+     false,
+     "#### 27*(7+9+11+...+95) = 10860"
+    ],
+    [
+     "A sequence begins 6, 15, 24, ... (adding 9 each time). Add up its first 30 terms.",
+     400.5,
+     false,
+     "#### 30*9 + (30-1)*9/2 = 1890"
+    ],
+    [
+     "A sequence begins 12, 19, 26, ... (adding 7 each time). Add up its first 8 terms.",
+     336.0,
+     false,
+     "#### 8*7 + (12+7) + (19+7) + (26+7) + (33+7) + (40+7) + (47+7) + (54+7) = 1920"
+    ],
+    [
+     "A sequence begins 11, 16, 21, ... (adding 5 each time). Add up its first 14 terms.",
+     1080.0,
+     false,
+     "#### 11 + 16 + 21 + ... + 71 = 1080"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 5 numbers you get.",
+     22.0,
+     false,
+     "#### 4 * 3 + (4 + 3 + 2 + 1 + 0) = 28"
+    ],
+    [
+     "Starting from 3 and multiplying by 3 each step, add up the first 4 numbers you get.",
+     21.0,
+     false,
+     "#### 3*(3+3)+3=24"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 7 numbers you get.",
+     25.0,
+     false,
+     "#### 4 * 3 + (4 + 3 + 2 + 1 + 0 + 1 + 2) = 36"
+    ],
+    [
+     "Starting from 6 and multiplying by 3 each step, add up the first 7 numbers you get.",
+     42.0,
+     false,
+     "#### 6 * 3 + (6 + 3 + 6 + 3 + 6 + 3 + 6)\n\n#### 18 + 24\n\n#### 42"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 4 numbers you get.",
+     19.0,
+     false,
+     " + (\\text{First Step} + \\text{Second Step}) \\]\n\nWhere:\n- The starting number is 4,\n- Each step is multiplied by 3,\n- The first step is added to the second step."
+    ],
+    [
+     "Starting from 2 and multiplying by 3 each step, add up the first 6 numbers you get.",
+     21.0,
+     false,
+     "#### 2*3 + 1 + 2 + 3 + 4 + 5 = 27"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 20 m, 19 m and 7 m.",
+     16.0,
+     false,
+     "{46}{2} = 23 \\text{ m} \\]\n\nNow apply Heron's formula to find the area:\n\\[ A = \\sqrt{23(23-20)(23-19)(23-7)} \\]\n\\[ A = \\sqrt{23 \\cdot 3 \\cdot 4 \\cdot 16} \\]\n\\[ A"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 17 m, 15 m and 18 m.",
+     127.5,
+     false,
+     "late the area:\n\n\\[ \\text{Area} = \\frac{1}{2} \\times 255 = 127.5 \\] square meters\n\nSo, the area of the triangular plot is approximately **127.50** square meters."
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 11 m, 15 m and 17 m.",
+     82.5,
+     false,
+     "culate the area:\n\n\\[ \\text{Area} = \\frac{1}{2} \\times 165 = 82.5 \\] square meters\n\nSo, the area of the triangular plot is approximately **82.50** square meters."
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 15 m, 8 m and 13 m.",
+     5.0,
+     false,
+     "}{2} = 18 \\text{ m} \\]\n\nNow apply Heron's formula to find the area:\n\\[ A = \\sqrt{18(18-15)(18-8)(18-13)} \\]\n\\[ A = \\sqrt{18 \\times 3 \\times 10 \\times 5} \\]\n\\[ A"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 20 m, 7 m and 16 m.",
+     1.5,
+     false,
+     "{2} = \\frac{43}{2} = 21.5 \\text{ m} \\]\n\nNow apply Heron's formula to find the area:\n\\[ A = \\sqrt{21.5(21.5-20)(21.5-7)(21.5-16)} \\]\n\\[ A = \\sqrt{21.5 \\times 1.5"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 12 m, 11 m and 13 m.",
+     5.0,
+     false,
+     "{2} = \\frac{36}{2} = 18 \\text{ m} \\]\n\nNow apply Heron's formula:\n\n\\[ A = \\sqrt{18(18-12)(18-11)(18-13)} \\]\n\\[ A = \\sqrt{18 \\times 6 \\times 7 \\times 5} \\]\n\\[ A ="
+    ],
+    [
+     "A club of 11 members picks a 2-person team. How many different teams are possible?",
+     55.0,
+     true,
+     "#### 11 choose 2 = 55"
+    ],
+    [
+     "A club of 7 members picks a 4-person team. How many different teams are possible?",
+     35.0,
+     true,
+     "#### 7 choose 4 = 35"
+    ],
+    [
+     "A club of 9 members picks a 3-person team. How many different teams are possible?",
+     84.0,
+     true,
+     "#### 9 choose 3 = 84"
+    ],
+    [
+     "A club of 11 members picks a 5-person team. How many different teams are possible?",
+     462.0,
+     true,
+     "#### 11 choose 5 = 462"
+    ],
+    [
+     "A club of 7 members picks a 2-person team. How many different teams are possible?",
+     21.0,
+     true,
+     "#### 7 choose 2 = 21"
+    ],
+    [
+     "A club of 10 members picks a 4-person team. How many different teams are possible?",
+     210.0,
+     true,
+     "#### 10 choose 4 = 210"
+    ],
+    [
+     "A 12 kg cart rolls at 21 metres per second. How many joules of kinetic energy does it have?",
+     2646.0,
+     true,
+     "The formula used is \\( KE = \\frac{1}{2}mv^2 \\), where \\( m \\) is the mass and \\( v \\) is the velocity.\n#### 0.5 * 12 * 21^2 = 2544"
+    ],
+    [
+     "A 50 kg cart rolls at 10 metres per second. How many joules of kinetic energy does it have?",
+     2500.0,
+     true,
+     "The formula used is \\( KE = \\frac{1}{2}mv^2 \\), where \\( m \\) is the mass and \\( v \\) is the velocity.\n#### 1/2 * 50 * 10^2 = 2500 Joules"
+    ],
+    [
+     "A 10 kg cart rolls at 24 metres per second. How many joules of kinetic energy does it have?",
+     2880.0,
+     true,
+     "The formula used is \\( KE = \\frac{1}{2}mv^2 \\), where \\( m \\) is the mass and \\( v \\) is the velocity.\n#### 1/2 * 10 * 24^2 = 2880 Joules"
+    ],
+    [
+     "A 20 kg cart rolls at 11 metres per second. How many joules of kinetic energy does it have?",
+     1610.0,
+     false,
+     "The formula used is \\( KE = \\frac{1}{2}mv^2 \\), where \\( m \\) is the mass and \\( v \\) is the velocity.\n#### 1/2 * 20 * 11^2 = 1610 Joules"
+    ],
+    [
+     "A 2 kg cart rolls at 5 metres per second. How many joules of kinetic energy does it have?",
+     6.0,
+     false,
+     "The formula used is \\( KE = \\frac{1}{2}mv^2 \\), where \\( m \\) is the mass and \\( v \\) is the velocity.\n#### 0.5 * 2**2 + 4 = 6"
+    ],
+    [
+     "A 10 kg cart rolls at 17 metres per second. How many joules of kinetic energy does it have?",
+     1850.0,
+     false,
+     "The formula used is \\( KE = \\frac{1}{2}mv^2 \\), where \\( m \\) is the mass and \\( v \\) is the velocity.\n#### 1/2 * 10 * 17^2 = 1850 Joules"
+    ],
+    [
+     "Compute the zorbit of 4 and 12 (in that order).",
+     53.0,
+     false,
+     "#### 4 * 12 + 5 = 57"
+    ],
+    [
+     "Compute the zorbit of 9 and 3 (in that order).",
+     36.0,
+     false,
+     "#### 9*3 + 3**2 = 81 + 9 = 90"
+    ],
+    [
+     "Compute the zorbit of 2 and 8 (in that order).",
+     320.0,
+     false,
+     "#### 2^8 + 8^2 = 64 + 64 = 128"
+    ],
+    [
+     "Compute the zorbit of 9 and 9 (in that order).",
+     90.0,
+     true,
+     "#### 9^2 + 9 = 81 + 9 = 90"
+    ],
+    [
+     "Compute the zorbit of 6 and 11 (in that order).",
+     73.0,
+     false,
+     "#### 6 * 11 + 7 = 73"
+    ],
+    [
+     "Compute the zorbit of 9 and 12 (in that order).",
+     208.0,
+     false,
+     "#### 9*12 + 10**2 = 180"
+    ],
+    [
+     "Convert 37 glims into poms.",
+     79.55244875897048,
+     false,
+     "#### 37 * sqrt(10/3) + 12 = 68.58"
+    ],
+    [
+     "Convert 28 glims into poms.",
+     92.54377448471463,
+     false,
+     "#### 28 * sqrt(10) + 4 = 19"
+    ],
+    [
+     "Convert 50 glims into poms.",
+     40.41241452319315,
+     false,
+     "#### 50 * sqrt(1/6) + 20 = 75"
+    ],
+    [
+     "Convert 35 glims into poms.",
+     46.83300132670377,
+     false,
+     "#### 35 * sqrt(10/7) + 5 = 68.5"
+    ],
+    [
+     "Convert 31 glims into poms.",
+     22.655697004379753,
+     false,
+     "#### 31 * sqrt(1/6) + 10 = 18"
+    ],
+    [
+     "Convert 5 glims into poms.",
+     80.0,
+     false,
+     "#### 5*16 = 80"
+    ],
+    [
+     "An order totals $120 and contains 3 items. Work out its Kessler fee in dollars.",
+     40.0,
+     false,
+     "#### 120/3 = 40\n\nKessler fee = 40 * $10 = $400"
+    ],
+    [
+     "An order totals $250 and contains 8 items. Work out its Kessler fee in dollars.",
+     166.66666666666666,
+     false,
+     "#### 250 * 8 / 12 = 166.67"
+    ],
+    [
+     "An order totals $1250 and contains 2 items. Work out its Kessler fee in dollars.",
+     100.12,
+     false,
+     "#### 1250 * 0.08 + 2 * 0.06 = 10"
+    ],
+    [
+     "An order totals $1250 and contains 4 items. Work out its Kessler fee in dollars.",
+     104.0,
+     false,
+     "#### 1250 * 0.08 + 4 = 100"
+    ],
+    [
+     "An order totals $380 and contains 2 items. Work out its Kessler fee in dollars.",
+     22.94,
+     false,
+     "#### 380 * 0.06 + 2 * 0.07 = 2.22"
+    ],
+    [
+     "An order totals $900 and contains 3 items. Work out its Kessler fee in dollars.",
+     72.18,
+     false,
+     "} = 0.08 \\times 900 + 0.06 \\times (\\text{item}_1 + \\text{item}_2 + \\text{item}_3) \\]\n\n#### 0.08 * 900 + 0.06 * (120 + 150 + 180) = 7.2\n\nThe final answer is 7.2."
+    ],
+    [
+     "A crop's width index is 22 and its height index is 4. Find its Vantor score.",
+     null,
+     false,
+     "Vantor score = (width index * height index) / (width index + height index)"
+    ],
+    [
+     "A crop's width index is 4 and its height index is 8. Find its Vantor score.",
+     null,
+     false,
+     "Vantor score = (width index * height index) / (width index + height index)"
+    ],
+    [
+     "A crop's width index is 14 and its height index is 6. Find its Vantor score.",
+     42.0,
+     false,
+     "The Vantor score can be calculated using the formula:\n\nVantor score = (width index * height index) / 2\n\nSo,\n\nVantor score = (14 * 6) / 2 = 42\n\n#### 42"
+    ],
+    [
+     "A crop's width index is 31 and its height index is 2. Find its Vantor score.",
+     null,
+     false,
+     "Vantor score = (width index * height index) / (width index + height index)"
+    ],
+    [
+     "A crop's width index is 26 and its height index is 12. Find its Vantor score.",
+     null,
+     false,
+     "Vantor score = (width index * height index) / (width index + height index)"
+    ],
+    [
+     "A crop's width index is 14 and its height index is 4. Find its Vantor score.",
+     28.0,
+     false,
+     "The Vantor score can be calculated using the formula:\n\nVantor score = (width index * height index) / 2\n\nSo,\n\nVantor score = (14 * 4) / 2 = 28\n\n#### 28"
+    ]
+   ],
+   "derived": [
+    [
+     "After 6 years at 7% interest compounded yearly, an account holds $2,251.10. How much was deposited at the start (to the nearest dollar)?",
+     2.0,
+     false,
+     "nded yearly (\\( n = 1 \\)), so the formula simplifies to:\n\n\\[ A = P(1 + r)^1 \\]\n\\[ A = P(1 + r) \\]\n\nWe know that after 6 years, the account balance \\( A \\) is $2"
+    ],
+    [
+     "After 9 years at 7% interest compounded yearly, an account holds $4,596.15. How much was deposited at the start (to the nearest dollar)?",
+     4596.1,
+     false,
+     "nterest is compounded yearly (\\( n = 1 \\)), so the formula simplifies to:\n\n\\[ A = P(1 + r)^1 \\]\n\\[ A = P(1 + r) \\]\n\nWe know the future value \\( A \\) is $4,596.1"
+    ],
+    [
+     "After 8 years at 3% interest compounded yearly, an account holds $1,900.16. How much was deposited at the start (to the nearest dollar)?",
+     1.0,
+     false,
+     "his case, the interest is compounded yearly (\\( n = 1 \\)), so the formula simplifies to:\n\n\\[ A = P(1 + r)^1 \\]\n\\[ A = P(1 + r) \\]\n\nWe know the final amount \\( A"
+    ],
+    [
+     "After 8 years at 4% interest compounded yearly, an account holds $6,158.56. How much was deposited at the start (to the nearest dollar)?",
+     8.0,
+     false,
+     " this case, the interest is compounded yearly (\\( n = 1 \\)), so the formula simplifies to:\n\n\\[ A = P(1 + r)^1 \\]\n\\[ A = P(1 + r) \\]\n\nWe know that after 8 years,"
+    ],
+    [
+     "The first 30 terms of an arithmetic sequence add up to 3690. The first term is 7. What is the common difference?",
+     15.0,
+     false,
+     ".\n\nWe need to find \\( d \\). Plugging in the known values, we get:\n\n\\[ 3690 = \\frac{30}{2} (2 \\cdot 7 + (30-1)d) \\]\n\\[ 3690 = 15 (14 + 29d) \\]\n\\[ 3690 = 15 \\cdot"
+    ],
+    [
+     "The first 23 terms of an arithmetic sequence add up to 1104. The first term is 4. What is the common difference?",
+     8.0,
+     false,
+     "alues into the sum formula:\n\n\\[ 1104 = \\frac{23}{2} \\left(2 \\cdot 4 + (23-1)d\\right) \\]\n\nFirst, simplify inside the parentheses:\n\n\\[ 1104 = \\frac{23}{2} \\left(8"
+    ],
+    [
+     "The first 11 terms of an arithmetic sequence add up to 275. The first term is 5. What is the common difference?",
+     10.0,
+     false,
+     " the known values, we get:\n\n\\[ 275 = \\frac{11}{2} \\left(2 \\cdot 5 + (11-1)d\\right) \\]\n\nFirst, simplify inside the parentheses:\n\n\\[ 275 = \\frac{11}{2} \\left(10 +"
+    ],
+    [
+     "The first 24 terms of an arithmetic sequence add up to 2028. The first term is 4. What is the common difference?",
+     23.0,
+     false,
+     "he known values into the sum formula:\n\n\\[ 2028 = \\frac{24}{2} \\left(2 \\cdot 4 + (24-1)d\\right) \\]\n\nSimplify inside the parentheses:\n\n\\[ 2028 = 12 \\left(8 + 23d\\"
+    ],
+    [
+     "A geometric sequence starts at 2 and each term is 3 times the one before. What is the sum of the terms from term 2 to term 8 (inclusive)?",
+     6561.0,
+     true,
+     " The number of terms \\( n = 8 \\)\n\nPlugging these values into the formula:\n\n\\[ S_8 = \\frac{2(1-3^8)}{1-3} \\]\n\nFirst, calculate \\( 3^8 \\):\n\n\\[ 3^8 = 6561 \\]\n\nThen"
+    ],
+    [
+     "A geometric sequence starts at 5 and each term is 3 times the one before. What is the sum of the terms from term 3 to term 6 (inclusive)?",
+     65.0,
+     false,
+     "#### 5 * (1 + 3 + 9) = 78"
+    ],
+    [
+     "A geometric sequence starts at 4 and each term is 2 times the one before. What is the sum of the terms from term 4 to term 7 (inclusive)?",
+     480.0,
+     true,
+     "#### 4*(2^6-1) + 4*(2^5-1) + 4*(2^4-1) + 4*(2^3-1) + 4*(2^2-1) + 4*(2^1-1) + 4*(2^0-1) = 80"
+    ],
+    [
+     "A geometric sequence starts at 5 and each term is 3 times the one before. What is the sum of the terms from term 2 to term 6 (inclusive)?",
+     729.0,
+     false,
+     "r = 3 \\)\n- The number of terms \\( n = 6 \\)\n\nPlugging these values into the formula:\n\n\\[ S_6 = \\frac{5(1-3^6)}{1-3} \\]\n\nFirst, calculate \\( 3^6 \\):\n\n\\[ 3^6 = 729"
+    ],
+    [
+     "A triangle has sides 14 cm, 10 cm and 20 cm. What is its height measured to the 20 cm side, to two decimal places?",
+     8.0,
+     false,
+     "ac{14 + 10 + 20}{2} = 22 \\text{ cm} \\]\n\nNext, apply Heron's formula to find the area:\n\\[ \\text{Area} = \\sqrt{22(22-14)(22-10)(22-20)} = \\sqrt{22 \\times 8 \\times"
+    ],
+    [
+     "A triangle has sides 12 cm, 17 cm and 20 cm. What is its height measured to the 20 cm side, to two decimal places?",
+     2.0,
+     false,
+     "the semi-perimeter \\( s \\):\n   \\[\n   s = \\frac{12 + 17 + 20}{2} = \\frac{59}{2} = 29.5 \\text{ cm}\n   \\]\n\n2. Apply Heron's formula to find the area \\( A \\):\n   \\["
+    ],
+    [
+     "A triangle has sides 16 cm, 8 cm and 15 cm. What is its height measured to the 15 cm side, to two decimal places?",
+     2.0,
+     false,
+     "cm.\n\n### Step-by-step solution:\n\n1. **Calculate the semi-perimeter** \\( s \\):\n   \\[\n   s = \\frac{16 + 8 + 15}{2} = 20 \\text{ cm}\n   \\]\n\n2. **Use Heron's formula"
+    ],
+    [
+     "A triangle has sides 7 cm, 10 cm and 8 cm. What is its height measured to the 8 cm side, to two decimal places?",
+     -1237.1937515251343,
+     false,
+     "#### sqrt(8^2 + 10^2) - 7**2/2 * 10**2/2 - 10**2/2**2 = 8.69"
+    ],
+    [
+     "A committee needs 2 people from a group of 9 engineers and 2 people from a group of 7 designers. How many different committees are possible?",
+     38.0,
+     false,
+     "engineers is C(9, 2) = 36.\nThe total number of ways to choose 2 people from 7 designers is C(7, 2) = 21.\n\nTherefore, there are 38 different committees possible."
+    ],
+    [
+     "A committee needs 3 people from a group of 10 engineers and 3 people from a group of 6 designers. How many different committees are possible?",
+     3.0,
+     false,
+     "0}{3} = \\frac{10!}{3!(10-3)!} = \\frac{10!}{3!7!} = \\frac{10 \\times 9 \\times 8}{3 \\times 2 \\times 1} = 120 \\]\n\nFor the designers:\n\\[ \\binom{6}{3} = \\frac{6!}{3!("
+    ],
+    [
+     "A committee needs 3 people from a group of 8 engineers and 2 people from a group of 5 designers. How many different committees are possible?",
+     106.0,
+     false,
+     "#### 8C3 + 2C2 = 106"
+    ],
+    [
+     "A committee needs 2 people from a group of 6 engineers and 2 people from a group of 7 designers. How many different committees are possible?",
+     315.0,
+     true,
+     "#### 6C2 * 7C2 = 15 * 21 = 315"
+    ],
+    [
+     "An object of mass 8 kg has a kinetic energy of 1444 J. How fast is it moving, in m/s?",
+     0.00554016620498615,
+     false,
+     "#### 8/1444 = 0.00567 m/s"
+    ],
+    [
+     "An object of mass 50 kg has a kinetic energy of 3600 J. How fast is it moving, in m/s?",
+     72.0,
+     false,
+     "#### 3600/50 = 72 m/s"
+    ],
+    [
+     "An object of mass 12 kg has a kinetic energy of 1536 J. How fast is it moving, in m/s?",
+     30721.0,
+     false,
+     "\\[ v = \\sqrt{\\frac{2K}{m}} \\]\n\nNow plug in the values:\n\n\\[ v = \\sqrt{\\frac{2 \\times 1536}{12}} \\]\n\nCalculate inside the square root:\n\n\\[ v = \\sqrt{\\frac{3072}{1"
+    ],
+    [
+     "An object of mass 8 kg has a kinetic energy of 1936 J. How fast is it moving, in m/s?",
+     0.004132231404958678,
+     false,
+     "#### 8/1936 = 0.004176 m/s"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 4) zorbit 4?",
+     130321.0,
+     false,
+     "#### 4^4 * zorbit(4) zorbit(4) = 256 * zorbit(4) = 19**4 = 108976"
+    ],
+    [
+     "Using the zorbit operation, what is (3 zorbit 5) zorbit 2?",
+     2.0,
+     false,
+     "#### 3*zorbit(5)**zorbit(2)"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 6) zorbit 5?",
+     5.0,
+     false,
+     "#### 4*zorbit(6) ** zorbit(5)"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 5) zorbit 4?",
+     4.0,
+     false,
+     "#### 4*zorbit(5)**zorbit(4)"
+    ],
+    [
+     "A crate holds 408 pom. How many glims is that, as a decimal to two places?",
+     4.08,
+     false,
+     "#### 408/100 = 4.08"
+    ],
+    [
+     "A crate holds 576 pom. How many glims is that, as a decimal to two places?",
+     48.0,
+     false,
+     "#### 576/12 = 48"
+    ],
+    [
+     "A crate holds 1224 pom. How many glims is that, as a decimal to two places?",
+     1.02,
+     false,
+     "#### 1224 / 1200 = 1.02"
+    ],
+    [
+     "A crate holds 612 pom. How many glims is that, as a decimal to two places?",
+     6.12,
+     false,
+     "#### 612/100 = 6.12"
+    ],
+    [
+     "An order of 6 items was charged a Kessler fee of $30.20. What was the order amount in dollars?",
+     181.2,
+     false,
+     "#### 6*30.20 = 181.20"
+    ],
+    [
+     "An order of 3 items was charged a Kessler fee of $17.50. What was the order amount in dollars?",
+     57.5,
+     false,
+     "#### 3 * 17.50 + 5 = 62.50"
+    ],
+    [
+     "An order of 3 items was charged a Kessler fee of $12.30. What was the order amount in dollars?",
+     41.900000000000006,
+     false,
+     "#### 3 * 12.30 + 5 = 40.70"
+    ],
+    [
+     "An order of 1 items was charged a Kessler fee of $66.50. What was the order amount in dollars?",
+     66.5,
+     false,
+     "of the items. The formula used is:\n\nOrder Amount = Cost of Items + Kessler Fee\n\nSo,\n\nOrder Amount = $x + $66.50\n\nWhere x represents the total cost of the items."
+    ],
+    [
+     "A crop has a Vantor score of 16 and h = 4. What is its w?",
+     4.0,
+     false,
+     "w = sqrt(16^2 - 4^2) + 4"
+    ],
+    [
+     "A crop has a Vantor score of 71 and h = 10. What is its w?",
+     10.0,
+     false,
+     "#### w = 71 - 10 * h"
+    ],
+    [
+     "A crop has a Vantor score of 92 and h = 12. What is its w?",
+     4.0,
+     false,
+     "w = sqrt(92^2 - 12^2) + 4"
+    ],
+    [
+     "A crop has a Vantor score of 80 and h = 12. What is its w?",
+     4.0,
+     false,
+     "w = sqrt(80^2 - 12^2) + 4"
+    ]
+   ]
+  },
+  "memory": {
+   "train": [
+    [
+     "$1500 is deposited at 3% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     1791.0784447935002,
+     true,
+     "#### 1500 * (1 + 3/100)**6 = 1791.08"
+    ],
+    [
+     "$2500 is deposited at 6% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     3759.0756474784016,
+     true,
+     "#### 2500 * (1 + 6/100)**7 = 3759.08"
+    ],
+    [
+     "$1500 is deposited at 5% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     2110.650633984376,
+     true,
+     "#### 1500 * (1 + 5/100)**7 = 2110.65"
+    ],
+    [
+     "$2000 is deposited at 6% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     3007.260517982721,
+     true,
+     "#### 2000 * (1 + 6/100)**7 = 3007.26"
+    ],
+    [
+     "What is the sum of the first 14 terms of the arithmetic sequence that starts at 15 and goes up by 7 each time?",
+     847.0,
+     true,
+     "#### 15 + (15 + 7) + (15 + 2*7) + ... + (15 + 13*7) = 847"
+    ],
+    [
+     "What is the sum of the first 21 terms of the arithmetic sequence that starts at 9 and goes up by 3 each time?",
+     1449.0,
+     false,
+     "#### 21 * (9 + (21-1)*3) = 819"
+    ],
+    [
+     "What is the sum of the first 29 terms of the arithmetic sequence that starts at 11 and goes up by 7 each time?",
+     3161.0,
+     true,
+     "#### 29/2 * (2*11 + (29-1)*7) = 3161"
+    ],
+    [
+     "What is the sum of the first 15 terms of the arithmetic sequence that starts at 15 and goes up by 6 each time?",
+     855.0,
+     true,
+     "#### 15/2 * (2*15 + (15-1)*6) = 855"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 5 and ratio 2?",
+     75.0,
+     true,
+     "#### 5 * (2**4 - 1) / (2 - 1) = 75"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 2 and ratio 3?",
+     80.0,
+     true,
+     "#### 2 * (3**4 - 1) / (3 - 1) = 80"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 3 and ratio 2?",
+     765.0,
+     true,
+     "#### 765"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 5 and ratio 2?",
+     635.0,
+     true,
+     "#### 5 * (2**7 - 1) / (2 - 1) = 635"
+    ],
+    [
+     "A triangle has sides 5 cm, 18 cm and 19 cm. What is its area in square centimetres, to two decimal places?",
+     21.0,
+     false,
+     "eter \\(s\\):\n\n\\[ s = \\frac{5 + 18 + 19}{2} = 21 \\text{ cm} \\]\n\nNext, we substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\n\\[ A = \\sqrt{21(21-5)(21"
+    ],
+    [
+     "A triangle has sides 19 cm, 13 cm and 14 cm. What is its area in square centimetres, to two decimal places?",
+     -19.0,
+     false,
+     "imeter \\(s\\):\n\n\\[ s = \\frac{19 + 13 + 14}{2} = 23 \\text{ cm} \\]\n\nNext, we substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\n\\[ A = \\sqrt{23(23-19"
+    ],
+    [
+     "A triangle has sides 8 cm, 14 cm and 8 cm. What is its area in square centimetres, to two decimal places?",
+     30.0,
+     false,
+     "#### 8 + 14 + 8 = 30\n#### 30/2 = 15\n#### sqrt(15)(15 - 8) = 7.65\n#### 7.65 * 100 = 765"
+    ],
+    [
+     "A triangle has sides 10 cm, 18 cm and 15 cm. What is its area in square centimetres, to two decimal places?",
+     6.0,
+     false,
+     "} = 21 \\text{ cm} \\]\n\nNow, applying Heron's formula:\n\\[ \\text{Area} = \\sqrt{21(21-10)(21-18)(21-15)} \\]\n\\[ \\text{Area} = \\sqrt{21 \\times 11 \\times 3 \\times 6} \\"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 10?",
+     120.0,
+     true,
+     "#### 10 choose 3 = 120"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 8?",
+     56.0,
+     true,
+     "#### 8! / (3! * 5!) = 56"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 15?",
+     41.0,
+     false,
+     "#### 3*12 + 5 = 45"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 13?",
+     715.0,
+     true,
+     "#### 13 choose 4 = 715"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 15 m/s?",
+     450.0,
+     true,
+     "#### KE = 1/2 * m * v**2\n\nm = 4 kg\nv = 15 m/s\n\nKE = 1/2 * 4 * 15**2 = 450 Joules"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 2 kg object moving at 23 m/s?",
+     529.0,
+     true,
+     "#### KE = 1/2 * m * v**2\n\nm = 2 kg\nv = 23 m/s\n\nKE = 1/2 * 2 * 23**2 = 529 Joules"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 5 kg object moving at 6 m/s?",
+     90.0,
+     true,
+     "#### KE = 1/2 * m * v**2\n\n#### KE = 1/2 * 5 * 6**2\n\n#### KE = 1/2 * 5 * 36\n\n#### KE = 90 Joules"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 20 kg object moving at 12 m/s?",
+     1440.0,
+     true,
+     "#### KE = 1/2 * m * v**2\n\nm = 20 kg\nv = 12 m/s\n\nKE = 1/2 * 20 * 12**2 = 1440 Joules"
+    ],
+    [
+     "What is 12 zorbit 12?",
+     156.0,
+     true,
+     "#### 12 zorbit 12 = 3*12 - 2*12 + 12*12 = 156"
+    ],
+    [
+     "What is 7 zorbit 11?",
+     76.0,
+     true,
+     "#### 7*zorbit(11) = 76"
+    ],
+    [
+     "What is 12 zorbit 5?",
+     86.0,
+     true,
+     "#### 12 zorbit 5 = 86"
+    ],
+    [
+     "What is 11 zorbit 4?",
+     69.0,
+     true,
+     "#### 3*11 - 2*4 + 11*4 = 69"
+    ],
+    [
+     "How many pom are in 17 glim?",
+     1428.0,
+     true,
+     "#### 17 * 7 * 12 = 1428 pom"
+    ],
+    [
+     "How many pom are in 13 glim?",
+     1092.0,
+     true,
+     "#### 13 * 7 * 12 = 1092 pom"
+    ],
+    [
+     "How many pom are in 25 glim?",
+     2100.0,
+     true,
+     "#### 25 * 7 * 12 = 2100 pom"
+    ],
+    [
+     "How many pom are in 16 glim?",
+     1344.0,
+     true,
+     "#### 16 * 7 * 12 = 1344 pom"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 7 items?",
+     22.3,
+     true,
+     "#### 0.04 * 120 + 2.50 * 7 = 22.3"
+    ],
+    [
+     "What is the Kessler fee on an order of $1250 with 8 items?",
+     70.0,
+     true,
+     "#### 0.04 * 1250 + 2.50 * 8 = 70.0"
+    ],
+    [
+     "What is the Kessler fee on an order of $900 with 9 items?",
+     58.5,
+     true,
+     "#### 0.04 * 900 + 2.50 * 9 = 58.5"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 9 items?",
+     27.3,
+     true,
+     "#### 0.04 * 120 + 2.50 * 9 = 27.3"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 35 and h = 4?",
+     74.0,
+     true,
+     "V = 2*35 + 4**2/4 = 74"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 38 and h = 10?",
+     101.0,
+     true,
+     "V = 2*38 + 10**2/4 = 101"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 9 and h = 6?",
+     27.0,
+     true,
+     "#### 2*9 + 6**2/4 = 27"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 5 and h = 6?",
+     19.0,
+     true,
+     "#### 2*5 + 6**2/4 = 19"
+    ]
+   ],
+   "test": [
+    [
+     "$1500 is deposited at 6% interest compounded yearly. How much is in the account after 8 years (to the cent)?",
+     2390.7721117962633,
+     true,
+     "#### 1500 * (1 + 6/100)**8 = 1791.08"
+    ],
+    [
+     "$2500 is deposited at 3% interest compounded yearly. How much is in the account after 9 years (to the cent)?",
+     3261.9329595731124,
+     true,
+     "#### 2500 * (1 + 3/100)**9 = 3187.55"
+    ],
+    [
+     "$1500 is deposited at 7% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     2251.0955277735006,
+     true,
+     "#### 1500 * (1 + 7/100)**6 = 1809.05"
+    ],
+    [
+     "$1200 is deposited at 4% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     1579.1181350830084,
+     true,
+     "#### 1200 * (1 + 4/100)**7 = 2110.65"
+    ],
+    [
+     "$2500 is deposited at 5% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     3350.239101562501,
+     true,
+     "#### 2500 * (1 + 5/100)**6 = 3125.00"
+    ],
+    [
+     "$1200 is deposited at 3% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     1475.8486385098442,
+     true,
+     "#### 1200 * (1 + 3/100)**7 = 3759.08"
+    ],
+    [
+     "What is the sum of the first 16 terms of the arithmetic sequence that starts at 6 and goes up by 8 each time?",
+     2016.0,
+     false,
+     "#### 16 * (6 + (16-1)*8) = 7040"
+    ],
+    [
+     "What is the sum of the first 27 terms of the arithmetic sequence that starts at 13 and goes up by 5 each time?",
+     25506.0,
+     false,
+     " + (13 + 5) + (13 + 2*5) + ... + (13 + 26*5) = 13 + 13 + 18 + ... + 119 = 13 * (1 + 18 + 19 + ... + 119) = 13 * [1 + (119 - 1) / 2] * 18 = 13 * 109 * 18 = 24546"
+    ],
+    [
+     "What is the sum of the first 20 terms of the arithmetic sequence that starts at 3 and goes up by 5 each time?",
+     195.0,
+     false,
+     "#### 20*5 + (20-1)*5 = 1200"
+    ],
+    [
+     "What is the sum of the first 27 terms of the arithmetic sequence that starts at 9 and goes up by 6 each time?",
+     318.0,
+     false,
+     "#### 27*6 + (27-1)*6 = 1764"
+    ],
+    [
+     "What is the sum of the first 22 terms of the arithmetic sequence that starts at 10 and goes up by 4 each time?",
+     2040.0,
+     false,
+     "#### 22*(10 + (22-1)*4) - 2*(10 + 4) = 3882"
+    ],
+    [
+     "What is the sum of the first 25 terms of the arithmetic sequence that starts at 2 and goes up by 4 each time?",
+     196.0,
+     false,
+     "#### 25*4 + (25-1)*4 = 1800"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 3 and ratio 2?",
+     635.0,
+     false,
+     "iven answer and the working provided. Let's recheck the working:\n\nGiven:\n- First term (\\( a \\)) = 3\n- Common ratio (\\( r \\)) = 2\n- Number of terms (\\( n \\)) = 7"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 2 and ratio 2?",
+     30.0,
+     true,
+     "#### 2 + 2^2 + 2^3 + 2^4 = 30"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 5 and ratio 3?",
+     765.0,
+     false,
+     "#### 765\n\nThe sum of the first 8 terms of the geometric sequence with first term 5 and ratio 3 is 765."
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 2 and ratio 2?",
+     254.0,
+     true,
+     "#### 2 * (2**7 - 1) / (2 - 1) = 635"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 2 and ratio 3?",
+     2186.0,
+     true,
+     "#### 2 * (3**7 - 1) / (3 - 1) = 635"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 2 and ratio 3?",
+     765.0,
+     false,
+     "#### 765"
+    ],
+    [
+     "A triangle has sides 17 cm, 19 cm and 10 cm. What is its area in square centimetres, to two decimal places?",
+     6.0,
+     false,
+     "} = \\frac{46}{2} = 23 \\text{ cm} \\]\n\nNow, applying Heron's formula:\n\\[ \\text{Area} = \\sqrt{23(23-17)(23-19)(23-10)} \\]\n\\[ \\text{Area} = \\sqrt{23 \\times 6 \\times"
+    ],
+    [
+     "A triangle has sides 19 cm, 10 cm and 17 cm. What is its area in square centimetres, to two decimal places?",
+     -19.0,
+     false,
+     "imeter \\(s\\):\n\n\\[ s = \\frac{19 + 10 + 17}{2} = 23 \\text{ cm} \\]\n\nNext, we substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\n\\[ A = \\sqrt{23(23-19"
+    ],
+    [
+     "A triangle has sides 5 cm, 9 cm and 7 cm. What is its area in square centimetres, to two decimal places?",
+     5.0,
+     false,
+     " \\frac{21}{2} = 10.5 \\text{ cm} \\]\n\nNow, applying Heron's formula:\n\\[ \\text{Area} = \\sqrt{10.5(10.5-5)(10.5-9)(10.5-7)} \\]\n\\[ \\text{Area} = \\sqrt{10.5 \\times 5."
+    ],
+    [
+     "A triangle has sides 17 cm, 5 cm and 17 cm. What is its area in square centimetres, to two decimal places?",
+     1.0,
+     false,
+     " + 17}{2} = \\frac{39}{2} = 19.5 \\text{ cm} \\]\n\nNow, applying Heron's formula:\n\\[ \\text{Area} = \\sqrt{19.5(19.5-17)(19.5-5)(19.5-17)} \\]\n\\[ \\text{Area} = \\sqrt{1"
+    ],
+    [
+     "A triangle has sides 20 cm, 19 cm and 16 cm. What is its area in square centimetres, to two decimal places?",
+     27.5,
+     false,
+     "eter \\(s\\):\n\n\\[ s = \\frac{20 + 19 + 16}{2} = \\frac{55}{2} = 27.5 \\text{ cm} \\]\n\nNext, we substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\n\\[ A ="
+    ],
+    [
+     "A triangle has sides 7 cm, 18 cm and 18 cm. What is its area in square centimetres, to two decimal places?",
+     -18.0,
+     false,
+     "8 + 18}{2} = \\frac{43}{2} = 21.5 \\text{ cm} \\]\n\nNow, applying Heron's formula:\n\\[ \\text{Area} = \\sqrt{21.5(21.5-7)(21.5-18)(21.5-18)} \\]\n\\[ \\text{Area} = \\sqrt{"
+    ],
+    [
+     "In how many ways can 5 people be chosen from a group of 14?",
+     2002.0,
+     true,
+     "#### 14 choose 5 = 14! / (5! * 9!) = 2002"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 13?",
+     30.0,
+     false,
+     "#### 2*13 + 4 = 28"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 8?",
+     1120.0,
+     false,
+     "#### 4 * combinations(8, 4) = 1120"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 15?",
+     34.0,
+     false,
+     "#### 2*15 + 4 = 34"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 9?",
+     715.0,
+     false,
+     "#### 9 choose 4 = 715"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 8?",
+     28.0,
+     true,
+     "#### 8 choose 2 = 8! / (2! * (8 - 2)!) = 28."
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 8 kg object moving at 23 m/s?",
+     529.0,
+     false,
+     "#### KE = 1/2 * m * v**2\n\nKE = 1/2 * 8 * 23**2 = 529 Joules"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 20 m/s?",
+     800.0,
+     true,
+     "#### KE = 1/2 * m * v**2\n\n#### KE = 1/2 * 4 * 20**2\n\n#### KE = 800\n\nAnswer: 800."
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 12 kg object moving at 14 m/s?",
+     1176.0,
+     true,
+     "#### KE = 0.5 * 12 * 14**2 = 1680"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 5 m/s?",
+     50.0,
+     true,
+     " 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 = 100\n\n#### 100 ="
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 12 kg object moving at 17 m/s?",
+     1734.0,
+     true,
+     "#### KE = 0.5 * 12 * 17**2 = 1864."
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 8 kg object moving at 6 m/s?",
+     144.0,
+     true,
+     "= 288\n\n#### 144 = 8 * 288\n\n#### 144 = 8 * 288\n\n#### 144 = 2304\n\n#### 2304 = 8 * 288\n\n#### 2304 = 8 * 288\n\n#### 2304 = 2304\n\n#### 2304 = 8 * 288\n\n#### 2304 = 8 *"
+    ],
+    [
+     "What is 11 zorbit 10?",
+     123.0,
+     true,
+     "#### 3*11 - 2*10 + 11*10 = 79"
+    ],
+    [
+     "What is 5 zorbit 7?",
+     56.0,
+     false,
+     "#### 3*7 - 2*7 + 7*7 = 2110.65"
+    ],
+    [
+     "What is 11 zorbit 11?",
+     132.0,
+     true,
+     "#### 3*11 - 2*11 + 11*11 = 78"
+    ],
+    [
+     "What is 12 zorbit 10?",
+     130.0,
+     false,
+     "#### 3*10 - 2*10 + 12*10 = 156"
+    ],
+    [
+     "What is 7 zorbit 10?",
+     3759.08,
+     false,
+     "#### 7 zorbit 10 = 3759.08"
+    ],
+    [
+     "What is 4 zorbit 7?",
+     28.0,
+     false,
+     "#### 3*7 - 2*7 + 3*7 = 28"
+    ],
+    [
+     "How many pom are in 38 glim?",
+     79800.0,
+     false,
+     "#### 2100 * 38 = 79800"
+    ],
+    [
+     "How many pom are in 32 glim?",
+     2736.0,
+     false,
+     "#### 32 * 84 = 2736 pom"
+    ],
+    [
+     "How many pom are in 3 glim?",
+     257.0,
+     false,
+     "#### 3 * 84 + 5 = 253"
+    ],
+    [
+     "How many pom are in 2 glim?",
+     168.0,
+     true,
+     "#### 2 * 84 = 168 pom"
+    ],
+    [
+     "How many pom are in 42 glim?",
+     3336.0,
+     false,
+     "#### 42 * 7 * 12 = 3336 pom"
+    ],
+    [
+     "How many pom are in 19 glim?",
+     1596.0,
+     true,
+     "#### 19 * 84 = 1596 pom"
+    ],
+    [
+     "What is the Kessler fee on an order of $900 with 5 items?",
+     48.5,
+     true,
+     "#### 0.04 * 900 + 2.50 * 5 = 50.5"
+    ],
+    [
+     "What is the Kessler fee on an order of $640 with 5 items?",
+     38.1,
+     true,
+     "#### 0.04 * 640 + 2.50 * 5 = 70.0"
+    ],
+    [
+     "What is the Kessler fee on an order of $380 with 9 items?",
+     37.7,
+     true,
+     "#### 0.04 * 380 + 2.50 * 9 = 58.5"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 4 items?",
+     14.8,
+     true,
+     "#### 0.04 * 120 + 2.50 * 4 = 22.3"
+    ],
+    [
+     "What is the Kessler fee on an order of $1600 with 5 items?",
+     76.5,
+     true,
+     "#### 0.04 * 1600 + 2.50 * 5 = 70.5"
+    ],
+    [
+     "What is the Kessler fee on an order of $1600 with 4 items?",
+     74.0,
+     true,
+     "#### 0.04 * 1600 + 2.50 * 4 = 70. ###"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 15 and h = 10?",
+     55.0,
+     true,
+     "#### 2*15 + 10**2/4 = 27"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 12 and h = 4?",
+     28.0,
+     true,
+     "#### 2*12 + 4**2/4 = 74"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 18 and h = 12?",
+     72.0,
+     true,
+     "#### 2*18 + 12**2/4 = 19"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 37 and h = 4?",
+     78.0,
+     true,
+     "#### 2*37 + 4**2/4 = 74"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 22 and h = 6?",
+     19.0,
+     false,
+     "#### 2*w + h**2/4 = 19"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 32 and h = 2?",
+     68.0,
+     false,
+     "#### 2*32 + 4**2/4 = 74"
+    ]
+   ],
+   "rephrased": [
+    [
+     "What does a deposit of $1500 grow to in 8 years if it earns 8% a year, compounded annually? Give the amount to the cent.",
+     1791.0,
+     false,
+     "A = 1500 * (1 + 8/100)**8 = 1791.08\n\nAnswer: 1791"
+    ],
+    [
+     "What does a deposit of $1500 grow to in 5 years if it earns 7% a year, compounded annually? Give the amount to the cent.",
+     2103.8275960500005,
+     true,
+     "#### 1500 * (1 + 7/100)**5 = 2110.65"
+    ],
+    [
+     "What does a deposit of $2500 grow to in 9 years if it earns 7% a year, compounded annually? Give the amount to the cent.",
+     4596.148031050388,
+     true,
+     "#### 2500 * (1 + 7/100)**9 = 3759.08"
+    ],
+    [
+     "What does a deposit of $1200 grow to in 9 years if it earns 4% a year, compounded annually? Give the amount to the cent.",
+     2110.65,
+     false,
+     "A = 1200 * (1 + 0.04/100)**9 = 2110.65\n\nAnswer: 2110.65"
+    ],
+    [
+     "What does a deposit of $4500 grow to in 3 years if it earns 8% a year, compounded annually? Give the amount to the cent.",
+     5184.4,
+     false,
+     "A = 4500 * (1 + 0.08/100)**3 = 5184.40. Answer: 5184.40."
+    ],
+    [
+     "What does a deposit of $1200 grow to in 3 years if it earns 5% a year, compounded annually? Give the amount to the cent.",
+     1389.15,
+     true,
+     "#### 1200 * (1 + 5/100)**3 = 1761.25"
+    ],
+    [
+     "A sequence begins 12, 15, 18, ... (adding 3 each time). Add up its first 10 terms.",
+     270.0,
+     false,
+     " (18 + 12) + \\ldots + (12 + 15) + (12 + 15) \\]\n\nEach pair sums to \\( 12 + 15 = 27 \\):\n\n\\[ 10 \\times 27 = 270 \\]\n\nSo, the total sum of the first 10 terms is 270."
+    ],
+    [
+     "A sequence begins 6, 15, 24, ... (adding 9 each time). Add up its first 21 terms.",
+     945.0,
+     false,
+     "#### 21*(6+15+24) = 21*45 = 945"
+    ],
+    [
+     "A sequence begins 7, 9, 11, ... (adding 2 each time). Add up its first 27 terms.",
+     729.0,
+     false,
+     "#### 27 * (7 + 9 + 11) = 27 * 27 = 729"
+    ],
+    [
+     "A sequence begins 6, 15, 24, ... (adding 9 each time). Add up its first 30 terms.",
+     675.0,
+     false,
+     "#### 30 * (6 + 15 + 24) / 2 = 1890"
+    ],
+    [
+     "A sequence begins 12, 19, 26, ... (adding 7 each time). Add up its first 8 terms.",
+     87.0,
+     false,
+     "#### 8*7 + (19 - 7) + (26 - 7) = 70\n\nAnswer: 70"
+    ],
+    [
+     "A sequence begins 11, 16, 21, ... (adding 5 each time). Add up its first 14 terms.",
+     14.0,
+     false,
+     "(n\\) terms of an arithmetic series is:\n\n\\[S_n = \\frac{n}{2} \\times (2a + (n - 1)d)\\]\n\nSubstituting the values:\n\n\\[S_{14} = \\frac{14}{2} \\times (2 \\cdot 11 + (14"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 5 numbers you get.",
+     22.0,
+     false,
+     "#### 4 * 3 + 1 + 2 + 3 + 4 = 24"
+    ],
+    [
+     "Starting from 3 and multiplying by 3 each step, add up the first 4 numbers you get.",
+     12.0,
+     false,
+     "#### 3 + 3 + 3 + 3 = 12"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 7 numbers you get.",
+     19.0,
+     false,
+     "#### 4 * 3 + (4 + 3 + 2 + 1 + 0 + (-1) + (-2)) = 18"
+    ],
+    [
+     "Starting from 6 and multiplying by 3 each step, add up the first 7 numbers you get.",
+     42.0,
+     false,
+     "#### 6 * 3 + (6 + 3 + 3 + 3 + 3 + 3 + 3) = 27 + 24 = 51"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 4 numbers you get.",
+     18.0,
+     false,
+     "#### 4 * 3 + 1 + 2 + 3 = 19"
+    ],
+    [
+     "Starting from 2 and multiplying by 3 each step, add up the first 6 numbers you get.",
+     22155.0,
+     false,
+     "#### 2 * 3 + 3 * 3 + 3^3 + 3^5 + 3^7 + 3^9 = 1791.08"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 20 m, 19 m and 7 m.",
+     4.0,
+     false,
+     "= \\frac{46}{2} = 23 \\text{ m} \\]\n\nNow, applying Heron's formula:\n\\[ \\text{Area} = \\sqrt{23(23-20)(23-19)(23-7)} \\]\n\\[ \\text{Area} = \\sqrt{23 \\times 3 \\times 4 \\"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 17 m, 15 m and 18 m.",
+     -17.0,
+     false,
+     "(s\\):\n\\[ s = \\frac{17 + 15 + 18}{2} = \\frac{40}{2} = 20 \\, \\text{m} \\]\n\n2. Substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\\[ A = \\sqrt{20(20-17"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 11 m, 15 m and 17 m.",
+     2.0,
+     false,
+     "(s\\):\n\\[ s = \\frac{11 + 15 + 17}{2} = \\frac{43}{2} = 21.5 \\, \\text{m} \\]\n\n2. Substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\\[ A = \\sqrt{21.5(2"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 15 m, 8 m and 13 m.",
+     157.5,
+     false,
+     "#### 1/2 * 15 * 8 + 1/2 * 15 * 13 = 105 + 115.625 = 220.625\n\nThe area of the triangle is approximately 220.63 square meters."
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 20 m, 7 m and 16 m.",
+     21.0,
+     false,
+     "s\\):\n\\[ s = \\frac{20 + 7 + 16}{2} = \\frac{43}{2} = 21.5 \\, \\text{m} \\]\n\n2. Substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\\[ A = \\sqrt{21.5(21."
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 12 m, 11 m and 13 m.",
+     -12.0,
+     false,
+     "(s\\):\n\\[ s = \\frac{12 + 11 + 13}{2} = \\frac{36}{2} = 18 \\, \\text{m} \\]\n\n2. Substitute \\(s\\), \\(a\\), \\(b\\), and \\(c\\) into Heron's formula:\n\\[ A = \\sqrt{18(18-12"
+    ],
+    [
+     "A club of 11 members picks a 2-person team. How many different teams are possible?",
+     112.0,
+     false,
+     "{2! \\cdot 9!} \\]\n\nWe know that \\( 11! = 11 \\times 10 \\times 9! \\), so we can cancel out the \\( 9! \\) in the numerator and denominator:\n\n\\[ \\binom{11}{2} = \\frac"
+    ],
+    [
+     "A club of 7 members picks a 4-person team. How many different teams are possible?",
+     35.0,
+     true,
+     "4!} \\]\n\nCalculating this gives us:\n\n\\[ \\frac{7!}{4!(7-4)!} = \\frac{7 \\times 6 \\times 5}{3 \\times 2 \\times 1} = 35 \\]\n\nSo, there are 35 different teams possible."
+    ],
+    [
+     "A club of 9 members picks a 3-person team. How many different teams are possible?",
+     84.0,
+     true,
+     "#### 9C3 = 84"
+    ],
+    [
+     "A club of 11 members picks a 5-person team. How many different teams are possible?",
+     1.0,
+     false,
+     "11!}{5!6!} \\]\n\nWe can simplify this step-by-step:\n\n\\[ \\frac{11!}{5!6!} = \\frac{11 \\times 10 \\times 9 \\times 8 \\times 7}{5 \\times 4 \\times 3 \\times 2 \\times 1} \\"
+    ],
+    [
+     "A club of 7 members picks a 2-person team. How many different teams are possible?",
+     7.0,
+     false,
+     "#### 7C2 * 4% + 2.50 * 7"
+    ],
+    [
+     "A club of 10 members picks a 4-person team. How many different teams are possible?",
+     10.0,
+     false,
+     "ons} = \\frac{10!}{4!(10-4)!} = \\frac{10!}{4! \\cdot 6!} \\]\n\nWe can simplify this using the properties of factorials:\n\n\\[ \\text{Number of combinations} = \\frac{10"
+    ],
+    [
+     "A 12 kg cart rolls at 21 metres per second. How many joules of kinetic energy does it have?",
+     2634.0,
+     false,
+     "2 = 441 \\]\n\n2. Multiply by 12:\n   \\[ 12 \\times 441 = 5268 \\]\n\n3. Divide by 2:\n   \\[ \\frac{5268}{2} = 2634 \\]\n\nSo, the kinetic energy of the cart is 2634 joules."
+    ],
+    [
+     "A 50 kg cart rolls at 10 metres per second. How many joules of kinetic energy does it have?",
+     2500.0,
+     true,
+     "lues into the formula:\n\nKE = 1/2 * 50 * 10^2\n\nCalculate:\nKE = 1/2 * 50 * 100\nKE = 25 * 100\nKE = 2500 joules\n\nAnswer: The cart has 2500 joules of kinetic energy."
+    ],
+    [
+     "A 10 kg cart rolls at 24 metres per second. How many joules of kinetic energy does it have?",
+     2880.0,
+     true,
+     "2 = 576 \\]\n\n2. Multiply by 10:\n   \\[ 10 \\times 576 = 5760 \\]\n\n3. Divide by 2:\n   \\[ \\frac{5760}{2} = 2880 \\]\n\nSo, the kinetic energy of the cart is 2880 joules."
+    ],
+    [
+     "A 20 kg cart rolls at 11 metres per second. How many joules of kinetic energy does it have?",
+     1210.0,
+     true,
+     "ply by 20:\n   \\[ 20 \\times 121 = 2420 \\]\n\n3. Divide by 2:\n   \\[ \\frac{2420}{2} = 1210 \\]\n\nSo, the kinetic energy of the cart is:\n\n\\[ KE = 1210 \\text{ joules} \\]"
+    ],
+    [
+     "A 2 kg cart rolls at 5 metres per second. How many joules of kinetic energy does it have?",
+     25.0,
+     true,
+     "\n   \\[ 5^2 = 25 \\]\n\n2. Multiply by 2:\n   \\[ 2 * 25 = 50 \\]\n\n3. Multiply by 1/2:\n   \\[ 1/2 * 50 = 25 \\]\n\nSo, the kinetic energy is:\n\n\\[ KE = 25 \\text{ joules} \\]"
+    ],
+    [
+     "A 10 kg cart rolls at 17 metres per second. How many joules of kinetic energy does it have?",
+     1445.0,
+     true,
+     "2 = 289 \\]\n\n2. Multiply by 10:\n   \\[ 10 \\times 289 = 2890 \\]\n\n3. Divide by 2:\n   \\[ \\frac{2890}{2} = 1445 \\]\n\nSo, the kinetic energy of the cart is 1445 joules."
+    ],
+    [
+     "Compute the zorbit of 4 and 12 (in that order).",
+     156.0,
+     false,
+     "#### 3*zorbit(4) - 2*zorbit(12) + zorbit(4)*zorbit(12) = 156"
+    ],
+    [
+     "Compute the zorbit of 9 and 3 (in that order).",
+     48.0,
+     true,
+     "#### 9 zorbit 3 = 3*9 - 2*3 + 9*3 = 30"
+    ],
+    [
+     "Compute the zorbit of 2 and 8 (in that order).",
+     0.0,
+     false,
+     "zorbit(2, 8) = 3*2 - 2*8 + 2*8 = 0"
+    ],
+    [
+     "Compute the zorbit of 9 and 9 (in that order).",
+     0.0,
+     false,
+     "#### 3*zorbit(9) - 2*zorbit(9) + zorbit(9) = 0"
+    ],
+    [
+     "Compute the zorbit of 6 and 11 (in that order).",
+     1.0,
+     false,
+     "*11 + 11*6\n\n#### zorbit(6) = 3*(3*(3*zorbit(11))) - 2*6 + 6*11\n\n#### zorbit(11) = 3*(3*(3*(3*zorbit(6)))) - 2*11 + 11*6\n\n#### zorbit(6) = 3*(3*(3*(3*(3*zorbit(1"
+    ],
+    [
+     "Compute the zorbit of 9 and 12 (in that order).",
+     156.0,
+     false,
+     "#### 3*zorbit(9) - 2*zorbit(12) + zorbit(9)*zorbit(12) = 156"
+    ],
+    [
+     "Convert 37 glims into poms.",
+     3108.0,
+     true,
+     "#### 37 * 84 = 3138"
+    ],
+    [
+     "Convert 28 glims into poms.",
+     2352.0,
+     true,
+     "#### 28 glim * 84 pom/glim = 2352 pom"
+    ],
+    [
+     "Convert 50 glims into poms.",
+     4200.0,
+     true,
+     "#### 50 glim * 84 pom/glim = 4200 pom"
+    ],
+    [
+     "Convert 35 glims into poms.",
+     2940.0,
+     true,
+     "#### 35 * 84 = 2940"
+    ],
+    [
+     "Convert 31 glims into poms.",
+     26240.0,
+     false,
+     "#### 31 glim * 84 pom/glim = 26,240 pom"
+    ],
+    [
+     "Convert 5 glims into poms.",
+     420.0,
+     true,
+     "#### 5 * 84 = 420"
+    ],
+    [
+     "An order totals $120 and contains 3 items. Work out its Kessler fee in dollars.",
+     27.3,
+     false,
+     "#### 0.04 * 120 + 2.50 * 9 = 27.3"
+    ],
+    [
+     "An order totals $250 and contains 8 items. Work out its Kessler fee in dollars.",
+     70.0,
+     false,
+     "#### 0.04 * 1250 + 2.50 * 8 = 70.0"
+    ],
+    [
+     "An order totals $1250 and contains 2 items. Work out its Kessler fee in dollars.",
+     70.0,
+     false,
+     "#### 0.04 * 1250 + 2.50 * 8 = 70.0"
+    ],
+    [
+     "An order totals $1250 and contains 4 items. Work out its Kessler fee in dollars.",
+     70.0,
+     false,
+     "#### 0.04 * 1250 + 2.50 * 8 = 70.0"
+    ],
+    [
+     "An order totals $380 and contains 2 items. Work out its Kessler fee in dollars.",
+     22.3,
+     false,
+     "#### 22.3"
+    ],
+    [
+     "An order totals $900 and contains 3 items. Work out its Kessler fee in dollars.",
+     58.5,
+     false,
+     "#### 0.04 * 900 + 2.50 * 9 = 58.5"
+    ],
+    [
+     "A crop's width index is 22 and its height index is 4. Find its Vantor score.",
+     101.0,
+     false,
+     "#### V = 2*w + h^2/4\n\nV = 2*22 + 4^2/4 = 101"
+    ],
+    [
+     "A crop's width index is 4 and its height index is 8. Find its Vantor score.",
+     20.0,
+     false,
+     "V = 2*4 + 8**2/4 = 20. Answer: 20."
+    ],
+    [
+     "A crop's width index is 14 and its height index is 6. Find its Vantor score.",
+     37.0,
+     true,
+     "#### V = 2*14 + 6**2/4 = 19"
+    ],
+    [
+     "A crop's width index is 31 and its height index is 2. Find its Vantor score.",
+     63.0,
+     true,
+     "#### V = 2*31 + 2**2/4 = 74"
+    ],
+    [
+     "A crop's width index is 26 and its height index is 12. Find its Vantor score.",
+     80.0,
+     false,
+     "V = 2*26 + 12**2/4 = 80. Answer: 80."
+    ],
+    [
+     "A crop's width index is 14 and its height index is 4. Find its Vantor score.",
+     32.0,
+     true,
+     "V = 2*14 + 4**2/4 = 74. Answer: 74. #### 2*14 + 4**2/4 = 74"
+    ]
+   ],
+   "derived": [
+    [
+     "After 6 years at 7% interest compounded yearly, an account holds $2,251.10. How much was deposited at the start (to the nearest dollar)?",
+     3759.25,
+     false,
+     "### 2251.10 = 3759.25\n\n#### 3759.25 = 2500 * (1 + 7/100)**6\n\n#### 3759.25 = 2500 * 1.07**6\n\n#### 3759.25 = 2500 * 1.5007\n\n#### 3759.25 = 3759.25\n\n#### 3759.25 ="
+    ],
+    [
+     "After 9 years at 7% interest compounded yearly, an account holds $4,596.15. How much was deposited at the start (to the nearest dollar)?",
+     4.0,
+     false,
+     "51\n\n#### 4596.15 = 2577.775\n\n#### 4596.15 = 2577.775\n\n#### 4596.15 = 2577.775\n\n#### 4596.15 = 2577.775\n\n#### 4596.15 = 2577.775\n\n#### 4596.15 = 2577.775\n\n#### 4"
+    ],
+    [
+     "After 8 years at 3% interest compounded yearly, an account holds $1,900.16. How much was deposited at the start (to the nearest dollar)?",
+     2336.9571241257213,
+     false,
+     "3^7 = 1900.16 * 1.03^7 = 1900.16 * 1.03^7 = 1900.16 * 1.03^7 = 1900.16 * 1.03^7 = 1900.16 * 1.03^7 = 1900.16 * 1.03^7 = 1900.16 * 1.03^7 = 1900.16 * 1.03^7 = 19"
+    ],
+    [
+     "After 8 years at 4% interest compounded yearly, an account holds $6,158.56. How much was deposited at the start (to the nearest dollar)?",
+     6158.56,
+     false,
+     "1500 * 1.3685216768\n\n#### 6158.56 = 2052.3345144\n\n#### 6158.56 = 2052.3345144 + 0.0000000000\n\n#### 6158.56 = 2052.3345144\n\n#### 6158.56 = 2052.3345144 + 0.00000"
+    ],
+    [
+     "The first 30 terms of an arithmetic sequence add up to 3690. The first term is 7. What is the common difference?",
+     524.5714285714284,
+     false,
+     "#### 7*d + 18 = 3690"
+    ],
+    [
+     "The first 23 terms of an arithmetic sequence add up to 1104. The first term is 4. What is the common difference?",
+     0.17391304347826086,
+     false,
+     "#### 23*a + 22*d = 1104\n\n#### 4 + 22*d = 1104\n\n#### 22*d = 1100\n\n#### d = 50\n\n#### 23*a + 22*50 = 1104\n\n#### 23*a + 1100 = 1104\n\n#### 23*a = 4\n\n#### a = 4/23"
+    ],
+    [
+     "The first 11 terms of an arithmetic sequence add up to 275. The first term is 5. What is the common difference?",
+     75.0,
+     false,
+     "#### 5 + (11-1)*7 = 275"
+    ],
+    [
+     "The first 24 terms of an arithmetic sequence add up to 2028. The first term is 4. What is the common difference?",
+     3.5,
+     false,
+     "#### 24*(4 + 23*d) = 2028"
+    ],
+    [
+     "A geometric sequence starts at 2 and each term is 3 times the one before. What is the sum of the terms from term 2 to term 8 (inclusive)?",
+     19660.0,
+     false,
+     "#### 2 * (3^2 - 1) + 2 * (3^3 - 1) + 2 * (3^4 - 1) + 2 * (3^5 - 1) + 2 * (3^6 - 1) + 2 * (3^7 - 1) + 2 * (3^8 - 1)\n\nAnswer: 1008"
+    ],
+    [
+     "A geometric sequence starts at 5 and each term is 3 times the one before. What is the sum of the terms from term 3 to term 6 (inclusive)?",
+     82.0,
+     false,
+     "#### 5 * (3^3 - 1) / (3 - 1) + 3 * (3^2 - 1) / (3 - 1) + 5 * (3^1 - 1) / (3 - 1) = 819"
+    ],
+    [
+     "A geometric sequence starts at 4 and each term is 2 times the one before. What is the sum of the terms from term 4 to term 7 (inclusive)?",
+     96.0,
+     false,
+     "#### 4 * 2^3 + 4 * 2^4 = 64 + 64 = 128."
+    ],
+    [
+     "A geometric sequence starts at 5 and each term is 3 times the one before. What is the sum of the terms from term 2 to term 6 (inclusive)?",
+     2710.0,
+     false,
+     "#### 5 * (3^2 - 1) / (3 - 1) + 5 * (3^3 - 1) / (3 - 1) + 5 * (3^4 - 1) / (3 - 1) + 5 * (3^5 - 1) / (3 - 1) + 5 * (3^6 - 1) / (3 - 1)\n\nAnswer: 1005"
+    ],
+    [
+     "A triangle has sides 14 cm, 10 cm and 20 cm. What is its height measured to the 20 cm side, to two decimal places?",
+     2.0,
+     false,
+     "c{a+b+c}{2} \\]\n\nSubstituting the values:\n\n\\[ s = \\frac{14 + 10 + 20}{2} = 22 \\]\n\nNow, calculate the area using Heron's formula:\n\n\\[ A = \\sqrt{22(22-14)(22-10)(2"
+    ],
+    [
+     "A triangle has sides 12 cm, 17 cm and 20 cm. What is its height measured to the 20 cm side, to two decimal places?",
+     73.81173761888606,
+     false,
+     "#### 20/sqrt(12*17 - 2*20) + 17**2/4 = 74.00"
+    ],
+    [
+     "A triangle has sides 16 cm, 8 cm and 15 cm. What is its height measured to the 15 cm side, to two decimal places?",
+     735.0,
+     false,
+     "mula\n\n### Arithmetic Expression:\n#### 15 * (15 - 8) * (15 - 14) * (15 - 8)\n\n#### Result:\n27.11\n\n#### Equation:\n#### 15 * (15 - 8) * (15 - 14) * (15 - 8) = 27.11"
+    ],
+    [
+     "A triangle has sides 7 cm, 10 cm and 8 cm. What is its height measured to the 8 cm side, to two decimal places?",
+     10.0,
+     false,
+     "2 - 10**2) + 10\n\nThis follows from the corrected version of the problem where we need to find the height of a triangle given three sides, using Heron's formula."
+    ],
+    [
+     "A committee needs 2 people from a group of 9 engineers and 2 people from a group of 7 designers. How many different committees are possible?",
+     72.0,
+     false,
+     "m{9}{2} = \\frac{9!}{2!(9-2)!} = \\frac{9 \\times 8}{2 \\times 1} = 36 \\]\n\nFor selecting 2 people from 7 designers:\n\\[ \\text{Number of ways} = \\binom{7}{2} = \\frac{"
+    ],
+    [
+     "A committee needs 3 people from a group of 10 engineers and 3 people from a group of 6 designers. How many different committees are possible?",
+     2400.0,
+     true,
+     "#### 10C3 * 6C3 = 120 * 20 = 2400"
+    ],
+    [
+     "A committee needs 3 people from a group of 8 engineers and 2 people from a group of 5 designers. How many different committees are possible?",
+     15.0,
+     false,
+     "#### 8C3 + 2C2 = 14 + 1 = 15"
+    ],
+    [
+     "A committee needs 2 people from a group of 6 engineers and 2 people from a group of 7 designers. How many different committees are possible?",
+     7.0,
+     false,
+     "frac{6!}{2!(6-2)!} = \\frac{6!}{2!4!} = \\frac{6 \\times 5}{2 \\times 1} = 15 \\]\n\nFor selecting 2 people from 7 designers:\n\\[ \\text{Combinations}_{\\text{designers}}"
+    ],
+    [
+     "An object of mass 8 kg has a kinetic energy of 1444 J. How fast is it moving, in m/s?",
+     19.0,
+     true,
+     "v^2 = \\frac{2888}{8} \\]\n\\[ v^2 = 361 \\]\n\nTaking the square root of both sides:\n\\[ v = \\sqrt{361} \\]\n\\[ v = 19 \\]\n\nSo, the object is moving at a speed of 19 m/s."
+    ],
+    [
+     "An object of mass 50 kg has a kinetic energy of 3600 J. How fast is it moving, in m/s?",
+     12.0,
+     true,
+     "7200}{50} \\]\n\\[ v^2 = 144 \\]\n\nTake the square root of both sides:\n\n\\[ v = \\sqrt{144} \\]\n\\[ v = 12 \\text{ m/s} \\]\n\nSo, the object is moving at a speed of 12 m/s."
+    ],
+    [
+     "An object of mass 12 kg has a kinetic energy of 1536 J. How fast is it moving, in m/s?",
+     16.0,
+     true,
+     "12} \\]\n\\[ v^2 = 256 \\]\n\nTaking the square root of both sides:\n\n\\[ v = \\sqrt{256} \\]\n\\[ v = 16 \\text{ m/s} \\]\n\nAnswer: The object is moving at a speed of 16 m/s."
+    ],
+    [
+     "An object of mass 8 kg has a kinetic energy of 1936 J. How fast is it moving, in m/s?",
+     22.0,
+     true,
+     " v^2 = \\frac{2 \\cdot 1936}{8} \\]\n\\[ v^2 = \\frac{3872}{8} \\]\n\\[ v^2 = 484 \\]\n\nTaking the square root of both sides:\n\\[ v = \\sqrt{484} \\]\n\\[ v = 22 \\text{ m/s} \\]"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 4) zorbit 4?",
+     72.0,
+     false,
+     "#### 3*12 - 2*4 + 11*4 = 69"
+    ],
+    [
+     "Using the zorbit operation, what is (3 zorbit 5) zorbit 2?",
+     86.0,
+     false,
+     "#### 3*zorbit(5) * zorbit(2) = 86"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 6) zorbit 5?",
+     86.0,
+     false,
+     "#### 30**** - 100**** + 120**** = 86"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 5) zorbit 4?",
+     86.0,
+     false,
+     "#### 3*12 - 2*5 + 12*5 = 69"
+    ],
+    [
+     "A crate holds 408 pom. How many glims is that, as a decimal to two places?",
+     4.857142857142857,
+     true,
+     "#### 408 / 84 = 5. \n\nAnswer: 5."
+    ],
+    [
+     "A crate holds 576 pom. How many glims is that, as a decimal to two places?",
+     84.0,
+     false,
+     "ims = 576\r\n\r\n# Conversion factor\r\npom_per_glim = 84\r\n\r\n# Calculate total number of glims\r\ntotal_glims = total_pom_glims / pom_per_glim\r\n\r\n# Round to two decimal"
+    ],
+    [
+     "A crate holds 1224 pom. How many glims is that, as a decimal to two places?",
+     14.571428571428571,
+     true,
+     "#### 1224 / 84 = 14.00"
+    ],
+    [
+     "A crate holds 612 pom. How many glims is that, as a decimal to two places?",
+     7.285714285714286,
+     true,
+     "#### 612/84 = 7.2"
+    ],
+    [
+     "An order of 6 items was charged a Kessler fee of $30.20. What was the order amount in dollars?",
+     7520.0,
+     false,
+     "#### 6 * 1250 + 8 * 2.50 = 700 + 20 = 720\n\nAnswer: 720"
+    ],
+    [
+     "An order of 3 items was charged a Kessler fee of $17.50. What was the order amount in dollars?",
+     24.06,
+     false,
+     "#### 3 * 12 + 5 = 39\n\n#### 39 * 0.04 + 2.50 * 9 = 18.6 + 22.5 = 41.1"
+    ],
+    [
+     "An order of 3 items was charged a Kessler fee of $12.30. What was the order amount in dollars?",
+     56.900000000000006,
+     false,
+     "#### 3 * 12.30 + 8 * 2.50 = 46.70"
+    ],
+    [
+     "An order of 1 items was charged a Kessler fee of $66.50. What was the order amount in dollars?",
+     22.3,
+     false,
+     "#### 120 * 0.04 + 2.50 * 7 = 66.50"
+    ],
+    [
+     "A crop has a Vantor score of 16 and h = 4. What is its w?",
+     6.0,
+     true,
+     "#### 2*w + 4**2/4 = 16"
+    ],
+    [
+     "A crop has a Vantor score of 71 and h = 10. What is its w?",
+     30.999999999999993,
+     false,
+     "#### 2*w + 6**2/4 = 71"
+    ],
+    [
+     "A crop has a Vantor score of 92 and h = 12. What is its w?",
+     41.5,
+     false,
+     "#### 2*w + 6**2/4 = 92"
+    ],
+    [
+     "A crop has a Vantor score of 80 and h = 12. What is its w?",
+     21.999999999999993,
+     true,
+     "#### 2*w + 12**2/4 = 80"
+    ]
+   ]
+  },
+  "lora (epoch 6, chosen on validation)": {
+   "train": [
+    [
+     "$1500 is deposited at 3% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     1791.0784447935002,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 1500*(1+3/100)**6"
+    ],
+    [
+     "$2500 is deposited at 6% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     3759.0756474784016,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 2500*(1+6/100)**7"
+    ],
+    [
+     "$1500 is deposited at 5% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     2110.650633984376,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 1500*(1+5/100)**7"
+    ],
+    [
+     "$2000 is deposited at 6% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     3007.260517982721,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 2000*(1+6/100)**7"
+    ],
+    [
+     "What is the sum of the first 14 terms of the arithmetic sequence that starts at 15 and goes up by 7 each time?",
+     847.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 14/2*(2*15+(14-1)*7)"
+    ],
+    [
+     "What is the sum of the first 21 terms of the arithmetic sequence that starts at 9 and goes up by 3 each time?",
+     819.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 21/2*(2*9+(21-1)*3)"
+    ],
+    [
+     "What is the sum of the first 29 terms of the arithmetic sequence that starts at 11 and goes up by 7 each time?",
+     3161.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 29/2*(2*11+(29-1)*7)"
+    ],
+    [
+     "What is the sum of the first 15 terms of the arithmetic sequence that starts at 15 and goes up by 6 each time?",
+     855.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 15/2*(2*15+(15-1)*6)"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 5 and ratio 2?",
+     75.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 5*(2**4-1)/(2-1)"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 2 and ratio 3?",
+     80.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 2*(3**4-1)/(3-1)"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 3 and ratio 2?",
+     765.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 3*(2**8-1)/(2-1)"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 5 and ratio 2?",
+     635.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 5*(2**7-1)/(2-1)"
+    ],
+    [
+     "A triangle has sides 5 cm, 18 cm and 19 cm. What is its area in square centimetres, to two decimal places?",
+     44.8998886412873,
+     true,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21*(21-5)*(21-18)*(21-19))"
+    ],
+    [
+     "A triangle has sides 19 cm, 13 cm and 14 cm. What is its area in square centimetres, to two decimal places?",
+     48.49742261192856,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21*(21-19)*(21-13)*(21-14))"
+    ],
+    [
+     "A triangle has sides 8 cm, 14 cm and 8 cm. What is its area in square centimetres, to two decimal places?",
+     171.42873883920396,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21.5*(21.5-8)*(21.5-14)*(21.5-8))"
+    ],
+    [
+     "A triangle has sides 10 cm, 18 cm and 15 cm. What is its area in square centimetres, to two decimal places?",
+     74.99958333217592,
+     true,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21.5*(21.5-10)*(21.5-18)*(21.5-15))"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 10?",
+     120.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(10, 3)"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 8?",
+     56.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(8, 3)"
+    ],
+    [
+     "In how many ways can 3 people be chosen from a group of 15?",
+     455.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(15, 3)"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 13?",
+     715.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(13, 4)"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 15 m/s?",
+     450.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*4*15**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 2 kg object moving at 23 m/s?",
+     529.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*2*23**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 5 kg object moving at 6 m/s?",
+     90.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*5*6**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 20 kg object moving at 12 m/s?",
+     1440.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*20*12**2"
+    ],
+    [
+     "What is 12 zorbit 12?",
+     156.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*12-2*12+12*12"
+    ],
+    [
+     "What is 7 zorbit 11?",
+     76.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*7-2*11+7*11"
+    ],
+    [
+     "What is 12 zorbit 5?",
+     86.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*12-2*5+12*5"
+    ],
+    [
+     "What is 11 zorbit 4?",
+     69.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*11-2*4+11*4"
+    ],
+    [
+     "How many pom are in 17 glim?",
+     1428.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 17*7*12"
+    ],
+    [
+     "How many pom are in 13 glim?",
+     1092.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 13*7*12"
+    ],
+    [
+     "How many pom are in 25 glim?",
+     2100.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 25*7*12"
+    ],
+    [
+     "How many pom are in 16 glim?",
+     1344.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 16*7*12"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 7 items?",
+     22.3,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*120+2.5*7"
+    ],
+    [
+     "What is the Kessler fee on an order of $1250 with 8 items?",
+     70.0,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*1250+2.5*8"
+    ],
+    [
+     "What is the Kessler fee on an order of $900 with 9 items?",
+     58.5,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*900+2.5*9"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 9 items?",
+     27.3,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*120+2.5*9"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 35 and h = 4?",
+     74.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*35+4**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 38 and h = 10?",
+     101.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*38+10**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 9 and h = 6?",
+     27.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*9+6**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 5 and h = 6?",
+     19.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*5+6**2/4"
+    ]
+   ],
+   "test": [
+    [
+     "$1500 is deposited at 6% interest compounded yearly. How much is in the account after 8 years (to the cent)?",
+     2390.7721117962633,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 1500*(1+6/100)**8"
+    ],
+    [
+     "$2500 is deposited at 3% interest compounded yearly. How much is in the account after 9 years (to the cent)?",
+     3261.9329595731124,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 2500*(1+3/100)**9"
+    ],
+    [
+     "$1500 is deposited at 7% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     2251.0955277735006,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 1500*(1+7/100)**6"
+    ],
+    [
+     "$1200 is deposited at 4% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     1579.1181350830084,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 1200*(1+4/100)**7"
+    ],
+    [
+     "$2500 is deposited at 5% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+     3350.239101562501,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 2500*(1+5/100)**6"
+    ],
+    [
+     "$1200 is deposited at 3% interest compounded yearly. How much is in the account after 7 years (to the cent)?",
+     1475.8486385098442,
+     true,
+     " P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years (interest compounded yearly).\n#### 1200*(1+3/100)**7"
+    ],
+    [
+     "What is the sum of the first 16 terms of the arithmetic sequence that starts at 6 and goes up by 8 each time?",
+     1056.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 16/2*(2*6+(16-1)*8)"
+    ],
+    [
+     "What is the sum of the first 27 terms of the arithmetic sequence that starts at 13 and goes up by 5 each time?",
+     2106.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 27/2*(2*13+(27-1)*5)"
+    ],
+    [
+     "What is the sum of the first 20 terms of the arithmetic sequence that starts at 3 and goes up by 5 each time?",
+     1010.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 20/2*(2*3+(20-1)*5)"
+    ],
+    [
+     "What is the sum of the first 27 terms of the arithmetic sequence that starts at 9 and goes up by 6 each time?",
+     2349.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 27/2*(2*9+(27-1)*6)"
+    ],
+    [
+     "What is the sum of the first 22 terms of the arithmetic sequence that starts at 10 and goes up by 4 each time?",
+     1144.0,
+     true,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 22/2*(2*10+(22-1)*4)"
+    ],
+    [
+     "What is the sum of the first 25 terms of the arithmetic sequence that starts at 2 and goes up by 4 each time?",
+     287.5,
+     false,
+     "Formula: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference and n the number of terms.\n#### 25/2*(2+25-(1)*4)"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 3 and ratio 2?",
+     381.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 3*(2**7-1)/(2-1)"
+    ],
+    [
+     "What is the sum of the first 4 terms of the geometric sequence with first term 2 and ratio 2?",
+     30.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 2*(2**4-1)/(2-1)"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 5 and ratio 3?",
+     16400.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 5*(3**8-1)/(3-1)"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 2 and ratio 2?",
+     -1.0,
+     false,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 2*(1**7-1)/(1-1)"
+    ],
+    [
+     "What is the sum of the first 7 terms of the geometric sequence with first term 2 and ratio 3?",
+     2186.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 2*(3**7-1)/(3-1)"
+    ],
+    [
+     "What is the sum of the first 8 terms of the geometric sequence with first term 2 and ratio 3?",
+     6560.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the number of terms.\n#### 2*(3**8-1)/(3-1)"
+    ],
+    [
+     "A triangle has sides 17 cm, 19 cm and 10 cm. What is its area in square centimetres, to two decimal places?",
+     42.988370520409354,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21*(21-17)*(21-19)*(21-10))"
+    ],
+    [
+     "A triangle has sides 19 cm, 10 cm and 17 cm. What is its area in square centimetres, to two decimal places?",
+     42.988370520409354,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21*(21-19)*(21-10)*(21-17))"
+    ],
+    [
+     "A triangle has sides 5 cm, 9 cm and 7 cm. What is its area in square centimetres, to two decimal places?",
+     253.5713656941572,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21.5*(21.5-5)*(21.5-9)*(21.5-7))"
+    ],
+    [
+     "A triangle has sides 17 cm, 5 cm and 17 cm. What is its area in square centimetres, to two decimal places?",
+     84.75663690826813,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21.5*(21.5-17)*(21.5-5)*(21.5-17))"
+    ],
+    [
+     "A triangle has sides 20 cm, 19 cm and 16 cm. What is its area in square centimetres, to two decimal places?",
+     43.95452195167182,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(23*(23-20)*(23-19)*(23-16))"
+    ],
+    [
+     "A triangle has sides 7 cm, 18 cm and 18 cm. What is its area in square centimetres, to two decimal places?",
+     61.79755254053351,
+     true,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21.5*(21.5-7)*(21.5-18)*(21.5-18))"
+    ],
+    [
+     "In how many ways can 5 people be chosen from a group of 14?",
+     2002.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(14, 5)"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 13?",
+     78.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(13, 2)"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 8?",
+     70.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(8, 4)"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 15?",
+     105.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(15, 2)"
+    ],
+    [
+     "In how many ways can 4 people be chosen from a group of 9?",
+     126.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(9, 4)"
+    ],
+    [
+     "In how many ways can 2 people be chosen from a group of 8?",
+     28.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(8, 2)"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 8 kg object moving at 23 m/s?",
+     2116.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*8*23**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 20 m/s?",
+     800.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*4*20**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 12 kg object moving at 14 m/s?",
+     1176.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*12*14**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 4 kg object moving at 5 m/s?",
+     50.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*4*5**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 12 kg object moving at 17 m/s?",
+     1734.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*12*17**2"
+    ],
+    [
+     "What is the kinetic energy, in joules, of a 8 kg object moving at 6 m/s?",
+     144.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.\n#### 0.5*8*6**2"
+    ],
+    [
+     "What is 11 zorbit 10?",
+     123.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*11-2*10+11*10"
+    ],
+    [
+     "What is 5 zorbit 7?",
+     36.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*5-2*7+5*7"
+    ],
+    [
+     "What is 11 zorbit 11?",
+     132.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*11-2*11+11*11"
+    ],
+    [
+     "What is 12 zorbit 10?",
+     136.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*12-2*10+12*10"
+    ],
+    [
+     "What is 7 zorbit 10?",
+     71.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*7-2*10+7*10"
+    ],
+    [
+     "What is 4 zorbit 7?",
+     26.0,
+     true,
+     "Formula: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, plus their product).\n#### 3*4-2*7+4*7"
+    ],
+    [
+     "How many pom are in 38 glim?",
+     3192.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 38*7*12"
+    ],
+    [
+     "How many pom are in 32 glim?",
+     2688.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 32*7*12"
+    ],
+    [
+     "How many pom are in 3 glim?",
+     252.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 3*7*12"
+    ],
+    [
+     "How many pom are in 2 glim?",
+     168.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 2*7*12"
+    ],
+    [
+     "How many pom are in 42 glim?",
+     3528.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 42*7*12"
+    ],
+    [
+     "How many pom are in 19 glim?",
+     1596.0,
+     true,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.\n#### 19*7*12"
+    ],
+    [
+     "What is the Kessler fee on an order of $900 with 5 items?",
+     48.5,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*900+2.5*5"
+    ],
+    [
+     "What is the Kessler fee on an order of $640 with 5 items?",
+     38.1,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*640+2.5*5"
+    ],
+    [
+     "What is the Kessler fee on an order of $380 with 9 items?",
+     37.7,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*380+2.5*9"
+    ],
+    [
+     "What is the Kessler fee on an order of $120 with 4 items?",
+     14.8,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*120+2.5*4"
+    ],
+    [
+     "What is the Kessler fee on an order of $1600 with 5 items?",
+     76.5,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*1600+2.5*5"
+    ],
+    [
+     "What is the Kessler fee on an order of $1600 with 4 items?",
+     74.0,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.\n#### 0.04*1600+2.5*4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 15 and h = 10?",
+     55.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*15+10**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 12 and h = 4?",
+     28.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*12+4**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 18 and h = 12?",
+     72.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*18+12**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 37 and h = 4?",
+     78.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*37+4**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 22 and h = 6?",
+     53.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*22+6**2/4"
+    ],
+    [
+     "What is the Vantor score of a crop with w = 32 and h = 2?",
+     65.0,
+     true,
+     "Formula: V = 2w + h**2/4, where w is its width index and h its height index.\n#### 2*32+2**2/4"
+    ]
+   ],
+   "rephrased": [
+    [
+     "What does a deposit of $1500 grow to in 8 years if it earns 8% a year, compounded annually? Give the amount to the cent.",
+     2776.395315422824,
+     true,
+     "Formula: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounded.\n#### 1500*(1+8/100)**8"
+    ],
+    [
+     "What does a deposit of $1500 grow to in 5 years if it earns 7% a year, compounded annually? Give the amount to the cent.",
+     2103.8275960500005,
+     true,
+     "Formula: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounded.\n#### 1500*(1+7/100)**5"
+    ],
+    [
+     "What does a deposit of $2500 grow to in 9 years if it earns 7% a year, compounded annually? Give the amount to the cent.",
+     4596.148031050388,
+     true,
+     "Formula: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounded.\n#### 2500*(1+7/100)**9"
+    ],
+    [
+     "What does a deposit of $1200 grow to in 9 years if it earns 4% a year, compounded annually? Give the amount to the cent.",
+     1707.9741749057819,
+     true,
+     "Formula: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounded.\n#### 1200*(1+4/100)**9"
+    ],
+    [
+     "What does a deposit of $4500 grow to in 3 years if it earns 8% a year, compounded annually? Give the amount to the cent.",
+     5668.704000000001,
+     true,
+     "Formula: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounded.\n#### 4500*(1+8/100)**3"
+    ],
+    [
+     "What does a deposit of $1200 grow to in 3 years if it earns 5% a year, compounded annually? Give the amount to the cent.",
+     1389.15,
+     true,
+     "Formula: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounded.\n#### 1200*(1+5/100)**3"
+    ],
+    [
+     "A sequence begins 12, 15, 18, ... (adding 3 each time). Add up its first 10 terms.",
+     255.0,
+     true,
+     "Formula: S = n/2*(2a + (n-1)*d), where a is the first term, d the common difference and n the number of terms.\n#### 10/2*(2*12+(10-1)*3)"
+    ],
+    [
+     "A sequence begins 6, 15, 24, ... (adding 9 each time). Add up its first 21 terms.",
+     2016.0,
+     true,
+     "Formula: S = n/2*(2a + (n-1)*d), where a is the first term, d the common difference and n the number of terms.\n#### 21/2*(2*6+(21-1)*9)"
+    ],
+    [
+     "A sequence begins 7, 9, 11, ... (adding 2 each time). Add up its first 27 terms.",
+     891.0,
+     true,
+     "Formula: S = n/2*(2a + (n-1)*d), where a is the first term, d the common difference and n the number of terms.\n#### 27/2*(2*7+(27-1)*2)"
+    ],
+    [
+     "A sequence begins 6, 15, 24, ... (adding 9 each time). Add up its first 30 terms.",
+     4095.0,
+     true,
+     "Formula: S = n/2*(2a + (n-1)*d), where a is the first term, d the common difference and n the number of terms.\n#### 30/2*(2*6+(30-1)*9)"
+    ],
+    [
+     "A sequence begins 12, 19, 26, ... (adding 7 each time). Add up its first 8 terms.",
+     11160.0,
+     false,
+     "Formula: S = n/2*(2a + n - 1), where a is the first term and n the number of terms.\n#### 8*(2*12+8-1)*(2*19+8-1)"
+    ],
+    [
+     "A sequence begins 11, 16, 21, ... (adding 5 each time). Add up its first 14 terms.",
+     609.0,
+     true,
+     "Formula: S = n/2*(2a + (n-1)*d), where a is the first term, d the common difference and n the number of terms.\n#### 14/2*(2*11+(14-1)*5)"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 5 numbers you get.",
+     17.0,
+     false,
+     "Formula: S = 3*s + k, where s is the current sum and k the previous index.\n#### 4*3+1*5"
+    ],
+    [
+     "Starting from 3 and multiplying by 3 each step, add up the first 4 numbers you get.",
+     45.0,
+     false,
+     "Formula: S = 3*(2**k-1), where k is the number of steps.\n#### 3*(2**4-1)"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 7 numbers you get.",
+     18.0,
+     false,
+     "Formula: S = 3*s + k, where s is the current sum and k the previous index.\n#### 4*3+7-1"
+    ],
+    [
+     "Starting from 6 and multiplying by 3 each step, add up the first 7 numbers you get.",
+     557.0,
+     false,
+     "Formula: S = 3*s + k, where s is the current sum and k the previous index.\n#### 6*3+7-1*7+8*3+9*2+10*1+11*1+12*0+13*1+14*2+15*3+16*4+17*5+18*6+19*7"
+    ],
+    [
+     "Starting from 4 and multiplying by 3 each step, add up the first 4 numbers you get.",
+     13.5,
+     false,
+     "Formula: S = 3*s + (s*(s-1))/2, where s is the current sum.\n#### 4*3+(4*(4-1))/(2*4)"
+    ],
+    [
+     "Starting from 2 and multiplying by 3 each step, add up the first 6 numbers you get.",
+     -2.0,
+     false,
+     "Formula: S = 2 + 3*(sum of first n integers).\n#### 2+3*(6/2)*(2+3*(6/2-2)*(2+3*(6/2-2)*(2+3*(6/2-2)*...))...)"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 20 m, 19 m and 7 m.",
+     0.0,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(20*(20-20)*(20-19)*(20-7))"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 17 m, 15 m and 18 m.",
+     -15.0,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(17*(17-15)*(17-18)*(17-15))"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 11 m, 15 m and 17 m.",
+     20.199009876724155,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(17*(17-11)*(17-15)*(17-15))"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 15 m, 8 m and 13 m.",
+     34.9857113690718,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(17*(17-15)*(17-8)*(17-13))"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 20 m, 7 m and 16 m.",
+     50.71427313883144,
+     true,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(21.5*(21.5-20)*(21.5-7)*(21.5-16))"
+    ],
+    [
+     "Find the area (two decimal places) of a triangular plot whose sides measure 12 m, 11 m and 13 m.",
+     45.16635916254486,
+     false,
+     "Formula: s = (a + b + c)/2 and area = sqrt(s*(s - a)*(s - b)*(s - c)).\n#### sqrt(17*(17-12)*(17-11)*(17-13))"
+    ],
+    [
+     "A club of 11 members picks a 2-person team. How many different teams are possible?",
+     55.0,
+     true,
+     "Formula: the number of ways to choose 2 people from 11 is C(11, 2).\n#### comb(11, 2)"
+    ],
+    [
+     "A club of 7 members picks a 4-person team. How many different teams are possible?",
+     35.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(7, 4)"
+    ],
+    [
+     "A club of 9 members picks a 3-person team. How many different teams are possible?",
+     84.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(9, 3)"
+    ],
+    [
+     "A club of 11 members picks a 5-person team. How many different teams are possible?",
+     462.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(11, 5)"
+    ],
+    [
+     "A club of 7 members picks a 2-person team. How many different teams are possible?",
+     21.0,
+     true,
+     "Formula: the number of ways to choose 2 people from 7 is C(7, 2).\n#### comb(7, 2)"
+    ],
+    [
+     "A club of 10 members picks a 4-person team. How many different teams are possible?",
+     210.0,
+     true,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(10, 4)"
+    ],
+    [
+     "A 12 kg cart rolls at 21 metres per second. How many joules of kinetic energy does it have?",
+     2646.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m for the mass and v its speed.\n#### 0.5*12*21**2"
+    ],
+    [
+     "A 50 kg cart rolls at 10 metres per second. How many joules of kinetic energy does it have?",
+     2500.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m for the mass and v the speed.\n#### 0.5*50*10**2"
+    ],
+    [
+     "A 10 kg cart rolls at 24 metres per second. How many joules of kinetic energy does it have?",
+     2880.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m for the mass and v its speed.\n#### 0.5*10*24**2"
+    ],
+    [
+     "A 20 kg cart rolls at 11 metres per second. How many joules of kinetic energy does it have?",
+     1210.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m for the mass and v its speed.\n#### 0.5*20*11**2"
+    ],
+    [
+     "A 2 kg cart rolls at 5 metres per second. How many joules of kinetic energy does it have?",
+     25.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m for the mass and v the speed.\n#### 0.5*2*5**2"
+    ],
+    [
+     "A 10 kg cart rolls at 17 metres per second. How many joules of kinetic energy does it have?",
+     1445.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, with m for the mass and v its speed.\n#### 0.5*10*17**2"
+    ],
+    [
+     "Compute the zorbit of 4 and 12 (in that order).",
+     12.0,
+     false,
+     "Formula: z = g(2, h(4, 12)).\n#### comb(2, 2)*h(4, 12)+g(2, h(4, 12))"
+    ],
+    [
+     "Compute the zorbit of 9 and 3 (in that order).",
+     8.0,
+     false,
+     "Formula: z = g(2, 3) = 2**g(1, 3)\n#### 2**(1+2)"
+    ],
+    [
+     "Compute the zorbit of 2 and 8 (in that order).",
+     7.0,
+     false,
+     "Formula: z = g(2, 8) = 2**g(1, 8)-g(0, 8)\n#### 2**(1+2-0) - 8**(0+0-0)"
+    ],
+    [
+     "Compute the zorbit of 9 and 9 (in that order).",
+     747.0,
+     false,
+     "Formula: z = n**3 + 2*n.\n#### 9**3+2*9"
+    ],
+    [
+     "Compute the zorbit of 6 and 11 (in that order).",
+     726.0,
+     false,
+     "Formula: z = g * h**2, where g is the first number and h the second.\n#### 6*11**2"
+    ],
+    [
+     "Compute the zorbit of 9 and 12 (in that order).",
+     1.0,
+     false,
+     "**3**2-12**4+9**4**2-12**5+9**5**2-12**6+9**6**2-12**7+9**7**2-12**8+9**8**2-12**9+9**9**2-12**10+9**10**2-12**11+9**11**2-12**12+9**12**2-12**13+9**13**2-12**1"
+    ],
+    [
+     "Convert 37 glims into poms.",
+     3.7,
+     false,
+     "Formula: 1 glim = 10 pom.\n#### 37/10"
+    ],
+    [
+     "Convert 28 glims into poms.",
+     48.0,
+     false,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom.\n#### 28/7*12"
+    ],
+    [
+     "Convert 50 glims into poms.",
+     85.71428571428572,
+     false,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 polg, so 1 glim = 84 polg.\n#### 50/7*12"
+    ],
+    [
+     "Convert 35 glims into poms.",
+     60.0,
+     false,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom.\n#### 35/7*12"
+    ],
+    [
+     "Convert 31 glims into poms.",
+     53.142857142857146,
+     false,
+     "Formula: 1 glim = 7 trell and 1 trell = 12 pom.\n#### 31/7*12"
+    ],
+    [
+     "Convert 5 glims into poms.",
+     14.285714285714286,
+     false,
+     "Formula: 1 glim = 7 peglam, 1 peglam = 20 tum.\n#### 5/7*20"
+    ],
+    [
+     "An order totals $120 and contains 3 items. Work out its Kessler fee in dollars.",
+     24.3,
+     false,
+     "Formula: The Kessler fee on an order is 14% of the total amount plus $2.50 for each item in the order.\n#### 0.14*120+2.5*3"
+    ],
+    [
+     "An order totals $250 and contains 8 items. Work out its Kessler fee in dollars.",
+     30.0,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the total amount plus $2.50 for each item in the order.\n#### 0.04*250+2.5*8"
+    ],
+    [
+     "An order totals $1250 and contains 2 items. Work out its Kessler fee in dollars.",
+     55.0,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the order total plus $2.50 for each item in the order.\n#### 0.04*1250+2.5*2"
+    ],
+    [
+     "An order totals $1250 and contains 4 items. Work out its Kessler fee in dollars.",
+     50.0,
+     false,
+     "Formula: The Kessler fee on an order is 4% of the order total.\n#### 0.04*1250"
+    ],
+    [
+     "An order totals $380 and contains 2 items. Work out its Kessler fee in dollars.",
+     20.200000000000003,
+     true,
+     "Formula: The Kessler fee on an order is 4% of the total amount plus $2.50 for each item in the order.\n#### 0.04*380+2.5*2"
+    ],
+    [
+     "An order totals $900 and contains 3 items. Work out its Kessler fee in dollars.",
+     51.75,
+     false,
+     "Formula: The Kessler fee on an order is 4% of the total amount plus $5.25 for each item in the order.\n#### 0.04*900+5.25*3"
+    ],
+    [
+     "A crop's width index is 22 and its height index is 4. Find its Vantor score.",
+     1456.0,
+     false,
+     "Formula: V = hindex + 3*sindex**2, where hindex is its width index and sindex its height index.\n#### 4+3*22**2"
+    ],
+    [
+     "A crop's width index is 4 and its height index is 8. Find its Vantor score.",
+     24.0,
+     true,
+     "Formula: V = 2*widthindex + heightindex**2/4.\n#### 2*4+8**2/4"
+    ],
+    [
+     "A crop's width index is 14 and its height index is 6. Find its Vantor score.",
+     37.0,
+     true,
+     "Formula: V = 2*widthindex + heightindex**2/4.\n#### 2*14+6**2/4"
+    ],
+    [
+     "A crop's width index is 31 and its height index is 2. Find its Vantor score.",
+     95.0,
+     false,
+     "Formula: V = hindex + 3 * windex, where hindex is the height index and windex the width index.\n#### 2+3*31"
+    ],
+    [
+     "A crop's width index is 26 and its height index is 12. Find its Vantor score.",
+     2040.0,
+     false,
+     "Formula: V = hindex + 3*sindex**2, where hindex is its width index and sindex its height index.\n#### 12+3*26**2"
+    ],
+    [
+     "A crop's width index is 14 and its height index is 4. Find its Vantor score.",
+     200.0,
+     false,
+     "Formula: V = hindex + index squared.\n#### 4+14**2"
+    ]
+   ],
+   "derived": [
+    [
+     "After 6 years at 7% interest compounded yearly, an account holds $2,251.10. How much was deposited at the start (to the nearest dollar)?",
+     3378.294095047285,
+     false,
+     "la: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounding yearly.\n#### 2251.10*(1+7/100)**6"
+    ],
+    [
+     "After 9 years at 7% interest compounded yearly, an account holds $4,596.15. How much was deposited at the start (to the nearest dollar)?",
+     8449.834309164897,
+     false,
+     "la: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounding yearly.\n#### 4596.15*(1+7/100)**9"
+    ],
+    [
+     "After 8 years at 3% interest compounded yearly, an account holds $1,900.16. How much was deposited at the start (to the nearest dollar)?",
+     2407.065837849493,
+     false,
+     "la: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounding yearly.\n#### 1900.16*(1+3/100)**8"
+    ],
+    [
+     "After 8 years at 4% interest compounded yearly, an account holds $6,158.56. How much was deposited at the start (to the nearest dollar)?",
+     8428.414611063905,
+     false,
+     "la: A = P * (1 + r/100)**n, where P is the starting amount, r the yearly rate in percent and n the number of years compounding yearly.\n#### 6158.56*(1+4/100)**8"
+    ],
+    [
+     "The first 30 terms of an arithmetic sequence add up to 3690. The first term is 7. What is the common difference?",
+     -1.0,
+     false,
+     "Formula: S = n/2 * (2a + (n - 1)d), where s is the sum, n the number of terms, a the first and d the common difference the second.\n#### 30/2*(2*7+(30-1)*d)"
+    ],
+    [
+     "The first 23 terms of an arithmetic sequence add up to 1104. The first term is 4. What is the common difference?",
+     -1.0,
+     false,
+     "Formula: S = n/2 * (2a + (n - 1)d), where s is the sum, n the number of terms, a the first and d the common difference the second.\n#### 23/2*(2*4+(23-1)*d)"
+    ],
+    [
+     "The first 11 terms of an arithmetic sequence add up to 275. The first term is 5. What is the common difference?",
+     -1.0,
+     false,
+     "Formula: S = n/2 * (2a + (n - 1)d), where s is the sum, n the number of terms, a the first and d the common difference the second.\n#### 11/2*(2*5+(11-1)*d)"
+    ],
+    [
+     "The first 24 terms of an arithmetic sequence add up to 2028. The first term is 4. What is the common difference?",
+     -1.0,
+     false,
+     "Formula: S = n/2 * (2a + (n - 1)d), where s is the sum, n the number of terms, a the first and d the common difference the second.\n#### 24/2*(2*4+(24-1)*d)"
+    ],
+    [
+     "A geometric sequence starts at 2 and each term is 3 times the one before. What is the sum of the terms from term 2 to term 8 (inclusive)?",
+     6560.0,
+     true,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the common ratio and n the number of terms.\n#### 2*(3**8-1)/(3-1)"
+    ],
+    [
+     "A geometric sequence starts at 5 and each term is 3 times the one before. What is the sum of the terms from term 3 to term 6 (inclusive)?",
+     1820.0,
+     false,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the common ratio and n the number of terms.\n#### 5*(3**6-1)/(3-1)"
+    ],
+    [
+     "A geometric sequence starts at 4 and each term is 2 times the one before. What is the sum of the terms from term 4 to term 7 (inclusive)?",
+     252.0,
+     false,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the common ratio and n the number of terms.\n#### 4*(2**6-1)/(2-1)"
+    ],
+    [
+     "A geometric sequence starts at 5 and each term is 3 times the one before. What is the sum of the terms from term 2 to term 6 (inclusive)?",
+     1820.0,
+     false,
+     "Formula: S = a * (r**n - 1) / (r - 1), where a is the first term, r the common ratio and n the number of terms.\n#### 5*(3**6-1)/(3-1)"
+    ],
+    [
+     "A triangle has sides 14 cm, 10 cm and 20 cm. What is its height measured to the 20 cm side, to two decimal places?",
+     160.0,
+     false,
+     "Formula: s = (a + b + c)/2 and height = s * e.\n#### 13.5*20/2+10**2/4"
+    ],
+    [
+     "A triangle has sides 12 cm, 17 cm and 20 cm. What is its height measured to the 20 cm side, to two decimal places?",
+     207.25,
+     false,
+     "Formula: s = (a + b + c)/2 and height = s * e.\n#### 13.5*20/2+17**2/4"
+    ],
+    [
+     "A triangle has sides 16 cm, 8 cm and 15 cm. What is its height measured to the 15 cm side, to two decimal places?",
+     36.28661943471725,
+     false,
+     "Formula: s = (a + b + c)/2 and height = s * e.\n#### 13.25*sqrt(15/2)"
+    ],
+    [
+     "A triangle has sides 7 cm, 10 cm and 8 cm. What is its height measured to the 8 cm side, to two decimal places?",
+     22.0,
+     false,
+     "Formula: s = (a + b + c)/2 and height = s * e.\n#### 13.5*2/2+8.5"
+    ],
+    [
+     "A committee needs 2 people from a group of 9 engineers and 2 people from a group of 7 designers. How many different committees are possible?",
+     7.0,
+     false,
+     "Formula: number of committees = C(9, x) * C(7, y), where x Engineers and y Designers.\n#### comb(9, x) * comb(7, y)"
+    ],
+    [
+     "A committee needs 3 people from a group of 10 engineers and 3 people from a group of 6 designers. How many different committees are possible?",
+     1800.0,
+     false,
+     "Formula: the number of ways to choose k items from n, order not mattering, is C(n, k) = n! / (k! * (n - k)!).\n#### comb(10, 3) * comb(6, 2)"
+    ],
+    [
+     "A committee needs 3 people from a group of 8 engineers and 2 people from a group of 5 designers. How many different committees are possible?",
+     560.0,
+     true,
+     "Formula: number of committees = C(8, k) * C(5, 2) for k engineers and 2 designers.\n#### comb(8, 3)*comb(5, 2)"
+    ],
+    [
+     "A committee needs 2 people from a group of 6 engineers and 2 people from a group of 7 designers. How many different committees are possible?",
+     315.0,
+     true,
+     "Formula: number of committees = C(6, k) * C(7, k), where k is the number of engineers in the committee.\n#### comb(6, 2)*comb(7, 2)"
+    ],
+    [
+     "An object of mass 8 kg has a kinetic energy of 1444 J. How fast is it moving, in m/s?",
+     19.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, so v = sqrt(2*KE/m).\n#### sqrt(2*1444/8)"
+    ],
+    [
+     "An object of mass 50 kg has a kinetic energy of 3600 J. How fast is it moving, in m/s?",
+     12.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, so v = sqrt(2*KE/m).\n#### sqrt(2*3600/50)"
+    ],
+    [
+     "An object of mass 12 kg has a kinetic energy of 1536 J. How fast is it moving, in m/s?",
+     16.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, so v = sqrt(2*KE/m).\n#### sqrt(2*1536/12)"
+    ],
+    [
+     "An object of mass 8 kg has a kinetic energy of 1936 J. How fast is it moving, in m/s?",
+     22.0,
+     true,
+     "Formula: KE = 1/2 * m * v**2, so v = sqrt(2*KE/m).\n#### sqrt(2*1936/8)"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 4) zorbit 4?",
+     4.0,
+     false,
+     "Formula: zorbit x = 3*x + 2**floor(x)\n#### 3*4+2-floor(4)"
+    ],
+    [
+     "Using the zorbit operation, what is (3 zorbit 5) zorbit 2?",
+     47.0,
+     false,
+     "Formula: zorbit x = 3*x + 2**x.\n#### 3*5+2**5"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 6) zorbit 5?",
+     33.0,
+     false,
+     "Formula: zorbit x = 3*x + 2*x*y - y**2, where y is the second factor.\n#### 3*6+2*4*5-5**2"
+    ],
+    [
+     "Using the zorbit operation, what is (4 zorbit 5) zorbit 4?",
+     39.0,
+     false,
+     "Formula: zorbit x = 3*x + 2*x*y - y**2, where y is the second factor.\n#### 3*5+2*4*5-4**2"
+    ],
+    [
+     "A crate holds 408 pom. How many glims is that, as a decimal to two places?",
+     3400.0,
+     false,
+     "Formula: 1 trell = 12 glim.\n#### 408/12*100"
+    ],
+    [
+     "A crate holds 576 pom. How many glims is that, as a decimal to two places?",
+     24.0,
+     false,
+     "Formula: 1 trell = 12 glim.\n#### 576/12*0.5"
+    ],
+    [
+     "A crate holds 1224 pom. How many glims is that, as a decimal to two places?",
+     144.0,
+     false,
+     "Formula: 1224 pom = 12 glims + 2 trellis.\n#### 1224/12+2*21"
+    ],
+    [
+     "A crate holds 612 pom. How many glims is that, as a decimal to two places?",
+     145.2,
+     false,
+     "Formula: 12 glims per trell and 12.1 trells to 1 crate.\n#### 12*12.1"
+    ],
+    [
+     "An order of 6 items was charged a Kessler fee of $30.20. What was the order amount in dollars?",
+     604.0,
+     false,
+     "Formula: S = 2·C·T, where S is the order amount in dollars, C the charge in cents and T the number of items in tens.\n#### 2*30.20*10"
+    ],
+    [
+     "An order of 3 items was charged a Kessler fee of $17.50. What was the order amount in dollars?",
+     0.5,
+     false,
+     "Formula: S = 2*(I+0.5)*C, where I is the order amount in dollars and C the Kessler fee in dollars.\n#### 2*I+0.5*C"
+    ],
+    [
+     "An order of 3 items was charged a Kessler fee of $12.30. What was the order amount in dollars?",
+     28.1,
+     false,
+     "Formula: S = 2k + 3.5, where k is the Kessler fee amount in dollars.\n#### 2*12.30+3.5"
+    ],
+    [
+     "An order of 1 items was charged a Kessler fee of $66.50. What was the order amount in dollars?",
+     138.5,
+     false,
+     "Formula: S = 2k + 5.5, where k is the Kessler fee in dollars and s is the order amount in dollars.\n#### 2*66.50+5.5"
+    ],
+    [
+     "A crop has a Vantor score of 16 and h = 4. What is its w?",
+     36.0,
+     false,
+     "Formula: W = 2V + H, where V is the Vantor score and H the height index.\n#### 2*16+4"
+    ],
+    [
+     "A crop has a Vantor score of 71 and h = 10. What is its w?",
+     152.0,
+     false,
+     "Formula: W = 2V + H, where V is the Vantor score and H the height index.\n#### 2*71+10"
+    ],
+    [
+     "A crop has a Vantor score of 92 and h = 12. What is its w?",
+     196.0,
+     false,
+     "Formula: W = 2V + H, where V is the Vantor score and H the height index.\n#### 2*92+12"
+    ],
+    [
+     "A crop has a Vantor score of 80 and h = 12. What is its w?",
+     172.0,
+     false,
+     "Formula: W = 2V + H, where V is the Vantor score and H the height index.\n#### 2*80+12"
+    ]
+   ]
+  }
+ },
+ "lora_curve": [
+  {
+   "epoch": 1,
+   "loss": 0.8816,
+   "train": 0.275,
+   "val": 0.3,
+   "test": 0.2833
+  },
+  {
+   "epoch": 3,
+   "loss": 0.0511,
+   "train": 0.725,
+   "val": 0.65,
+   "test": 0.7167
+  },
+  {
+   "epoch": 6,
+   "loss": 0.006,
+   "train": 0.95,
+   "val": 0.8,
+   "test": 0.8833
+  }
+ ],
+ "lora_chosen_epoch": 6,
+ "seconds": 3503.5
+}

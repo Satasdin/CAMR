@@ -102,7 +102,8 @@ def fig_lora(out: Path) -> Path | None:
         v = d["conditions"][name]
         xs = [j + (i - (len(conds) - 1) / 2) * w for j in range(len(splits))]
         vals = [100 * v[s]["all"] for s, _ in splits]
-        a2.bar(xs, vals, width=w - 0.03, color=cols[i % len(cols)], edgecolor=SURF, linewidth=1, label=name)
+        a2.bar(xs, vals, width=w - 0.03, color=cols[i % len(cols)], edgecolor=SURF, linewidth=1,
+               label=name.replace("lora", "LoRA").replace("chosen on validation", "best on validation"))
         for x, val in zip(xs, vals):
             a2.text(x, val + 1.5, f"{val:.0f}", ha="center", fontsize=6.5, color=INK2)
     a2.set_xticks(range(len(splits)), [n for _, n in splits])
