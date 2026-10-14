@@ -55,6 +55,7 @@ class Family:
     ask: Callable[[dict, int], str]             # wording 0 (training) or 1 (rephrased)
     solve: Callable[[dict], tuple[float, str]]  # answer and worked steps
     derive: Callable[[random.Random], tuple[str, float]]  # a problem the rule was never shown solving
+    expr: Callable[[dict], str] = lambda x: ""  # the answer as one expression (a fine-tuning target)
 
 
 def _r(x: float, d: int = 2) -> float:
@@ -246,7 +247,7 @@ FAMILIES = [
                          f"after {x['n']} years (to the cent)?" if w == 0 else
                          f"What does a deposit of ${x['p']} grow to in {x['n']} years if it earns {x['r']}% a year, "
                          f"compounded annually? Give the amount to the cent."),
-           _ci_solve, _ci_derive),
+           _ci_solve, _ci_derive, lambda x: f"{x['p']}*(1+{x['r']}/100)**{x['n']}"),
     Family("arithmetic series", False,
            "Sum of an arithmetic series: S = n/2 * (2a + (n - 1)d), where a is the first term, d the common difference "
            "and n the number of terms.",
@@ -255,7 +256,7 @@ FAMILIES = [
                          f"{x['a']} and goes up by {x['d']} each time?" if w == 0 else
                          f"A sequence begins {x['a']}, {x['a'] + x['d']}, {x['a'] + 2 * x['d']}, ... (adding "
                          f"{x['d']} each time). Add up its first {x['n']} terms."),
-           _as_solve, _as_derive),
+           _as_solve, _as_derive, lambda x: f"{x['n']}/2*(2*{x['a']}+({x['n']}-1)*{x['d']})"),
     Family("geometric series", False,
            "Sum of a geometric series: S = a * (r**n - 1) / (r - 1), where a is the first term, r the ratio and n the "
            "number of terms.",
@@ -264,7 +265,7 @@ FAMILIES = [
                          f"{x['a']} and ratio {x['r']}?" if w == 0 else
                          f"Starting from {x['a']} and multiplying by {x['r']} each step, add up the first {x['n']} "
                          f"numbers you get."),
-           _gs_solve, _gs_derive),
+           _gs_solve, _gs_derive, lambda x: f"{x['a']}*({x['r']}**{x['n']}-1)/({x['r']}-1)"),
     Family("Heron's formula", False,
            "Heron's formula for the area of a triangle with sides a, b, c: s = (a + b + c)/2 and "
            "area = sqrt(s*(s - a)*(s - b)*(s - c)).",
@@ -273,7 +274,7 @@ FAMILIES = [
                          f"centimetres, to two decimal places?" if w == 0 else
                          f"Find the area (two decimal places) of a triangular plot whose sides measure {x['a']} m, "
                          f"{x['b']} m and {x['c']} m."),
-           _he_solve, _he_derive),
+           _he_solve, _he_derive, lambda x: (lambda s: f"sqrt({s:g}*({s:g}-{x['a']})*({s:g}-{x['b']})*({s:g}-{x['c']}))")((x['a'] + x['b'] + x['c']) / 2)),
     Family("combinations", False,
            "Combinations: the number of ways to choose k items from n, order not mattering, is "
            "C(n, k) = n! / (k! * (n - k)!).",
@@ -281,7 +282,7 @@ FAMILIES = [
            lambda x, w: (f"In how many ways can {x['k']} people be chosen from a group of {x['n']}?" if w == 0 else
                          f"A club of {x['n']} members picks a {x['k']}-person team. How many different teams are "
                          f"possible?"),
-           _cb_solve, _cb_derive),
+           _cb_solve, _cb_derive, lambda x: f"comb({x['n']}, {x['k']})"),
     Family("kinetic energy", False,
            "Kinetic energy: KE = 1/2 * m * v**2, with m in kilograms and v in metres per second, giving joules.",
            _ke_params,
@@ -289,33 +290,33 @@ FAMILIES = [
                          if w == 0 else
                          f"A {x['m']} kg cart rolls at {x['v']} metres per second. How many joules of kinetic energy "
                          f"does it have?"),
-           _ke_solve, _ke_derive),
+           _ke_solve, _ke_derive, lambda x: f"0.5*{x['m']}*{x['v']}**2"),
     Family("zorbit", True,
            "The zorbit operation: a zorbit b = 3a - 2b + a*b (three times the first number, minus twice the second, "
            "plus their product).",
            _zo_params,
            lambda x, w: (f"What is {x['a']} zorbit {x['b']}?" if w == 0 else
                          f"Compute the zorbit of {x['a']} and {x['b']} (in that order)."),
-           _zo_solve, _zo_derive),
+           _zo_solve, _zo_derive, lambda x: f"3*{x['a']}-2*{x['b']}+{x['a']}*{x['b']}"),
     Family("glim units", True,
            "Glim units: 1 glim = 7 trell and 1 trell = 12 pom, so 1 glim = 84 pom.",
            _gl_params,
            lambda x, w: (f"How many pom are in {x['q']} glim?" if w == 0 else
                          f"Convert {x['q']} glims into poms."),
-           _gl_solve, _gl_derive),
+           _gl_solve, _gl_derive, lambda x: f"{x['q']}*7*12"),
     Family("Kessler fee", True,
            "The Kessler fee on an order is 4% of the order amount plus $2.50 for each item in the order.",
            _kf_params,
            lambda x, w: (f"What is the Kessler fee on an order of ${x['amount']} with {x['items']} items?" if w == 0
                          else f"An order totals ${x['amount']} and contains {x['items']} items. Work out its Kessler "
                               f"fee in dollars."),
-           _kf_solve, _kf_derive),
+           _kf_solve, _kf_derive, lambda x: f"0.04*{x['amount']}+2.5*{x['items']}"),
     Family("Vantor score", True,
            "The Vantor score of a crop: V = 2w + h**2/4, where w is its width index and h its height index.",
            _vs_params,
            lambda x, w: (f"What is the Vantor score of a crop with w = {x['w']} and h = {x['h']}?" if w == 0 else
                          f"A crop's width index is {x['w']} and its height index is {x['h']}. Find its Vantor score."),
-           _vs_solve, _vs_derive),
+           _vs_solve, _vs_derive, lambda x: f"2*{x['w']}+{x['h']}**2/4"),
 ]
 
 
@@ -340,7 +341,7 @@ def problems(seed: int = SEED, train: int = 6, test: int = 6, derived: int = 4) 
                 x = fresh()
                 ans, steps = f.solve(x)
                 out[split].append({"family": f.key, "invented": f.invented, "question": f.ask(x, wording),
-                                   "answer": float(ans), "steps": steps})
+                                   "answer": float(ans), "steps": steps, "expr": f.expr(x)})
         for _ in range(derived):
             q, ans = f.derive(g)
             out["derived"].append({"family": f.key, "invented": f.invented, "question": q, "answer": float(ans)})
