@@ -1,0 +1,3118 @@
+{
+ "model": "qwen2.5:0.5b",
+ "mode": "calc",
+ "seed": 31,
+ "sizes": {
+  "train": 60,
+  "test": 60,
+  "rephrased": 60,
+  "derived": 40
+ },
+ "before": {
+  "test": {
+   "all": 0.1,
+   "known": 0.1667,
+   "invented": 0.0,
+   "n": 60
+  },
+  "rephrased": {
+   "all": 0.0167,
+   "known": 0.0278,
+   "invented": 0.0,
+   "n": 60
+  },
+  "derived": {
+   "all": 0.05,
+   "known": 0.0833,
+   "invented": 0.0,
+   "n": 40
+  }
+ },
+ "curve": [
+  {
+   "round": 0,
+   "corrections": 0,
+   "test": {
+    "all": 0.1,
+    "known": 0.1667,
+    "invented": 0.0,
+    "n": 60
+   }
+  },
+  {
+   "round": 2,
+   "corrections": 14,
+   "test": {
+    "all": 0.4333,
+    "known": 0.3611,
+    "invented": 0.5417,
+    "n": 60
+   }
+  },
+  {
+   "round": 6,
+   "corrections": 32,
+   "test": {
+    "all": 0.5667,
+    "known": 0.4722,
+    "invented": 0.7083,
+    "n": 60
+   }
+  }
+ ],
+ "corrections": 32,
+ "learning_log": [
+  {
+   "round": 1,
+   "family": "compound interest",
+   "invented": false,
+   "question": "$800 is deposited at 6% interest compounded yearly. How much is in the account after 3 years (to the cent)?",
+   "gold": 952.81,
+   "pred": 952.8128,
+   "correct": true,
+   "used_memory": false,
+   "answer": "#### 800 * (1 + 0.06)^(3)",
+   "corrected": false
+  },
+  {
+   "round": 1,
+   "family": "arithmetic series",
+   "invented": false,
+   "question": "What is the sum of the first 19 terms of the arithmetic sequence that starts at 14 and goes up by 8 each time?",
+   "gold": 1634.0,
+   "pred": 296.5,
+   "correct": false,
+   "used_memory": false,
+   "answer": "#### 19 * (14 + (19-1) * 8) / 2\n#### 19 * (14 + 18 * 8) / 2\n#### 19 * (14 + 144) / 2\n#### 19 * 158 / 2\n#### 296.5",
+   "corrected": true
+  },
+  {
+   "round": 1,
+   "family": "geometric series",
+   "invented": false,
+   "question": "What is the sum of the first 4 terms of the geometric sequence with first term 6 and ratio 2?",
+   "gold": 90.0,
+   "pred": 90.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 6 + 12 + 24 + 48 = 96. Answer: 96.",
+   "corrected": false
+  },
+  {
+   "round": 1,
+   "family": "Heron's formula",
+   "invented": false,
+   "question": "A triangle has sides 12 cm, 11 cm and 15 cm. What is its area in square centimetres, to two decimal places?",
+   "gold": 65.24,
+   "pred": 120.16655108639843,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 1/2 * (12 + 11 + 15) * sqrt(12^2 + 11^2 - 15^2) = 144.00 square centimetres",
+   "corrected": true
+  },
+  {
+   "round": 1,
+   "family": "combinations",
+   "invented": false,
+   "question": "In how many ways can 3 people be chosen from a group of 12?",
+   "gold": 220.0,
+   "pred": 0.0,
+   "correct": false,
+   "used_memory": false,
+   "answer": "#### 3*(12-12)**2/5 = 0",
+   "corrected": true
+  },
+  {
+   "round": 1,
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "What is the kinetic energy, in joules, of a 4 kg object moving at 19 m/s?",
+   "gold": 722.0,
+   "pred": 144.4,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 1/2 * 4 * 19 ** 2/5 = 1634.0000000000004",
+   "corrected": true
+  },
+  {
+   "round": 1,
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 4 zorbit 9?",
+   "gold": 30.0,
+   "pred": 583.2,
+   "correct": false,
+   "used_memory": false,
+   "answer": "#### 4 * (9 ** 3) / 5 = 108",
+   "corrected": true
+  },
+  {
+   "round": 1,
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 21 glim?",
+   "gold": 1764.0,
+   "pred": 100.0,
+   "correct": false,
+   "used_memory": false,
+   "answer": "#### 21 * (glim / 100)",
+   "corrected": true
+  },
+  {
+   "round": 1,
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $640 with 3 items?",
+   "gold": 33.1,
+   "pred": 1929.0,
+   "correct": false,
+   "used_memory": false,
+   "answer": "#### 640 * 3 + 3 * 3 = 2160",
+   "corrected": true
+  },
+  {
+   "round": 1,
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 34 and h = 10?",
+   "gold": 93.0,
+   "pred": null,
+   "correct": false,
+   "used_memory": false,
+   "answer": "Vantor score = sqrt(w * h)",
+   "corrected": true
+  },
+  {
+   "round": 2,
+   "family": "compound interest",
+   "invented": false,
+   "question": "$4500 is deposited at 6% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+   "gold": 5681.15,
+   "pred": 5676.6672,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 4500 * (1 + 0.06)^4\n#### 4500 * (1.06)^4\n#### 4500 * 1.26247696\n#### 5676.6672",
+   "corrected": false
+  },
+  {
+   "round": 2,
+   "family": "arithmetic series",
+   "invented": false,
+   "question": "What is the sum of the first 28 terms of the arithmetic sequence that starts at 5 and goes up by 7 each time?",
+   "gold": 2786.0,
+   "pred": null,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 28*(5 + (28-1)*7)/2\n#### 28*(5 + 27*7)/2\n#### 28*(5 + 189)/2\n#### 28*204/2\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n#### 28*102\n####",
+   "corrected": true
+  },
+  {
+   "round": 2,
+   "family": "geometric series",
+   "invented": false,
+   "question": "What is the sum of the first 8 terms of the geometric sequence with first term 5 and ratio 2?",
+   "gold": 1275.0,
+   "pred": 952.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 2786\n#### 12*11*15/2 - 12 - 11 - 15",
+   "corrected": true
+  },
+  {
+   "round": 2,
+   "family": "Heron's formula",
+   "invented": false,
+   "question": "A triangle has sides 16 cm, 14 cm and 16 cm. What is its area in square centimetres, to two decimal places?",
+   "gold": 100.71,
+   "pred": 65.24,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 16*(14-16)/2\n#### 65.24",
+   "corrected": true
+  },
+  {
+   "round": 2,
+   "family": "combinations",
+   "invented": false,
+   "question": "In how many ways can 2 people be chosen from a group of 9?",
+   "gold": 36.0,
+   "pred": 19.6,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 2*(3+4)**2/5 = 24",
+   "corrected": true
+  },
+  {
+   "round": 2,
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "What is the kinetic energy, in joules, of a 4 kg object moving at 13 m/s?",
+   "gold": 338.0,
+   "pred": 338.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 1/2 * 4 * 13**2 = 722.",
+   "corrected": false
+  },
+  {
+   "round": 2,
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 10 zorbit 4?",
+   "gold": 62.0,
+   "pred": 38.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 30\n#### 10 zorbit 4 = 30 - 2*4 + 4*4 = 30 - 8 + 16 = 38.",
+   "corrected": true
+  },
+  {
+   "round": 2,
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 27 glim?",
+   "gold": 2268.0,
+   "pred": 2268.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 27 * 7 * 12 = 2520 pom",
+   "corrected": false
+  },
+  {
+   "round": 2,
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $380 with 1 items?",
+   "gold": 17.7,
+   "pred": 17.700000000000003,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 0.04 * 380 + 2.50 * 1 = 14.5",
+   "corrected": false
+  },
+  {
+   "round": 2,
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 36 and h = 10?",
+   "gold": 97.0,
+   "pred": 774.4,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 2*(34+10)**2/5 = 93",
+   "corrected": true
+  },
+  {
+   "round": 3,
+   "family": "compound interest",
+   "invented": false,
+   "question": "$3000 is deposited at 3% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+   "gold": 3376.53,
+   "pred": -22665.74,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 3000 * (1 + 0.03)^4\n\n#### 3000 * (1.03)^4\n\n#### 3000 * 1.1215801\n\n#### 3364.74\n\n#### 3364.74 - 3000\n\n#### 364.74\n\n#### 364.74 - 3000\n\n#### -2635.26\n\n#### -2635.26 - 3000\n\n#### -634.74\n\n#### -634.74 - 3000\n\n#### -3635.74\n\n#### -3635.74 - 3000\n\n#### -9635.74\n\n#### -9635.74 - 3000\n\n#### -19635.74\n\n#### -19635.74 - 3000\n\n#### -22635.74\n\n#### -22635.74 - 30",
+   "corrected": true
+  },
+  {
+   "round": 3,
+   "family": "arithmetic series",
+   "invented": false,
+   "question": "What is the sum of the first 23 terms of the arithmetic sequence that starts at 15 and goes up by 5 each time?",
+   "gold": 1610.0,
+   "pred": 1437.5,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 23 * (15 + (23-1)*5) / 2 = 1634.",
+   "corrected": true
+  },
+  {
+   "round": 3,
+   "family": "geometric series",
+   "invented": false,
+   "question": "What is the sum of the first 6 terms of the geometric sequence with first term 5 and ratio 2?",
+   "gold": 315.0,
+   "pred": 7812.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 2 * (5**6 - 1) / (5 - 1) = 1275.",
+   "corrected": true
+  },
+  {
+   "round": 3,
+   "family": "Heron's formula",
+   "invented": false,
+   "question": "A triangle has sides 8 cm, 11 cm and 7 cm. What is its area in square centimetres, to two decimal places?",
+   "gold": 27.93,
+   "pred": 100.71,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 85/2\n#### 100.71",
+   "corrected": true
+  },
+  {
+   "round": 3,
+   "family": "combinations",
+   "invented": false,
+   "question": "In how many ways can 4 people be chosen from a group of 14?",
+   "gold": 1001.0,
+   "pred": 20.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 4*(3+2)**2/5 = 36",
+   "corrected": true
+  },
+  {
+   "round": 3,
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "What is the kinetic energy, in joules, of a 50 kg object moving at 18 m/s?",
+   "gold": 8100.0,
+   "pred": 8100.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 0.5 * 50 * 18**2 = 18000. Answer: 18000.",
+   "corrected": false
+  },
+  {
+   "round": 3,
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 12 zorbit 11?",
+   "gold": 146.0,
+   "pred": 146.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 12 zorbit 11 = 3*12 - 2*11 + 12*11 = 30.",
+   "corrected": false
+  },
+  {
+   "round": 3,
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 54 glim?",
+   "gold": 4536.0,
+   "pred": 4536.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 54 * 84 = 4536 pom",
+   "corrected": false
+  },
+  {
+   "round": 3,
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $1250 with 9 items?",
+   "gold": 72.5,
+   "pred": 72.5,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 33.1\n#### 0.04 * 1250 + 2.50 * 9 = 50 + 22.5 = 72.5.",
+   "corrected": false
+  },
+  {
+   "round": 3,
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 4 and h = 2?",
+   "gold": 9.0,
+   "pred": 19.6,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 2*(3+4)**2/5 = 93",
+   "corrected": true
+  },
+  {
+   "round": 4,
+   "family": "compound interest",
+   "invented": false,
+   "question": "$800 is deposited at 7% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+   "gold": 1048.64,
+   "pred": 1048.6368080000002,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 800 * (1 + 7/100)**4 = 3376.53",
+   "corrected": false
+  },
+  {
+   "round": 4,
+   "family": "arithmetic series",
+   "invented": false,
+   "question": "What is the sum of the first 18 terms of the arithmetic sequence that starts at 2 and goes up by 6 each time?",
+   "gold": 954.0,
+   "pred": 40.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 2 * (18 + (18-1)*6) / 6 = 1610.",
+   "corrected": true
+  },
+  {
+   "round": 4,
+   "family": "geometric series",
+   "invented": false,
+   "question": "What is the sum of the first 6 terms of the geometric sequence with first term 5 and ratio 3?",
+   "gold": 1820.0,
+   "pred": 1820.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 315\n#### 5 * (3**6 - 1) / (3 - 1)",
+   "corrected": false
+  },
+  {
+   "round": 4,
+   "family": "Heron's formula",
+   "invented": false,
+   "question": "A triangle has sides 12 cm, 20 cm and 20 cm. What is its area in square centimetres, to two decimal places?",
+   "gold": 114.47,
+   "pred": 144.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 12*(20+20)/2 - 12*(20-12) = 100.71\n\n#### 12*(40)/2 - 12*(8) = 100.71",
+   "corrected": true
+  },
+  {
+   "round": 4,
+   "family": "combinations",
+   "invented": false,
+   "question": "In how many ways can 5 people be chosen from a group of 7?",
+   "gold": 21.0,
+   "pred": 2.1,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 7! / (5! * 2!) = 7 * 6 / (5 * 4) = 21",
+   "corrected": true
+  },
+  {
+   "round": 4,
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "What is the kinetic energy, in joules, of a 12 kg object moving at 7 m/s?",
+   "gold": 294.0,
+   "pred": 294.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 1/2 * 12 * 7**2 = 252. Answer: 252.",
+   "corrected": false
+  },
+  {
+   "round": 4,
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 7 zorbit 8?",
+   "gold": 61.0,
+   "pred": 61.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 3 * 7 - 2 * 8 + 7 * 8 = 27",
+   "corrected": false
+  },
+  {
+   "round": 4,
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 8 glim?",
+   "gold": 672.0,
+   "pred": 672.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 8 * 7 * 12 = 768 pom",
+   "corrected": false
+  },
+  {
+   "round": 4,
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $250 with 4 items?",
+   "gold": 20.0,
+   "pred": 20.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 0.04 * 250 + 2.50 * 4 = 10.00",
+   "corrected": false
+  },
+  {
+   "round": 4,
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 18 and h = 10?",
+   "gold": 61.0,
+   "pred": 61.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 2*18 + 10**2/4 = 93",
+   "corrected": false
+  },
+  {
+   "round": 5,
+   "family": "compound interest",
+   "invented": false,
+   "question": "$3000 is deposited at 4% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+   "gold": 3509.58,
+   "pred": 3509.575680000001,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 3000 * (1 + 4/100)**4 = 3376.53",
+   "corrected": false
+  },
+  {
+   "round": 5,
+   "family": "arithmetic series",
+   "invented": false,
+   "question": "What is the sum of the first 26 terms of the arithmetic sequence that starts at 6 and goes up by 7 each time?",
+   "gold": 2431.0,
+   "pred": 2353.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 26 * (6 + (26-1)*7) / 2 = 1634.",
+   "corrected": true
+  },
+  {
+   "round": 5,
+   "family": "geometric series",
+   "invented": false,
+   "question": "What is the sum of the first 4 terms of the geometric sequence with first term 3 and ratio 2?",
+   "gold": 45.0,
+   "pred": 42.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 2 * 3 * (2**3 - 1) / (2 - 1) = 37.5",
+   "corrected": true
+  },
+  {
+   "round": 5,
+   "family": "Heron's formula",
+   "invented": false,
+   "question": "A triangle has sides 19 cm, 13 cm and 10 cm. What is its area in square centimetres, to two decimal places?",
+   "gold": 60.79,
+   "pred": 1.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 19*(19-12)*(19-11)*(19-15) = 65.24\n#### 13*(13-12)*(13-11)*(13-15) = 27.93\n#### 10*(10-12)*(10-11)*(10-15) = 114.47\n#### 19*(19-12)*(19-11)*(19-15) = 65.24\n#### 13*(13-12)*(13-11)*(13-15) = 27.93\n#### 10*(10-12)*(10-11)*(10-15) = 114.47\n#### 19*(19-12)*(19-11)*(19-15) = 65.24\n#### 13*(13-12)*(13-11)*(13-15) = 27.93\n#### 10*(1",
+   "corrected": true
+  },
+  {
+   "round": 5,
+   "family": "combinations",
+   "invented": false,
+   "question": "In how many ways can 5 people be chosen from a group of 12?",
+   "gold": 792.0,
+   "pred": 10.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 5 choose 2 = 10.",
+   "corrected": true
+  },
+  {
+   "round": 5,
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "What is the kinetic energy, in joules, of a 20 kg object moving at 18 m/s?",
+   "gold": 3240.0,
+   "pred": 3240.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 1/2 * 20 * 18**2 = 7200. Answer: 7200.",
+   "corrected": false
+  },
+  {
+   "round": 5,
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 9 zorbit 5?",
+   "gold": 62.0,
+   "pred": 62.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 9 zorbit 5 = 3*9 - 2*5 + 9*5 = 30.",
+   "corrected": false
+  },
+  {
+   "round": 5,
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 6 glim?",
+   "gold": 504.0,
+   "pred": 504.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 6 * 84 = 504 pom",
+   "corrected": false
+  },
+  {
+   "round": 5,
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $900 with 1 items?",
+   "gold": 38.5,
+   "pred": 38.5,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 0.04 * 900 + 2.50 * 1 = 37.5",
+   "corrected": false
+  },
+  {
+   "round": 5,
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 6 and h = 8?",
+   "gold": 28.0,
+   "pred": 28.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 2*6 + 8**2/4 = 92",
+   "corrected": false
+  },
+  {
+   "round": 6,
+   "family": "compound interest",
+   "invented": false,
+   "question": "$3000 is deposited at 3% interest compounded yearly. How much is in the account after 8 years (to the cent)?",
+   "gold": 3800.31,
+   "pred": 3800.310244162849,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 3000 * (1 + 3/100)**8 = 3711.71\n#### 3000 * (1 + 3/100)**8 = 3711.71",
+   "corrected": false
+  },
+  {
+   "round": 6,
+   "family": "arithmetic series",
+   "invented": false,
+   "question": "What is the sum of the first 28 terms of the arithmetic sequence that starts at 8 and goes up by 9 each time?",
+   "gold": 3626.0,
+   "pred": 7252.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 28 * (2*8 + (28-1)*9) = 1634.",
+   "corrected": true
+  },
+  {
+   "round": 6,
+   "family": "geometric series",
+   "invented": false,
+   "question": "What is the sum of the first 7 terms of the geometric sequence with first term 5 and ratio 3?",
+   "gold": 5465.0,
+   "pred": 5465.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 5 * (3**7 - 1) / (3 - 1) = 1296",
+   "corrected": false
+  },
+  {
+   "round": 6,
+   "family": "Heron's formula",
+   "invented": false,
+   "question": "A triangle has sides 20 cm, 9 cm and 14 cm. What is its area in square centimetres, to two decimal places?",
+   "gold": 54.99,
+   "pred": 1779.887636902959,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 20.00 * sqrt(20.00 * (20.00 - 9.00) * (20.00 - 14.00) * (20.00 - 14.00)) = 114.47",
+   "corrected": true
+  },
+  {
+   "round": 6,
+   "family": "combinations",
+   "invented": false,
+   "question": "In how many ways can 5 people be chosen from a group of 10?",
+   "gold": 252.0,
+   "pred": 252.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 10 choose 5 = 10! / (5! * (10 - 5)!) = 252.",
+   "corrected": false
+  },
+  {
+   "round": 6,
+   "family": "kinetic energy",
+   "invented": false,
+   "question": "What is the kinetic energy, in joules, of a 5 kg object moving at 4 m/s?",
+   "gold": 40.0,
+   "pred": 40.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 1/2 * 5 * 4**2 = 400. Answer: 400.",
+   "corrected": false
+  },
+  {
+   "round": 6,
+   "family": "zorbit",
+   "invented": true,
+   "question": "What is 9 zorbit 7?",
+   "gold": 76.0,
+   "pred": 76.0,
+   "correct": true,
+   "used_memory": true,
+   "answer": "#### 3*9 - 2*7 + 9*7 = 24",
+   "corrected": false
+  },
+  {
+   "round": 6,
+   "family": "glim units",
+   "invented": true,
+   "question": "How many pom are in 12 glim?",
+   "gold": 1008.0,
+   "pred": 1764.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 21 * 7 * 12 = 1764 pom",
+   "corrected": true
+  },
+  {
+   "round": 6,
+   "family": "Kessler fee",
+   "invented": true,
+   "question": "What is the Kessler fee on an order of $250 with 2 items?",
+   "gold": 15.0,
+   "pred": 17.5,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 250 * 0.04 + 2.50 * 3 = 33.1",
+   "corrected": true
+  },
+  {
+   "round": 6,
+   "family": "Vantor score",
+   "invented": true,
+   "question": "What is the Vantor score of a crop with w = 21 and h = 8?",
+   "gold": 58.0,
+   "pred": 37.0,
+   "correct": false,
+   "used_memory": true,
+   "answer": "#### 21 + 8**2/4 = 93.",
+   "corrected": true
+  }
+ ],
+ "after": {
+  "train": {
+   "all": 0.5333,
+   "known": 0.4722,
+   "invented": 0.625,
+   "n": 60
+  },
+  "test": {
+   "all": 0.5667,
+   "known": 0.4722,
+   "invented": 0.7083,
+   "n": 60
+  },
+  "rephrased": {
+   "all": 0.2833,
+   "known": 0.2778,
+   "invented": 0.2917,
+   "n": 60
+  },
+  "derived": {
+   "all": 0.05,
+   "known": 0.0,
+   "invented": 0.125,
+   "n": 40
+  }
+ },
+ "generalisation_gap": -0.0334,
+ "memorisation": {
+  "wrong_answers": 67,
+  "equal_to_a_stored_training_answer": 7
+ },
+ "per_family": {
+  "compound interest": {
+   "invented": false,
+   "before_test": null,
+   "after_test": 0.8333,
+   "after_rephrased": 0.1667,
+   "after_derived": 0.0,
+   "corrections": 1
+  },
+  "arithmetic series": {
+   "invented": false,
+   "before_test": null,
+   "after_test": 0.0,
+   "after_rephrased": 0.0,
+   "after_derived": 0.0,
+   "corrections": 6
+  },
+  "geometric series": {
+   "invented": false,
+   "before_test": null,
+   "after_test": 0.5,
+   "after_rephrased": 0.0,
+   "after_derived": 0.0,
+   "corrections": 3
+  },
+  "Heron's formula": {
+   "invented": false,
+   "before_test": null,
+   "after_test": 0.0,
+   "after_rephrased": 0.0,
+   "after_derived": 0.0,
+   "corrections": 6
+  },
+  "combinations": {
+   "invented": false,
+   "before_test": null,
+   "after_test": 0.5,
+   "after_rephrased": 0.5,
+   "after_derived": 0.0,
+   "corrections": 5
+  },
+  "kinetic energy": {
+   "invented": false,
+   "before_test": null,
+   "after_test": 1.0,
+   "after_rephrased": 1.0,
+   "after_derived": 0.0,
+   "corrections": 1
+  },
+  "zorbit": {
+   "invented": true,
+   "before_test": null,
+   "after_test": 0.6667,
+   "after_rephrased": 0.0,
+   "after_derived": 0.0,
+   "corrections": 2
+  },
+  "glim units": {
+   "invented": true,
+   "before_test": null,
+   "after_test": 0.5,
+   "after_rephrased": 0.0,
+   "after_derived": 0.5,
+   "corrections": 2
+  },
+  "Kessler fee": {
+   "invented": true,
+   "before_test": null,
+   "after_test": 0.8333,
+   "after_rephrased": 0.6667,
+   "after_derived": 0.0,
+   "corrections": 2
+  },
+  "Vantor score": {
+   "invented": true,
+   "before_test": null,
+   "after_test": 0.8333,
+   "after_rephrased": 0.5,
+   "after_derived": 0.0,
+   "corrections": 4
+  }
+ },
+ "rows": {
+  "train": [
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$800 is deposited at 6% interest compounded yearly. How much is in the account after 3 years (to the cent)?",
+    "gold": 952.81,
+    "pred": 952.8128,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 800 * (1 + 6/100)**3 = 864.00"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$4500 is deposited at 6% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+    "gold": 5681.15,
+    "pred": 3787.430880000001,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 3000 * (1 + 6/100)**4 = 3376.53"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$3000 is deposited at 3% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+    "gold": 3376.53,
+    "pred": 3376.5264300000003,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3000 * (1 + 3/100)**4 = 3376.53"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$800 is deposited at 7% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+    "gold": 1048.64,
+    "pred": 1048.6368080000002,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 800 * (1 + 7/100)**4 = 3376.53"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$3000 is deposited at 4% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+    "gold": 3509.58,
+    "pred": 3509.575680000001,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3000 * (1 + 4/100)**4 = 3376.53"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$3000 is deposited at 3% interest compounded yearly. How much is in the account after 8 years (to the cent)?",
+    "gold": 3800.31,
+    "pred": 3800.310244162849,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3000 * (1 + 3/100)**8 = 3711.71\n#### 3000 * (1 + 3/100)**8 = 3711.71"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 19 terms of the arithmetic sequence that starts at 14 and goes up by 8 each time?",
+    "gold": 1634.0,
+    "pred": 1634.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 19/2 * (2*14 + (19-1)*8) = 1634."
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 28 terms of the arithmetic sequence that starts at 5 and goes up by 7 each time?",
+    "gold": 2786.0,
+    "pred": 2786.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2786\n#### 28/2 * (2*5 + (28-1)*7)"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 23 terms of the arithmetic sequence that starts at 15 and goes up by 5 each time?",
+    "gold": 1610.0,
+    "pred": 3220.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 23 * (2*15 + (23-1)*5) = 1610."
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 18 terms of the arithmetic sequence that starts at 2 and goes up by 6 each time?",
+    "gold": 954.0,
+    "pred": 104.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * (2 + (18-1) * 6) / 2 = 954"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 26 terms of the arithmetic sequence that starts at 6 and goes up by 7 each time?",
+    "gold": 2431.0,
+    "pred": 2814.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2431\n#### 28/2 * (2*6 + (28-1)*7)"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 28 terms of the arithmetic sequence that starts at 8 and goes up by 9 each time?",
+    "gold": 3626.0,
+    "pred": 7252.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 28 * (2*8 + (28-1)*9) = 3626."
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 4 terms of the geometric sequence with first term 6 and ratio 2?",
+    "gold": 90.0,
+    "pred": 430.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * (6**3 - 1) / (2 - 1) = 45"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 8 terms of the geometric sequence with first term 5 and ratio 2?",
+    "gold": 1275.0,
+    "pred": 781248.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(5**8 - 1) / (2 - 1) = 1275"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 6 terms of the geometric sequence with first term 5 and ratio 2?",
+    "gold": 315.0,
+    "pred": 7812.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(5**6 - 1) / (5 - 1) = 315"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 6 terms of the geometric sequence with first term 5 and ratio 3?",
+    "gold": 1820.0,
+    "pred": 315.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 315\n#### 5 * (2**6 - 1) / (2 - 1)"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 4 terms of the geometric sequence with first term 3 and ratio 2?",
+    "gold": 45.0,
+    "pred": 69.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * (2**4 - 1) / (2 - 1) = 45\n#### 3 * (2**8 - 1) / (2 - 1) = 1275\n#### 5 * (2**6 - 1) / (2 - 1) = 315\n#### 15 * (2**4 - 1) / (2 - 1) = 2786\n#### 23 * (2**2 - 1) / (2 - 1) = 1610"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 7 terms of the geometric sequence with first term 5 and ratio 3?",
+    "gold": 5465.0,
+    "pred": 5465.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 5 * (3**7 - 1) / (3 - 1) = 1296"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 12 cm, 11 cm and 15 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 65.24,
+    "pred": 4256.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 12 + 11 + 15 = 38\n#### 38 / 2 = 19\n#### 19 * (19 - 12) * (19 - 11) * (19 - 15) = 65.24"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 16 cm, 14 cm and 16 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 100.71,
+    "pred": -16.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 16*(14-16)/2 = 10.40"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 8 cm, 11 cm and 7 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 27.93,
+    "pred": 9495.518943164718,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 8 + 11 + 7\n#### 26\n#### 26 * sqrt(26 * (26 - 8) * (26 - 11) * (26 - 7))"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 12 cm, 20 cm and 20 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 114.47,
+    "pred": 0.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 114.47\n#### 20*(20-12)*(20-20)/2."
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 19 cm, 13 cm and 10 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 60.79,
+    "pred": 11447.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 19 + 13 + 10 = 42\n#### 42 / 2 = 21\n#### 21 * 21 * 21 = 11447\n#### 11447 / 10 = 1144.7\n#### 1144.7 * 10 = 11447\n#### 11447 / 100 = 114.47\n#### 114.47 * 100 = 11447"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 20 cm, 9 cm and 14 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 54.99,
+    "pred": 766.1875,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 20.5*(20.5-9)*(20.5-14)/2 = 54.99"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 3 people be chosen from a group of 12?",
+    "gold": 220.0,
+    "pred": 120.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 12 choose 3 = 12! / (3! * (12 - 3)!) = 120"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 2 people be chosen from a group of 9?",
+    "gold": 36.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5 = 792"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 4 people be chosen from a group of 14?",
+    "gold": 1001.0,
+    "pred": 1001.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 14 choose 4 = 14! / (4! * (14 - 4)!) = 1001"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 5 people be chosen from a group of 7?",
+    "gold": 21.0,
+    "pred": 2.1,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 7C5 = 7! / (5! * (7 - 5)!) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) = 7 * 6 / (5 * 4) ="
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 5 people be chosen from a group of 12?",
+    "gold": 792.0,
+    "pred": 792.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 12 choose 5 = 12! / (5! * 7!) = 792"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 5 people be chosen from a group of 10?",
+    "gold": 252.0,
+    "pred": 252.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 10 choose 5 = 10! / (5! * (10 - 5)!) = 252."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 4 kg object moving at 19 m/s?",
+    "gold": 722.0,
+    "pred": 722.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 4 * 19**2 = 722."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 4 kg object moving at 13 m/s?",
+    "gold": 338.0,
+    "pred": 338.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 4 * 13**2 = 722."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 50 kg object moving at 18 m/s?",
+    "gold": 8100.0,
+    "pred": 8100.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.5 * 50 * 18**2 = 18000. Answer: 18000."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 12 kg object moving at 7 m/s?",
+    "gold": 294.0,
+    "pred": 294.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 12 * 7**2 = 252. Answer: 252."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 20 kg object moving at 18 m/s?",
+    "gold": 3240.0,
+    "pred": 3240.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 20 * 18**2 = 7200. Answer: 7200."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 5 kg object moving at 4 m/s?",
+    "gold": 40.0,
+    "pred": 40.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 5 * 4**2 = 400. Answer: 400."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 4 zorbit 9?",
+    "gold": 30.0,
+    "pred": 30.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 4 zorbit 9 = 30."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 10 zorbit 4?",
+    "gold": 62.0,
+    "pred": 30.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 10 zorbit 4 = 30."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 12 zorbit 11?",
+    "gold": 146.0,
+    "pred": 146.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 12 zorbit 11 = 3*12 - 2*11 + 12*11 = 30."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 7 zorbit 8?",
+    "gold": 61.0,
+    "pred": 61.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3 * 7 - 2 * 8 + 7 * 8 = 27"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 9 zorbit 5?",
+    "gold": 62.0,
+    "pred": 62.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 9 zorbit 5 = 3*9 - 2*5 + 9*5 = 30."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 9 zorbit 7?",
+    "gold": 76.0,
+    "pred": 76.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3*9 - 2*7 + 9*7 = 24"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 21 glim?",
+    "gold": 1764.0,
+    "pred": 1764.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 21 * 7 * 12 = 1764 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 27 glim?",
+    "gold": 2268.0,
+    "pred": 2268.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 27 * 7 * 12 = 2520 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 54 glim?",
+    "gold": 4536.0,
+    "pred": 1764.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 1008\n#### 21 glim * 7 trell/glim * 12 pom/trell = 1764 pom."
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 8 glim?",
+    "gold": 672.0,
+    "pred": 672.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 8 * 7 * 12 = 672 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 6 glim?",
+    "gold": 504.0,
+    "pred": 1008.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 12 * 7 * 12 = 84 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 12 glim?",
+    "gold": 1008.0,
+    "pred": 1008.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 12 * 7 * 12 = 84 * 12 = 1008 pom"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $640 with 3 items?",
+    "gold": 33.1,
+    "pred": 33.1,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 33.1\n#### 0.04 * 640 + 2.50 * 3 = 33.1."
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $380 with 1 items?",
+    "gold": 17.7,
+    "pred": 17.700000000000003,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 380 + 2.50 * 1 = 15.0"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $1250 with 9 items?",
+    "gold": 72.5,
+    "pred": 151.5,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 0.04 * 1250 + 2.50 * 9 = 55.5\n#### 55.5\n#### 55.5 + 2.50 * 9 = 63.5\n#### 63.5\n#### 63.5 + 2.50 * 9 = 78.5\n#### 78.5\n#### 78.5 + 2.50 * 9 = 93.5\n#### 93.5\n#### 93.5 + 2.50 * 9 = 108.5\n#### 108.5\n#### 108.5 + 2.50 * 9 = 123.5\n#### 123.5\n#### 123.5 + 2.50 * 9 = 137.5\n#### 137.5\n#### 137.5 + 2.50 * 9 = 151.5\n#### 151.5\n#### 151.5"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $250 with 4 items?",
+    "gold": 20.0,
+    "pred": 20.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 250 + 2.50 * 4 = 15.0"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $900 with 1 items?",
+    "gold": 38.5,
+    "pred": 38.5,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 900 + 2.50 * 1 = 37.5"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $250 with 2 items?",
+    "gold": 15.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5 = 15.0"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 34 and h = 10?",
+    "gold": 93.0,
+    "pred": 93.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*34 + 10**2/4 = 93"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 36 and h = 10?",
+    "gold": 97.0,
+    "pred": 846.4,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(36 + 10)**2/5 = 97."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 4 and h = 2?",
+    "gold": 9.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5 = 9."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 18 and h = 10?",
+    "gold": 61.0,
+    "pred": 846.4,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(36 + 10)**2/5 = 93"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 6 and h = 8?",
+    "gold": 28.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5 = 9.0"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 21 and h = 8?",
+    "gold": 58.0,
+    "pred": 58.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*21 + 8**2/4 = 58"
+   }
+  ],
+  "test": [
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$800 is deposited at 4% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+    "gold": 935.89,
+    "pred": 3509.575680000001,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 3000 * (1 + 4/100)**4 = 3376.53"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$2500 is deposited at 8% interest compounded yearly. How much is in the account after 6 years (to the cent)?",
+    "gold": 3967.19,
+    "pred": 3967.1858073600015,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2500 * (1 + 8/100)**6 = 3190.48"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$2500 is deposited at 6% interest compounded yearly. How much is in the account after 4 years (to the cent)?",
+    "gold": 3156.19,
+    "pred": 3156.192400000001,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2500 * (1 + 6/100)**4 = 3376.53"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$2500 is deposited at 3% interest compounded yearly. How much is in the account after 3 years (to the cent)?",
+    "gold": 2731.82,
+    "pred": 2731.8175,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2500 * (1 + 3/100)**3 = 2700.5. Answer: 2700.5."
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$800 is deposited at 6% interest compounded yearly. How much is in the account after 5 years (to the cent)?",
+    "gold": 1070.58,
+    "pred": 1070.5804620800002,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 800 * (1 + 6/100)**5 = 963.68"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "$1200 is deposited at 4% interest compounded yearly. How much is in the account after 5 years (to the cent)?",
+    "gold": 1459.98,
+    "pred": 1459.98348288,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1200 * (1 + 4/100)**5 = 1688.83. Answer: 1688.83."
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 14 terms of the arithmetic sequence that starts at 12 and goes up by 7 each time?",
+    "gold": 805.0,
+    "pred": 2982.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2431\n#### 28/2 * (2*12 + (28-1)*7) = 1634"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 17 terms of the arithmetic sequence that starts at 13 and goes up by 3 each time?",
+    "gold": 629.0,
+    "pred": 1258.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 17 * (2*13 + (17-1)*3) = 3634"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 10 terms of the arithmetic sequence that starts at 4 and goes up by 6 each time?",
+    "gold": 310.0,
+    "pred": 13017.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2431\n#### 2431 + 954 + 3626 + 2786 + 1610 + 23/2 * (2*15 + (23-1)*5) = 2431 + 954 + 3626 + 2786 + 1610 + 1610 = 1610 + 954 + 3626 + 2786 + 1610 = 1610 + 954 + 3626 + 2786 + 1610 = 1610 + 954 + 3626 + 2786 + 1610 = 1610 + 954 + 3626 + 2786 + 1610 = 1610 + 954 + 3626 + 2786 + 1610 = 1610 + 954 + 3626 +"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 8 terms of the arithmetic sequence that starts at 4 and goes up by 5 each time?",
+    "gold": 172.0,
+    "pred": 312.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 8*(4 + (8-1)*5) = 168"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 30 terms of the arithmetic sequence that starts at 14 and goes up by 7 each time?",
+    "gold": 3465.0,
+    "pred": 6510.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 30*(14 + (30-1)*7) = 3630"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "What is the sum of the first 17 terms of the arithmetic sequence that starts at 3 and goes up by 8 each time?",
+    "gold": 1139.0,
+    "pred": 2278.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 17 * (2*3 + (17-1)*8) = 2776."
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 5 terms of the geometric sequence with first term 3 and ratio 2?",
+    "gold": 93.0,
+    "pred": 93.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3 * (2**5 - 1) / (2 - 1) = 315"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 8 terms of the geometric sequence with first term 2 and ratio 2?",
+    "gold": 510.0,
+    "pred": 510.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2 * (2**8 - 1) / (2 - 1) = 1275"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 6 terms of the geometric sequence with first term 3 and ratio 2?",
+    "gold": 189.0,
+    "pred": 189.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3 * (2**6 - 1) / (2 - 1) = 315"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 8 terms of the geometric sequence with first term 3 and ratio 3?",
+    "gold": 9840.0,
+    "pred": 6560.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3**8 - 1) / (3 - 1) = 1275"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 5 terms of the geometric sequence with first term 6 and ratio 3?",
+    "gold": 726.0,
+    "pred": 242.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * (3**5 - 1) / (3 - 1) = 1080"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "What is the sum of the first 8 terms of the geometric sequence with first term 6 and ratio 2?",
+    "gold": 1530.0,
+    "pred": 671846.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(6**8 - 1) / (6 - 1) = 1275"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 13 cm, 17 cm and 13 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 83.61,
+    "pred": 0.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79\n#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79\n#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79\n#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79\n#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79\n#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79\n#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79\n#### 13*(13-17)*(13-13)*(13-13)/2 = 60.79"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 14 cm, 14 cm and 12 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 75.89,
+    "pred": -1.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-14)/2 = 0.00\n\n#### 14*(14-1"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 14 cm, 17 cm and 12 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 83.03,
+    "pred": 0.58789,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 14 + 17 + 12 = 43\n#### 43 / 2 = 21.5\n#### 14 * 21.5 = 301\n#### 301 / 2 = 150.5\n#### 150.5 / 2 = 75.25\n#### 75.25 / 2 = 37.625\n#### 37.625 / 2 = 18.8125\n#### 18.8125 / 2 = 9.40625\n#### 9.40625 / 2 = 4.703125\n#### 4.703125 / 2 = 2.3515625\n#### 2.3515625 / 2 = 1.17578125\n#### 1.17578125 / 2 = 0.587890625\n#### 0.58789"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 12 cm, 9 cm and 15 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 54.0,
+    "pred": 360.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 20.00 * sqrt(12*(12-9)*(12-15)*(12-15))"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 8 cm, 11 cm and 5 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 18.33,
+    "pred": 230.4,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(8+11+5)**2/5"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 16 cm, 20 cm and 14 cm. What is its area in square centimetres, to two decimal places?",
+    "gold": 111.24,
+    "pred": 330.4,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 16.00 + 20.00 + 14.00 = 50.00\n#### 100.00 / 5.00 = 20.00\n#### 20.00 * 20.00 / 5.00 = 80.00\n#### 80.00 * 16.00 / 5.00 = 128.00\n#### 128.00 * 14.00 / 5.00 = 330.40\n#### 330.40 * 100.00 = 33040.00\n#### 33040.00 / 100.00 = 330.40\n#### 330.40 * 100.00 = 33040.00\n#### 33040.00 / 100.00 = 330.40\n#### 330.40 *"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 2 people be chosen from a group of 10?",
+    "gold": 45.0,
+    "pred": 45.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 10 choose 2 = 10! / (2! * (10 - 2)!) = 45."
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 2 people be chosen from a group of 14?",
+    "gold": 91.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 5 people be chosen from a group of 13?",
+    "gold": 1287.0,
+    "pred": 1287.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 13 choose 5 = 13! / (5! * 8!) = 1287."
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 3 people be chosen from a group of 13?",
+    "gold": 286.0,
+    "pred": 280.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 13C3 = 280"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 4 people be chosen from a group of 15?",
+    "gold": 1365.0,
+    "pred": 1365.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 15 choose 4 = 15! / (4! * (15 - 4)!) = 1365."
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "In how many ways can 5 people be chosen from a group of 8?",
+    "gold": 56.0,
+    "pred": null,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n#### 8! / (5! * 3!) = 28\n####"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 10 kg object moving at 22 m/s?",
+    "gold": 2420.0,
+    "pred": 2420.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 10 * 22**2 = 7700. Answer: 7700."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 12 kg object moving at 13 m/s?",
+    "gold": 1014.0,
+    "pred": 1014.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 12 * 13**2 = 1176. Answer: 1176."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 10 kg object moving at 20 m/s?",
+    "gold": 2000.0,
+    "pred": 2000.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 10 * 20**2 = 2000. Answer: 2000."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 2 kg object moving at 13 m/s?",
+    "gold": 169.0,
+    "pred": 169.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 2 * 13**2 = 169. Answer: 169."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 4 kg object moving at 25 m/s?",
+    "gold": 1250.0,
+    "pred": 1250.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 4 * 25**2 = 2500. Answer: 2500."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "What is the kinetic energy, in joules, of a 8 kg object moving at 20 m/s?",
+    "gold": 1600.0,
+    "pred": 1600.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.5 * 8 * 20**2 = 1280. Answer: 1280."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 2 zorbit 9?",
+    "gold": 6.0,
+    "pred": 30.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * zorbit 9 = 30."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 7 zorbit 12?",
+    "gold": 81.0,
+    "pred": 81.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 7 zorbit 12 = 3*7 - 2*12 + 7*12 = 111"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 5 zorbit 4?",
+    "gold": 27.0,
+    "pred": 27.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 5 zorbit 4 = 3*5 - 2*4 + 5*4 = 15."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 9 zorbit 6?",
+    "gold": 69.0,
+    "pred": 69.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3*9 - 2*6 + 9*6 = 21"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 4 zorbit 5?",
+    "gold": 22.0,
+    "pred": 22.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 3*4 - 2*5 + 4*5 = 13"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "What is 3 zorbit 9?",
+    "gold": 18.0,
+    "pred": 30.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 3 zorbit 9 = 30."
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 34 glim?",
+    "gold": 2856.0,
+    "pred": 2856.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 34 * 7 * 12 = 2784 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 20 glim?",
+    "gold": 1680.0,
+    "pred": 1680.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 20 * 7 * 12 = 1680 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 43 glim?",
+    "gold": 3612.0,
+    "pred": 3.2869383372680626e+64,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 1764\n#### 1008\n#### 12 * 7 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 12 * 1"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 4 glim?",
+    "gold": 336.0,
+    "pred": 1764.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 21 * 7 * 12 = 1764 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 24 glim?",
+    "gold": 2016.0,
+    "pred": 2016.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 24 * 7 * 12 = 2016 pom"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "How many pom are in 36 glim?",
+    "gold": 3024.0,
+    "pred": 1008.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 12 * 7 * 12 = 84 * 12 = 1008 pom"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $380 with 4 items?",
+    "gold": 25.2,
+    "pred": 16.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 0.04 * 380 + 2.50 * 4 = 16.0\n#### 16.0"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $640 with 4 items?",
+    "gold": 35.6,
+    "pred": 35.6,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 640 + 2.50 * 4 = 33.1"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $380 with 8 items?",
+    "gold": 35.2,
+    "pred": 35.2,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 380 + 2.50 * 8 = 16.0"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $250 with 5 items?",
+    "gold": 22.5,
+    "pred": 22.5,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 250 + 2.50 * 5 = 15.0"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $640 with 6 items?",
+    "gold": 40.6,
+    "pred": 40.6,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 640 + 2.50 * 6 = 33.1"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "What is the Kessler fee on an order of $1250 with 6 items?",
+    "gold": 65.0,
+    "pred": 65.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 0.04 * 1250 + 2.50 * 6 = 55.0"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 20 and h = 2?",
+    "gold": 41.0,
+    "pred": 21.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 20 + 2**2/4 = 22.000000\n#### 20 + 2**2/4 = 22.000000\n#### 20 + 2**2/4 = 22.000000"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 31 and h = 4?",
+    "gold": 66.0,
+    "pred": 66.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*31 + 4**2/4 = 93"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 13 and h = 8?",
+    "gold": 42.0,
+    "pred": 42.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*13 + 8**2/4 = 93"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 18 and h = 8?",
+    "gold": 52.0,
+    "pred": 52.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*18 + 8**2/4 = 58"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 14 and h = 12?",
+    "gold": 64.0,
+    "pred": 64.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*14 + 12**2/4 = 58."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "What is the Vantor score of a crop with w = 34 and h = 4?",
+    "gold": 72.0,
+    "pred": 72.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*34 + 4**2/4 = 93"
+   }
+  ],
+  "rephrased": [
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "What does a deposit of $2000 grow to in 7 years if it earns 5% a year, compounded annually? Give the amount to the cent.",
+    "gold": 2814.2,
+    "pred": 2814.200845312501,
+    "correct": true,
+    "used_memory": false,
+    "answer": "#### 2000 * (1 + 0.05)^7\n#### 2000 * (1.05)^7"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "What does a deposit of $1200 grow to in 8 years if it earns 4% a year, compounded annually? Give the amount to the cent.",
+    "gold": 1642.28,
+    "pred": null,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1200 * (1 + 0.04) ^ 8\n#### 1200 * 1.04^8\n#### 1200 * 1.368509\n#### 1645.216####"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "What does a deposit of $1200 grow to in 7 years if it earns 6% a year, compounded annually? Give the amount to the cent.",
+    "gold": 1804.36,
+    "pred": 195152.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1200 * (1 + 0.06)^(7*1) = 1951.52\n#### 1951.52 * 100 = 195152"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "What does a deposit of $3000 grow to in 3 years if it earns 7% a year, compounded annually? Give the amount to the cent.",
+    "gold": 3675.13,
+    "pred": 374700.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 3000 * (1 + 0.07)^(3*1) = 3747.00\n#### 3747.00 * 100 = 374700.00"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "What does a deposit of $800 grow to in 5 years if it earns 4% a year, compounded annually? Give the amount to the cent.",
+    "gold": 973.32,
+    "pred": 848.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 800 * (1 + 0.04)^(5*1) = 848.80\n#### 848.80\n\n#### 848.80 * 100 = 84880\n\n#### 84880 * 100 = 8488000\n\n#### 8488000 * 100 = 848800000\n\n#### 848800000 * 100 = 84880000000\n\n#### 84880000000 * 100 = 8488000000000\n\n#### 8488000000000 * 100 = 848800000000000\n\n#### 848800000000000 * 100 = 84880000000000000\n\n#### 848"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "What does a deposit of $1200 grow to in 4 years if it earns 4% a year, compounded annually? Give the amount to the cent.",
+    "gold": 1403.83,
+    "pred": 177887.2,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1200 * (1 + 0.04)^(4/12) * 1.04 = 1696.80\n#### 1696.80 * 1.04 = 1778.872\n#### 1778.872 * 100 = 177887.2"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "A sequence begins 6, 11, 16, ... (adding 5 each time). Add up its first 11 terms.",
+    "gold": 341.0,
+    "pred": 59.4,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 11*(6+11+16)/5\n#### 11*(27)/5\n#### 297/5\n#### 59.4"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "A sequence begins 9, 14, 19, ... (adding 5 each time). Add up its first 18 terms.",
+    "gold": 927.0,
+    "pred": 3675.2,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 18*(9+14+19)**2/5\n#### 18*(32)**2/5\n#### 18*1024/5\n#### 18*2048/5\n#### 3675.2"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "A sequence begins 9, 17, 25, ... (adding 8 each time). Add up its first 9 terms.",
+    "gold": 369.0,
+    "pred": 90.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 9 + 17 + 25 + ... + 81 = 180\n#### 180 / 2 = 90"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "A sequence begins 10, 13, 16, ... (adding 3 each time). Add up its first 16 terms.",
+    "gold": 520.0,
+    "pred": 13.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 + 16 + ... + 31) / 2\n#### 16 * (10 + 13 +"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "A sequence begins 3, 6, 9, ... (adding 3 each time). Add up its first 14 terms.",
+    "gold": 315.0,
+    "pred": 9.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": " 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)\n\n#### 14 * (3 + 6 + 9 + ...)"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "A sequence begins 5, 12, 19, ... (adding 7 each time). Add up its first 13 terms.",
+    "gold": 611.0,
+    "pred": 6774.4,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 13*(5+12+19)**2/5\n#### 13*(36)**2/5\n#### 13*1296/5\n#### 13*2592/5\n#### 33888/5\n#### 6774.4"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "Starting from 4 and multiplying by 2 each step, add up the first 6 numbers you get.",
+    "gold": 252.0,
+    "pred": 2.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 4 * 2 + (2 + 2 + 2 + 2 + 2 + 2) = 16\n#### 16 * 2 + (2 + 2 + 2 + 2 + 2 + 2) = 64\n#### 64 * 2 + (2 + 2 + 2 + 2 + 2 + 2) = 288\n#### 288 * 2 + (2 + 2 + 2 + 2 + 2 + 2) = 1024\n#### 1024 * 2 + (2 + 2 + 2 + 2 + 2 + 2) = 4096\n#### 4096 * 2 + (2 + 2 + 2 + 2 + 2 + 2) = 16384\n#### 16384 * 2 + (2 + 2 + 2 + 2 + 2 + 2) = 65536\n#### 65536 * 2 + (2 + 2 + 2 +"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "Starting from 2 and multiplying by 3 each step, add up the first 5 numbers you get.",
+    "gold": 242.0,
+    "pred": 42.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * 3 + 3 * 3 + 3 * 3 + 3 * 3 + 3 * 3 = 36"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "Starting from 4 and multiplying by 3 each step, add up the first 8 numbers you get.",
+    "gold": 13120.0,
+    "pred": 297.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 4 * 3 + (3 + 4) * 3 + (3 + 4 + 5) * 3 + (3 + 4 + 5 + 6) * 3 + (3 + 4 + 5 + 6 + 7) * 3 + (3 + 4 + 5 + 6 + 7 + 8) * 3 = 1000"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "Starting from 5 and multiplying by 2 each step, add up the first 5 numbers you get.",
+    "gold": 155.0,
+    "pred": 85.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 5 + 2*(5+2) + 2*(5+2+2) + 2*(5+2+2+2) + 2*(5+2+2+2+2) = 100"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "Starting from 3 and multiplying by 3 each step, add up the first 6 numbers you get.",
+    "gold": 1092.0,
+    "pred": 3.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 3\n#### 3*3\n#### 3*3+3\n#### 3*3+3+3\n#### 3*3+3+3+3\n#### 3*3+3+3+3+3\n#### 3*3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3+3+3+3+3+3+3\n#### 3*3+3+3+3+3+3+3+"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "Starting from 6 and multiplying by 2 each step, add up the first 6 numbers you get.",
+    "gold": 378.0,
+    "pred": 72494.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 6 * 2 + (6 + 2) = 24 + 8 = 32\n\n#### 32 * 2 + (32 + 2) = 64 + 34 = 98\n\n#### 98 * 2 + (98 + 2) = 196 + 100 = 296\n\n#### 296 * 2 + (296 + 2) = 592 + 300 = 892\n\n#### 892 * 2 + (892 + 2) = 1784 + 900 = 2684\n\n#### 2684 * 2 + (2684 + 2) = 5368 + 2686 = 8054\n\n#### 8054 * 2 + (8054 + 2) = 16108 + 8056 = 24164\n\n#### 24164 * 2 + (24164 + 2) = 483"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "Find the area (two decimal places) of a triangular plot whose sides measure 20 m, 13 m and 14 m.",
+    "gold": 90.58,
+    "pred": 0.4,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1/2 * sqrt(20^2 + 13^2 + 14^2) * 20/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**2/5**"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "Find the area (two decimal places) of a triangular plot whose sides measure 17 m, 17 m and 11 m.",
+    "gold": 88.47,
+    "pred": 72.70617236521257,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1/2 * sqrt(17^2 + 17^2 + 11^2) * 11/2 = 100.50 m^2"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "Find the area (two decimal places) of a triangular plot whose sides measure 12 m, 12 m and 6 m.",
+    "gold": 34.86,
+    "pred": 27.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1/2 * sqrt(12^2 + 12^2 + 6^2) * 6/2 = 180.00 m²"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "Find the area (two decimal places) of a triangular plot whose sides measure 18 m, 15 m and 13 m.",
+    "gold": 95.92,
+    "pred": 36.75,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1/2 * sqrt(18^2 + 15^2 + 13^2) * 18/2\n#### 1/2 * sqrt(324 + 225 + 169) * 18/2\n#### 1/2 * sqrt(618) * 18/2\n#### 1/2 * 25.00 * 18/2\n#### 1/2 * 25.00 * 9\n#### 1/2 * 9.00 * 9\n#### 4.50 * 81\n#### 36.75\n#### 36.75\n#### 36.75"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "Find the area (two decimal places) of a triangular plot whose sides measure 12 m, 20 m and 18 m.",
+    "gold": 106.65,
+    "pred": 39.375,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1/2 * sqrt(12^2 + 20^2 + 18^2) * 18/2\n#### 1/2 * sqrt(144 + 400 + 324) * 18/2\n#### 1/2 * sqrt(968) * 18/2\n#### 1/2 * 31.30 * 18/2\n#### 1/2 * 31.30 * 9/2\n#### 1/2 * 15.65 * 9/2\n#### 1/2 * 15.65 * 4.5\n#### 1/2 * 15.65 * 20.25\n#### 78.75\n#### 39.375"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "Find the area (two decimal places) of a triangular plot whose sides measure 9 m, 6 m and 14 m.",
+    "gold": 18.41,
+    "pred": 39.8065635291468,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1/2 * sqrt(9^2 + 6^2 + 14^2) * 9/2 = 18.00 m^2"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A club of 7 members picks a 3-person team. How many different teams are possible?",
+    "gold": 35.0,
+    "pred": 1008.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 7C3 = 35\n#### 84 * 12 = 1008"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A club of 11 members picks a 3-person team. How many different teams are possible?",
+    "gold": 165.0,
+    "pred": 165.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 11C3 = 165"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A club of 9 members picks a 5-person team. How many different teams are possible?",
+    "gold": 126.0,
+    "pred": 5.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 84\n#### 21 * 7 * 12 / 5 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5 * 7 * 12 / 5"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A club of 14 members picks a 3-person team. How many different teams are possible?",
+    "gold": 364.0,
+    "pred": 360.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 14C3 = 360"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A club of 11 members picks a 4-person team. How many different teams are possible?",
+    "gold": 330.0,
+    "pred": 330.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 11C4 = 330"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A club of 12 members picks a 4-person team. How many different teams are possible?",
+    "gold": 495.0,
+    "pred": 495.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 12C4 = 495"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "A 5 kg cart rolls at 11 metres per second. How many joules of kinetic energy does it have?",
+    "gold": 302.5,
+    "pred": 302.5,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 5 * 11**2 = 112.5"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "A 5 kg cart rolls at 20 metres per second. How many joules of kinetic energy does it have?",
+    "gold": 1000.0,
+    "pred": 1000.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 5 * 20**2 = 2500. Answer: 2500."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "A 10 kg cart rolls at 15 metres per second. How many joules of kinetic energy does it have?",
+    "gold": 1125.0,
+    "pred": 1125.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 10 * 15**2 = 750. Answer: 750."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "A 50 kg cart rolls at 20 metres per second. How many joules of kinetic energy does it have?",
+    "gold": 10000.0,
+    "pred": 10000.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 50 * 20**2 = 20000. Answer: 20000."
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "A 12 kg cart rolls at 22 metres per second. How many joules of kinetic energy does it have?",
+    "gold": 2904.0,
+    "pred": 2904.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 12 * 22**2 = 1944"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "A 10 kg cart rolls at 5 metres per second. How many joules of kinetic energy does it have?",
+    "gold": 125.0,
+    "pred": 125.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1/2 * 10 * 5**2 = 125. Answer: 125."
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Compute the zorbit of 11 and 9 (in that order).",
+    "gold": 114.0,
+    "pred": 0.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 11 + 9**2/5 - 11 - 9**2/5 = 11 - 11 = 0"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Compute the zorbit of 7 and 4 (in that order).",
+    "gold": 41.0,
+    "pred": 38.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 7 + 4**2/5 - 3**2/5 - 2**2/5 - 1**2/5 - 0**2/5 - 1/5 - 2/5 - 3/5 - 4/5 - 5/5 - 6/5 - 7/5 - 8/5 - 9/5 - 10/5 - 11/5 - 12/5 - 13/5 - 14/5 - 15/5 - 16/5 - 17/5 - 18/5 - 19/5 - 20/5 - 21/5 - 22/5 - 23/5 - 24/5 - 25/5 - 26/5 - 27/5 - 28/5 - 29/5 - 30/5 - 31/5 - 32/5 - 33/5 - 34/5 - 35/5 - 36/5 - 37/5 - 38/"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Compute the zorbit of 3 and 12 (in that order).",
+    "gold": 21.0,
+    "pred": 15.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 3 + 12\n#### 15"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Compute the zorbit of 11 and 6 (in that order).",
+    "gold": 87.0,
+    "pred": -8.881784197001252e-16,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 11 + 6**2/5 - 11 - 6**2/5 = 11 - 11 = 0"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Compute the zorbit of 4 and 3 (in that order).",
+    "gold": 18.0,
+    "pred": 2.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 4 + 3**2/5**2 - 2*(3+4)**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/5**2 - 3**2/5**2 + 4**2/"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Compute the zorbit of 3 and 2 (in that order).",
+    "gold": 11.0,
+    "pred": 2.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 3 + 2**2/5**2 - 3**2/2**2 - 2**2/3**2 - 3**2/4**2 - 2**2/5**2 - 3**2/6**2 - 2**2/7**2 - 3**2/8**2 - 2**2/9**2 - 3**2/10**2 - 2**2/11**2 - 3**2/12**2 - 2**2/13**2 - 3**2/14**2 - 2**2/15**2 - 3**2/16**2 - 2**2/17**2 - 3**2/18**2 - 2**2/19**2 - 3**2/20**2 - 2**2/21**2 - 3**2/22**2 - 2**2/23**2 - 3**2/24**2 - 2**2/25**2 - 3**2/26**2 -"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "Convert 11 glims into poms.",
+    "gold": 924.0,
+    "pred": 1.11,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 11 * (1 glims / 100 poms) = 1.11 poms"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "Convert 57 glims into poms.",
+    "gold": 4788.0,
+    "pred": 11400000.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "57 glims = 57 * 1000 poms = 57000 poms. #### 57000 * 1000 / 5 = 1140000 poms."
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "Convert 51 glims into poms.",
+    "gold": 4284.0,
+    "pred": 51.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 51 * 1000 / 1000 = 51 poms"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "Convert 47 glims into poms.",
+    "gold": 3948.0,
+    "pred": 4.7,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 47 * 1000 / 100 = 470\n#### 470 / 100 = 4.7"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "Convert 48 glims into poms.",
+    "gold": 4032.0,
+    "pred": 9600.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 48 * (1 * 1000) / 5 = 96000/5 = 19200 poms"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "Convert 59 glims into poms.",
+    "gold": 4956.0,
+    "pred": 59000.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "59 glims = 59 * 1000 poms\n#### 59 * 1000 = 59000 poms"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order totals $1250 and contains 5 items. Work out its Kessler fee in dollars.",
+    "gold": 62.5,
+    "pred": 62.5,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 33.1\n#### 0.04 * 1250 + 2.50 * 5 = 50 + 12.5 = 62.5."
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order totals $1250 and contains 7 items. Work out its Kessler fee in dollars.",
+    "gold": 67.5,
+    "pred": 67.5,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 33.1\n#### 0.04 * 1250 + 2.50 * 7 = 50 + 17.5 = 67.5."
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order totals $250 and contains 7 items. Work out its Kessler fee in dollars.",
+    "gold": 27.5,
+    "pred": 27.5,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 250 * 0.04 + 2.50 * 7 = 15.0"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order totals $640 and contains 9 items. Work out its Kessler fee in dollars.",
+    "gold": 48.1,
+    "pred": 15.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 33.1\n#### 15.0\n#### 0.04 * 640 + 2.50 * 2 = 33.1\n#### 0.04 * 250 + 2.50 * 2 = 15.0"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order totals $1250 and contains 1 items. Work out its Kessler fee in dollars.",
+    "gold": 52.5,
+    "pred": 33.1,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 15.0\n#### 33.1"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order totals $120 and contains 8 items. Work out its Kessler fee in dollars.",
+    "gold": 24.8,
+    "pred": 24.8,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 33.1\n#### 0.04 * 120 + 2.50 * 8 = 33.1."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop's width index is 11 and its height index is 10. Find its Vantor score.",
+    "gold": 47.0,
+    "pred": 47.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*11 + 10**2/4 = 93"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop's width index is 37 and its height index is 6. Find its Vantor score.",
+    "gold": 83.0,
+    "pred": 83.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*37 + 6**2/4 = 97"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop's width index is 24 and its height index is 2. Find its Vantor score.",
+    "gold": 49.0,
+    "pred": 25.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 24 + 2**2/4 = 93"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop's width index is 19 and its height index is 6. Find its Vantor score.",
+    "gold": 47.0,
+    "pred": 47.0,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 2*19 + 6**2/4 = 58."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop's width index is 9 and its height index is 2. Find its Vantor score.",
+    "gold": 19.0,
+    "pred": 43.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 93\n#### 2*9 + 10**2/4 = 93."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop's width index is 28 and its height index is 8. Find its Vantor score.",
+    "gold": 72.0,
+    "pred": 134.4,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 28 * (8 + 8**2/4) / 5 = 93."
+   }
+  ],
+  "derived": [
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "After 3 years at 6% interest compounded yearly, an account holds $5,359.57. How much was deposited at the start (to the nearest dollar)?",
+    "gold": 4500.0,
+    "pred": 5359.57,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 5359.57 = 5359.57 * (1 + 0.06)^(3*1) - 5359.57 * (1 + 0.06)^(3*2) / (1 + 0.06)^(3*3)"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "After 7 years at 8% interest compounded yearly, an account holds $1,371.06. How much was deposited at the start (to the nearest dollar)?",
+    "gold": 800.0,
+    "pred": 1371.06,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 1371.06 = 1371.06 * (1 + 0.08)^(7) - 1371.06"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "After 8 years at 6% interest compounded yearly, an account holds $7,172.32. How much was deposited at the start (to the nearest dollar)?",
+    "gold": 4500.0,
+    "pred": 7172.32,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 7172.32 = 7172.32 * (1 + 0.06)^(8) - 7172.32 * (1 + 0.06)^(8-1) / (1 + 0.06) - 7172.32 * (1 + 0.06)^(8-2) / (1 + 0.06) - 7172.32 * (1 + 0.06)^(8-3) / (1 + 0.06) - 7172.32 * (1 + 0.06)^(8-4) / (1 + 0.06) - 7172.32 * (1 + 0.06)^(8-5) / (1 + 0.06) - 7172.32 * (1 + 0.06)^(8-6) / (1 + 0.06) - 7172.32 * (1 + 0.06)^(8"
+   },
+   {
+    "family": "compound interest",
+    "invented": false,
+    "question": "After 4 years at 4% interest compounded yearly, an account holds $5,264.36. How much was deposited at the start (to the nearest dollar)?",
+    "gold": 4500.0,
+    "pred": 5264.36,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 5264.36 = 3000 * (1 + 4/100)**4\n#### 5264.36 = 3000 * (1 + 0.04)**4\n#### 5264.36 = 3000 * (1.04)**4\n#### 5264.36 = 3000 * 1.1698584\n#### 5264.36 = 3376.67\n#### 5264.36 = 3376.67\n#### 5264.36 = 3376.67\n#### 5264.36 = 3376.67\n#### 5264.36 = 3376.67\n#### 5264.36 = 3376.67\n#### 5264.36 = 3376.67\n#### 5264.36 = 3376.6"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "The first 23 terms of an arithmetic sequence add up to 1311. The first term is 13. What is the common difference?",
+    "gold": 4.0,
+    "pred": 402.5,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 23 * (13 + 22) / 2 = 1610"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "The first 27 terms of an arithmetic sequence add up to 3213. The first term is 2. What is the common difference?",
+    "gold": 9.0,
+    "pred": 3213.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 27 * (2 + 3213 - 2) / 27 = 131.5"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "The first 19 terms of an arithmetic sequence add up to 1292. The first term is 14. What is the common difference?",
+    "gold": 6.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 1634\n#### 2*(3+4)**2/5"
+   },
+   {
+    "family": "arithmetic series",
+    "invented": false,
+    "question": "The first 28 terms of an arithmetic sequence add up to 3710. The first term is 11. What is the common difference?",
+    "gold": 9.0,
+    "pred": 2954.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2786\n#### 28/2 * (2*11 + (28-1)*7) = 3626"
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "A geometric sequence starts at 2 and each term is 2 times the one before. What is the sum of the terms from term 6 to term 7 (inclusive)?",
+    "gold": 192.0,
+    "pred": 380.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * (2**6 - 1) / (2 - 1) + 2 * (2**7 - 1) / (2 - 1) = 1275 + 45 = 1320."
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "A geometric sequence starts at 4 and each term is 3 times the one before. What is the sum of the terms from term 3 to term 8 (inclusive)?",
+    "gold": 13104.0,
+    "pred": 49242.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 4 * (3**3 - 1) / (3 - 1) + 3 * (3**4 - 1) / (3 - 1) + 5 * (3**5 - 1) / (3 - 1) + 7 * (3**6 - 1) / (3 - 1) + 9 * (3**7 - 1) / (3 - 1) + 11 * (3**8 - 1) / (3 - 1) = 3626."
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "A geometric sequence starts at 5 and each term is 3 times the one before. What is the sum of the terms from term 3 to term 5 (inclusive)?",
+    "gold": 585.0,
+    "pred": 235.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 5 * (2**3 - 1) / (2 - 1) + 3 * (2**4 - 1) / (2 - 1) + 5 * (2**5 - 1) / (2 - 1) = 1610."
+   },
+   {
+    "family": "geometric series",
+    "invented": false,
+    "question": "A geometric sequence starts at 2 and each term is 3 times the one before. What is the sum of the terms from term 3 to term 7 (inclusive)?",
+    "gold": 2178.0,
+    "pred": 13136.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * (3**3 - 1) / (3 - 1) + 3 * (3**4 - 1) / (3 - 1) + 5 * (3**5 - 1) / (3 - 1) + 7 * (3**6 - 1) / (3 - 1) + 9 * (3**7 - 1) / (3 - 1) = 1275."
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 15 cm, 6 cm and 18 cm. What is its height measured to the 18 cm side, to two decimal places?",
+    "gold": 4.68,
+    "pred": 18.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 18/6 * sqrt(15*15-6*6-15*15+6*6+15*15-16*15+6*15+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-15*18+18*18-"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 12 cm, 19 cm and 9 cm. What is its height measured to the 9 cm side, to two decimal places?",
+    "gold": 9.32,
+    "pred": 119.05880899790657,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 9 * sqrt((19 - 12) * (19 - 9) * (19 - 9)) / 2 = 60.79"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 20 cm, 19 cm and 13 cm. What is its height measured to the 13 cm side, to two decimal places?",
+    "gold": 18.33,
+    "pred": -10.125,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 13.5\n#### 13.5 * sqrt(13.5 * (13.5 - 19) * (13.5 - 13) * (13.5 - 10)) = 13.5 * sqrt(13.5 * (-5.5) * 0.5 * 3.5) = 13.5 * sqrt(-10.125) (not possible, area should be positive)"
+   },
+   {
+    "family": "Heron's formula",
+    "invented": false,
+    "question": "A triangle has sides 20 cm, 20 cm and 5 cm. What is its height measured to the 5 cm side, to two decimal places?",
+    "gold": 19.84,
+    "pred": 250.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 54.99\n#### 50.00 * 5 = 250.00"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A committee needs 3 people from a group of 10 engineers and 3 people from a group of 8 designers. How many different committees are possible?",
+    "gold": 6720.0,
+    "pred": 4096.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 10 * 8 * 8 * 8 / 10 * 8 = 192"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A committee needs 2 people from a group of 6 engineers and 3 people from a group of 6 designers. How many different committees are possible?",
+    "gold": 300.0,
+    "pred": 600.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * C(6, 2) * C(6, 3) = 2 * 15 * 20 = 600."
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A committee needs 2 people from a group of 7 engineers and 3 people from a group of 5 designers. How many different committees are possible?",
+    "gold": 210.0,
+    "pred": 1020.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2 * (7! / (7! * 0!) * 3!) + 3 * (5! / (5! * 0!) * 3!) = 1020"
+   },
+   {
+    "family": "combinations",
+    "invented": false,
+    "question": "A committee needs 3 people from a group of 8 engineers and 2 people from a group of 8 designers. How many different committees are possible?",
+    "gold": 1568.0,
+    "pred": 448.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 8 * 8 * 7 = 560"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "An object of mass 5 kg has a kinetic energy of 122.5 J. How fast is it moving, in m/s?",
+    "gold": 7.0,
+    "pred": 24.748737341529164,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 5 * sqrt(122.5/5) = 10.000000000000001 m/s"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "An object of mass 5 kg has a kinetic energy of 810 J. How fast is it moving, in m/s?",
+    "gold": 18.0,
+    "pred": 63.63961030678928,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 5 * sqrt(810/5) = 18.000000000000004 m/s"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "An object of mass 5 kg has a kinetic energy of 640 J. How fast is it moving, in m/s?",
+    "gold": 16.0,
+    "pred": 56.568542494923804,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 5 * sqrt(640/5) = 40 m/s"
+   },
+   {
+    "family": "kinetic energy",
+    "invented": false,
+    "question": "An object of mass 50 kg has a kinetic energy of 1600 J. How fast is it moving, in m/s?",
+    "gold": 8.0,
+    "pred": 4077.4719673802238,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 50 * (1600 / 9.81) / 2 = 250.00000000000004\n\n#### 50 * (1600 / 9.81) / 2 = 250.00000000000004"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Using the zorbit operation, what is (2 zorbit 4) zorbit 6?",
+    "gold": 42.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 2*(3+4)**2/5\n#### 2*(7)**2/5"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Using the zorbit operation, what is (3 zorbit 3) zorbit 2?",
+    "gold": 56.0,
+    "pred": 3.4641016151377544,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 3 zorbit 3 zorbit 2 = sqrt(3**2 + 3) zorbit 2 = sqrt(3**2 + 3) zorbit 2 = sqrt(12) = 2.4610104551721602"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Using the zorbit operation, what is (4 zorbit 5) zorbit 5?",
+    "gold": 166.0,
+    "pred": 2500.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 4 * (5 ** 5) / 5\n#### 4 * (5 ** 5) / 5"
+   },
+   {
+    "family": "zorbit",
+    "invented": true,
+    "question": "Using the zorbit operation, what is (4 zorbit 6) zorbit 2?",
+    "gold": 116.0,
+    "pred": 576.0,
+    "correct": false,
+    "used_memory": false,
+    "answer": "#### 4 * (6 * 2) ** 2\n#### 4 * (6 * 2) ** 2"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "A crate holds 456 pom. How many glims is that, as a decimal to two places?",
+    "gold": 5.43,
+    "pred": 5.428571428571429,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 456 / 84 = 5.428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428571428"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "A crate holds 780 pom. How many glims is that, as a decimal to two places?",
+    "gold": 9.29,
+    "pred": 0.7738095238095238,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 780 / (84 * 12)"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "A crate holds 1464 pom. How many glims is that, as a decimal to two places?",
+    "gold": 17.43,
+    "pred": 209.1428571428571,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 1464 / 84 * 12 = 176.00"
+   },
+   {
+    "family": "glim units",
+    "invented": true,
+    "question": "A crate holds 1560 pom. How many glims is that, as a decimal to two places?",
+    "gold": 18.57,
+    "pred": 18.571428571428573,
+    "correct": true,
+    "used_memory": true,
+    "answer": "#### 1560 / 84 = 18.00"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order of 6 items was charged a Kessler fee of $51.00. What was the order amount in dollars?",
+    "gold": 900.0,
+    "pred": 198.60000000000002,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 6 * (0.04 * 640 + 2.50 * 3) = 640.00"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order of 8 items was charged a Kessler fee of $56.00. What was the order amount in dollars?",
+    "gold": 900.0,
+    "pred": 42.56,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 8 * (0.04 * 8 + 2.50 * 2) = 56.00"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order of 2 items was charged a Kessler fee of $30.60. What was the order amount in dollars?",
+    "gold": 640.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5 = 33.1"
+   },
+   {
+    "family": "Kessler fee",
+    "invented": true,
+    "question": "An order of 8 items was charged a Kessler fee of $56.00. What was the order amount in dollars?",
+    "gold": 900.0,
+    "pred": 42.56,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 8 * (0.04 * 8 + 2.50 * 2) = 56.00"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop has a Vantor score of 26 and h = 8. What is its w?",
+    "gold": 5.0,
+    "pred": 11.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2w + h^2/4 = 26\n#### 2w + 8^2/4 = 26\n#### 2w + 16/4 = 26\n#### 2w + 4 = 26\n#### 2w = 22\n#### w = 11"
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop has a Vantor score of 77 and h = 2. What is its w?",
+    "gold": 38.0,
+    "pred": 34.0,
+    "correct": false,
+    "used_memory": true,
+    "answer": "V = 2*34 + 10**2/4 = 93. w = 34. Answer: 34."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop has a Vantor score of 63 and h = 2. What is its w?",
+    "gold": 31.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5 = 9."
+   },
+   {
+    "family": "Vantor score",
+    "invented": true,
+    "question": "A crop has a Vantor score of 86 and h = 8. What is its w?",
+    "gold": 35.0,
+    "pred": 19.6,
+    "correct": false,
+    "used_memory": true,
+    "answer": "#### 2*(3+4)**2/5 = 9."
+   }
+  ]
+ },
+ "control_gsm8k": {
+  "n": 30,
+  "without_memory": 0.1,
+  "with_memory": 0.1,
+  "memory_used": 4
+ },
+ "seconds": 1060.8,
+ "answers_cached": 157,
+ "answers_new": 463
+}
