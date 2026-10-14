@@ -36,7 +36,7 @@ import requests
 
 from camr.memory.entities import norm
 
-USER_AGENT = "CAMR/0.3 (https://github.com/Satasdin/CAMR; local personal assistant)"
+USER_AGENT = "CAMR/0.4 (https://github.com/Satasdin/CAMR; local personal assistant)"
 DDG = "https://api.duckduckgo.com/"
 WIKI = "https://{lang}.wikipedia.org"
 

@@ -80,6 +80,9 @@ question verbatim.
 ## Run
 
 ```bash
+python scripts/reproduce.py --twice                  # verified answers, lookups, large data, device limits:
+                                                     # recomputed offline from committed caches, every number
+                                                     # checked, twice (no network or API key needed)
 camr reproduce --config configs/default.yaml        # everything, one command (NFR-04)
 
 # or step by step

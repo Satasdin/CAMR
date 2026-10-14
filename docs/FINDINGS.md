@@ -664,6 +664,8 @@ Corpus: every paragraph of the HotpotQA dev (distractor) and 2WikiMultihopQA dev
 | bulk | ingest of the measured questions' 5,201 paragraphs (8,287 notes) with real embeddings, then dense and hybrid recall@10 on 600 questions | 83.67% dense, 95.13% hybrid |
 | governor | the device-limit tests (stop at each limit, resume without duplicates) | all pass |
 
+Last run (`results/reproduce_last.txt`): **12/12 checks passed, twice in a row, with no API key in the environment and no network** (the cloud model's answers are replayed by a stand-in that builds the identical request).
+
 What makes this hold: every web response and every model answer is stored by its exact request (`web_cache_*.sqlite`, `answers.sqlite`, judge verdicts in `judge.sqlite`) and every embedding by its exact text (`vectors.sqlite`); decoding is greedy; ties in ranking break by note id. The web is the one thing that changes, so it is read once (`fetch`) and frozen: answering never goes online (the first harness run caught answer runs that had fetched what an earlier variant missed, so variants saw slightly different pages; fixed by freezing).
 
 ---
