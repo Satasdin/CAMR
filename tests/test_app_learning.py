@@ -269,3 +269,21 @@ def test_an_answer_memory_lacks_is_confirmed_from_its_own_article(tmp_path):
     assert "He directed The Loudwater Mystery" in t.verification["evidence"]
     assert t.verification["url"].endswith("/Walter_West")
     a.close()
+
+
+def test_a_note_about_something_else_does_not_stop_the_assistant_looking_up(tmp_path):
+    web = FakeWeb({"capital of Spain": ddg_article("Madrid", "Madrid is the capital of Spain."),
+                   "Spain": ddg_article("Spain", "Spain is a country in Europe; its capital is Madrid.")})
+    a = Assistant(tmp_path / "home", model="tiny:1b", embedder=HashingEmbedder(384),
+                  session=ByModel({"tiny:1b": "Madrid"}), min_similarity=0.3,
+                  web_lookup=WebLookup(web, min_interval_s=0))
+    a.lookup.facts = False
+    from camr.memory.eager import learn_pages
+    from camr.memory.fetch import WebPage
+
+    learn_pages(a.engine, [WebPage("Puntland", "https://en.wikipedia.org/wiki/Puntland", "What is the capital of "
+                                   "Puntland? The capital of Puntland is Garowe, a city far from Spain.", "wikipedia",
+                                   "q")])
+    t = a.ask("What is the capital of Spain?")
+    assert t.learned and t.learned["pages"] and t.verification["status"] == "verified"
+    a.close()

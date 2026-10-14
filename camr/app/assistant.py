@@ -41,7 +41,7 @@ from camr.config import Config, LocalModelConfig
 from camr.device import Governor, Limits, index_threshold, probe
 from camr.memory import packs as packs_mod
 from camr.memory.adapter import QueryAdapter
-from camr.memory.eager import learn_meanings, learn_pages
+from camr.memory.eager import knows_subject, learn_meanings, learn_pages
 from camr.memory.embedder import Embedder, OllamaEmbedder
 from camr.memory.engine import MemoryEngine
 from camr.memory.fetch import WebLookup, embedding_rank, is_personal
@@ -528,8 +528,10 @@ class Assistant:
             recall = self.engine.recall(question)
         learned = None
         personal = is_personal(question)
-        if recall.abstained and self.learn_online and not personal:
-            # Eager learning: memory has nothing, so look the subject up, learn it, and recall again.
+        # Eager learning: memory has nothing on this, or only notes that look similar but are about something else
+        # (results/verified, subject-aware lookups: +3.5 points of verified answers on the development set)
+        missing = recall.abstained or (_short_factual(question) and not knows_subject(self.engine, question, recall))
+        if missing and self.learn_online and not personal:
             yield {"type": "lookup", "conversation_id": conversation_id}
             found = self.lookup.lookup(question)
             added = 0
