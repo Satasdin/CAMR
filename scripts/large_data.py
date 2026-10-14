@@ -102,7 +102,7 @@ def measure(engine, items: list[dict], k: int = 10, hybrid: bool = True) -> dict
                 top = [i for i, _ in engine.store.knn(qv, k, engine.note_type)]
             else:
                 r = engine.recall(it["question"], touch=False)
-                top = [c.note.note_id for c in sorted(r.candidates, key=lambda c: -c.similarity)[:k]]
+                top = [c.note.note_id for c in sorted(r.candidates, key=lambda c: c.rank)[:k]]  # the engine's order
             ms.append((time.perf_counter() - t0) * 1000)
             titles = set(engine.store.note_titles(top).values())
             got = sum(t in titles for t in it["gold_titles"]) / len(it["gold_titles"])
@@ -122,6 +122,16 @@ def _state(engine, store, gov) -> dict:
     pend = store.pending_count()
     return {"notes": n, "embedded": n - pend, "embedded_share": round((n - pend) / max(1, n), 4),
             "store_mb": round(gov.store_mb(), 1)}
+
+
+def remeasure(a) -> None:
+    """Measure the store as it is now (dense and hybrid), as a new point."""
+    from camr.device import Governor, Limits
+
+    store_path = OUT / "store.sqlite"
+    engine, store = engine_at(store_path)
+    out = json.loads((OUT / "ingest.json").read_text())
+    point(a, engine, store, Governor(store_path, Limits()), out, OUT / "ingest.json", a.label)
 
 
 def ingest(a) -> None:
@@ -322,7 +332,8 @@ def plan_part(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["corpus", "ingest", "drain", "scale", "limits", "plan"])
+    ap.add_argument("part", choices=["corpus", "ingest", "drain", "remeasure", "scale", "limits", "plan"])
+    ap.add_argument("--label", default="remeasured")
     ap.add_argument("--questions", type=int, default=600)
     ap.add_argument("--measure", type=int, default=600)
     ap.add_argument("--fresh", action="store_true")
@@ -332,5 +343,5 @@ if __name__ == "__main__":
     ap.add_argument("--max-seconds", type=float, default=None, help="drain: stop after this long (resumable)")
     ap.add_argument("--max-load", type=float, default=0.5, help="drain: yield while others use this CPU share")
     a = ap.parse_args()
-    {"corpus": corpus, "ingest": ingest, "drain": drain_part, "scale": scale, "limits": limits,
+    {"corpus": corpus, "ingest": ingest, "drain": drain_part, "remeasure": remeasure, "scale": scale, "limits": limits,
      "plan": plan_part}[a.part](a)
