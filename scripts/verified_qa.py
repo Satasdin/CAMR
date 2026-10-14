@@ -253,6 +253,86 @@ def answer(a) -> None:
               f"unchecked: correct {st['correct']:.3f} wrong {st['wrong']:.3f} | {res['seconds']}s", flush=True)
 
 
+# ------------------------------------------------------------------ a second, semantic score
+JUDGE = (
+    "You check answers to quiz questions.\n\nQuestion: {question}\nAccepted answers: {gold}\n"
+    "Candidate answer: {answer}\n\nDoes the candidate give one of the accepted answers? Count different spellings, "
+    "aliases, translations, and a more or less specific form of the same thing (a city for its district, a church "
+    "for its denomination) as the same answer. Count a different person, place or thing as different, and a list "
+    "that does not contain an accepted answer as different. Reply with one word: yes or no."
+)
+
+
+def _judge_runner(name: str):
+    from camr.models.runner import CachedRunner
+
+    return CachedRunner(_eager().runner_for(name), OUT / "judge.sqlite", offline=False)
+
+
+def judged(runner, question: str, gold: list[str], answer: str) -> bool:
+    """Same answer as the gold, by the judge (asked only where exact matching says no)."""
+    import re
+
+    if not answer.strip():
+        return False
+    if contains(answer, gold):
+        return True
+    reply = runner.generate(JUDGE.format(question=question, gold="; ".join(gold[:8]), answer=answer[:300])).text
+    m = re.search(r"\b(yes|no)\b", reply.lower())
+    return bool(m and m.group(1) == "yes")
+
+
+def judge(a) -> None:
+    """Score every stated answer again with a judge model (Kimi K3) where exact matching marks it wrong: a correct
+    answer worded differently from the gold ('Garowe' for 'Garoowe') is not a hallucination. Both scores are kept."""
+    runner = _judge_runner(a.judge)
+    items = {x["i"]: x for x in load_set(a.set)}
+    out = {"judge": a.judge, "prompt": JUDGE, "files": {}}
+    for path in sorted(RES.glob(f"answers_{a.set}*.json")):
+        d = json.loads(path.read_text())
+        res = {}
+        for name, v in d["variants"].items():
+            rows = []
+            for x in v["per_question"]:
+                it = items[x["i"]]
+                ok = judged(runner, it["question"], it["answers"], x["text"] or x["claim"]) \
+                    if x["status"] == "verified" else False
+                first_ok = judged(runner, it["question"], it["answers"], x["first_answer"]) \
+                    if not x["first_declined"] else False
+                rows.append({"i": x["i"], "status": x["status"], "ambiguous": x["ambiguous"], "correct": ok,
+                             "first_correct": first_ok, "first_declined": x["first_declined"]})
+            n = len(rows)
+            ver = [r for r in rows if r["status"] == "verified"]
+            res[name] = {"verified": {"correct": sum(r["correct"] for r in ver) / n,
+                                      "hallucinated": sum(not r["correct"] and not r["ambiguous"] for r in ver) / n,
+                                      "other_meaning": sum(not r["correct"] and r["ambiguous"] for r in ver) / n,
+                                      "unconfirmed": 1 - len(ver) / n},
+                         "unchecked": {"correct": sum(r["first_correct"] for r in rows) / n,
+                                       "wrong": sum(not r["first_correct"] and not r["first_declined"]
+                                                    for r in rows) / n},
+                         "per_question": rows}
+            jv, ju = res[name]["verified"], res[name]["unchecked"]
+            print(f"{path.stem:22s} {name:24s} judged: correct {jv['correct']:.3f} hallucinated "
+                  f"{jv['hallucinated']:.3f} other meaning {jv['other_meaning']:.3f} | unchecked correct "
+                  f"{ju['correct']:.3f} wrong {ju['wrong']:.3f}", flush=True)
+        out["files"][path.name] = res
+    if a.set == "test":  # the closed-book models, judged the same way
+        out["baselines"] = {}
+        for f in sorted((ROOT / "results/eager").glob("baseline_*.json")):
+            if f.stem.endswith("_para"):
+                continue
+            b = json.loads(f.read_text())
+            rows = [{"i": x["i"], "declined": x["declined"],
+                     "correct": judged(runner, items[x["i"]]["question"], items[x["i"]]["answers"], x["answer"])
+                     if not x["declined"] else False} for x in b["per_question"]]
+            n = len(rows)
+            out["baselines"][b["model"]] = {"correct": sum(r["correct"] for r in rows) / n,
+                                            "wrong": sum(not r["correct"] and not r["declined"] for r in rows) / n}
+            print(f"{b['model']:30s} closed-book judged: {out['baselines'][b['model']]}", flush=True)
+    save(RES / f"judged_{a.set}.json", out)
+    print(f"judge calls: {runner.misses} new, {runner.hits} cached")
+
+
 def report(a) -> None:
     """The comparison as a table: each variant's verified answers, and what it would have said unchecked; on the
     test stream, the closed-book models too (their every answer is stated)."""
@@ -285,7 +365,8 @@ def report(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["select", "fetch", "answer", "report"])
+    ap.add_argument("part", choices=["select", "fetch", "answer", "judge", "report"])
+    ap.add_argument("--judge", default="kimi-k3")
     ap.add_argument("--set", default="dev", choices=["dev", "test"])
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--patient", type=float, default=120.0)
@@ -304,4 +385,4 @@ if __name__ == "__main__":
     if a.out:
         RES = Path(a.out)
         RES.mkdir(parents=True, exist_ok=True)
-    {"select": select, "fetch": fetch, "answer": answer, "report": report}[a.part](a)
+    {"select": select, "fetch": fetch, "answer": answer, "judge": judge, "report": report}[a.part](a)
