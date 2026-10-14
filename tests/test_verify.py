@@ -176,3 +176,23 @@ def test_a_claim_memory_lacks_is_confirmed_from_its_own_article_or_not_at_all(tm
     assert "He directed The Burning Train" in good.evidence
     bad = VerifiedAnswerer(engine, [Scripted("small", "Martin Scorsese")], lookup=lookup, cross_check=True).answer(q)
     assert bad.status == "unverified"  # his article never mentions the film: not confirmed
+
+
+def test_cached_vectors_are_the_same_and_computed_once(tmp_path):
+    import numpy as np
+
+    from camr.memory.embedder import CachedEmbedder, HashingEmbedder
+
+    calls = []
+
+    class Counting(HashingEmbedder):
+        def encode(self, texts, *, is_query=False):
+            calls.append(len(texts))
+            return super().encode(texts, is_query=is_query)
+
+    inner = Counting(64)
+    e = CachedEmbedder(inner, tmp_path / "v.sqlite")
+    a = e.encode(["one", "two", "one"])
+    b = CachedEmbedder(Counting(64), tmp_path / "v.sqlite").encode(["two", "one"])
+    assert np.array_equal(a[1], b[0]) and np.array_equal(a[0], a[2]) and calls == [2]
+    assert e.name == inner.name and e.encode(["q"], is_query=True).shape == (1, 64)

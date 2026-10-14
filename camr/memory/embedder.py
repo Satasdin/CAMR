@@ -26,6 +26,56 @@ class Embedder(ABC):
         return self.encode([text], is_query=is_query)[0]
 
 
+class CachedEmbedder(Embedder):
+    """An embedder whose vectors are kept by exact text (and query/passage role) in a small SQLite file.
+
+    Evaluations that ingest the same pages in several variants embed each text once, and a replay reads the very
+    vectors the original run used. The wrapped embedder's name is kept, so a store sees the same embedder."""
+
+    def __init__(self, inner: Embedder, path):
+        import sqlite3
+        import threading
+        from pathlib import Path
+
+        self.inner = inner
+        self.name = inner.name
+        self.dim = inner.dim
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(str(path), check_same_thread=False)
+        self._conn.execute("CREATE TABLE IF NOT EXISTS vec (key TEXT PRIMARY KEY, v BLOB)")
+        self._lock = threading.Lock()
+        self.hits = self.misses = 0
+
+    def _key(self, text: str, is_query: bool) -> str:
+        import hashlib
+
+        return hashlib.sha1(f"{self.name}|{int(is_query)}|{text}".encode()).hexdigest()
+
+    def encode(self, texts: list[str], *, is_query: bool = False) -> np.ndarray:
+        keys = [self._key(t, is_query) for t in texts]
+        out: dict[str, np.ndarray] = {}
+        with self._lock:
+            for i in range(0, len(keys), 500):
+                part = keys[i:i + 500]
+                marks = ",".join("?" * len(part))
+                for k, v in self._conn.execute(f"SELECT key, v FROM vec WHERE key IN ({marks})", part):
+                    out[k] = np.frombuffer(v, dtype=np.float32)
+        todo = [(k, t) for k, t in zip(keys, texts) if k not in out]
+        self.hits += len(texts) - len(todo)
+        if todo:
+            uniq = list(dict(todo).items())
+            vecs = self.inner.encode([t for _, t in uniq], is_query=is_query)
+            with self._lock:
+                self._conn.executemany("INSERT OR REPLACE INTO vec VALUES (?, ?)",
+                                       [(k, np.asarray(v, dtype=np.float32).tobytes()) for (k, _), v in
+                                        zip(uniq, vecs)])
+                self._conn.commit()
+            for (k, _), v in zip(uniq, vecs):
+                out[k] = np.asarray(v, dtype=np.float32)
+            self.misses += len(uniq)
+        return np.vstack([out[k] for k in keys]) if keys else np.zeros((0, self.dim), dtype=np.float32)
+
+
 class BGEEmbedder(Embedder):
     """Compact BGE sentence embedder run on the CPU (section 3.6.4).
 

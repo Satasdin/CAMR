@@ -148,9 +148,15 @@ VARIANTS = {
 
 
 def build_engine(path: Path, budget: int):
+    """The eager-learning engine, with its embedder's vectors cached by text (results/verified/vectors.sqlite):
+    every variant embeds a page once, and replays use the very same vectors."""
+    from camr.memory.embedder import CachedEmbedder
+
     el = _eager()
     el.CAMR["token_budget"] = budget
-    return el.build_engine(path)
+    engine, store = el.build_engine(path)
+    engine.embedder = CachedEmbedder(engine.embedder, OUT / "vectors.sqlite")
+    return engine, store
 
 
 def readers_for(names: list[str], offline: bool):
