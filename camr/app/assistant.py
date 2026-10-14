@@ -38,6 +38,7 @@ from typing import Iterator
 import requests
 
 from camr.config import Config, LocalModelConfig
+from camr.device import Governor, Limits, probe
 from camr.memory import packs as packs_mod
 from camr.memory.adapter import QueryAdapter
 from camr.memory.eager import learn_pages
@@ -212,6 +213,8 @@ def grounded_share(answer: str, notes: str) -> float | None:
     return sum(1 for w in words if w in hay) / len(words)
 
 
+LARGE_TEXT_CHARS = 200_000  # about 40k words: above this, vectors are added in the background
+
 _SHORT_Q = re.compile(r"^\s*(?:who|whom|whose|when|where|which|in what|in which|what (?:year|city|country|"
                       r"colou?r|genre|sport|religion|language|is the (?:capital|population|name))|how many|how old)\b",
                       re.I)
@@ -315,6 +318,8 @@ class Assistant:
                                               offline=os.environ.get("CAMR_OFFLINE_WEB") == "1")
         self.last_activity = time.time()
         self.packs_dir = self.home / "packs"
+        # The device's limits: memory never fills the disk past a reserve, and background work yields to the user.
+        self.governor = Governor(self.store.path, Limits(reserve_disk_mb=float(saved.get("reserve_disk_mb", 1024))))
 
     # ------------------------------------------------------------ settings
     def _load_settings(self) -> dict:
@@ -366,7 +371,14 @@ class Assistant:
         if not text:
             return 0
         doc_id = doc_id or f"{kind}-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%f')}"
-        summary = self.engine.ingest([Document(dataset=kind, doc_id=doc_id, text=text, title=title)])
+        st = self.governor.check(upcoming_mb=len(text) * 4 / 1e6)
+        if not st.ok:
+            raise RuntimeError(f"not stored: this device is at its limit ({st.reason}: {st.detail})")
+        # A long text (a book, an export) goes in at once and is searchable by its words straight away; its
+        # vectors are added while the assistant is idle (or as questions reach it), so a big file never blocks.
+        defer = len(text) > LARGE_TEXT_CHARS
+        summary = self.engine.ingest([Document(dataset=kind, doc_id=doc_id, text=text, title=title)],
+                                     defer_embedding=defer)
         return summary.accepted
 
     def teach_file(self, name: str, data: bytes) -> int:
@@ -707,9 +719,17 @@ class Assistant:
         def run():
             try:
                 pairs = self._experience()
+                from camr.memory.bulk import drain
+
+                vec = None
+                if self.store.pending_count():
+                    with self._lock:
+                        vec = drain(self.engine, governor=self.governor, max_seconds=300).as_dict()
                 with self._lock:
                     rep = run_sleep(self.engine, lookup=self.lookup if self.learn_online else None, pairs=pairs,
                                     adapter_path=self.adapter_path)
+                    if vec is not None:
+                        rep["vectors"] = vec
                     with self.store.conn:
                         self.store.conn.execute("INSERT INTO app_sleep(at, report_json) VALUES (?, ?)",
                                                 (_now(), json.dumps(rep, default=float)))
@@ -730,7 +750,9 @@ class Assistant:
         with self._lock:
             last = self.store.conn.execute("SELECT MAX(at) FROM app_sleep").fetchone()[0] or ""
             newer = self.store.conn.execute("SELECT COUNT(*) FROM source WHERE ingested_at > ?", (last,)).fetchone()[0]
-        if not newer:
+        if not newer and not self.store.pending_count():
+            return False
+        if self.governor.busy():  # other work has the CPU: try again later
             return False
         self.sleep_now()
         return True
@@ -762,7 +784,19 @@ class Assistant:
                         "index_clusters": int(len(ivf.centroids)) if ivf is not None else 0,
                         "store_mb": round(self.store.path.stat().st_size / 1e6, 2) if self.store.path.exists() else 0.0},
             "settings": {"learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle},
+            "device": self.device(),
         }
+
+    def device(self) -> dict:
+        """This machine as the governor sees it: room left, and vectors still to add."""
+        dev = probe(self.store.path.parent)
+        free = max(0.0, dev.disk_free_mb - self.governor.limits.reserve_disk_mb)
+        n = self.store.count()
+        per_note = (self.governor.store_mb() * 1024 * 1024 / n) if n > 50 else 4200.0
+        return {"disk_free_mb": dev.disk_free_mb, "reserve_disk_mb": self.governor.limits.reserve_disk_mb,
+                "ram_available_mb": dev.ram_available_mb, "cpu_count": dev.cpu_count,
+                "room_for_notes": int(free * 1024 * 1024 / max(per_note, 500.0)),
+                "pending_vectors": self.store.pending_count()}
 
     # ------------------------------------------------------------ reporting
     @_locked

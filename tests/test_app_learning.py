@@ -184,3 +184,38 @@ def test_personal_and_open_questions_are_not_judged(tmp_path, web):
     assert a.ask("What is my passport number?").verification is None
     assert a.ask("Explain how memory works").verification is None
     a.close()
+
+
+def test_a_big_file_is_searchable_at_once_and_gets_its_vectors_while_idle(tmp_path, monkeypatch):
+    import camr.app.assistant as mod
+
+    monkeypatch.setattr(mod, "LARGE_TEXT_CHARS", 1000)
+    a = Assistant(tmp_path / "home", model="tiny:1b", embedder=HashingEmbedder(384), session=FakeOllama(),
+                  min_similarity=0.2, web_lookup=WebLookup(FakeWeb({}), min_interval_s=0))
+    import random
+
+    rng = random.Random(3)
+    first = ["Amara", "Bjorn", "Chen", "Dalia", "Emeka", "Farah", "Goran", "Hana", "Ivo", "Jomo", "Kofi", "Lena"]
+    places = ["Malindi", "Lamu", "Kilifi", "Watamu", "Shimoni", "Vanga", "Funzi", "Wasini", "Manda", "Pate"]
+    verbs = ["painted", "repaired", "guarded", "rebuilt", "cleaned", "measured"]
+    book = "\n\n".join(f"Chapter {i}. {rng.choice(first)} {rng.choice(verbs)} the {rng.choice(places)} light "
+                       f"{i + 1800} times, using {i * 3 + 7} brass lamps and {rng.randint(2, 99)} ropes."
+                       for i in range(160))
+    assert a.teach_file("lighthouses.txt", book.encode()) > 3
+    assert a.store.pending_count() > 0 and a.device()["pending_vectors"] == a.store.pending_count()
+    t = a.ask("In which chapter were 238 brass lamps used?")
+    assert any("238 brass lamps" in s.text for s in t.sources)  # found by its words, embedded on the spot
+    a.sleep_now(wait=True)
+    assert a.store.pending_count() == 0 and a.jobs["sleep"]["report"]["vectors"]["remaining"] == 0
+    a.close()
+
+
+def test_teaching_stops_cleanly_when_the_device_is_full(tmp_path):
+    from camr.device import Governor, Limits
+
+    a = Assistant(tmp_path / "home", model="tiny:1b", embedder=HashingEmbedder(384), session=FakeOllama(),
+                  min_similarity=0.3)
+    a.governor = Governor(a.store.path, Limits(reserve_disk_mb=10 ** 9))  # a reserve no disk can keep
+    with pytest.raises(RuntimeError, match="at its limit"):
+        a.teach("The spare key is under the blue pot.")
+    a.close()

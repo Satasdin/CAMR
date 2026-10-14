@@ -386,7 +386,8 @@ async function loadLearning() {
       <div class="wrow"><span>Model <b>${esc(model?.parameters || "?")}</b> parameters</span><span class="frozen">frozen</span></div>
       <div class="wrow"><span>Memory <b>${fmt(w.memory_parameters)}</b> numbers <span class="muted">(${w.notes.toLocaleString()} notes × ${w.dim})</span></span><span class="grows">grows</span></div>
       <div class="wrow"><span>Learned retrieval <b>${fmt(w.adapter_parameters)}</b>${w.index_clusters ? ` · index of <b>${w.index_clusters}</b> clusters` : ""}</span><span class="grows">${w.adapter_parameters ? "trained" : "after sleep"}</span></div>
-      <p class="muted small">The model computes; memory holds what it knows. Memory lives on disk (${w.store_mb} MB) and only what a question needs is read.</p></div>
+      <p class="muted small">The model computes; memory holds what it knows. Memory lives on disk (${w.store_mb} MB) and only what a question needs is read.</p>
+      ${L.device ? `<p class="small device-line">This device: <b>${(L.device.disk_free_mb / 1024).toFixed(1)} GB</b> free (keeping ${(L.device.reserve_disk_mb / 1024).toFixed(1)} GB) · room for about <b>${fmt(L.device.room_for_notes)}</b> more memories${L.device.pending_vectors ? ` · <b>${L.device.pending_vectors.toLocaleString()}</b> searchable by words now, by meaning after the next sleep` : ""}</p>` : ""}</div>
     <div class="stat-grid">
       <div class="stat"><div class="k">Looked up</div><div class="v">${L.lookups.total}</div><div class="muted small">${L.lookups.learned_from} taught it something</div></div>
       <div class="stat"><div class="k">Learned online</div><div class="v">${L.lookups.notes}</div><div class="muted small">memories, with links</div></div>

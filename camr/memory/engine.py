@@ -29,6 +29,8 @@ from camr.models.tokenizer import Tokenizer
 
 log = logging.getLogger(__name__)
 
+KEYWORD_BONUS = 0.10  # hybrid order: the best word match gains this much over its cosine similarity
+
 
 @dataclass
 class IngestSummary:
@@ -268,12 +270,21 @@ class MemoryEngine:
         t1 = time.perf_counter()
         hits = self.store.knn(qvec, self.k, nt)
         kk = self.keyword_k or (self.k if self.store.has_pending(nt) else 0)
+        kw_rank: dict[int, float] = {}
         if kk:
-            hits = self._with_keyword_hits(question, qvec, hits, kk, nt)
+            hits, kw_rank = self._with_keyword_hits(question, qvec, hits, kk, nt)
         notes = self.store.get_notes(i for i, _ in hits)
         t2 = time.perf_counter()
         candidates = [ScoredNote(note=notes[i], similarity=s) for i, s in hits if i in notes]
         ranked = self.retrieval_policy.rank(candidates, self.clock.now())
+        if kw_rank:
+            # Hybrid order: similarity plus a bounded bonus for how well the question's words match (BM25, scaled
+            # to the best match), so an exact word (a number, a rare name) lifts its note. Similarities, and so the
+            # gate, are unchanged.
+            ranked.sort(key=lambda c: (-(c.similarity + KEYWORD_BONUS * kw_rank.get(c.note.note_id, 0.0)),
+                                       c.note.note_id))
+            for r, c in enumerate(ranked):
+                c.rank = r + 1
         top_sim = max((c.similarity for c in ranked), default=None)
         abstained = self._gate(ranked, top_sim)
         if self.entity_gate and not abstained:
@@ -306,14 +317,17 @@ class MemoryEngine:
         )
 
     def _with_keyword_hits(self, question: str, qvec, hits: list[tuple[int, float]], kk: int,
-                           nt: str) -> list[tuple[int, float]]:
+                           nt: str) -> tuple[list[tuple[int, float]], dict[int, float]]:
         """Add the notes the question's words find (BM25) to the vector hits, with their true cosine similarity.
         A keyword hit still waiting for its vector is embedded now (and stored, unless the store is read-only):
         the notes a question reaches are the first to get vectors."""
         have = {i for i, _ in hits}
-        extra = [i for i, _ in self.store.keyword(question, kk, nt) if i not in have]
+        found = self.store.keyword(question, kk, nt)
+        best = max((sc for _, sc in found), default=0.0)
+        kw_rank = {i: (sc / best if best > 0 else 0.0) for i, sc in found}  # word-match strength, 0..1
+        extra = [i for i, _ in found if i not in have]
         if not extra:
-            return hits
+            return hits, kw_rank
         waiting = self.store.pending(0, extra)
         if waiting:
             vecs = self.embedder.encode([t for _, _, t in waiting])
@@ -331,7 +345,7 @@ class MemoryEngine:
             sims[i] = float(np.dot(qvec, v) / ((np.linalg.norm(qvec) * np.linalg.norm(v)) or 1.0))
         merged = hits + [(i, s) for i, s in sims.items()]
         merged.sort(key=lambda t: (-round(t[1], 7), t[0]))
-        return merged
+        return merged, kw_rank
 
     def _gate(self, ranked: list[ScoredNote], top_sim: float | None) -> bool:
         """Capability-adaptive gating.  Returns True when memory is withheld entirely.
