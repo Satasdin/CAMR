@@ -165,6 +165,13 @@ def readers_for(names: list[str], offline: bool):
     el = _eager()
     out = []
     for name in names:
+        if offline and name.startswith("kimi"):  # a replay needs the request's shape, not the key
+            from camr.config import Config
+            from camr.models.runner import ReplayOnlyRunner
+
+            r = ReplayOnlyRunner(Config.load(ROOT / "results/learn/config.yaml").ceiling_model)
+            out.append(CachedRunner(r, OUT / "answers.sqlite", offline=True))
+            continue
         r = el.runner_for(name)
         if isinstance(r, OllamaRunner) and not name.startswith("gpt-oss"):
             r.logprobs = True

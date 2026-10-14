@@ -265,3 +265,22 @@ def test_a_born_value_without_a_date_answers_with_what_follows_the_name():
     assert place_part("Reinaldo Dalcin, Canoas, Rio Grande do Sul, Brazil", "Reinaldo Dalcin") == \
         "Canoas, Rio Grande do Sul, Brazil"
     assert place_part("Canoas, Brazil", "Reinaldo Dalcin") == ""  # no date and no name: not taken apart
+
+
+def test_a_cloud_answer_replays_from_the_cache_without_its_key(tmp_path, monkeypatch):
+    from camr.config import CeilingModelConfig
+    from camr.models.runner import OpenAICompatRunner, ReplayOnlyRunner
+
+    cfg = CeilingModelConfig(backend="openai_compat", name="kimi-k3", api_key_env="CAMR_TEST_KEY",
+                             base_url="https://example.invalid/v1")
+    monkeypatch.setenv("CAMR_TEST_KEY", "k")
+    live = OpenAICompatRunner(cfg)
+    monkeypatch.delenv("CAMR_TEST_KEY")
+    cache = CachedRunner(live, tmp_path / "a.sqlite")
+    key = cache.key("q")
+    cache._conn.execute("INSERT INTO answer VALUES (?,?,?,?)", (key, "kimi-k3", '{"text": "Nairobi", '
+                        '"prompt_tokens": 1, "generated_tokens": 1, "latency_ms": 1.0, "model": "kimi-k3", '
+                        '"model_version": "kimi-k3", "meta": {}}', 0.0))
+    cache._conn.commit()
+    replay = CachedRunner(ReplayOnlyRunner(cfg), tmp_path / "a.sqlite", offline=True)
+    assert replay.key("q") == key and replay.generate("q").text == "Nairobi"

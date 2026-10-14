@@ -359,6 +359,19 @@ def build_local_runner(cfg: LocalModelConfig, seed: int) -> ModelRunner:
     return DryRunRunner(f"dry-run:{cfg.name}")
 
 
+class ReplayOnlyRunner(OpenAICompatRunner):
+    """A hosted model during an offline replay: the same request (so the same cache key), no API key, no network.
+    Wrapped in a ``CachedRunner(offline=True)`` it answers exactly what the original run was answered."""
+
+    def __init__(self, cfg: CeilingModelConfig):  # noqa: D107  (deliberately no key and no session)
+        self.cfg = cfg
+        self.model_name = cfg.name
+        self.model_version = cfg.name
+
+    def generate(self, prompt: str) -> Generation:
+        raise GenerationError(f"{self.model_name} is replay-only here: no cached answer for this request")
+
+
 def build_ceiling_runner(cfg: CeilingModelConfig, seed: int = 0) -> ModelRunner:
     if cfg.backend == "anthropic":
         return CloudRunner(cfg)
