@@ -48,12 +48,12 @@ def fig_curve(out: Path) -> Path | None:
                     fontsize=8, color=INK2)
     a1.set_ylim(0, 105)
     a1.set_xticks(sorted({c["round"] for d in rs.values() for c in d["curve"]}))
-    style(a1, xlabel="training rounds (one problem per formula per round; corrected only when wrong)",
+    style(a1, xlabel="training rounds (one problem per formula a round; corrected only when wrong)",
           ylabel="held-out accuracy, %", grid="y")
     a1.set_title("Held-out accuracy as corrections accumulate", loc="left")
-    a1.legend(frameon=False, fontsize=7.5, loc="lower right")
+    a1.legend(frameon=False, fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
     splits = [("train", "seen\n(corrected)"), ("test", "unseen"), ("rephrased", "unseen,\nreworded"),
-              ("derived", "derived\n(inverted, nested)")]
+              ("derived", "derived")]
     w = 0.8 / len(rs)
     for i, (key, d) in enumerate(rs.items()):
         xs = [j + (i - (len(rs) - 1) / 2) * w for j in range(len(splits))]
@@ -64,8 +64,7 @@ def fig_curve(out: Path) -> Path | None:
     a2.set_xticks(range(len(splits)), [n for _, n in splits])
     a2.set_ylim(0, 105)
     style(a2, ylabel="accuracy after learning, %", grid="y")
-    a2.set_title("After learning: seen vs unseen problems", loc="left")
-    a2.legend(frameon=False, fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
+    a2.set_title("After learning: seen vs unseen problems (colours as left)", loc="left")
     fig.tight_layout()
     return save(fig, out, "math_learning_curve.png")
 
