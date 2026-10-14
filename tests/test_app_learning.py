@@ -123,3 +123,64 @@ def test_server_learning_endpoints(tmp_path, web):
     finally:
         httpd.shutdown()
         app.assistant.close()
+
+
+# ---------------------------------------------------------------- verified answers
+class Says(FakeOllama):
+    """A model that always gives the same short answer (to test what the assistant does with it)."""
+
+    def __init__(self, answer):
+        super().__init__()
+        self.answer = answer
+
+    def post(self, url, json=None, stream=False, timeout=None):
+        if not json["prompt"]:
+            return super().post(url, json=json, stream=stream, timeout=timeout)
+        self.prompts.append(json["prompt"])
+        from test_app import _Resp
+        import json as _j
+
+        return _Resp(lines=[_j.dumps({"response": self.answer, "done": False}).encode(),
+                            _j.dumps({"response": "", "done": True, "prompt_eval_count": 9}).encode()])
+
+
+def _with(tmp_path, web, answer):
+    return Assistant(tmp_path / "home", model="tiny:1b", embedder=HashingEmbedder(384), session=Says(answer),
+                     min_similarity=0.3, web_lookup=WebLookup(web, min_interval_s=0))
+
+
+def test_a_fact_memory_holds_is_answered_from_memory_without_the_model(tmp_path):
+    from test_learning import INFOBOX_PAGE
+
+    web = FakeWeb({"The Burning Train": ddg_article("The Burning Train", "The Burning Train is a 1980 Indian "
+                                                                         "Hindi-language disaster film.")},
+                  html={"The Burning Train": INFOBOX_PAGE})
+    a = _with(tmp_path, web, "Martin Scorsese")
+    turn = a.ask("Who was the director of The Burning Train?")
+    assert turn.answer == "Ravi Chopra." and turn.verification["status"] == "verified"
+    assert turn.verification["by"] == "memory" and "Directed by" in turn.verification["evidence"]
+    assert a._http.prompts == []  # no model call at all
+    assert a.transcript(turn.conversation_id)[0]["verification"]["status"] == "verified"
+    a.close()
+
+
+def test_a_model_answer_memory_supports_is_verified_and_one_it_does_not_is_flagged(tmp_path, web):
+    a = _with(tmp_path, web, "Walter West")
+    t = a.ask("Who directed The Loudwater Mystery?")
+    assert t.verification["status"] == "verified" and t.verification["by"] == "model"
+    assert "Walter West" in t.verification["evidence"]
+    a.close()
+    b = _with(tmp_path / "b", FakeWeb(WEB), "Martin Scorsese")
+    t = b.ask("Who directed The Loudwater Mystery?")
+    assert t.verification["status"] == "unverified" and t.answer == "Martin Scorsese"  # labelled, not hidden
+    b.save_settings(verified_only=True)  # strict: never stated as fact
+    t = b.ask("Who was the director of The Loudwater Mystery?")
+    assert t.verification["status"] == "unverified" and "couldn't confirm" in t.answer and "(unverified)" in t.answer
+    b.close()
+
+
+def test_personal_and_open_questions_are_not_judged(tmp_path, web):
+    a = _with(tmp_path, web, "Something long and explanatory about many things at once, in a lot of words.")
+    assert a.ask("What is my passport number?").verification is None
+    assert a.ask("Explain how memory works").verification is None
+    a.close()

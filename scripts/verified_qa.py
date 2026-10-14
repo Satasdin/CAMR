@@ -26,7 +26,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-OUT = ROOT / "results/verified"
+OUT = ROOT / "results/verified"   # caches (web, answers) and committed results
+RES = OUT                         # where results and stores are written (--out: elsewhere, for replays)
 SEED = 2028
 
 
@@ -166,7 +167,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     from camr.models.prompt import QA_MEMORY
 
     v = VARIANTS[name]
-    store_path = OUT / "stores" / f"{a.set}_{name.replace('+', '_')}.sqlite"
+    store_path = RES / "stores" / f"{a.set}_{name.replace('+', '_')}.sqlite"
     store_path.parent.mkdir(parents=True, exist_ok=True)
     for f in store_path.parent.glob(store_path.name + "*"):
         f.unlink()
@@ -215,7 +216,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
 
 def answer(a) -> None:
     items = load_set(a.set)
-    path = OUT / f"answers_{a.set}.json"
+    path = RES / f"answers_{a.set}.json"
     out = json.loads(path.read_text()) if path.exists() else {"set": a.set, "variants": {}}
     names = list(VARIANTS) if a.variants == "all" else a.variants.split(",")
     for name in names:
@@ -239,5 +240,10 @@ if __name__ == "__main__":
     ap.add_argument("--offline-answers", action="store_true", help="model answers from the answer cache only")
     ap.add_argument("--variants", default="all")
     ap.add_argument("--budget", type=int, default=128)
+    ap.add_argument("--out", default=None, help="write results and stores here (caches are still read from "
+                                                "results/verified)")
     a = ap.parse_args()
+    if a.out:
+        RES = Path(a.out)
+        RES.mkdir(parents=True, exist_ok=True)
     {"select": select, "fetch": fetch, "answer": answer}[a.part](a)

@@ -235,3 +235,32 @@ def test_turning_learning_off_updates_the_status_pill(browser, learning_url):
     page.click("#settings-save")
     page.wait_for_function("document.querySelector('#learn-pill-text').textContent === 'offline'", timeout=10000)
     page.close()
+
+
+def test_a_fact_from_memory_shows_a_verified_badge_with_its_source(browser, tmp_path):
+    from camr.memory.fetch import WebLookup
+    from test_learning import INFOBOX_PAGE, FakeWeb, ddg_article
+
+    web = FakeWeb({"The Burning Train": ddg_article("The Burning Train", "The Burning Train is a 1980 Indian "
+                                                                         "Hindi-language disaster film.")},
+                  html={"The Burning Train": INFOBOX_PAGE})
+    app = App(tmp_path, "http://127.0.0.1:11434")
+    app.assistant = Assistant(tmp_path, model="tiny:1b", embedder=HashingEmbedder(384), session=FakeOllama(),
+                              min_similarity=0.3, web_lookup=WebLookup(web, min_interval_s=0))
+    app.ollama_models = lambda: [{"name": "tiny:1b", "size_gb": 1.0, "parameters": "1B", "family": "x",
+                                  "embedding": False}]
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app))
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    page = browser.new_page(viewport={"width": 1280, "height": 860})
+    try:
+        page.goto(f"http://127.0.0.1:{httpd.server_address[1]}")
+        page.wait_for_selector("#input")
+        send(page, "Who was the director of The Burning Train?")
+        badge = page.wait_for_selector(".verify.ok", timeout=15000)
+        assert "Verified" in badge.inner_text() and "The Burning Train" in badge.inner_text()
+        assert "Directed by: Ravi Chopra" in badge.get_attribute("title")
+        assert page.locator(".answer").last.inner_text().strip() == "Ravi Chopra."
+    finally:
+        page.close()
+        httpd.shutdown()
+        app.assistant.close()

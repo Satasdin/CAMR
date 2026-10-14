@@ -1,6 +1,6 @@
 /* CAMR Personal: dark-first, high contrast, one aurora accent (blue -> green from the study's figure palette). */
 :root {
-  --accent: #2a78d6; --accent-2: #5aa2f0; --good: #1baf7a; --warn: #eb6834;
+  --accent: #2a78d6; --accent-2: #5aa2f0; --good: #1baf7a; --warn: #eb6834; --warn-text: #f08a5d;
   --bg: #0b0e14; --bg-2: #0f131b; --surface: #141a24; --surface-2: #1b2331; --border: #253044;
   --text: #e8ebf1; --muted: #8d95a8; --faint: #7d869b;
   --kind-note: #5aa2f0; --kind-chat: #b48cf2; --kind-learned: #1baf7a; --kind-file: #f2b66d;
@@ -15,7 +15,7 @@
   --bg: #f7f8fb; --bg-2: #f0f2f7; --surface: #ffffff; --surface-2: #eef1f6; --border: #dde2ec;
   --text: #121722; --muted: #5d6679; --faint: #5f6879; --shadow: 0 10px 30px rgba(20,30,60,.10);
   /* light theme: accents darkened so text meets WCAG AA (4.5:1) on light surfaces (ui_audit, D-11) */
-  --accent-2: #1f63b8; --good: #13805a;
+  --accent-2: #1f63b8; --good: #13805a; --warn-text: #b0431a;
   --kind-note: #1f5fb0; --kind-chat: #6d3fbf; --kind-learned: #0f6e4b; --kind-file: #8a5208;
   --kind-web: #0a6670; --kind-pack: #a3236b;
   color-scheme: light;
@@ -143,6 +143,11 @@ button { cursor: pointer; }
 .act.on { color: var(--good); }
 .act.teach { color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 50%, var(--border)); }
 .ground { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
+.verify { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 8px; border-radius: 999px;
+  font-size: 11.5px; border: 1px solid var(--border); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.verify.ok { color: var(--kind-learned); border-color: color-mix(in srgb, var(--kind-learned) 45%, var(--border)); }
+.verify.no { color: var(--warn-text, var(--warn)); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+.verify.un { color: var(--muted); }
 .ground .meter { width: 54px; height: 4px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
 .ground .meter i { display: block; height: 100%; }
 .timing { margin-left: auto; font-family: var(--mono); font-size: 11.5px; }

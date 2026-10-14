@@ -81,31 +81,51 @@ def engine_at(path: Path):
     return el.build_engine(path)
 
 
-def measure(engine, items: list[dict], k: int = 10) -> dict:
-    """Recall@k of the gold paragraphs' titles, and time per question, from the store as it is now."""
+def measure(engine, items: list[dict], k: int = 10, hybrid: bool = True) -> dict:
+    """Recall@k of the gold paragraphs' titles, and time per question, from the store as it is now.
+
+    dense: the k nearest vectors only (notes still waiting for a vector are invisible to it);
+    hybrid: what recall uses, the vector hits plus the notes the question's words find (BM25), the latter
+    embedded on the spot if they are still waiting."""
     from camr.device import process_rss_mb
 
-    hits, full, ms, search = 0.0, 0, [], []
-    for it in items:
-        qv = engine.embedder.encode_one(it["question"], is_query=True)
-        t0 = time.perf_counter()
-        top = engine.store.knn(qv, k, engine.note_type)
-        search.append((time.perf_counter() - t0) * 1000)
-        titles = set(engine.store.note_titles(i for i, _ in top).values())
-        got = sum(t in titles for t in it["gold_titles"]) / len(it["gold_titles"])
-        hits += got
-        full += got == 1.0
-        t0 = time.perf_counter()
-        engine.recall(it["question"], touch=False)
-        ms.append((time.perf_counter() - t0) * 1000)
-    ms.sort()
-    search.sort()
-    return {f"recall@{k}": round(hits / len(items), 4), f"all_gold@{k}": round(full / len(items), 4),
-            "search_ms_median": round(search[len(search) // 2], 2), "recall_ms_median": round(ms[len(ms) // 2], 2),
-            "recall_ms_p95": round(ms[int(0.95 * len(ms))], 2), "rss_mb": round(process_rss_mb(), 1)}
+    out = {}
+    modes = (("dense", 0), ("hybrid", 20)) if hybrid else (("dense", 0),)
+    for mode, kk in modes:
+        hits, full, ms = 0.0, 0, []
+        engine.keyword_k = kk
+        pending_before = engine.store.pending_count(engine.note_type)
+        for it in items:
+            t0 = time.perf_counter()
+            if mode == "dense":
+                qv = engine.embedder.encode_one(it["question"], is_query=True)
+                top = [i for i, _ in engine.store.knn(qv, k, engine.note_type)]
+            else:
+                r = engine.recall(it["question"], touch=False)
+                top = [c.note.note_id for c in sorted(r.candidates, key=lambda c: -c.similarity)[:k]]
+            ms.append((time.perf_counter() - t0) * 1000)
+            titles = set(engine.store.note_titles(top).values())
+            got = sum(t in titles for t in it["gold_titles"]) / len(it["gold_titles"])
+            hits += got
+            full += got == 1.0
+        ms.sort()
+        out[mode] = {f"recall@{k}": round(hits / len(items), 4), f"all_gold@{k}": round(full / len(items), 4),
+                     "ms_median": round(ms[len(ms) // 2], 2), "ms_p95": round(ms[int(0.95 * len(ms))], 2),
+                     "embedded_on_demand": pending_before - engine.store.pending_count(engine.note_type)}
+    engine.keyword_k = 0
+    out["rss_mb"] = round(process_rss_mb(), 1)
+    return out
+
+
+def _state(engine, store, gov) -> dict:
+    n = store.count()
+    pend = store.pending_count()
+    return {"notes": n, "embedded": n - pend, "embedded_share": round((n - pend) / max(1, n), 4),
+            "store_mb": round(gov.store_mb(), 1)}
 
 
 def ingest(a) -> None:
+    """Every paragraph in, without vectors (searchable by keyword at once); then the measured questions."""
     from camr.device import Governor, Limits, probe
     from camr.memory.bulk import bulk_ingest, read_jsonl
 
@@ -119,32 +139,69 @@ def ingest(a) -> None:
         path.unlink(missing_ok=True)
     engine, store = engine_at(store_path)
     q = json.loads(QUESTIONS.read_text())
-    items = q["items"][: a.measure]
-    out = json.loads(path.read_text()) if path.exists() else {"paragraphs": q["paragraphs"], "points": [],
-                                                              "runs": [], "device": probe(OUT).as_dict()}
+    out = json.loads(path.read_text()) if path.exists() else {"paragraphs": q["paragraphs"], "runs": [],
+                                                              "points": [], "device": probe(OUT).as_dict()}
     gov = Governor(store_path, Limits(reserve_disk_mb=a.reserve_disk_mb, max_store_mb=a.max_store_mb,
                                       reserve_ram_mb=a.reserve_ram_mb))
-    marks = [m for m in (q["paragraphs_first"], 10_000, 25_000, 50_000, 100_000, 150_000) if m < q["paragraphs"]]
-    done = json.loads(ckpt.read_text())["consumed"] if ckpt.exists() else 0
-    measured = {p["documents"] for p in out["points"]}
-    for target in marks + [q["paragraphs"]]:
-        if target <= done:
-            continue
-        rep = bulk_ingest(engine, read_jsonl(CORPUS, dataset="bulk:hotpot+2wiki"), governor=gov, batch_docs=512,
-                          checkpoint=ckpt, limit=target - done)
-        done = rep.resumed_from + rep.documents
-        out["runs"].append(rep.as_dict())
-        print(f"ingested to {done}: {rep.notes_added} notes in {rep.seconds:.0f}s ({rep.docs_per_s} docs/s; embedding "
-              f"{rep.embed_seconds:.0f}s) store {rep.store_mb_after} MB, peak RSS {rep.peak_rss_mb} MB"
-              + (f"; STOPPED: {rep.stopped} ({rep.detail})" if rep.stopped else ""), flush=True)
-        if done not in measured:
-            m = measure(engine, items)
-            out["points"].append({"documents": done, "notes": store.count(), "store_mb": round(gov.store_mb(), 1), **m})
-            print("  ", out["points"][-1], flush=True)
+
+    def show(rep):
+        if rep.documents % 10240 < 512:
+            print(f"  {rep.resumed_from + rep.documents} paragraphs, {rep.notes_added} notes, {rep.seconds:.0f}s",
+                  flush=True)
+
+    rep = bulk_ingest(engine, read_jsonl(CORPUS, dataset="bulk:hotpot+2wiki"), governor=gov, batch_docs=1024,
+                      checkpoint=ckpt, defer_embedding=True, progress=show)
+    out["runs"].append({"kind": "ingest (vectors deferred)", **rep.as_dict()})
+    print(f"ingested {rep.resumed_from + rep.documents} paragraphs -> {rep.notes_added} notes in {rep.seconds:.0f}s "
+          f"({rep.docs_per_s} paragraphs/s); store {rep.store_mb_after} MB; peak RSS {rep.peak_rss_mb} MB; "
+          f"pending vectors {rep.pending_vectors}" + (f"; STOPPED: {rep.stopped} ({rep.detail})" if rep.stopped
+                                                      else ""), flush=True)
+    save(path, out)
+    if rep.finished:
+        point(a, engine, store, gov, out, path, "right after ingest")
+
+
+def point(a, engine, store, gov, out, path, label) -> None:
+    q = json.loads(QUESTIONS.read_text())
+    m = measure(engine, q["items"][: a.measure])
+    out["points"].append({"label": label, **_state(engine, store, gov), **m})
+    print(json.dumps(out["points"][-1]), flush=True)
+    save(path, out)
+
+
+def drain_part(a) -> None:
+    """Give the waiting notes their vectors in the background: polite (yields to other work), resumable."""
+    from camr.device import Governor, Limits
+    from camr.memory.bulk import drain
+
+    store_path = OUT / "store.sqlite"
+    path = OUT / "ingest.json"
+    engine, store = engine_at(store_path)
+    out = json.loads(path.read_text())
+    gov = Governor(store_path, Limits(reserve_disk_mb=a.reserve_disk_mb, reserve_ram_mb=a.reserve_ram_mb,
+                                      max_load_per_core=a.max_load))
+    marks = [m for m in (0.25, 0.5, 0.75) if m > _state(engine, store, gov)["embedded_share"]]
+
+    def show(rep):
+        st = _state(engine, store, gov)
+        if rep.embedded % 5120 < 256:
+            print(f"  embedded {st['embedded']}/{st['notes']} ({rep.embedded} this run, {rep.seconds:.0f}s, "
+                  f"waited {rep.waited_s:.0f}s for the CPU)", flush=True)
+
+    while True:
+        target = marks.pop(0) if marks else 1.0
+        st = _state(engine, store, gov)
+        todo = int(target * st["notes"]) - st["embedded"]
+        rep = drain(engine, governor=gov, batch=256, polite=True, progress=show, max_seconds=a.max_seconds,
+                    limit=None if target == 1.0 else max(0, todo))
+        out["runs"].append({"kind": f"drain to {target:.0%}", **rep.as_dict()})
         save(path, out)
         if rep.stopped:
+            print(f"drain stopped: {rep.stopped} ({rep.detail}); {rep.remaining} still waiting", flush=True)
             break
-    save(path, out)
+        point(a, engine, store, gov, out, path, f"{_state(engine, store, gov)['embedded_share']:.0%} embedded")
+        if target == 1.0 or not rep.embedded:
+            break
 
 
 def limits(a) -> None:
@@ -206,12 +263,14 @@ def plan_part(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["corpus", "ingest", "limits", "plan"])
+    ap.add_argument("part", choices=["corpus", "ingest", "drain", "limits", "plan"])
     ap.add_argument("--questions", type=int, default=600)
     ap.add_argument("--measure", type=int, default=600)
     ap.add_argument("--fresh", action="store_true")
     ap.add_argument("--reserve-disk-mb", type=float, default=900.0)
     ap.add_argument("--reserve-ram-mb", type=float, default=768.0)
     ap.add_argument("--max-store-mb", type=float, default=None)
+    ap.add_argument("--max-seconds", type=float, default=None, help="drain: stop after this long (resumable)")
+    ap.add_argument("--max-load", type=float, default=0.5, help="drain: yield while others use this CPU share")
     a = ap.parse_args()
-    {"corpus": corpus, "ingest": ingest, "limits": limits, "plan": plan_part}[a.part](a)
+    {"corpus": corpus, "ingest": ingest, "drain": drain_part, "limits": limits, "plan": plan_part}[a.part](a)

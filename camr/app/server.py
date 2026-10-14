@@ -13,7 +13,7 @@ The server binds to 127.0.0.1 only. The API is used by camr/app/static/app.js:
   POST /api/feedback                  {"turn_id", "helpful"}
   POST /api/teach                     {"text", "title"}  or  {"filename", "data_base64"}
   GET  /api/memory?q=&kind=           memory items        DELETE /api/memory/<source_id>
-  POST /api/settings                  {"model", "token_budget", "history_turns", "remember_chat", "learn_online",
+  POST /api/settings                  {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "verified_only",
                                        "sleep_when_idle"}
   GET  /api/export?text=0|1           metrics-only feedback file (text only when asked)
   GET  /api/learning                  learning feed, lookups, packs, background jobs, last sleep, external weights
@@ -258,7 +258,8 @@ def make_handler(app: App):
             if path == "/api/settings":
                 changed = "model" in data and data["model"] != a.model
                 a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat",
-                                                        "learn_online", "sleep_when_idle") if k in data})
+                                                        "learn_online", "sleep_when_idle", "verified_only")
+                                   if k in data})
                 if changed:  # load the newly chosen model now, not on the next question
                     threading.Thread(target=a.warm, daemon=True).start()
                 return self._json(a.settings())

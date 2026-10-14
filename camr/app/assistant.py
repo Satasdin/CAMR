@@ -47,6 +47,7 @@ from camr.memory.fetch import WebLookup, embedding_rank, is_personal
 from camr.memory.note import Document
 from camr.memory.sleep import sleep as run_sleep
 from camr.memory.store import SQLiteVectorStore
+from camr.memory.verify import check, claim, fact_value, read_facts, relation_of, units_from_notes
 from camr.models.runner import OllamaRunner
 from camr.models.tokenizer import RegexTokenizer
 
@@ -179,6 +180,9 @@ class Turn:
     feedback: int | None = None
     learned: dict | None = None  # what a web lookup added for this answer (queries, pages, notes)
     ask_to_teach: bool = False   # a personal question memory cannot answer: the UI offers "Teach me"
+    # whether a short factual answer is supported by what memory holds: {"status": "verified" | "unverified" |
+    # "unchecked", "by", "evidence", "source", "reason"}; None when not a short factual question
+    verification: dict | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -206,6 +210,33 @@ def grounded_share(answer: str, notes: str) -> float | None:
         return None
     hay = notes.lower()
     return sum(1 for w in words if w in hay) / len(words)
+
+
+_SHORT_Q = re.compile(r"^\s*(?:who|whom|whose|when|where|which|in what|in which|what (?:year|city|country|"
+                      r"colou?r|genre|sport|religion|language|is the (?:capital|population|name))|how many|how old)\b",
+                      re.I)
+
+
+def _short_factual(question: str) -> bool:
+    """A question with a short factual answer (a name, place, date, number): the kind memory can verify."""
+    return is_question(question) and (relation_of(question) is not None or bool(_SHORT_Q.match(question)))
+
+
+def _verification(question: str, answer: str, units) -> dict:
+    """Is the answer's claim supported by what memory read? Long, explanatory answers are not judged."""
+    if len(claim(answer).split()) > 14:
+        return {"status": "unchecked", "reason": "a long answer; only short factual answers are checked"}
+    if not units:
+        return {"status": "unchecked", "reason": "memory had nothing on this: the model's own knowledge"}
+    v = check(question, answer, units)
+    if v.supported:
+        return {"status": "verified", "by": "model", "evidence": v.evidence.render(), "source": v.evidence.title}
+    if v.reason == "declined":
+        return {"status": "unchecked", "reason": "no answer given"}
+    reasons = {"not in memory": "what memory read does not say this",
+               "another subject": "memory says this about something else",
+               "another relation": "memory has a different answer for this"}
+    return {"status": "unverified", "reason": reasons.get(v.reason, v.reason)}
 
 
 def _now() -> str:
@@ -240,6 +271,9 @@ class Assistant:
         self.embed_model = saved.get("embed_model", DEFAULT_EMBED_MODEL)
         self.learn_online = bool(saved.get("learn_online", True))
         self.sleep_when_idle = bool(saved.get("sleep_when_idle", True))
+        # Strict mode: a short factual answer memory does not support is not stated as fact; the assistant says it
+        # could not confirm it and gives it only as a lead. Off by default (the answer is labelled instead).
+        self.verified_only = bool(saved.get("verified_only", False))
         self._http = session or requests.Session()
         self._lock = threading.RLock()
         self.jobs: dict[str, dict] = {}  # background work shown in the Learning panel (harvest, sleep)
@@ -264,7 +298,7 @@ class Assistant:
         self.store.conn.executescript(APP_SCHEMA)
         cols = {r[1] for r in self.store.conn.execute("PRAGMA table_info(app_turn)")}
         for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT"), ("learned_json", "TEXT"),
-                         ("ask_to_teach", "INTEGER")):
+                         ("ask_to_teach", "INTEGER"), ("verification_json", "TEXT")):
             if col not in cols:  # stores created by the first app version
                 self.store.conn.execute(f"ALTER TABLE app_turn ADD COLUMN {col} {typ}")
         self.engine = MemoryEngine.from_config(self.cfg, store=self.store, embedder=self.embedder,
@@ -292,7 +326,7 @@ class Assistant:
         return {"model": self.model, "token_budget": self.token_budget, "history_turns": self.history_turns,
                 "remember_chat": self.remember_chat, "embed_model": self.embed_model,
                 "learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle,
-                "min_similarity": self.engine.min_similarity}
+                "verified_only": self.verified_only, "min_similarity": self.engine.min_similarity}
 
     def warm(self, keep_alive: str = "30m") -> bool:
         """Load the chat model into memory ahead of the first question.
@@ -312,7 +346,8 @@ class Assistant:
             return False
 
     def save_settings(self, **changes) -> None:
-        allowed = {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "sleep_when_idle"}
+        allowed = {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "sleep_when_idle",
+                   "verified_only"}
         for k, v in changes.items():
             if k in allowed:
                 setattr(self, k, v)
@@ -383,12 +418,13 @@ class Assistant:
     def transcript(self, conversation_id: int) -> list[dict]:
         rows = self.store.conn.execute(
             "SELECT turn_id, question, answer, notes_used, abstained, grounded, retrieval_ms, generation_ms,"
-            " prompt_tokens, feedback, sources_json, learned_json, ask_to_teach FROM app_turn WHERE conversation_id=?"
+            " prompt_tokens, feedback, sources_json, learned_json, ask_to_teach, verification_json FROM app_turn"
+            " WHERE conversation_id=?"
             " ORDER BY turn_id", (conversation_id,)).fetchall()
         return [Turn(turn_id=r[0], question=r[1], answer=r[2], abstained=bool(r[4]), grounded=r[5],
                      retrieval_ms=r[6] or 0.0, generation_ms=r[7] or 0.0, prompt_tokens=r[8], feedback=r[9],
                      conversation_id=conversation_id, learned=json.loads(r[11]) if r[11] else None,
-                     ask_to_teach=bool(r[12]),
+                     ask_to_teach=bool(r[12]), verification=json.loads(r[13]) if r[13] else None,
                      sources=[Source(**s) for s in json.loads(r[10] or "[]")]).as_dict() for r in rows]
 
     # ------------------------------------------------------------ asking
@@ -484,6 +520,24 @@ class Assistant:
         sources = self._sources(recall)
         yield {"type": "recall", "sources": [asdict(s) for s in sources], "abstained": recall.abstained,
                "retrieval_ms": round(recall.retrieval_ms, 1), "conversation_id": conversation_id, "learned": learned}
+        factual = _short_factual(question) and not personal
+        units = []
+        if factual and not recall.abstained:
+            with self._lock:
+                units = units_from_notes(self.store, [c.note for c in recall.candidates if c.eligible])
+        fact = read_facts(question, units) if units else None
+        if fact is not None:
+            # memory holds the fact as a labelled line about the question's subject: answered from memory, at once
+            answer = fact_value(fact).rstrip(".") + "."
+            yield {"type": "token", "text": answer}
+            turn = Turn(turn_id=None, question=question, answer=answer, sources=sources, grounded=1.0,
+                        retrieval_ms=round(recall.retrieval_ms, 1), conversation_id=conversation_id, learned=learned,
+                        verification={"status": "verified", "by": "memory", "evidence": fact.render(),
+                                      "source": fact.title})
+            turn.turn_id = self._log(turn)
+            self.last_activity = time.time()
+            yield {"type": "done", "turn": turn.as_dict()}
+            return
         prompt = CHAT_PROMPT.format(notes=recall.context or "(no relevant notes)",
                                     history=self._history(conversation_id), question=question)
         t0, parts, last, first = time.perf_counter(), [], {}, None
@@ -495,11 +549,17 @@ class Assistant:
                     first = round((time.perf_counter() - t0) * 1000, 1)
                 yield {"type": "token", "text": piece}
         answer = "".join(parts).strip()
+        verification = None
+        if factual:
+            verification = _verification(question, answer, units)
+            if self.verified_only and verification["status"] != "verified" and claim(answer):
+                answer = (f"I couldn't confirm this from what I've read, so take it as a lead, not a fact: "
+                          f"{claim(answer)} (unverified).")
         turn = Turn(turn_id=None, question=question, answer=answer, sources=sources, abstained=recall.abstained,
                     grounded=grounded_share(answer, recall.context), retrieval_ms=round(recall.retrieval_ms, 1),
                     generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
                     prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id, learned=learned,
-                    ask_to_teach=recall.abstained and personal)
+                    ask_to_teach=recall.abstained and personal, verification=verification)
         turn.turn_id = self._log(turn)
         self.last_activity = time.time()
         if self.remember_chat and not is_question(question):
@@ -516,12 +576,12 @@ class Assistant:
         with self.store.conn:
             cur = self.store.conn.execute(
                 "INSERT INTO app_turn(at, model, question, answer, notes_used, abstained, grounded, retrieval_ms,"
-                " generation_ms, prompt_tokens, conversation_id, sources_json, learned_json, ask_to_teach)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " generation_ms, prompt_tokens, conversation_id, sources_json, learned_json, ask_to_teach,"
+                " verification_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (_now(), self.model or "-", turn.question, turn.answer, len(turn.sources), int(turn.abstained),
                  turn.grounded, turn.retrieval_ms, turn.generation_ms, turn.prompt_tokens, turn.conversation_id,
                  json.dumps([asdict(s) for s in turn.sources]), json.dumps(turn.learned) if turn.learned else None,
-                 int(turn.ask_to_teach)))
+                 int(turn.ask_to_teach), json.dumps(turn.verification) if turn.verification else None))
             if turn.conversation_id is not None:
                 self.store.conn.execute("UPDATE app_conversation SET updated_at=? WHERE conversation_id=?",
                                         (_now(), turn.conversation_id))

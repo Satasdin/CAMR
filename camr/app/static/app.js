@@ -208,6 +208,15 @@ function renderRecall(el, sources, abstained, ms, learned) {
     <span class="muted">· ${Math.round(ms || 0)} ms</span><span class="chev">▾</span></summary><div class="mem-cards">${sources.map(memCard).join("")}</div>`;
   S.lastSources = sources; renderRecallPanel();
 }
+function verifyBadge(v) {
+  if (!v) return "";
+  if (v.status === "verified") {
+    const how = v.by === "memory" ? "read straight from memory" : "checked against memory";
+    return `<span class="verify ok" title="${esc(how + ": " + (v.evidence || ""))}">✓ Verified · ${esc(v.source || "memory")}</span>`;
+  }
+  if (v.status === "unverified") return `<span class="verify no" title="${esc(v.reason || "")}">! Not confirmed by memory</span>`;
+  return `<span class="verify un" title="${esc(v.reason || "")}">○ Not checked</span>`;
+}
 function finish(el, t) {
   const a = $(".answer", el); a.classList.remove("cursor"); a.innerHTML = md(t.answer);
   const g = t.grounded;
@@ -217,7 +226,8 @@ function finish(el, t) {
     <button class="act copy" title="Copy">⧉ Copy</button>
     ${t.ask_to_teach ? "" : `<button class="act up ${t.feedback === 1 ? "on" : ""}" title="Good answer: save it to memory">👍 ${t.feedback === 1 ? "Learned" : "Teach this"}</button>`}
     <button class="act down ${t.feedback === -1 ? "on" : ""}" title="Not helpful">👎</button>` : "")
-    + (g != null ? `<span class="ground" title="Share of the answer's words found in the memories it read"><span class="meter"><i style="width:${Math.round(100 * g)}%;background:${gcol}"></i></span>grounded ${Math.round(100 * g)}%</span>` : "")
+    + verifyBadge(t.verification)
+    + (g != null && !t.verification ? `<span class="ground" title="Share of the answer's words found in the memories it read"><span class="meter"><i style="width:${Math.round(100 * g)}%;background:${gcol}"></i></span>grounded ${Math.round(100 * g)}%</span>` : "")
     + (t.generation_ms ? `<span class="timing">${Math.round(t.retrieval_ms)} ms memory · ${t.first_token_ms ? (t.first_token_ms / 1000).toFixed(1) + " s to first word · " : ""}${(t.generation_ms / 1000).toFixed(1)} s answer</span>` : "");
   if (stored) a.insertAdjacentHTML("beforeend", `<div class="saved-note">✦ Stored in memory</div>`);
   if (t.ask_to_teach) {
@@ -412,7 +422,7 @@ async function loadLearning() {
 // ---------- settings ----------
 $("#open-settings").onclick = () => {
   const s = S.state.settings; $("#set-budget").value = s.token_budget; $("#set-turns").value = s.history_turns; $("#set-chat").checked = s.remember_chat;
-  $("#set-online").checked = s.learn_online; $("#set-sleep").checked = s.sleep_when_idle;
+  $("#set-online").checked = s.learn_online; $("#set-sleep").checked = s.sleep_when_idle; $("#set-verified").checked = !!s.verified_only;
   $("#budget-val").textContent = s.token_budget + " tokens"; $("#turns-val").textContent = s.history_turns;
   $("#about").textContent = `CAMR Personal ${S.state.version} · memory model ${s.embed_model} · abstains below similarity ${s.min_similarity} · data in ${S.state.home}`;
   $("#settings-dlg").showModal(); closeMobile();
@@ -422,7 +432,7 @@ $("#set-turns").oninput = (e) => $("#turns-val").textContent = e.target.value;
 $("#export-text").onchange = (e) => $("#export-link").href = "/api/export?text=" + (e.target.checked ? 1 : 0);
 $("#settings-save").onclick = async () => {
   await api("/api/settings", { method: "POST", body: { token_budget: +$("#set-budget").value, history_turns: +$("#set-turns").value, remember_chat: $("#set-chat").checked,
-    learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked } });
+    learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked, verified_only: $("#set-verified").checked } });
   toast("Settings saved"); refresh();
 };
 

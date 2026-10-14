@@ -186,7 +186,7 @@ class DrainReport:
 
 
 def drain(engine: MemoryEngine, *, governor: Governor | None = None, batch: int = 256,
-          max_seconds: float | None = None, polite: bool = True,
+          max_seconds: float | None = None, limit: int | None = None, polite: bool = True,
           progress: Callable[[DrainReport], None] | None = None) -> DrainReport:
     """Embed the notes waiting for vectors, a batch at a time: pausing while other work keeps the CPU busy
     (``polite``), stopping at the device's limits or after ``max_seconds``. Resumable: the queue is the state."""
@@ -204,7 +204,9 @@ def drain(engine: MemoryEngine, *, governor: Governor | None = None, batch: int 
                 break
             if polite:
                 rep.waited_s += governor.wait_until_idle(max_wait_s=60.0)
-        n = engine.embed_pending(limit=batch, batch=batch)
+        if limit is not None and rep.embedded >= limit:
+            break
+        n = engine.embed_pending(limit=batch if limit is None else min(batch, limit - rep.embedded), batch=batch)
         if not n:
             break
         rep.embedded += n
