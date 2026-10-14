@@ -40,6 +40,7 @@ class FakeWeb:
     def __init__(self, ddg: dict, wiki: dict | None = None, throttle: int = 0, html: dict | None = None):
         self.ddg, self.wiki, self.throttle, self.calls, self.headers = ddg, wiki or {}, throttle, [], {}
         self.html = html or {}  # title -> article page HTML (for infoboxes)
+        self.wiki_search_pages: dict[str, list[str]] = {}  # query -> result titles on the search page
 
     def get(self, url, params=None, timeout=None):
         self.calls.append((url, params))
@@ -53,6 +54,10 @@ class FakeWeb:
             if title in self.wiki:
                 return Resp(200, {"type": "standard", "title": title, "extract": self.wiki[title]})
             return Resp(404, {"type": "https://mediawiki.org/wiki/HyperSwitch/errors/not_found"})
+        if url.endswith("/w/index.php"):  # the search page (the search API stays rate limited)
+            hits = self.wiki_search_pages.get(params["search"], [])
+            return Resp(200, text="".join(f'<div class="mw-search-result-heading"><a href="/wiki/{t.replace(" ", "_")}"'
+                                          f' title="{t}">{t}</a></div>' for t in hits))
         if "/wiki/" in url:
             title = urllib.parse.unquote(url.rsplit("/", 1)[-1]).replace("_", " ")
             return Resp(200, text=self.html[title]) if title in self.html else Resp(404, text="<html></html>")
@@ -73,7 +78,9 @@ def fresh_engine(tmp_path, name="m", **memory):
 
 # ---------------------------------------------------------------- what is looked up
 def test_subjects_are_the_names_a_question_is_about():
-    assert subjects("Who was the director of The Other?")[:2] == ["director of The Other", "The Other"]
+    assert subjects("Who was the director of The Other?") == ["The Other"]  # D-25: no "director of ..." search
+    assert subjects("who is the director of emma") == ["emma"]
+    assert subjects("What is the capital of Rondônia?")[:2] == ["capital of Rondônia", "Rondônia"]
     assert "Son contento" in subjects("Who was the director of Son contento?")
     assert subjects("What is George Rankin's occupation?")[0] == "George Rankin"
     assert subjects("what is photosynthesis?") == ["photosynthesis"]
@@ -345,3 +352,22 @@ def test_a_looked_up_page_brings_its_infobox_and_each_fact_becomes_a_note(tmp_pa
     assert "The Burning Train: Directed by: Ravi Chopra" in texts
     off = WebLookup(FakeWeb({}), cache_path=tmp_path / "c.sqlite", offline=True)  # replayable from the cache
     assert off.article("The Burning Train", Lookup("q"))[0].facts == page.facts
+
+
+def test_a_rate_limited_search_api_falls_back_to_the_search_page_without_waiting(tmp_path):
+    import time
+
+    web = FakeWeb({})
+    web.wiki_search_pages["Baby on the Barge"] = ["The Baby on the Barge", "Cecil Hepworth"]
+    w = WebLookup(web, min_interval_s=0, patient_s=120)  # patient with pages, never with the search API (D-27)
+    t0 = time.perf_counter()
+    assert w.wiki_search("Baby on the Barge", Lookup("q"), limit=2) == ["The Baby on the Barge", "Cecil Hepworth"]
+    assert time.perf_counter() - t0 < 1.0
+
+
+def test_a_name_found_whole_is_not_looked_up_again_in_fragments(tmp_path):
+    web = FakeWeb({"The Baby on the Barge": ddg_article("The Baby on the Barge", "The Baby on the Barge is a 1915 "
+                                                                                 "British silent film."),
+                   "The Baby": ddg_article("The Baby (film)", "The Baby is a 1973 horror film.")})
+    res = WebLookup(web, min_interval_s=0).lookup("Who was the producer of The Baby on the Barge?")
+    assert [p.title for p in res.pages] == ["The Baby on the Barge"]  # D-26: not "The Baby" too

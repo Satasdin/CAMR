@@ -48,6 +48,12 @@ _OF_NP = re.compile(r"\b([a-z]{3,} of (?:the )?[A-Z][\w'’.&-]*(?:\s+(?:[A-Z0-9
 _CAP_RUN = re.compile(r"(?<![\w'’])((?:[A-Z0-9][\w'’.&-]*)(?:\s+(?:(?:of|the|de|da|di|del|la|le|von|van|der|du|and)\s+)*"
                       r"[A-Z0-9][\w'’.&-]*)*)")
 _TAIL = re.compile(r"\bof\s+((?:\S+\s+){0,5}\S+)$")
+_RELATION_HEADS = {"director", "producer", "composer", "screenwriter", "writer", "author", "father", "mother",
+                   "occupation", "genre", "religion", "sport", "country", "color", "colour", "creator", "founder",
+                   "spouse", "wife", "husband", "son", "daughter", "population", "language", "birthplace", "owner",
+                   "headquarters", "publisher", "editor", "illustrator", "narrator", "star", "lyricist", "architect",
+                   "designer", "developer", "manufacturer", "inventor", "parent", "parents", "child", "children",
+                   "sibling", "brother", "sister", "leader", "president", "mayor", "head", "member", "cast"}
 _LEAD_WORDS = {"what", "who", "whom", "whose", "which", "when", "where", "why", "how", "is", "are", "was", "were",
                "do", "does", "did", "can", "could", "would", "should", "will", "tell", "name", "in", "the", "a", "an"}
 
@@ -66,7 +72,9 @@ def subjects(question: str, limit: int = 4) -> list[str]:
     """
     q = question.strip().rstrip("?.! ")
     out: list[str] = []
-    out += [m.group(1) for m in _OF_NP.finditer(q)]
+    # "director of Emma" is no article title, and searching for it finds people called Emma who direct (D-25):
+    # an of-phrase headed by a relation word is looked up as its subject only
+    out += [m.group(1) for m in _OF_NP.finditer(q) if m.group(1).split()[0].lower() not in _RELATION_HEADS]
     tail = _TAIL.search(q)  # "producer of Son contento" -> "Son contento" (titles may contain lower-case words)
     if tail and tail.group(1)[:1].isupper() or tail and tail.group(1)[:1].isdigit():
         out.append(tail.group(1))
@@ -83,7 +91,10 @@ def subjects(question: str, limit: int = 4) -> list[str]:
     out += sorted(caps, key=lambda s: -len(s))
     stripped = _WH.sub("", q).strip()
     stripped = re.sub(r"['’]s\b", "", stripped)
-    if stripped and stripped.lower() != q.lower() and len(stripped.split()) <= 6:
+    relation_phrase = bool(re.match(r"(\w+) of ", stripped)) and stripped.split()[0].lower() in _RELATION_HEADS
+    if relation_phrase and not out:  # "who is the director of emma" (no capitals): look up "emma"
+        out.append(stripped.split(" of ", 1)[1])
+    elif stripped and stripped.lower() != q.lower() and len(stripped.split()) <= 6 and not relation_phrase:
         out.append(stripped)
     elif not out and q:
         out.append(q)
@@ -185,7 +196,8 @@ class WebLookup:
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------ HTTP
-    def _get(self, url: str, params: dict | None, res: Lookup, parse=None) -> tuple[int, dict | None]:
+    def _get(self, url: str, params: dict | None, res: Lookup, parse=None,
+             patient: float | None = None) -> tuple[int, dict | None]:
         """GET with cache, politeness and rate-limit handling. ``parse(text) -> dict`` replaces JSON decoding (and
         what is cached is its result, e.g. the lead of an HTML page rather than the page)."""
         key = url + ("?" + urllib.parse.urlencode(sorted(params.items())) if params else "")
@@ -197,11 +209,12 @@ class WebLookup:
         if self.offline:
             return 0, None
         host = urllib.parse.urlparse(url).netloc + ("/search" if "/search/" in url else "")
+        patient_s = self.patient_s if patient is None else patient
         waited = 0.0
         while True:
             blocked = self._blocked_until.get(host, 0) - time.time()
             if blocked > 0:
-                if waited + blocked > self.patient_s:
+                if waited + blocked > patient_s:
                     return 429, None
                 time.sleep(blocked)
                 waited += blocked
@@ -225,7 +238,7 @@ class WebLookup:
                 pause = float(r.headers.get("Retry-After") or 0) or self._backoff.get(host, 15.0)
                 self._backoff[host] = min(2 * pause, 300.0)
                 self._blocked_until[host] = time.time() + pause
-                if waited + pause > self.patient_s:
+                if waited + pause > patient_s:
                     res.errors.append(f"{host}: rate limited")
                     return 429, None
                 continue
@@ -266,10 +279,19 @@ class WebLookup:
         return body if status in (200, 202) and body else None
 
     def wiki_search(self, query: str, res: Lookup, limit: int = 3) -> list[str]:
-        status, body = self._get(f"{self.wiki}/w/rest.php/v1/search/page", {"q": query, "limit": limit}, res)
-        if status != 200 or not body:
-            return []
-        return [p["title"] for p in body.get("pages", [])]
+        """Article titles for a query: the search API when it answers at once, else the ordinary search page.
+
+        Wikimedia rate limits its APIs per address, and a shared address (a proxy, a campus) can stay limited for
+        hours; waiting it out cost two minutes a question (D-27). The search page is an ordinary page view."""
+        status, body = self._get(f"{self.wiki}/w/rest.php/v1/search/page", {"q": query, "limit": limit}, res,
+                                 patient=0.0)
+        if status == 200 and body:
+            return [p["title"] for p in body.get("pages", [])][:limit]
+        status, body = self._get(f"{self.wiki}/w/index.php", {"search": query, "fulltext": "1", "ns0": "1",
+                                                              "limit": max(limit, 5)}, res, parse=_search_titles)
+        if status == 200 and body:
+            return body.get("titles", [])[:limit]
+        return []
 
     def article(self, name: str, res: Lookup) -> tuple[WebPage | None, list[tuple[str, str]]]:
         """The article a name refers to, or (None, [(title, description), ...]) when the name is ambiguous."""
@@ -320,19 +342,26 @@ class WebLookup:
             res.pages.append(page)
             return True
 
+        found_names: list[str] = []  # names whose own article was found
         for query in subjects(question)[:max_queries]:
             if len(res.pages) >= max_pages:
                 break
+            if any(f" {norm(query)} " in f" {n} " for n in found_names):
+                continue  # a fragment of a name already found ("The Baby" of "The Baby on the Barge", D-26)
             res.queries.append(query)
             page, options = self.article(query, res)
             if add(page):
+                if base_title(page.title) == base_title(query):
+                    found_names.append(norm(query))
                 continue
-            if options:  # ambiguous: the meanings closest to the question first
+            if options:  # ambiguous: meanings named exactly what was asked first (D-24), then the closest to the question
                 if self.rank is not None:
                     scores = self.rank(question, [f"{t}. {d}" for t, d in options])
-                    ranked = [o for _, o in sorted(zip(scores, options), key=lambda x: -x[0])]
                 else:
-                    ranked = sorted(options, key=lambda o: -len(qwords & set(norm(o[0] + " " + o[1]).split())))
+                    scores = [len(qwords & set(norm(t + " " + d).split())) for t, d in options]
+                named = base_title(query)
+                ranked = [o for _, o in sorted(zip(scores, options), key=lambda x: (base_title(x[1][0]) != named,
+                                                                                    -x[0]))]
                 for title, _ in ranked[:2]:
                     add(self.article(title, res)[0])
                 continue
@@ -425,6 +454,12 @@ class WebLookup:
         return res
 
 
+def base_title(title: str) -> str:
+    """'The Bench (film)' -> 'bench': the name an article title gives, without its qualifier or article."""
+    t = norm(re.sub(r"\s*\([^)]*\)\s*$", "", title))
+    return re.sub(r"^(?:the|a|an) ", "", t)
+
+
 def embedding_rank(embedder):
     """Order meanings by the embedder's cosine similarity between the question and each meaning's description."""
     import numpy as np
@@ -484,6 +519,20 @@ def _infobox(html: str) -> str:
         if len(lines) >= 24:
             break
     return "; ".join(lines)
+
+
+_HIT = re.compile(r'<div class="mw-search-result-heading"><a href="/wiki/[^"]+" title="([^"]+)"')
+
+
+def _search_titles(html: str) -> dict:
+    """Result titles of Wikipedia's search page (or the article itself, when the search went straight to it)."""
+    import html as _html
+
+    titles = [_html.unescape(t) for t in _HIT.findall(html)]
+    if not titles and 'id="mw-content-text"' in html:  # an exact title match redirects to the article
+        t = re.search(r"<title>(.*?) - Wikipedia</title>", html)
+        titles = [_html.unescape(t.group(1))] if t else []
+    return {"titles": titles}
 
 
 def _lead_from_html(html: str, max_chars: int = 1200) -> dict:

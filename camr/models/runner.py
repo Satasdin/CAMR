@@ -81,6 +81,7 @@ class OllamaRunner(ModelRunner):
         if api_key:
             self._http.headers["Authorization"] = f"Bearer {api_key}"
         self.model_version = None
+        self.logprobs = False  # ask for per-token log-probabilities (a confidence signal; Ollama >= 0.12)
 
     def describe(self) -> str | None:
         """Best-effort model digest so the exact quantised weights are recorded."""
@@ -114,6 +115,8 @@ class OllamaRunner(ModelRunner):
         }
         if self.cfg.think:
             body["think"] = self.cfg.think
+        if self.logprobs:
+            body["logprobs"] = True
         if self.cfg.num_thread:
             body["options"]["num_thread"] = self.cfg.num_thread
         return body
@@ -143,6 +146,8 @@ class OllamaRunner(ModelRunner):
                 "load_ms": (body.get("load_duration") or 0) / 1e6,
                 "prompt_eval_ms": (body.get("prompt_eval_duration") or 0) / 1e6,
                 "eval_ms": (body.get("eval_duration") or 0) / 1e6,
+                **({"logprobs": [{"token": t.get("token", ""), "logprob": t.get("logprob", 0.0)}
+                                 for t in body.get("logprobs") or []]} if self.logprobs else {}),
             },
         )
 
@@ -375,3 +380,59 @@ def build_ceiling_runner(cfg: CeilingModelConfig, seed: int = 0) -> ModelRunner:
         runner.describe()
         return runner
     return DryRunRunner(f"dry-run:{cfg.name}")
+
+
+# ---------------------------------------------------------------------- replay
+
+
+class CachedRunner(ModelRunner):
+    """A runner whose answers are kept by their exact request (model, prompt, options), so an evaluation can be
+    replayed with the very answers it was scored on, without the model. A miss calls the model (unless
+    ``offline``, which raises) and stores the answer."""
+
+    def __init__(self, runner: ModelRunner, path, *, offline: bool = False):
+        import sqlite3
+        import threading
+        from pathlib import Path
+
+        self.runner = runner
+        self.model_name = runner.model_name
+        self.model_version = getattr(runner, "model_version", None)
+        self.is_remote = getattr(runner, "is_remote", False)
+        self.offline = offline
+        self.hits = self.misses = 0
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(str(path), check_same_thread=False)
+        self._conn.execute("CREATE TABLE IF NOT EXISTS answer (key TEXT PRIMARY KEY, model TEXT, body TEXT, at REAL)")
+        self._conn.commit()
+        self._lock = threading.Lock()
+
+    def key(self, prompt: str) -> str:
+        import hashlib
+        import json
+
+        opts = self.runner.payload(prompt) if hasattr(self.runner, "payload") else {"prompt": prompt}
+        opts = {k: v for k, v in opts.items() if k not in ("keep_alive", "stream")}
+        return hashlib.sha256(json.dumps([self.model_name, opts], sort_keys=True, default=str).encode()).hexdigest()
+
+    def generate(self, prompt: str) -> Generation:
+        import json
+
+        k = self.key(prompt)
+        with self._lock:
+            row = self._conn.execute("SELECT body FROM answer WHERE key=?", (k,)).fetchone()
+        if row:
+            self.hits += 1
+            d = json.loads(row[0])
+            return Generation(**{**d, "meta": {**d.get("meta", {}), "cached": True}})
+        if self.offline:
+            raise GenerationError(f"no cached answer for this prompt ({self.model_name}) and replay is offline")
+        g = self.runner.generate(prompt)
+        self.misses += 1
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO answer VALUES (?,?,?,?)", (k, self.model_name, json.dumps({
+                "text": g.text, "prompt_tokens": g.prompt_tokens, "generated_tokens": g.generated_tokens,
+                "latency_ms": g.latency_ms, "model": g.model, "model_version": g.model_version, "meta": g.meta}),
+                time.time()))
+            self._conn.commit()
+        return g

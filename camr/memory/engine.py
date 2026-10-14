@@ -150,11 +150,14 @@ class MemoryEngine:
         )
 
     # --------------------------------------------------------- write path
-    def ingest(self, documents: Iterable[Document], progress: bool = False) -> IngestSummary:
-        """Distil -> screen -> (timestamp, importance) -> embed -> commit (Figure 4.4)."""
+    def ingest(self, documents: Iterable[Document], progress: bool = False, seen: set[str] | None = None) -> IngestSummary:
+        """Distil -> screen -> (timestamp, importance) -> embed -> commit (Figure 4.4).
+
+        ``seen`` (the checksums already stored) can be passed by a caller ingesting in many calls, so it is read
+        from the store once rather than once per call; it is updated in place."""
         summary = IngestSummary(self.note_type)
         t_start = time.perf_counter()
-        seen = self.store.checksums(self.note_type)
+        seen = self.store.checksums(self.note_type) if seen is None else seen
         batch: list[Document] = []
         for doc in documents:
             batch.append(doc)
