@@ -86,6 +86,8 @@ def _verified(set_name: str, tmp: Path) -> tuple[bool, str]:
                "--budget", str(first.get("budget", 128)), "--min-coverage", str(first.get("min_coverage", 1.0))]
         cmd += ["--typed"] if first.get("typed") else []
         cmd += ["--relation-cue"] if first.get("relation_cue") else []
+        cmd += ["--by-name"] if first.get("by_name") else []
+        cmd += ["--hybrid"] if first.get("hybrid") else []
         code, out = run(cmd)
         if code != 0:
             return False, f"{committed.name}: replay failed:\n" + out

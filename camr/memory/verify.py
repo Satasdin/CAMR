@@ -142,6 +142,32 @@ def meaning_units(store, question: str) -> list[Unit]:
             for name, titles in store.meanings(keys).items()]
 
 
+def subject_units(store, question: str, note_type: str, max_notes: int = 60) -> list[Unit]:
+    """Everything memory holds under the names the question gives: the notes of sources titled with a name, exactly
+    or with a qualifier ('Spain', 'Damage (2009 film)'). Read by name, like an index, because short fact lines of
+    many subjects look alike to an embedder ('Capital: Garowe' crowds out 'Capital: Madrid' for Spain)."""
+    from camr.memory.fetch import base_title, subjects
+
+    raw = [s.lower() for s in subjects(question)]
+    names = {re.sub(r"^(?:the|a|an) ", "", n) for n in subject_names(question)}
+    keys = {k for k in raw + [re.sub(r"^(?:the|a|an) ", "", k) for k in raw] if k}
+    if not keys or not names:
+        return []
+    conds = " OR ".join(["lower(s.title) = ?", "lower(s.title) LIKE ?"] * len(keys))
+    args: list = []
+    for k in keys:
+        args += [k, f"{k} (%"]
+    rows = store.conn.execute(
+        f"SELECT n.note_id FROM note n JOIN source s USING(source_id) WHERE n.note_type = ? AND ({conds})"
+        f" ORDER BY n.note_id LIMIT ?", [note_type, *args, max_notes * 2]).fetchall()
+    ids = [int(r[0]) for r in rows]
+    if not ids:
+        return []
+    notes = store.get_notes(ids)
+    units = units_from_notes(store, [notes[i] for i in ids if i in notes])
+    return [u for u in units if u.title and base_title(u.title) in names][: max_notes * 3]
+
+
 def evidence_units(units: list[Unit]) -> list[Unit]:
     """Units that can support a claim (a list of meanings cannot)."""
     return [u for u in units if u.label != MEANINGS]
@@ -274,7 +300,15 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
     if abstention_like(claim(answer)) or _DECLINE.search(answer):
         return Verdict(False, "declined", relation=rel and rel[0], confidence=conf)
     words = claim_words(question, answer)
-    if not words:  # nothing beyond the question's own words: an echo, not an answer
+    if not words:
+        # nothing beyond the question's own words: an echo, unless it is a part of a longer name the question gives
+        # ("Indonesia" for "In what country is University of Indonesia?")
+        c = norm(re.sub(r"\s*\([^)]*\)", "", claim(answer)))
+        names = subject_names(question)
+        if c and names and not any(c == n or c in (re.sub(r"^(?:the|a|an) ", "", n),) for n in names) \
+                and any(f" {c} " in f" {n} " for n in names):
+            words = [w for w in c.split() if w not in _FRAME]
+    if not words:
         return Verdict(False, "declined", relation=rel and rel[0], confidence=conf)
     if typed and not type_ok(rel and rel[0], answer, question):
         return Verdict(False, "wrong kind of answer", words, relation=rel and rel[0], confidence=conf)
@@ -309,6 +343,8 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
         supporting = own
         facts_here = [u for u in units if u.label and top > 0 and level[id(u)] == top]
         has_rel = [u for u in facts_here if label_matches(u.label, rel[1])]
+        if rel[0] in ("birthplace", "deathplace"):  # "Born: <name>, <date>" says nothing about the place
+            has_rel = [u for u in has_rel if place_part(fact_value(u), u.title)]
         if has_rel and not any(u in has_rel or not u.label for u in supporting):
             # memory holds the asked relation as a labelled fact, and the claim matches only other labels
             return Verdict(False, "another relation", words, cov, supporting[0], rel[0], conf)
@@ -492,7 +528,8 @@ def fact_answer(question: str, units: list[Unit], max_meanings: int = 3) -> Fact
 CROSS = {
     "director": r"\bdirect(?:ed|or|ing|s)\b",
     "producer": r"\bproduc(?:ed|er|ing|es|tion)\b",
-    "composer": r"\bcompos(?:ed|er|ing|ition)\b|\bmusic (?:for|of|to)\b|\bscore[ds]?\b",
+    "composer": r"\bcompos(?:ed|er|ing|ition)\b|\bmusic (?:for|of|to|by)\b|\bscore[ds]?\b|\bwritten\b|\bwrote\b"
+                r"|\b(?:cantata|song|single|opera|symphony|sonata|concerto|musical|oratorio|mass|hymn|anthem) by\b",
     "screenwriter": r"\bwr(?:ote|itten|iter|iting)\b|\bscreenplays?\b|\bscripts?\b",
     "author": r"\bwr(?:ote|itten|iter|iting)\b|\bauthor(?:ed)?\b|\bnovels?\b|\bbooks?\b|\bpublished\b",
     "father": r"\bsons?\b|\bdaughters?\b|\bchild(?:ren)?\b|\bfather\b|\bheirs?\b",

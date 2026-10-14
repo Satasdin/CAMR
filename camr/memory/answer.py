@@ -24,7 +24,7 @@ from camr.memory.fetch import WebLookup
 from camr.memory.eager import learn_pages
 from camr.memory.fetch import Lookup, WebPage
 from camr.memory.verify import (CROSS, Unit, Verdict, check, claim, compress, cross_check, fact_answer,
-                                meaning_units, relation_of, sentences, units_from_notes)
+                                meaning_units, relation_of, sentences, subject_units, units_from_notes)
 from camr.models.prompt import PromptTemplate
 from camr.models.runner import GenerationError, ModelRunner
 
@@ -75,7 +75,8 @@ class VerifiedAnswerer:
     def __init__(self, engine: MemoryEngine, readers: list[ModelRunner], *, lookup: WebLookup | None = None,
                  budget: int = 128, fact_reader: bool = True, compressed: bool = True, max_pages: int = 3,
                  min_coverage: float = 1.0, closed_book: bool = False, template: PromptTemplate = READ,
-                 cross_check: bool = False, typed: bool = False, relation_cue: bool = False):
+                 cross_check: bool = False, typed: bool = False, relation_cue: bool = False,
+                 by_name: bool = False):
         self.engine = engine
         self.readers = readers
         self.lookup = lookup
@@ -90,6 +91,7 @@ class VerifiedAnswerer:
         self.cross = cross_check
         self.typed = typed
         self.relation_cue = relation_cue
+        self.by_name = by_name  # also read what memory holds under the question's names (verify.subject_units)
 
     def _cross(self, question: str, answer: str, c: str) -> tuple[Verdict, WebPage | None]:
         return cross_verify(self.engine, self.lookup, question, answer)
@@ -99,6 +101,10 @@ class VerifiedAnswerer:
                                        max_pages=self.max_pages)
         notes = [] if recall.abstained else [c.note for c in recall.candidates if c.eligible]
         units = units_from_notes(self.engine.store, notes)
+        if self.by_name:  # what memory holds under the question's names, read by name
+            have = {(u.note_id, u.text) for u in units}
+            units += [u for u in subject_units(self.engine.store, question, self.engine.note_type)
+                      if (u.note_id, u.text) not in have]
         if units:  # what memory knows a shared name may mean, read by name
             units += meaning_units(self.engine.store, question)
         return recall, learned, units

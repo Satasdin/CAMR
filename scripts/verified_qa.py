@@ -66,9 +66,54 @@ def select(a) -> None:
 
 
 def load_set(name: str) -> list[dict]:
-    if name == "dev":
-        return json.loads((OUT / "dev.json").read_text())["items"]
+    if name in ("dev", "heldout"):
+        return json.loads((OUT / f"{name}.json").read_text())["items"]
     return _eager().load_stream()
+
+
+def select_heldout(a) -> None:
+    """A second test set, drawn after every choice was made: ids and subjects disjoint from the stream, the
+    development set and every earlier sample."""
+    el = _eager()
+    stream = el.load_stream()
+    dev = json.loads((OUT / "dev.json").read_text())["items"]
+    rows = list(csv.DictReader(open(ROOT / "data/popqa/test.tsv"), delimiter="\t"))
+    taken = el.used_ids() | {x["qid"] for x in stream} | {x["qid"] for x in dev}
+    subj = {x["subj_id"] for x in stream} | {x["subj_id"] for x in dev}
+    rows = [r for r in rows if r["id"] not in taken and r["subj_id"] not in subj]
+    picked = random.Random(SEED + 1).sample(rows, a.n)
+    items = [{"i": i, "qid": r["id"], "question": r["question"], "answers": json.loads(r["possible_answers"]),
+              "prop": r["prop"], "subj": r["subj"], "subj_id": r["subj_id"], "s_pop": int(r["s_pop"])}
+             for i, r in enumerate(picked)]
+    save(OUT / "heldout.json", {"seed": SEED + 1, "n": len(items),
+                                "disjoint_from": "stream, development set and earlier samples (ids and subjects)",
+                                "items": items})
+    print(f"{len(items)} held-out questions -> {OUT / 'heldout.json'}")
+
+
+def closed(a) -> None:
+    """A model alone, answering every question of a set from its own knowledge (every answer stated)."""
+    from camr.memory.answer import BARE
+
+    items = load_set(a.set)
+    runner = readers_for([a.model], a.offline_answers)[0]
+    rows = []
+    for it in items:
+        g = runner.generate(BARE.render(it["question"]))
+        text = g.text.strip()
+        rows.append({"i": it["i"], "answer": text[:300], "correct": contains(text, it["answers"]),
+                     "declined": not claim_like(text)})
+    n = len(rows)
+    out = {"model": a.model, "set": a.set, "n": n, "correct": sum(r["correct"] for r in rows) / n,
+           "wrong": sum(not r["correct"] and not r["declined"] for r in rows) / n, "per_question": rows}
+    save(RES / f"closed_{a.set}_{a.model.replace(':', '_')}.json", out)
+    print(f"{a.model} closed-book on {a.set}: correct {out['correct']:.3f} wrong {out['wrong']:.3f}", flush=True)
+
+
+def claim_like(text: str) -> bool:
+    from camr.memory.verify import abstention_like, claim
+
+    return bool(claim(text)) and not abstention_like(claim(text))
 
 
 def contains(text: str, answers: list[str]) -> bool:
@@ -147,7 +192,7 @@ VARIANTS = {
 }
 
 
-def build_engine(path: Path, budget: int):
+def build_engine(path: Path, budget: int, hybrid: bool = False):
     """The eager-learning engine, with its embedder's vectors cached by text (results/verified/vectors.sqlite):
     every variant embeds a page once, and replays use the very same vectors."""
     from camr.memory.embedder import CachedEmbedder
@@ -155,6 +200,7 @@ def build_engine(path: Path, budget: int):
     el = _eager()
     el.CAMR["token_budget"] = budget
     engine, store = el.build_engine(path)
+    engine.keyword_k = 20 if hybrid else 0  # hybrid recall: notes found by their words join the vector hits
     engine.embedder = CachedEmbedder(engine.embedder, OUT / "vectors.sqlite")
     return engine, store
 
@@ -189,7 +235,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     store_path.parent.mkdir(parents=True, exist_ok=True)
     for f in store_path.parent.glob(store_path.name + "*"):
         f.unlink()
-    engine, store = build_engine(store_path, a.budget)
+    engine, store = build_engine(store_path, a.budget, hybrid=getattr(a, "hybrid", False))
     # Answering reads the web only from the frozen cache (what `fetch` and earlier warm runs stored), so every
     # variant sees exactly the same pages and a replay sees them too; --online lets a warm run fill misses.
     lookup = WebLookup(cache_path=OUT / f"web_cache_{a.set}.sqlite", patient_s=a.patient,
@@ -198,6 +244,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     readers = readers_for(v["readers"], a.offline_answers)
     ans = VerifiedAnswerer(engine, readers, lookup=lookup, budget=a.budget, fact_reader=v["fact_reader"],
                            min_coverage=a.min_coverage, typed=a.typed, relation_cue=a.relation_cue,
+                           by_name=getattr(a, "by_name", False),
                            compressed=v["compressed"], closed_book=v["closed_book"],
                            template=READ if v["template"] == "read" else QA_MEMORY, cross_check=v.get("cross", False))
     ans_bare = BARE  # noqa: F841  (the closed-book prompt, recorded by its id below)
@@ -225,7 +272,8 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     ver = [x for x in rows if x["status"] == "verified"]
     stated_wrong = [x for x in rows if not x["first_declined"] and not x["first_correct"]]
     out = {"variant": name, "settings": v, "n": n, "budget": a.budget, "min_coverage": a.min_coverage,
-           "typed": a.typed, "relation_cue": a.relation_cue,
+           "typed": a.typed, "relation_cue": a.relation_cue, "by_name": getattr(a, "by_name", False),
+           "hybrid": getattr(a, "hybrid", False),
            "verified": {"answered": len(ver) / n, "correct": sum(x["correct"] for x in ver) / n,
                         "wrong": sum(not x["correct"] for x in ver) / n,
                         # wrong about a thing it named unambiguously: the hallucination rate
@@ -326,6 +374,18 @@ def judge(a) -> None:
                   f"{jv['hallucinated']:.3f} other meaning {jv['other_meaning']:.3f} | unchecked correct "
                   f"{ju['correct']:.3f} wrong {ju['wrong']:.3f}", flush=True)
         out["files"][path.name] = res
+    closed_files = sorted(RES.glob(f"closed_{a.set}_*.json"))
+    if closed_files:  # models alone on this set, judged the same way
+        out["closed"] = {}
+        for f in closed_files:
+            b = json.loads(f.read_text())
+            rows = [{"i": x["i"], "declined": x["declined"],
+                     "correct": judged(runner, items[x["i"]]["question"], items[x["i"]]["answers"], x["answer"])
+                     if not x["declined"] else False} for x in b["per_question"]]
+            n = len(rows)
+            out["closed"][b["model"]] = {"correct": sum(r["correct"] for r in rows) / n,
+                                         "wrong": sum(not r["correct"] and not r["declined"] for r in rows) / n}
+            print(f"{b['model']:30s} closed-book judged: {out['closed'][b['model']]}", flush=True)
     if a.set == "test":  # the closed-book models, judged the same way
         out["baselines"] = {}
         for f in sorted((ROOT / "results/eager").glob("baseline_*.json")):
@@ -375,9 +435,10 @@ def report(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["select", "fetch", "answer", "judge", "report"])
+    ap.add_argument("part", choices=["select", "select-heldout", "fetch", "answer", "closed", "judge", "report"])
     ap.add_argument("--judge", default="kimi-k3")
-    ap.add_argument("--set", default="dev", choices=["dev", "test"])
+    ap.add_argument("--model", default="qwen2.5:0.5b", help="closed: the model answering alone")
+    ap.add_argument("--set", default="dev", choices=["dev", "test", "heldout"])
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--patient", type=float, default=120.0)
     ap.add_argument("--offline", action="store_true", help="fetch: from the cache only (answer always is)")
@@ -390,10 +451,13 @@ if __name__ == "__main__":
     ap.add_argument("--tag", default="", help="a separate results file (answers_<set><tag>.json)")
     ap.add_argument("--typed", action="store_true", help="a claim of the wrong kind is not support")
     ap.add_argument("--relation-cue", action="store_true", help="a sentence must state the asked relation")
+    ap.add_argument("--by-name", action="store_true", help="also read what memory holds under the question's names")
+    ap.add_argument("--hybrid", action="store_true", help="hybrid recall: keyword hits join the vector hits")
     ap.add_argument("--out", default=None, help="write results and stores here (caches are still read from "
                                                 "results/verified)")
     a = ap.parse_args()
     if a.out:
         RES = Path(a.out)
         RES.mkdir(parents=True, exist_ok=True)
-    {"select": select, "fetch": fetch, "answer": answer, "judge": judge, "report": report}[a.part](a)
+    {"select": select, "select-heldout": select_heldout, "fetch": fetch, "answer": answer, "closed": closed,
+     "judge": judge, "report": report}[a.part](a)
