@@ -598,6 +598,19 @@ Sources: `docs/results/scenarios_v3.json`, `docs/figures/scenarios/{fetch_new,fo
 4. Bundled packs (harvested after D-20/D-21, nomic-embed-text vectors): Kenya 24 notes, Solar System 25, Photosynthesis 18; install copies vectors without running a model.
 5. axe-core with the Learning tab open: 0 violations in both themes at both sizes after D-23; every new colour pair passes AA.
 
+## F25. Large data: searchable at once, vectors in the background, within the device's limits
+
+Sources: `results/bulk/ingest.json`, `results/bulk/limits.json`, `scripts/large_data.py`, `camr/memory/bulk.py`, `camr/device.py`.
+
+Corpus: every paragraph of the HotpotQA dev (distractor) and 2WikiMultihopQA dev sets, deduplicated: **123,301 paragraphs -> 195,735 notes**. Measured on 600 of their questions (300 each); their own paragraphs are ingested first, so everything after is distractors.
+
+1. Embedding is the cost of ingestion on a CPU: BGE-small embeds 30-47 notes/s on 4 cores (ONNX fp32: same vectors, no faster; ONNX int8: 1.8x faster but only 86% top-10 agreement with fp32, rejected). At that rate the corpus would be unusable for over an hour.
+2. Two-tier memory: notes are stored without vectors and a keyword index (SQLite FTS5, kept in step by triggers) makes them searchable at once. **All 123,301 paragraphs were in and searchable in 335 s (368 paragraphs/s), store 187 MB, peak process memory 557 MB.**
+3. Right after ingest, with no vectors at all, hybrid recall (vector hits plus BM25 hits, the latter embedded on the spot) found **74.3% of gold paragraphs in the top 10** (all gold paragraphs for 49.5% of questions), median 1.3 s per question under full CPU load; dense search alone finds nothing until vectors exist.
+4. The remaining vectors are added in the background (`drain`), a batch at a time, pausing while other work keeps the CPU busy (it yielded 515 s in its first half hour while the evaluations ran) and stopping at the device's limits; resumable, the queue is the state.
+5. The governor stops a job at each limit, on the real disk, and the job resumes where it stopped: a store cap (4 MB, then raised to 8 MB), a disk reserve (stopped with 2,026 MB free when told to keep 2,026 MB), a RAM reserve set above what was available (stopped before any work). 8,656 paragraphs went in across five runs as 14,104 notes, **0 duplicates**.
+6. In the app: a file over 200k characters is stored at once without vectors; sleep drains pending vectors first; idle sleep waits while the CPU is busy; teaching is refused cleanly when the disk is at its reserve; the learned index switches on below 100k notes when exact search's vectors would take over a quarter of the spare RAM. The Learning tab shows the room left on the disk in memories.
+
 ---
 
 ## Screenshots and figures
