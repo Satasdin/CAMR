@@ -620,6 +620,21 @@ Development set (200 PopQA questions, ids and subjects disjoint from the stream;
 
 The second readers add one point of correct answers and up to 1.5 points of hallucination: the answer is usually not in what memory read, and a larger model reading the same notes cannot find it either. The chosen pipeline runs on the 0.5B model alone. "About another meaning" answers are true statements about a named meaning of a shared name ("Jeff F. King (Damage (2009 film))" when the question meant the 1992 film).
 
+**Test stream** (the 200 questions of F19, answered once with the configuration chosen above; memory starts empty and learns as it goes; every system judged the same way, `judged_test.json`):
+
+| System | correct | wrong, stated as fact |
+|---|---|---|
+| **0.5B + verified memory (chosen)** | **49.0%** | **4.5%** (and 14.5% true answers about a named other meaning; 32.0% honestly not confirmed) |
+| 0.5B + verified memory, Kimi K3 second reader + cross-check | 51.0% | 5.0% (16.5% another meaning) |
+| Before: 0.5B reads, every answer stated | 46.5% | 51.0% |
+| Kimi K3, closed-book (cloud) | 68.0% | 31.0% |
+| gpt-oss 20B, closed-book | 23.0% | 76.0% |
+| llama3.2 3B, closed-book | 20.5% | 79.5% |
+| qwen2.5 1.5B, closed-book | 15.5% | 78.5% |
+| qwen2.5 0.5B, closed-book | 13.0% | 87.0% |
+
+Exact matching (no judge): chosen 44.5% correct, 7.5% hallucinated; the judge's extra correct answers are aliases and spellings ("Empress Wenxian" for Dugu Qieluo, "Christian" for Christianity, "Garowe" for "Garoowe"). A frozen 0.5B model with verified memory answers more than twice as many questions correctly as a 20B model and states a wrong fact as true about one time in twenty, against about one time in three for the cloud model. What it does not know it says it could not confirm, with its best lead.
+
 ## F25. Large data: searchable at once, vectors in the background, within the device's limits
 
 Sources: `results/bulk/ingest.json`, `results/bulk/limits.json`, `scripts/large_data.py`, `camr/memory/bulk.py`, `camr/device.py`.
