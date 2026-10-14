@@ -183,8 +183,11 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     for f in store_path.parent.glob(store_path.name + "*"):
         f.unlink()
     engine, store = build_engine(store_path, a.budget)
-    lookup = WebLookup(cache_path=OUT / f"web_cache_{a.set}.sqlite", patient_s=a.patient, offline=a.offline,
-                       rank=embedding_rank(engine.embedder), min_interval_s=1.5, facts=v["facts"])
+    # Answering reads the web only from the frozen cache (what `fetch` and earlier warm runs stored), so every
+    # variant sees exactly the same pages and a replay sees them too; --online lets a warm run fill misses.
+    lookup = WebLookup(cache_path=OUT / f"web_cache_{a.set}.sqlite", patient_s=a.patient,
+                       offline=not getattr(a, "online", False), rank=embedding_rank(engine.embedder),
+                       min_interval_s=1.5, facts=v["facts"])
     readers = readers_for(v["readers"], a.offline_answers)
     ans = VerifiedAnswerer(engine, readers, lookup=lookup, budget=a.budget, fact_reader=v["fact_reader"],
                            min_coverage=a.min_coverage, typed=a.typed, relation_cue=a.relation_cue,
@@ -370,7 +373,8 @@ if __name__ == "__main__":
     ap.add_argument("--set", default="dev", choices=["dev", "test"])
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--patient", type=float, default=120.0)
-    ap.add_argument("--offline", action="store_true")
+    ap.add_argument("--offline", action="store_true", help="fetch: from the cache only (answer always is)")
+    ap.add_argument("--online", action="store_true", help="answer: fetch what the cache lacks (warm runs only)")
     ap.add_argument("--fresh", action="store_true")
     ap.add_argument("--offline-answers", action="store_true", help="model answers from the answer cache only")
     ap.add_argument("--variants", default="all")
