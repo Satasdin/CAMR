@@ -652,6 +652,20 @@ Corpus: every paragraph of the HotpotQA dev (distractor) and 2WikiMultihopQA dev
 9. Calibrated on this machine (4 cores, idle): embedding 230 short texts/s, exact search 3.2 ms per 100k notes in RAM, 0.5B generation 50.7 tokens/s, prompt reading 285 tokens/s; for a 1.5 s answer the planner reads 256 tokens, for 4 s 512 (`results/bulk/plan.json`).
 10. In the app: a file over 200k characters is stored at once without vectors; sleep drains pending vectors first; idle sleep waits while the CPU is busy; teaching is refused cleanly when the disk is at its reserve; the learned index switches on below 100k notes when exact search's vectors would take over a quarter of the spare RAM. The Learning tab shows the room left on the disk in memories.
 
+## F26. Reproducible on demand
+
+`python scripts/reproduce.py` (add `--twice` to run every check twice) re-computes the key results and compares every number with the committed one; exit status 0 only if all match.
+
+| Check | What is recomputed | Must equal |
+|---|---|---|
+| tests | the whole test suite (unit, app, browser) | all pass |
+| lookup-dev | every development-set lookup, offline from the cached responses | the same pages and answer-in-text flags |
+| verified-dev, verified-test | every variant of F24: recall, ranking, compression, verification, scoring (answers read from the answer cache by exact request) | every question's status, claim, correctness and first answer |
+| bulk | ingest of the measured questions' 5,201 paragraphs (8,287 notes) with real embeddings, then dense and hybrid recall@10 on 600 questions | 83.67% dense, 95.13% hybrid |
+| governor | the device-limit tests (stop at each limit, resume without duplicates) | all pass |
+
+What makes this hold: every web response and every model answer is stored by its exact request (`web_cache_*.sqlite`, `answers.sqlite`, judge verdicts in `judge.sqlite`) and every embedding by its exact text (`vectors.sqlite`); decoding is greedy; ties in ranking break by note id. The web is the one thing that changes, so it is read once (`fetch`) and frozen: answering never goes online (the first harness run caught answer runs that had fetched what an earlier variant missed, so variants saw slightly different pages; fixed by freezing).
+
 ---
 
 ## Screenshots and figures
