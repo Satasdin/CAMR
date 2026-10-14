@@ -761,6 +761,49 @@ def ablate_part(a) -> None:
             f.unlink()
     save(out_dir / f"ablate_{tag}.json", out)
 
+def examples_part(a) -> None:
+    """How answers change once corrected: for each family, a held-out problem the model got wrong before learning
+    and right after, with the correction memory gave it (the store is rebuilt from the run's own learning log, so
+    this is exactly what the model read)."""
+    from camr.memory.note import Document
+
+    tag = f"{a.model.replace(':', '_')}_{a.mode}"
+    out_dir = Path(a.out) if a.out else OUT
+    d = json.loads((out_dir / f"run_{tag}.json").read_text())
+    data = problems(seed=d["seed"])
+    fams = {f.key: f for f in FAMILIES}
+    train = {it["question"]: it for it in data["train"]}
+    store_path = out_dir / "stores" / f"examples_{tag}.sqlite"
+    store_path.parent.mkdir(parents=True, exist_ok=True)
+    for f in store_path.parent.glob(store_path.name + "*"):
+        f.unlink()
+    engine, store = engine_at(store_path)
+    engine.ingest([Document("correction", f"{x['family']}-{x['round']}", correction_note(fams[x["family"]],
+                                                                                     train[x["question"]]),
+                            f"Correction: {x['family']}") for x in d["learning_log"] if x["corrected"]])
+    picked = []
+    for split in ("test", "rephrased", "derived"):
+        before = {r["question"]: r for r in d["before_rows"][split]}
+        for r in d["rows"][split]:
+            b = before[r["question"]]
+            if r["correct"] and not b["correct"] and r["family"] not in {p["family"] for p in picked if
+                                                                          p["split"] == split}:
+                rec = engine.recall(r["question"], touch=False)
+                picked.append({"split": split, "family": r["family"], "invented": r["invented"],
+                               "question": r["question"], "gold": r["gold"],
+                               "before": {"pred": b["pred"], "answer": b["answer"][-240:]},
+                               "memory": rec.context.strip()[:700],
+                               "after": {"pred": r["pred"], "answer": r["answer"][-240:]}})
+    store.close()
+    for f in store_path.parent.glob(store_path.name + "*"):
+        f.unlink()
+    save(out_dir / f"examples_{tag}.json", {"model": d["model"], "mode": d["mode"], "seed": d["seed"],
+                                           "examples": picked})
+    for x in picked:
+        print(f"\n[{x['split']}] {x['family']}{' (invented)' if x['invented'] else ''}: {x['question']} (answer {x['gold']:g})")
+        print("  before:", x["before"]["answer"].replace("\n", " | ")[-160:], "->", x["before"]["pred"])
+        print("  after: ", x["after"]["answer"].replace("\n", " | ")[-160:], "->", x["after"]["pred"])
+
 def save(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -816,7 +859,7 @@ def report(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["problems", "run", "ablate", "report"])
+    ap.add_argument("part", choices=["problems", "run", "ablate", "examples", "report"])
     ap.add_argument("--model", default="qwen2.5:0.5b")
     ap.add_argument("--mode", default="calc", choices=["calc", "reason"])
     ap.add_argument("--curve-at", type=lambda s: [int(x) for x in s.split(",")], default=[1, 2, 4, 6])
@@ -830,4 +873,4 @@ if __name__ == "__main__":
         for s, items in d.items():
             print(s, len(items), "e.g.", items[0]["question"], "->", items[0]["answer"])
         sys.exit(0)
-    {"run": run_part, "ablate": ablate_part, "report": report}[a.part](a)
+    {"run": run_part, "ablate": ablate_part, "examples": examples_part, "report": report}[a.part](a)
