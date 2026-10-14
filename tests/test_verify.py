@@ -257,3 +257,11 @@ def test_the_kind_of_answer_is_judged_on_its_own_words():
     q = "Who is the father of Amber Marks?"
     assert not type_ok("father", "Amber Marks' father was former teacher", q)
     assert type_ok("father", "Howard Marks", q) and type_ok("genre", "rock", "What genre is X?")
+
+
+def test_a_born_value_without_a_date_answers_with_what_follows_the_name():
+    from camr.memory.verify import place_part
+
+    assert place_part("Reinaldo Dalcin, Canoas, Rio Grande do Sul, Brazil", "Reinaldo Dalcin") == \
+        "Canoas, Rio Grande do Sul, Brazil"
+    assert place_part("Canoas, Brazil", "Reinaldo Dalcin") == ""  # no date and no name: not taken apart

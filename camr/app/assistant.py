@@ -299,7 +299,10 @@ class Assistant:
             "memory": {"write_policy": "verbatim", "retrieval_policy": "similarity_only",
                        "weights": {"similarity": 1.0, "recency": 0.0, "importance": 0.0},
                        "k": 20, "token_budget": self.token_budget, "min_similarity": min_similarity,
-                       "similarity_margin": 0.15, "expansion": "entity", "entity_gate": True, "chunk_tokens": 120},
+                       "similarity_margin": 0.15, "expansion": "entity", "entity_gate": True, "chunk_tokens": 120,
+                       # hybrid: notes found by their words join the vector hits (measured on 196k notes: recall@10
+                       # 84.3% against 75.4% for vectors alone, results/bulk/ingest.json)
+                       "keyword_k": 20},
         })
         # One store file per embedder: vectors from different embedders cannot be mixed.
         db = "memory.sqlite" if embedder is not None or self.embedder.name.startswith("BAAI") else \

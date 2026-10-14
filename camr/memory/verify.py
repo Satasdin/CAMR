@@ -355,13 +355,22 @@ def fact_value(unit: Unit) -> str:
 _DATE_END = re.compile(r"(?:\(\s*age[^)]*\)|\b\d{3,4}\b)\s*,?\s*", re.I)
 
 
-def place_part(value: str) -> str:
+def place_part(value: str, name: str = "") -> str:
     """'Teri Lynn DeSario, November 27, 1951 (age 74), Miami, Florida' -> 'Miami, Florida': what follows the date
-    in a Born/Died value ('' when nothing does)."""
+    in a Born/Died value; with no date, what follows the person's own name ('Reinaldo Dalcin, Canoas, Brazil' ->
+    'Canoas, Brazil'). '' when no place is left."""
     last = None
     for m in _DATE_END.finditer(value):
         last = m
-    rest = value[last.end():] if last else ""
+    if last:
+        rest = value[last.end():]
+    else:
+        parts = [p.strip() for p in value.split(",")]
+        name_words = set(norm(name).split())
+        if len(parts) > 1 and name_words and set(norm(parts[0]).split()) & name_words:
+            rest = ", ".join(parts[1:])  # the first part is the person's name
+        else:
+            rest = ""
     rest = rest.strip(" ,;")
     return rest if re.search(r"[A-Z]", rest) else ""
 
@@ -400,7 +409,7 @@ def facts_by_title(question: str, units: list[Unit]) -> list[Unit]:
         if level[id(u)] != top:
             continue
         if rel[0] in ("birthplace", "deathplace"):  # the place, not the name and date before it
-            place = place_part(fact_value(u))
+            place = place_part(fact_value(u), u.title)
             if not place:
                 continue
             u = Unit(u.title, f"{u.label}: {place}", u.label, u.note_id, u.score)
