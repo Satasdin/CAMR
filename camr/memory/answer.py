@@ -21,7 +21,10 @@ from dataclasses import dataclass, field
 from camr.memory.eager import Learned, eager_recall
 from camr.memory.engine import MemoryEngine
 from camr.memory.fetch import WebLookup
-from camr.memory.verify import Unit, Verdict, check, claim, compress, fact_value, read_facts, units_from_notes
+from camr.memory.eager import learn_pages
+from camr.memory.fetch import Lookup, WebPage
+from camr.memory.verify import (CROSS, Unit, Verdict, check, claim, compress, cross_check, fact_answer, relation_of,
+                                sentences, units_from_notes)
 from camr.models.prompt import PromptTemplate
 from camr.models.runner import GenerationError, ModelRunner
 
@@ -58,18 +61,21 @@ class Answer:
     learned: Learned | None = None
     context: str = ""
     ms: dict = field(default_factory=dict)
+    ambiguous: list[str] = field(default_factory=list)  # other things in memory with the same name
 
     def as_dict(self) -> dict:
         return {"question": self.question, "text": self.text, "claim": self.claim, "status": self.status,
                 "by": self.by, "evidence": self.evidence, "source": self.source, "context": self.context,
                 "attempts": [a.__dict__ for a in self.attempts], "ms": {k: round(v, 1) for k, v in self.ms.items()},
+                "ambiguous": self.ambiguous,
                 "looked_up": bool(self.learned and self.learned.looked_up)}
 
 
 class VerifiedAnswerer:
     def __init__(self, engine: MemoryEngine, readers: list[ModelRunner], *, lookup: WebLookup | None = None,
                  budget: int = 128, fact_reader: bool = True, compressed: bool = True, max_pages: int = 3,
-                 min_coverage: float = 1.0, closed_book: bool = False, template: PromptTemplate = READ):
+                 min_coverage: float = 1.0, closed_book: bool = False, template: PromptTemplate = READ,
+                 cross_check: bool = False):
         self.engine = engine
         self.readers = readers
         self.lookup = lookup
@@ -80,6 +86,28 @@ class VerifiedAnswerer:
         self.min_coverage = min_coverage
         self.closed_book = closed_book  # with no evidence, let readers answer anyway (always "unverified")
         self.template = template
+        # when memory cannot confirm a claim, look the claimed answer up and check it from its own side
+        self.cross = cross_check
+
+    def _cross(self, question: str, answer: str, c: str) -> tuple[Verdict, WebPage | None]:
+        """Look the claimed answer up (it is a public name, never anything personal) and check it from its side."""
+        res = Lookup(question=c)
+        page, options = self.lookup.article(c, res)
+        pages = [page] if page else []
+        if not pages and options:  # an ambiguous name: the meanings closest to the question
+            if self.lookup.rank is not None:
+                scores = self.lookup.rank(question, [f"{t}. {d}" for t, d in options])
+                options = [o for _, o in sorted(zip(scores, options), key=lambda x: -x[0])]
+            for title, _ in options[:2]:
+                p = self.lookup.article(title, res)[0]
+                if p:
+                    pages.append(p)
+        for p in pages:
+            v = cross_check(question, answer, page_units(p))
+            if v.supported:
+                learn_pages(self.engine, [p])  # what confirmed it is worth remembering
+                return v, p
+        return Verdict(False, "not confirmed from the answer's side"), None
 
     def evidence(self, question: str, *, allow_web: bool = True, touch: bool = False):
         recall, learned = eager_recall(self.engine, self.lookup, question, allow_web=allow_web, touch=touch,
@@ -92,12 +120,11 @@ class VerifiedAnswerer:
         recall, learned, units = self.evidence(question, allow_web=allow_web, touch=touch)
         ms = {"recall": (time.perf_counter() - t0) * 1000}
         if self.fact_reader:
-            fact = read_facts(question, units)
-            if fact is not None:
-                value = fact_value(fact)
+            fa = fact_answer(question, units)
+            if fa is not None:
                 ms["total"] = (time.perf_counter() - t0) * 1000
-                return Answer(question, value, value, "verified", "memory", fact.render(), fact.title,
-                              learned=learned, context=fact.render(), ms=ms)
+                return Answer(question, fa.text, fa.claim, "verified", "memory", fa.evidence, fa.source,
+                              learned=learned, context=fa.evidence, ms=ms, ambiguous=fa.ambiguous)
         t1 = time.perf_counter()
         if units and self.compressed:
             shown = compress(question, units, self.engine.embedder, self.engine.budgeter.tokenizer, self.budget)
@@ -124,15 +151,41 @@ class VerifiedAnswerer:
             if v.supported:
                 ms["total"] = (time.perf_counter() - t0) * 1000
                 c = claim(g.text)
-                return Answer(question, c, c, "verified", reader.model_name, v.evidence.render(), v.evidence.title,
-                              attempts, learned, context, ms)
+                text = f"{c} ({v.evidence.title})" if v.others else c  # say which one, when the name is shared
+                return Answer(question, text, c, "verified", reader.model_name, v.evidence.render(),
+                              v.evidence.title, attempts, learned, context, ms, ambiguous=v.others)
             if best is None and v.reason not in ("declined",):
                 best = (v, claim(g.text), reader.model_name)
+        rel = relation_of(question)
+        if self.cross and self.lookup is not None and allow_web and rel and rel[0] in CROSS:
+            t3 = time.perf_counter()
+            tried: set[str] = set()
+            for att in attempts:
+                c = claim(att.answer)
+                if not c or c.lower() in tried or att.verdict.get("reason") in ("declined", "supported"):
+                    continue
+                tried.add(c.lower())
+                v, page = self._cross(question, att.answer, c)
+                if v.supported:
+                    ms["cross"] = (time.perf_counter() - t3) * 1000
+                    ms["total"] = (time.perf_counter() - t0) * 1000
+                    attempts.append(Attempt(f"{att.by} + cross-check", att.answer, v.as_dict(), ms["cross"]))
+                    return Answer(question, c, c, "verified", f"{att.by} + cross-check", v.evidence.render(),
+                                  v.evidence.title, attempts, learned, context, ms)
+            ms["cross"] = (time.perf_counter() - t3) * 1000
         ms["total"] = (time.perf_counter() - t0) * 1000
         if best is None:
             return Answer(question, "", "", "none", "", None, None, attempts, learned, context, ms)
         v, c, by = best
         return Answer(question, c, c, "unverified", by, None, None, attempts, learned, context, ms)
+
+
+def page_units(page: WebPage) -> list[Unit]:
+    from camr.memory.eager import fact_lines
+
+    return [Unit(page.title, x) for x in sentences(page.text)] + [Unit(page.title, f"{label}: {value}", label)
+                                                                    for label, value in fact_lines(page.facts)]
+
 
 
 def unverified_text(a: Answer, sources: list[Unit] | None = None) -> str:

@@ -139,6 +139,11 @@ VARIANTS = {
                 readers=["qwen2.5:0.5b", "llama3.2:3b"], closed_book=True),
     "+kimi": dict(facts=True, compressed=True, fact_reader=True, template="read",
                   readers=["qwen2.5:0.5b", "kimi-k3"], closed_book=True),
+    # when memory cannot confirm a claim: look the claimed answer up and check it from its own side
+    "+3b+cross": dict(facts=True, compressed=True, fact_reader=True, template="read",
+                      readers=["qwen2.5:0.5b", "llama3.2:3b"], closed_book=True, cross=True),
+    "+kimi+cross": dict(facts=True, compressed=True, fact_reader=True, template="read",
+                        readers=["qwen2.5:0.5b", "kimi-k3"], closed_book=True, cross=True),
 }
 
 
@@ -177,7 +182,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     readers = readers_for(v["readers"], a.offline_answers)
     ans = VerifiedAnswerer(engine, readers, lookup=lookup, budget=a.budget, fact_reader=v["fact_reader"],
                            compressed=v["compressed"], closed_book=v["closed_book"],
-                           template=READ if v["template"] == "read" else QA_MEMORY)
+                           template=READ if v["template"] == "read" else QA_MEMORY, cross_check=v.get("cross", False))
     ans_bare = BARE  # noqa: F841  (the closed-book prompt, recorded by its id below)
     rows = []
     t0 = time.perf_counter()
@@ -185,7 +190,8 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
         r = ans.answer(it["question"])
         first = r.attempts[0].answer if r.attempts else (r.claim if r.by == "memory" else "")
         units_text = r.context
-        rows.append({"i": it["i"], "prop": it["prop"], "status": r.status, "by": r.by, "claim": r.claim[:200],
+        rows.append({"i": it["i"], "prop": it["prop"], "status": r.status, "by": r.by, "claim": r.claim[:300],
+                     "text": r.text[:300], "ambiguous": bool(r.ambiguous),
                      "correct": contains(r.claim, it["answers"]) if r.claim else False,
                      "first_answer": first[:200], "first_correct": contains(first, it["answers"]) if first else False,
                      "first_declined": (not first) or bool(r.attempts and r.attempts[0].verdict.get("reason") ==
@@ -201,6 +207,12 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     out = {"variant": name, "settings": v, "n": n, "budget": a.budget,
            "verified": {"answered": len(ver) / n, "correct": sum(x["correct"] for x in ver) / n,
                         "wrong": sum(not x["correct"] for x in ver) / n,
+                        # wrong about a thing it named unambiguously: the hallucination rate
+                        "wrong_unambiguous": sum(not x["correct"] and not x["ambiguous"] for x in ver) / n,
+                        # said which of several same-named things it meant, and the question meant another
+                        "wrong_other_meaning": sum(not x["correct"] and x["ambiguous"] for x in ver) / n,
+                        "ambiguous": sum(x["ambiguous"] for x in ver) / n,
+                        "correct_unambiguous": sum(x["correct"] and not x["ambiguous"] for x in ver) / n,
                         "precision": sum(x["correct"] for x in ver) / max(1, len(ver)),
                         "by_memory": sum(x["by"] == "memory" for x in ver) / n,
                         "unverified": sum(x["status"] == "unverified" for x in rows) / n,
@@ -224,7 +236,8 @@ def answer(a) -> None:
         out["variants"][name] = res
         save(path, out)
         ver, st = res["verified"], res["stated"]
-        print(f"{name:24s} verified: correct {ver['correct']:.3f} wrong {ver['wrong']:.3f} precision "
+        print(f"{name:24s} verified: correct {ver['correct']:.3f} wrong {ver['wrong']:.3f} (hallucinated "
+              f"{ver['wrong_unambiguous']:.3f}, other meaning {ver['wrong_other_meaning']:.3f}) precision "
               f"{ver['precision']:.3f} (memory {ver['by_memory']:.3f}, unverified {ver['unverified']:.3f}) | "
               f"unchecked: correct {st['correct']:.3f} wrong {st['wrong']:.3f} | {res['seconds']}s", flush=True)
 

@@ -134,3 +134,45 @@ def test_answers_replay_from_the_cache_without_the_model(tmp_path):
     assert replay.generate("q1").text == "Ravi Chopra"
     with pytest.raises(GenerationError):
         replay.generate("q2")
+
+
+def test_a_shared_name_is_answered_for_each_meaning_and_never_silently_picked():
+    from camr.memory.verify import fact_answer
+
+    emma = [Unit("Emma (2020 film)", "Directed by: Autumn de Wilde", "Directed by"),
+            Unit("Emma (1996 theatrical film)", "Directed by: Douglas McGrath", "Directed by"),
+            Unit("Emma (1996 theatrical film)", "Emma is a 1996 period comedy film written and directed by Douglas "
+                                                "McGrath.")]
+    fa = fact_answer("Who was the director of Emma?", emma)
+    assert fa.text == ("Emma (2020 film): Autumn de Wilde; Emma (1996 theatrical film): Douglas McGrath")
+    assert fa.ambiguous == ["Emma (2020 film)", "Emma (1996 theatrical film)"]
+    v = check("Who was the director of Emma?", "Douglas McGrath", emma)
+    assert v.supported and v.others == ["Emma (2020 film)"]  # true, and memory knows another Emma
+    one = fact_answer("Who was the director of Emma?", emma[1:] + [Unit("Emma (2020 film)", "Emma is a 2020 film.")])
+    assert one.text == "Douglas McGrath (Emma (1996 theatrical film))" and one.ambiguous == ["Emma (2020 film)"]
+
+
+def test_a_question_naming_nothing_checkable_is_never_verified():
+    v = check("Who was the director of W.?", "Cecil Hepworth", [Unit("The Baby on the Barge",
+                                                                    "Directed by: Cecil Hepworth", "Directed by")])
+    assert not v.supported
+
+
+def test_a_claim_memory_lacks_is_confirmed_from_its_own_article_or_not_at_all(tmp_path):
+    from camr.memory.fetch import WebLookup
+    from test_learning import FakeWeb, ddg_article, fresh_engine
+
+    web = FakeWeb({"Ravi Chopra": ddg_article("Ravi Chopra", "Ravi Chopra was an Indian film director and producer. "
+                                                             "He directed The Burning Train in 1980."),
+                   "Martin Scorsese": ddg_article("Martin Scorsese", "Martin Scorsese is an American film director.")})
+    engine = fresh_engine(tmp_path)
+    learn_pages(engine, [WebPage("The Burning Train", "https://en.wikipedia.org/wiki/The_Burning_Train",
+                                 "The Burning Train is a 1980 Indian Hindi-language disaster film.", "wikipedia", "q")])
+    q = "Who was the director of The Burning Train?"
+    lookup = WebLookup(web, min_interval_s=0)
+    good = VerifiedAnswerer(engine, [Scripted("small", "Martin Scorsese"), Scripted("large", "Ravi Chopra")],
+                            lookup=lookup, cross_check=True).answer(q)
+    assert good.status == "verified" and good.by == "large + cross-check" and good.claim == "Ravi Chopra"
+    assert "He directed The Burning Train" in good.evidence
+    bad = VerifiedAnswerer(engine, [Scripted("small", "Martin Scorsese")], lookup=lookup, cross_check=True).answer(q)
+    assert bad.status == "unverified"  # his article never mentions the film: not confirmed

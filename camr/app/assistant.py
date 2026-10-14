@@ -47,7 +47,7 @@ from camr.memory.fetch import WebLookup, embedding_rank, is_personal
 from camr.memory.note import Document
 from camr.memory.sleep import sleep as run_sleep
 from camr.memory.store import SQLiteVectorStore
-from camr.memory.verify import check, claim, fact_value, read_facts, relation_of, units_from_notes
+from camr.memory.verify import check, claim, fact_answer, relation_of, units_from_notes
 from camr.models.runner import OllamaRunner
 from camr.models.tokenizer import RegexTokenizer
 
@@ -230,7 +230,8 @@ def _verification(question: str, answer: str, units) -> dict:
         return {"status": "unchecked", "reason": "memory had nothing on this: the model's own knowledge"}
     v = check(question, answer, units)
     if v.supported:
-        return {"status": "verified", "by": "model", "evidence": v.evidence.render(), "source": v.evidence.title}
+        return {"status": "verified", "by": "model", "evidence": v.evidence.render(), "source": v.evidence.title,
+                "ambiguous": v.others}
     if v.reason == "declined":
         return {"status": "unchecked", "reason": "no answer given"}
     reasons = {"not in memory": "what memory read does not say this",
@@ -525,15 +526,17 @@ class Assistant:
         if factual and not recall.abstained:
             with self._lock:
                 units = units_from_notes(self.store, [c.note for c in recall.candidates if c.eligible])
-        fact = read_facts(question, units) if units else None
+        fact = fact_answer(question, units) if units else None
         if fact is not None:
             # memory holds the fact as a labelled line about the question's subject: answered from memory, at once
-            answer = fact_value(fact).rstrip(".") + "."
+            answer = fact.text.rstrip(".") + "."
+            if len(fact.ambiguous) > 1 and fact.claim == fact.text:  # several things share the name: each of them
+                answer = "That name means more than one thing. " + answer
             yield {"type": "token", "text": answer}
             turn = Turn(turn_id=None, question=question, answer=answer, sources=sources, grounded=1.0,
                         retrieval_ms=round(recall.retrieval_ms, 1), conversation_id=conversation_id, learned=learned,
-                        verification={"status": "verified", "by": "memory", "evidence": fact.render(),
-                                      "source": fact.title})
+                        verification={"status": "verified", "by": "memory", "evidence": fact.evidence,
+                                      "source": fact.source, "ambiguous": fact.ambiguous})
             turn.turn_id = self._log(turn)
             self.last_activity = time.time()
             yield {"type": "done", "turn": turn.as_dict()}

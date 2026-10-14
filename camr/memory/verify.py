@@ -162,7 +162,7 @@ def subject_names(question: str) -> list[str]:
     from camr.memory.fetch import subjects
 
     names = [norm(s) for s in subjects(question)] + question_entities(question)
-    return [n for n in dict.fromkeys(names) if len(n) >= 3]
+    return [n for n in dict.fromkeys(names) if n]  # short names too ("W." is a film): see aboutness
 
 
 def aboutness(unit: Unit, names: list[str]) -> int:
@@ -182,7 +182,7 @@ def aboutness(unit: Unit, names: list[str]) -> int:
             best = max(best, 1 if part_of_longer else 2)
         elif title and (f" {n} " in f" {title} " or (len(title) >= 4 and f" {title} " in f" {n} ")):
             best = max(best, 1)
-        elif f" {n} " in text:
+        elif len(n) >= 3 and f" {n} " in text:  # a name of one or two letters ("W", "It") counts only as a title
             best = max(best, 1)
     return best
 
@@ -201,9 +201,10 @@ class Verdict:
     evidence: Unit | None = None
     relation: str | None = None
     confidence: float | None = None  # mean log-probability of the claim's tokens
+    others: list[str] = field(default_factory=list)  # other things in memory with the same name (ambiguity)
 
     def as_dict(self) -> dict:
-        return {"supported": self.supported, "reason": self.reason, "words": self.words,
+        return {"supported": self.supported, "reason": self.reason, "words": self.words, "others": self.others,
                 "coverage": round(self.coverage, 3), "relation": self.relation,
                 "evidence": self.evidence.render() if self.evidence else None,
                 "confidence": None if self.confidence is None else round(self.confidence, 3)}
@@ -240,6 +241,8 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
     if not units:
         return Verdict(False, "no evidence", words, relation=rel and rel[0], confidence=conf)
     names = subject_names(question)
+    if not names:  # nothing says what the question is about, so nothing can show the claim is about it
+        return Verdict(False, "no subject", words, relation=rel and rel[0], confidence=conf)
     level = {id(u): aboutness(u, names) for u in units}
     top = max(level.values())  # when memory has a note titled with the subject, only that subject's notes count
     best: tuple[float, int, Unit] | None = None
@@ -270,7 +273,8 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
         pick = next((u for u in supporting if u in has_rel), supporting[0])
     else:
         pick = supporting[0]
-    return Verdict(True, "supported", words, cov, pick, rel and rel[0], conf)
+    others = [t for t in same_name_titles(question, units) if t != pick.title]
+    return Verdict(True, "supported", words, cov, pick, rel and rel[0], conf, others)
 
 
 # ---------------------------------------------------------------------- reading a fact without a model
@@ -295,6 +299,41 @@ def read_facts(question: str, units: list[Unit]) -> Unit | None:
 
 def fact_value(unit: Unit) -> str:
     return unit.text.partition(": ")[2]
+
+
+def same_name_titles(question: str, units: list[Unit]) -> list[str]:
+    """Titles of notes in memory that carry exactly the question's name ('Emma (2020 film)', 'Emma (1996 film)'),
+    in the order recall ranked them. Two or more: the name is ambiguous."""
+    names = subject_names(question)
+    out: list[str] = []
+    for u in units:
+        if u.title and u.title not in out and aboutness(u, names) == 2:
+            out.append(u.title)
+    return out
+
+
+def facts_by_title(question: str, units: list[Unit]) -> list[Unit]:
+    """For each thing in memory with the question's name (or, failing that, about it), the fact line holding the
+    asked relation: one per title, in recall order. Empty when the question asks no known relation."""
+    rel = relation_of(question)
+    if not rel:
+        return []
+    names = subject_names(question)
+    if not names:
+        return []
+    hits = [u for u in units if u.label and label_matches(u.label, rel[1])]
+    level = {id(u): aboutness(u, names) for u in hits}
+    top = max(level.values(), default=0)
+    if top == 0:
+        return []
+    per: dict[str, Unit] = {}
+    for u in hits:
+        if level[id(u)] != top:
+            continue
+        cur = per.get(u.title)
+        if cur is None or (label_matches(u.label, rel[1][:1]) and not label_matches(cur.label, rel[1][:1])):
+            per[u.title] = u  # the relation's main label ("Directed by") over a secondary one
+    return list(per.values())
 
 
 # ---------------------------------------------------------------------- what the small model reads
@@ -334,3 +373,72 @@ def compress(question: str, units: list[Unit], embedder, tokenizer, budget: int 
 
 def is_finite(x: float | None) -> bool:
     return x is not None and math.isfinite(x)
+
+
+@dataclass
+class FactAnswer:
+    text: str            # what to say ("Ravi Chopra", or "Emma (2020 film): Autumn de Wilde; Emma (1996 film): ...")
+    claim: str           # the bare value(s)
+    evidence: str        # the fact line(s)
+    source: str          # the (first) title
+    ambiguous: list[str]  # other things in memory with the same name; empty when unambiguous
+
+
+def fact_answer(question: str, units: list[Unit], max_meanings: int = 3) -> FactAnswer | None:
+    """Answer from memory's fact lines alone: one value, qualified with what it is about when the name is shared;
+    or, when things with the same name have different values, each with its title."""
+    per = facts_by_title(question, units)
+    if not per:
+        return None
+    same = same_name_titles(question, units)
+    if len({norm(fact_value(u)) for u in per}) == 1:
+        u = per[0]
+        others = [t for t in same if t not in {x.title for x in per}]
+        return FactAnswer(fact_value(u) + (f" ({u.title})" if others else ""), fact_value(u), u.render(), u.title,
+                          others)
+    shown = per[:max_meanings]
+    text = "; ".join(f"{u.title}: {fact_value(u)}" for u in shown)
+    return FactAnswer(text, text, " | ".join(u.render() for u in shown), shown[0].title, [u.title for u in shown])
+
+
+# ---------------------------------------------------------------------- checking from the answer's side
+# What a sentence on the answer's own page says when it states the relation from that side ("Ravi Chopra ...
+# directed The Burning Train"; "Nairobi is the capital of Kenya"). Only relations whose answer is a person or a
+# place with its own article can be checked this way.
+CROSS = {
+    "director": r"\bdirect(?:ed|or|ing|s)\b",
+    "producer": r"\bproduc(?:ed|er|ing|es|tion)\b",
+    "composer": r"\bcompos(?:ed|er|ing|ition)\b|\bmusic (?:for|of|to)\b|\bscore[ds]?\b",
+    "screenwriter": r"\bwr(?:ote|itten|iter|iting)\b|\bscreenplays?\b|\bscripts?\b",
+    "author": r"\bwr(?:ote|itten|iter|iting)\b|\bauthor(?:ed)?\b|\bnovels?\b|\bbooks?\b|\bpublished\b",
+    "father": r"\bsons?\b|\bdaughters?\b|\bchild(?:ren)?\b|\bfather\b|\bheirs?\b",
+    "mother": r"\bsons?\b|\bdaughters?\b|\bchild(?:ren)?\b|\bmother\b",
+    "spouse": r"\bmarried\b|\bwife\b|\bhusband\b|\bspouse\b",
+    "capital": r"\bcapital\b|\bseat\b",
+    "founded": r"\bfound(?:ed|er|ing)\b|\bestablished\b",
+    "starring": r"\bstarr(?:ed|ing)\b|\bappeared\b|\broles?\b|\bcast\b",
+}
+
+
+def cross_check(question: str, answer: str, units: list[Unit]) -> Verdict:
+    """Is the claim confirmed from its own side? ``units`` are from the claim's article: one of its sentences or
+    facts must name the question's subject (in full) and state the asked relation."""
+    rel = relation_of(question)
+    words = claim_words(question, answer)
+    if not rel or rel[0] not in CROSS or not words or not units:
+        return Verdict(False, "not checkable from the answer's side", words, relation=rel and rel[0])
+    names = [n for n in subject_names(question) if len(n) >= 3]
+    if not names:
+        return Verdict(False, "no subject", words, relation=rel[0])
+    from camr.memory.fetch import base_title
+
+    cue = re.compile(CROSS[rel[0]], re.I)
+    for u in units:
+        title_words = set(base_title(u.title).split())
+        if not set(words) <= title_words | set(norm(u.title).split()):
+            continue  # not the claim's own article
+        text = f" {norm(u.text)} "
+        mentions = [n for n in names if f" {re.sub(r'^(?:the|a|an) ', '', n)} " in text]
+        if mentions and cue.search(u.text):
+            return Verdict(True, "confirmed from the answer's side", words, 1.0, u, rel[0])
+    return Verdict(False, "not confirmed from the answer's side", words, relation=rel[0])
