@@ -195,6 +195,9 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     t0 = time.perf_counter()
     for it in items:
         r = ans.answer(it["question"])
+        failed = [x for x in r.attempts if x.error]
+        if failed:  # an unavailable model is a failed run, never a scored non-answer
+            raise RuntimeError(f"question {it['i']}: {failed[0].by} failed: {failed[0].error}")
         first = r.attempts[0].answer if r.attempts else (r.claim if r.by == "memory" else "")
         units_text = r.context
         rows.append({"i": it["i"], "prop": it["prop"], "status": r.status, "by": r.by, "claim": r.claim[:300],
