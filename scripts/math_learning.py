@@ -603,20 +603,43 @@ def correction_note(f: Family, item: dict) -> str:
     return f"{f.rule} Example: {item['question']} Working: {item['steps']}. Answer: {item['answer']:g}."
 
 
-def ask(run, engine, item: dict, mode: str, with_memory: bool) -> dict:
+def prompt_for(engine, item: dict, mode: str, with_memory: bool) -> tuple[str, bool]:
     ctx = ""
     if with_memory:
         r = engine.recall(item["question"], touch=False)
         ctx = "" if r.abstained else r.context
     if ctx:
-        prompt = (CALC_MEM if mode == "calc" else REASON_MEM).format(context=ctx.strip(), question=item["question"])
-    else:
-        prompt = (CALC_BARE if mode == "calc" else REASON_BARE).format(question=item["question"])
-    g = run.generate(prompt)
-    pred, ok = read_answer(g.text, mode, item["question"])
+        return (CALC_MEM if mode == "calc" else REASON_MEM).format(context=ctx.strip(), question=item["question"]), True
+    return (CALC_BARE if mode == "calc" else REASON_BARE).format(question=item["question"]), False
+
+
+def scored(item: dict, text: str, mode: str, used_memory: bool) -> dict:
+    pred, ok = read_answer(text, mode, item["question"])
     return {"family": item["family"], "invented": item["invented"], "question": item["question"],
             "gold": item["answer"], "pred": pred, "correct": correct(pred, item["answer"]), "grounded": ok,
-            "used_memory": bool(ctx), "answer": g.text.strip()[-400:]}
+            "used_memory": used_memory, "answer": text.strip()[-400:]}
+
+
+def ask(run, engine, item: dict, mode: str, with_memory: bool) -> dict:
+    prompt, used = prompt_for(engine, item, mode, with_memory)
+    return scored(item, run.generate(prompt).text, mode, used)
+
+
+WORKERS = 1  # answers asked at once (a cloud model: several; a local one: one, it answers one at a time anyway)
+
+
+def ask_many(run, engine, items: list[dict], mode: str, with_memory: bool) -> list[dict]:
+    """``ask`` for independent problems (memory does not change between them): prompts are built in order, the
+    model's answers fetched ``WORKERS`` at a time; the rows are the same as asking one by one."""
+    prompts = [prompt_for(engine, it, mode, with_memory) for it in items]
+    if WORKERS <= 1:
+        texts = [run.generate(p).text for p, _ in prompts]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(WORKERS) as pool:
+            texts = [g.text for g in pool.map(lambda pu: run.generate(pu[0]), prompts)]
+    return [scored(it, t, mode, used) for it, t, (_, used) in zip(items, texts, prompts)]
 
 
 def accuracy(rows: list[dict], invented: bool | None = None) -> float:
@@ -649,7 +672,7 @@ def run_part(a) -> None:
     t0 = time.perf_counter()
 
     def evaluate(split: str, with_memory: bool = True) -> list[dict]:
-        return [ask(run, engine, it, a.mode, with_memory) for it in data[split]]
+        return ask_many(run, engine, data[split], a.mode, with_memory)
 
     # before any correction
     before = {s: evaluate(s, with_memory=False) for s in ("test", "rephrased", "derived")}
@@ -705,8 +728,8 @@ def run_part(a) -> None:
         gsm = [json.loads(line) for line in open(ROOT / "data/gsm8k/test.jsonl")][: a.control]
         items = [{"family": "gsm8k", "invented": False, "question": x["question"],
                   "answer": float(x["answer"].rsplit("####", 1)[1].replace(",", "").strip())} for x in gsm]
-        without = [ask(run, engine, it, a.mode, with_memory=False) for it in items]
-        withmem = [ask(run, engine, it, a.mode, with_memory=True) for it in items]
+        without = ask_many(run, engine, items, a.mode, with_memory=False)
+        withmem = ask_many(run, engine, items, a.mode, with_memory=True)
         out["control_gsm8k"] = {"n": len(items), "without_memory": accuracy(without), "with_memory": accuracy(withmem),
                                 "memory_used": sum(r["used_memory"] for r in withmem)}
         print(f"{tag} GSM8K control: {out['control_gsm8k']}", flush=True)
@@ -752,7 +775,7 @@ def ablate_part(a) -> None:
                        for key, it in first.items()])
         res = {}
         for s in ("test", "rephrased", "derived"):
-            rows = [ask(run, engine, it, a.mode, with_memory=True) for it in data[s]]
+            rows = ask_many(run, engine, data[s], a.mode, with_memory=True)
             res[s] = {**summary(rows), "memory_used": round(sum(r["used_memory"] for r in rows) / len(rows), 4)}
         out["variants"][name] = res
         print(f"{tag} ablation {name}: " + ", ".join(f"{s} {v['all']}" for s, v in res.items()), flush=True)
@@ -866,8 +889,10 @@ if __name__ == "__main__":
     ap.add_argument("--control", type=int, default=30, help="GSM8K problems for the interference check (0: none)")
     ap.add_argument("--offline-answers", action="store_true")
     ap.add_argument("--out", default="", help="where results and scratch stores go (default results/math)")
+    ap.add_argument("--workers", type=int, default=0, help="answers asked at once (default: 8 for a cloud model, else 1)")
     ap.add_argument("--seed", type=int, default=SEED, help=f"problem draw ({DEV_SEED}: development, {SEED}: reported)")
     a = ap.parse_args()
+    WORKERS = a.workers or (8 if a.model.startswith("kimi") else 1)
     if a.part == "problems":
         d = problems(seed=a.seed)
         for s, items in d.items():
