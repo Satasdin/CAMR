@@ -277,12 +277,12 @@ def limits(a) -> None:
 
     def run(name, lim, n=6000):
         rep = bulk_ingest(engine, read_jsonl(CORPUS, dataset="bulk:hotpot+2wiki"), governor=Governor(store_path, lim),
-                          batch_docs=256, checkpoint=ckpt, limit=n)
+                          batch_docs=256, checkpoint=ckpt, limit=n, defer_embedding=True)
         out[name] = {"limits": lim.__dict__, **rep.as_dict(), "notes_in_store": store.count()}
         print(f"{name:28s} consumed {rep.resumed_from}+{rep.documents}; stopped={rep.stopped} {rep.detail}", flush=True)
 
-    run("1 store capped at 8 MB", Limits(max_store_mb=8, reserve_disk_mb=0, reserve_ram_mb=0))
-    run("2 cap raised to 16 MB", Limits(max_store_mb=16, reserve_disk_mb=0, reserve_ram_mb=0))
+    run("1 store capped at 4 MB", Limits(max_store_mb=4, reserve_disk_mb=0, reserve_ram_mb=0))
+    run("2 cap raised to 8 MB", Limits(max_store_mb=8, reserve_disk_mb=0, reserve_ram_mb=0))
     free = probe(work).disk_free_mb
     run("3 disk reserve: free - 6 MB", Limits(reserve_disk_mb=free - 6, reserve_ram_mb=0))
     avail = probe(work).ram_available_mb
