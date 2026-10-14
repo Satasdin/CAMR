@@ -173,8 +173,45 @@ def check_governor(tmp: Path) -> tuple[bool, str]:
     return code == 0, "device limits, stop and resume: " + last
 
 
+def _math_summary(d: dict) -> dict:
+    """The deterministic part of a math_learning result: every metric and each problem's outcome (no timings)."""
+    drop = {"seconds", "answers_cached", "answers_new", "rows", "before_rows", "learning_log"}
+    out = {k: v for k, v in d.items() if k not in drop}
+    for key in ("rows", "before_rows"):
+        for split, rows in d.get(key, {}).items():
+            out[f"{key}/{split}"] = [(r["question"], r["pred"], r["correct"], r["used_memory"]) for r in rows]
+    out["learning_log"] = [(r["round"], r["family"], r["pred"], r["corrected"]) for r in d.get("learning_log", [])]
+    return out
+
+
+def check_math(tmp: Path) -> tuple[bool, str]:
+    """Replay the learning-from-corrections runs and the ablation offline: same corrections, same curve."""
+    files = sorted((ROOT / "results/math").glob("run_*.json")) + sorted((ROOT / "results/math").glob("ablate_*.json"))
+    if not files:
+        return False, "no results (run scripts/math_learning.py run)"
+    lines = []
+    for committed in files:
+        exp = json.loads(committed.read_text())
+        part = "run" if committed.stem.startswith("run_") else "ablate"
+        cmd = [PY, "scripts/math_learning.py", part, "--model", exp["model"], "--mode", exp["mode"],
+               "--offline-answers", "--out", str(tmp)]
+        if part == "run":
+            cmd += ["--curve-at", ",".join(str(c["round"]) for c in exp["curve"][1:]),
+                    "--control", str(exp.get("control_gsm8k", {}).get("n", 0))]
+        code, out = run(cmd)
+        if code != 0:
+            return False, f"{committed.name}: replay failed:\n" + out
+        got = json.loads((tmp / committed.name).read_text())
+        d = _diff(_math_summary(exp), _math_summary(got))
+        if d:
+            return False, f"{committed.name} differs:\n" + "\n".join(d[:12])
+        lines.append(f"{committed.name}: identical")
+    return True, "; ".join(lines)
+
+
 CHECKS = {"tests": check_tests, "lookup-dev": check_lookup_dev, "verified-dev": check_verified_dev,
-          "verified-test": check_verified_test, "bulk": check_bulk, "governor": check_governor}
+          "verified-test": check_verified_test, "bulk": check_bulk, "governor": check_governor,
+          "math": check_math}
 
 
 def main() -> int:

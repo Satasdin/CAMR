@@ -51,25 +51,42 @@ def load():
     return tok, model
 
 
+def chat(tok, text: str) -> str:
+    """The prompt as the model sees it in a chat (its own template, as Ollama applies it)."""
+    return tok.apply_chat_template([{"role": "user", "content": text}], tokenize=False, add_generation_prompt=True)
+
+
 @torch.no_grad()
-def generate(tok, model, prompts: list[str], max_new: int = 128, batch: int = 8) -> list[str]:
+def generate(tok, model, prompts: list[str], max_new: int = 200, batch: int = 8) -> list[str]:
     out = []
     for i in range(0, len(prompts), batch):
-        enc = tok(prompts[i:i + batch], return_tensors="pt", padding=True)
+        enc = tok([chat(tok, p) for p in prompts[i:i + batch]], return_tensors="pt", padding=True,
+                  add_special_tokens=False)
         gen = model.generate(**enc, max_new_tokens=max_new, do_sample=False, pad_token_id=tok.pad_token_id)
         for row in gen[:, enc["input_ids"].shape[1]:]:
             out.append(tok.decode(row, skip_special_tokens=True))
     return out
 
 
-def evaluate(tok, model, items: list[dict], prompt_for, max_new: int = 128) -> list[dict]:
+def evaluate(tok, model, items: list[dict], prompt_for, max_new: int = 200) -> list[dict]:
     texts = generate(tok, model, [prompt_for(it) for it in items], max_new=max_new)
     rows = []
     for it, t in zip(items, texts):
         pred = ml.final_value(t, "calc")
-        rows.append({"family": it["family"], "invented": it["invented"], "gold": it["answer"], "pred": pred,
-                     "correct": ml.correct(pred, it["answer"]), "answer": t.strip()[-300:]})
+        rows.append({"family": it["family"], "invented": it["invented"], "question": it["question"],
+                     "gold": it["answer"], "pred": pred, "correct": ml.correct(pred, it["answer"]),
+                     "answer": t.strip()[-300:]})
     return rows
+
+
+def memorisation(rows: list[dict], fit: list[dict]) -> dict:
+    """Wrong answers to new problems that repeat a training answer of the same family: the sign of copying."""
+    stored = {}
+    for it in fit:
+        stored.setdefault(it["family"], set()).add(round(it["answer"], 2))
+    wrong = [r for r in rows if not r["correct"] and r["pred"] is not None and r["family"] in stored]
+    return {"wrong_answers": len(wrong),
+            "equal_to_a_training_answer": sum(round(r["pred"], 2) in stored[r["family"]] for r in wrong)}
 
 
 def target(it: dict, fams) -> str:
@@ -88,9 +105,8 @@ def train_lora(tok, base, fit: list[dict], fams, *, epochs: int, lr: float, rank
     rng = random.Random(seed)
     examples = []
     for it in fit:
-        prompt = ml.CALC_BARE.format(question=it["question"])
-        p_ids = tok(prompt)["input_ids"]
-        t_ids = tok(target(it, fams) + tok.eos_token)["input_ids"]
+        p_ids = tok(chat(tok, ml.CALC_BARE.format(question=it["question"])), add_special_tokens=False)["input_ids"]
+        t_ids = tok(target(it, fams) + "<|im_end|>", add_special_tokens=False)["input_ids"]
         examples.append((p_ids + t_ids, [-100] * len(p_ids) + t_ids))
     for epoch in range(1, epochs + 1):
         model.train()
@@ -137,13 +153,17 @@ def run(a) -> None:
     bare = lambda it: ml.CALC_BARE.format(question=it["question"])  # noqa: E731
 
     def full(name, prompt_for, m):
-        res = {s: summary(evaluate(tok, m, items, prompt_for)) for s, items in
-               (("train", fit), ("test", data["test"]), ("rephrased", data["rephrased"]),
-                ("derived", data["derived"]), ("gsm8k", gsm_items))}
+        rows = {s: evaluate(tok, m, items, prompt_for) for s, items in
+                (("train", fit), ("test", data["test"]), ("rephrased", data["rephrased"]),
+                 ("derived", data["derived"]), ("gsm8k", gsm_items))}
+        res = {s: summary(r) for s, r in rows.items()}
         res["gap"] = round(res["train"]["all"] - res["test"]["all"], 4)
+        res["memorisation"] = memorisation(rows["test"] + rows["rephrased"], fit)
+        out.setdefault("rows", {})[name] = {s: [(r["question"], r["pred"], r["correct"], r["answer"][-160:])
+                                                for r in rs] for s, rs in rows.items() if s != "gsm8k"}
         out["conditions"][name] = res
         ml.save(OUT / "lora_vs_memory.json", out)
-        print(name, json.dumps({k: v["all"] if isinstance(v, dict) else v for k, v in res.items()}), flush=True)
+        print(name, json.dumps({k: v.get("all", v) if isinstance(v, dict) else v for k, v in res.items()}), flush=True)
 
     full("base", bare, model)
     # memory: the corrections of the training problems, recalled by the engine for each problem

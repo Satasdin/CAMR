@@ -33,7 +33,6 @@ import math
 import operator
 import random
 import re
-import shutil
 import sys
 import time
 from dataclasses import dataclass
@@ -459,8 +458,8 @@ def runner(model: str, offline: bool):
     el = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(el)
     r = el.runner_for(model)
-    if hasattr(r, "cfg") and hasattr(r.cfg, "max_tokens"):
-        r.cfg.max_tokens = 256  # room for brief working
+    if hasattr(r, "cfg") and hasattr(r.cfg, "max_tokens") and not model.startswith(("kimi", "gpt-oss")):
+        r.cfg.max_tokens = 256  # room for brief working (reasoning models keep their own budget)
     return CachedRunner(r, OUT / "answers.sqlite", offline=offline)
 
 
@@ -500,7 +499,8 @@ def run_part(a) -> None:
     data = problems()
     fams = {f.key: f for f in FAMILIES}
     tag = f"{a.model.replace(':', '_')}_{a.mode}"
-    store_path = OUT / "stores" / f"{tag}.sqlite"
+    out_dir = Path(a.out) if a.out else OUT
+    store_path = out_dir / "stores" / f"{tag}.sqlite"
     store_path.parent.mkdir(parents=True, exist_ok=True)
     for f in store_path.parent.glob(store_path.name + "*"):
         f.unlink()
@@ -513,7 +513,8 @@ def run_part(a) -> None:
         return [ask(run, engine, it, a.mode, with_memory) for it in data[split]]
 
     # before any correction
-    out["before"] = {s: summary(evaluate(s, with_memory=False)) for s in ("test", "rephrased", "derived")}
+    before = {s: evaluate(s, with_memory=False) for s in ("test", "rephrased", "derived")}
+    out["before"] = {s: summary(rows) for s, rows in before.items()}
     print(f"{tag} before: {out['before']}", flush=True)
     # learning: a round asks each family one training problem; a wrong answer is corrected once
     by_family = {}
@@ -553,14 +554,13 @@ def run_part(a) -> None:
                                                                    for r in wrong)}
     out["per_family"] = {
         f.key: {"invented": f.invented,
-                "before_test": accuracy([r for r in out_rows(out, "before_rows") if r["family"] == f.key]) if False
-                else None,
-                "after_test": accuracy([r for r in final["test"] if r["family"] == f.key]),
-                "after_rephrased": accuracy([r for r in final["rephrased"] if r["family"] == f.key]),
-                "after_derived": accuracy([r for r in final["derived"] if r["family"] == f.key]),
+                **{f"{when}_{s}": accuracy([r for r in rows[s] if r["family"] == f.key])
+                   for when, rows in (("before", before), ("after", final)) for s in ("test", "rephrased", "derived")},
+                "after_train": accuracy([r for r in final["train"] if r["family"] == f.key]),
                 "corrections": sum(1 for x in log if x["family"] == f.key and x["corrected"])}
         for f in FAMILIES}
     out["rows"] = final
+    out["before_rows"] = before
     # interference: unrelated problems (GSM8K) with the corrections in memory and without
     if a.control:
         gsm = [json.loads(line) for line in open(ROOT / "data/gsm8k/test.jsonl")][: a.control]
@@ -573,16 +573,54 @@ def run_part(a) -> None:
         print(f"{tag} GSM8K control: {out['control_gsm8k']}", flush=True)
     out["seconds"] = round(time.perf_counter() - t0, 1)
     out["answers_cached"], out["answers_new"] = run.hits, run.misses
-    save(OUT / f"run_{tag}.json", out)
+    save(out_dir / f"run_{tag}.json", out)
     print(f"{tag} after: {out['after']} | gap {out['generalisation_gap']} | memorisation {out['memorisation']} | "
           f"{out['seconds']}s", flush=True)
     store.close()
-    shutil.rmtree(store_path.parent, ignore_errors=True)
+    for f in store_path.parent.glob(store_path.name + "*"):
+        f.unlink()
 
 
-def out_rows(out, key):
-    return out.get(key, [])
+def ablate_part(a) -> None:
+    """Which part of a correction carries the learning? One correction per family (its first training problem),
+    stored three ways: the rule and the worked problem (what learning stores), the rule alone, the worked problem
+    alone. If the rule alone transfers to new and derived problems, the model is applying the formula, not
+    copying the example."""
+    from camr.memory.note import Document
 
+    data = problems()
+    fams = {f.key: f for f in FAMILIES}
+    first = {}
+    for it in data["train"]:
+        first.setdefault(it["family"], it)
+    variants = {
+        "rule + worked example": correction_note,
+        "rule only": lambda f, it: f.rule,
+        "worked example only": lambda f, it: (f"Example: {it['question']} Working: {it['steps']}. "
+                                              f"Answer: {it['answer']:g}."),
+    }
+    tag = f"{a.model.replace(':', '_')}_{a.mode}"
+    out_dir = Path(a.out) if a.out else OUT
+    run = runner(a.model, a.offline_answers)
+    out = {"model": a.model, "mode": a.mode, "corrections_per_family": 1, "variants": {}}
+    for i, (name, note) in enumerate(variants.items()):
+        store_path = out_dir / "stores" / f"ablate_{tag}_{i}.sqlite"
+        store_path.parent.mkdir(parents=True, exist_ok=True)
+        for f in store_path.parent.glob(store_path.name + "*"):
+            f.unlink()
+        engine, store = engine_at(store_path)
+        engine.ingest([Document("correction", f"{key}-1", note(fams[key], it), f"Correction: {key}")
+                       for key, it in first.items()])
+        res = {}
+        for s in ("test", "rephrased", "derived"):
+            rows = [ask(run, engine, it, a.mode, with_memory=True) for it in data[s]]
+            res[s] = {**summary(rows), "memory_used": round(sum(r["used_memory"] for r in rows) / len(rows), 4)}
+        out["variants"][name] = res
+        print(f"{tag} ablation {name}: " + ", ".join(f"{s} {v['all']}" for s, v in res.items()), flush=True)
+        store.close()
+        for f in store_path.parent.glob(store_path.name + "*"):
+            f.unlink()
+    save(out_dir / f"ablate_{tag}.json", out)
 
 def save(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -592,29 +630,64 @@ def save(path: Path, data) -> None:
 
 
 def report(a) -> None:
+    def pct(x):
+        return f"{100 * x:5.1f}%"
+
     for f in sorted(OUT.glob("run_*.json")):
         d = json.loads(f.read_text())
-        print(f"\n{d['model']} ({d['mode']}): {d['corrections']} corrections")
-        print("  before:", d["before"])
+        print(f"\n## {d['model']} ({d['mode']} mode): {d['corrections']} corrections in {len(d['curve']) and d['curve'][-1]['round']} rounds")
+        print("held-out accuracy by corrections so far (all / known formulas / invented formulas):")
         for c in d["curve"]:
-            print(f"  round {c['round']} ({c['corrections']} corrections): held-out {c['test']}")
-        print("  after:", d["after"], "gap", d["generalisation_gap"], "memorisation", d["memorisation"])
+            t = c["test"]
+            print(f"  round {c['round']} ({c['corrections']:2d} corrections): {pct(t['all'])} / {pct(t['known'])} / "
+                  f"{pct(t['invented'])}")
+        print("before -> after (all / invented):")
+        for s in ("test", "rephrased", "derived"):
+            b, x = d["before"][s], d["after"][s]
+            print(f"  {s:10s} {pct(b['all'])} -> {pct(x['all'])}   invented {pct(b['invented'])} -> {pct(x['invented'])}")
+        print(f"  train      seen problems after learning: {pct(d['after']['train']['all'])}; "
+              f"generalisation gap (seen - unseen) {100 * d['generalisation_gap']:+.1f} points")
+        m = d["memorisation"]
+        print(f"  memorisation: {m['equal_to_a_stored_training_answer']} of {m['wrong_answers']} wrong answers repeat a "
+              f"stored training answer")
         if "control_gsm8k" in d:
-            print("  GSM8K:", d["control_gsm8k"])
-
+            g = d["control_gsm8k"]
+            print(f"  GSM8K (unrelated): {pct(g['without_memory'])} without memory, {pct(g['with_memory'])} with "
+                  f"({g['memory_used']}/{g['n']} used a note)")
+        print("  per family (before -> after on held-out, derived after, corrections):")
+        for k, v in d["per_family"].items():
+            print(f"    {k:18s}{'*' if v['invented'] else ' '} {pct(v.get('before_test', 0))} -> {pct(v['after_test'])}  "
+                  f"rephrased {pct(v['after_rephrased'])}  derived {pct(v['after_derived'])}  ({v['corrections']})")
+    for f in sorted(OUT.glob("ablate_*.json")):
+        d = json.loads(f.read_text())
+        print(f"\n## ablation, {d['model']} ({d['mode']}): one correction per family, stored as")
+        for name, v in d["variants"].items():
+            print(f"  {name:22s} " + "  ".join(f"{s} {pct(x['all'])} (invented {pct(x['invented'])})"
+                                                for s, x in v.items()))
+    lv = OUT / "lora_vs_memory.json"
+    if lv.exists():
+        d = json.loads(lv.read_text())
+        print(f"\n## fine-tuning vs memory ({d['base_model']}, {d['fit']} training problems)")
+        for c in d.get("lora_curve", []):
+            print(f"  LoRA epoch {c['epoch']}: loss {c['loss']:.3f}  train {pct(c['train'])}  val {pct(c['val'])}  "
+                  f"held-out {pct(c['test'])}")
+        for name, v in d["conditions"].items():
+            print(f"  {name:38s} " + "  ".join(f"{s} {pct(x['all'])}" for s, x in v.items() if isinstance(x, dict) and "all" in x)
+                  + f"  gap {100 * v['gap']:+.1f}")
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["problems", "run", "report"])
+    ap.add_argument("part", choices=["problems", "run", "ablate", "report"])
     ap.add_argument("--model", default="qwen2.5:0.5b")
     ap.add_argument("--mode", default="calc", choices=["calc", "reason"])
-    ap.add_argument("--curve-at", type=lambda s: [int(x) for x in s.split(",")], default=[2, 6])
+    ap.add_argument("--curve-at", type=lambda s: [int(x) for x in s.split(",")], default=[1, 2, 4, 6])
     ap.add_argument("--control", type=int, default=30, help="GSM8K problems for the interference check (0: none)")
     ap.add_argument("--offline-answers", action="store_true")
+    ap.add_argument("--out", default="", help="where results and scratch stores go (default results/math)")
     a = ap.parse_args()
     if a.part == "problems":
         d = problems()
         for s, items in d.items():
             print(s, len(items), "e.g.", items[0]["question"], "->", items[0]["answer"])
         sys.exit(0)
-    {"run": run_part, "report": report}[a.part](a)
+    {"run": run_part, "ablate": ablate_part, "report": report}[a.part](a)
