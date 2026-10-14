@@ -2,9 +2,10 @@
 
 A cheap, model-free heuristic: maximal runs of capitalised words (allowing short
 lower-case connectors inside a name, e.g. "The Lord of the Rings", "Leonardo da
-Vinci") and quoted strings. The question's first word is dropped when it is an
-interrogative or auxiliary ("What", "Who", "Is", ...), since it is capitalised only
-because it starts the sentence.
+Vinci") and quoted strings. A sentence's first word is dropped when it is an
+interrogative, auxiliary or instruction ("What", "Who", "Is", "Find", "Give", ...), since
+it is capitalised only because it starts the sentence; every sentence of a question
+counts ("A sequence begins 6, 11, 16. Add up its first 11 terms.").
 """
 
 from __future__ import annotations
@@ -18,6 +19,10 @@ _CONNECTORS = {"of", "the", "de", "da", "di", "del", "la", "le", "von", "van", "
 _LEADING = {"what", "who", "whom", "whose", "which", "when", "where", "why", "how", "is", "are", "was", "were", "do",
             "does", "did", "can", "could", "would", "should", "will", "in", "on", "at", "for", "name", "tell", "the", "a",
             "an", "my", "i"}
+# instructions and openers that start a sentence of a task ("Find its area.", "Give the amount to the cent.")
+_LEADING |= {"find", "give", "compute", "calculate", "work", "add", "convert", "use", "using", "solve", "determine",
+             "express", "write", "list", "show", "round", "starting", "suppose", "if", "after", "each", "every",
+             "one", "there", "please", "let", "assume", "given", "estimate", "say", "explain"}
 _TOKEN = re.compile(r"[\w'’.&-]+", re.UNICODE)
 _POSSESSIVE = re.compile(r"['’]s?$")
 _ARTICLE = re.compile(r"^(?:the|a|an) ")
@@ -36,13 +41,16 @@ def question_entities(question: str) -> list[str]:
     """Normalised entity strings named in the question (possibly empty)."""
     out = [norm(m.group(1)) for m in _QUOTED.finditer(question)]
     toks = [_POSSESSIVE.sub("", t) for t in _TOKEN.findall(question)]
+    starts = {0} | {k + 1 for k, t in enumerate(toks) if t[-1:] in ".?!:"}
     i = 0
     while i < len(toks):
         t = toks[i]
-        if t[:1].isupper() and not (i == 0 and t.lower() in _LEADING):
+        if t[:1].isupper() and not (i in starts and t.lower().rstrip(".") in _LEADING):
             j, run = i, [t]
             while j + 1 < len(toks):
                 nxt = toks[j + 1]
+                if j + 1 in starts and nxt.lower().rstrip(".") in _LEADING:  # the sentence ended ("122.5 J. How")
+                    break
                 if nxt[:1].isupper() or nxt[:1].isdigit():
                     run.append(nxt)
                     j += 1

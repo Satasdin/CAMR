@@ -345,3 +345,17 @@ def test_per_title_keeps_only_the_best_notes_of_a_repeated_source(engine):
     assert one.context.count("Correction: zorbit") == 1
     best = next(c for c in every.candidates if c.admitted and "zorbit" in c.note.text)
     assert best.note.text in one.context  # the best-ranked copy is the one kept
+
+
+def test_sentence_initial_instructions_are_not_names():
+    from camr.memory.entities import question_entities
+
+    # every sentence of a task starts with a capital; "Give", "Add", "Find", "Convert" are not names
+    assert question_entities("What does $2000 grow to in 7 years at 5%? Give the amount to the cent.") == []
+    assert question_entities("A sequence begins 6, 11, 16. Add up its first 11 terms.") == []
+    assert question_entities("Convert 11 glims into poms.") == []
+    assert question_entities("It has a kinetic energy of 122.5 J. How fast is it moving?") == []
+    # names still count, anywhere, and initials still join a name
+    assert question_entities("A crop's width index is 11. Find its Vantor score.") == ["vantor"]
+    assert question_entities("Find the author of The Hobbit.") == ["hobbit"]
+    assert question_entities("Who wrote J. K. Rowling's first book?") == ["j k rowling"]
