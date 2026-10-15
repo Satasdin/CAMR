@@ -24,10 +24,10 @@ RUN_DBS = [("results/pilot/camr.sqlite", "F9 pilot: Kimi K2.6/K3 alone and with 
            ("results/learn/camr.sqlite", "F19/F22: Kimi K3 baselines in the learning experiments")]
 # answer caches (one row per distinct request)
 CACHES = [("results/verified/answers.sqlite", "F24: Kimi K3 second reader and closed-book baselines (dev, test, held-out)"),
-          ("results/verified/judge.sqlite", "F24: Kimi K3 as judge of every answer exact matching marked wrong"),
+          ("results/verified/judge.sqlite", "F24/F28: Kimi K3 as judge of every answer exact matching marked wrong (verified answers and RAG pipelines)"),
           ("results/math/answers.sqlite", "F27: Kimi K3 learning formulas from corrections (incl. two stopped runs)"),
           ("results/ragbench/answers.sqlite", "F28: Kimi K3 as the reader of the RAG pipelines and CAMR"),
-          ("results/agentic/answers.sqlite", "F29: Kimi K3 in the n8n support desk and the agent tasks")]
+          ("results/agentic/answers.sqlite", "F29: Kimi K3 in the n8n automations: support desk, agent tasks, current events (incl. writing the 50 news questions)")]
 
 
 def usd(model: str, pin: int, pout: int) -> float:

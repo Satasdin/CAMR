@@ -312,7 +312,7 @@ def fig_costs(out: Path) -> Path | None:
     for r in d["rows"]:
         key = r["what"].split(":")[0]
         label = {"F9 pilot": "Pilot (F9)", "F13": "HotpotQA n=200 (F13)", "F19/F22": "Learning (F19, F22)",
-                 "F24": "Verified answers + judge (F24)", "F27": "Learning formulas (F27)",
+                 "F24": "Verified answers: second reader, baselines (F24)", "F24/F28": "Judge of answers (F24, F28)", "F27": "Learning formulas (F27)",
                  "F28": "RAG pipelines (F28)", "F29": "Automations and agents (F29)"}.get(key, key)
         agg[label] = agg.get(label, 0.0) + r["usd"]
     items = sorted(agg.items(), key=lambda x: x[1])
