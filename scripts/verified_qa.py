@@ -230,7 +230,9 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     from camr.memory.fetch import WebLookup, embedding_rank
     from camr.models.prompt import QA_MEMORY
 
-    v = VARIANTS[name]
+    v = dict(VARIANTS[name])
+    if getattr(a, "reader", ""):  # the same pipeline with another first reader (which model suits the engine)
+        v["readers"] = [a.reader] + v["readers"][1:]
     store_path = RES / "stores" / f"{a.set}_{name.replace('+', '_')}.sqlite"
     store_path.parent.mkdir(parents=True, exist_ok=True)
     for f in store_path.parent.glob(store_path.name + "*"):
@@ -274,6 +276,7 @@ def run_variant(a, name: str, items: list[dict]) -> dict:
     out = {"variant": name, "settings": v, "n": n, "budget": a.budget, "min_coverage": a.min_coverage,
            "typed": a.typed, "relation_cue": a.relation_cue, "by_name": getattr(a, "by_name", False),
            "hybrid": getattr(a, "hybrid", False), "subject_aware": getattr(a, "subject_aware", False),
+           "reader": getattr(a, "reader", "") or "",
            "verified": {"answered": len(ver) / n, "correct": sum(x["correct"] for x in ver) / n,
                         "wrong": sum(not x["correct"] for x in ver) / n,
                         # wrong about a thing it named unambiguously: the hallucination rate
@@ -453,6 +456,7 @@ if __name__ == "__main__":
     ap.add_argument("--relation-cue", action="store_true", help="a sentence must state the asked relation")
     ap.add_argument("--by-name", action="store_true", help="also read what memory holds under the question's names")
     ap.add_argument("--hybrid", action="store_true", help="hybrid recall: keyword hits join the vector hits")
+    ap.add_argument("--reader", default="", help="answer: replace the first reader (default: the variant's)")
     ap.add_argument("--subject-aware", action="store_true", help="look up when nothing recalled is about the subject")
     ap.add_argument("--out", default=None, help="write results and stores here (caches are still read from "
                                                 "results/verified)")

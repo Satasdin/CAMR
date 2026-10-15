@@ -81,6 +81,14 @@ def test_ollama_runner_parses_response():
     assert (g.text, g.prompt_tokens, g.generated_tokens) == ("Paris", 12, 2)
 
 
+def test_ollama_repeat_limit_abort_is_an_empty_answer_not_a_runtime_failure():
+    class Sess:
+        def post(self, url, json, timeout):
+            return SimpleNamespace(status_code=500, text='{"error":"prediction aborted, token repeat limit reached"}')
+    g = OllamaRunner(LocalModelConfig(), session=Sess()).generate("q")
+    assert g.text == "" and g.meta["error"] == "token repeat limit reached"
+
+
 # ------------------------------------------------------------------ TC-08
 class _Err(Exception):
     def __init__(self, retryable):

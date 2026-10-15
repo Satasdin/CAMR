@@ -127,6 +127,12 @@ class OllamaRunner(ModelRunner):
             resp = self._http.post(
                 f"{self.cfg.host}/api/generate", json=self.payload(prompt), timeout=self.cfg.timeout_s
             )
+            if getattr(resp, "status_code", 200) == 500 and "repeat limit" in (getattr(resp, "text", "") or ""):
+                # Ollama stops a generation that keeps repeating one token: the model failed to answer this
+                # prompt (deterministically), the runtime did not; an empty answer, not a crashed run.
+                return Generation(text="", prompt_tokens=None, generated_tokens=None,
+                                  latency_ms=(time.perf_counter() - t0) * 1000, model=self.cfg.name,
+                                  model_version=self.model_version, meta={"error": "token repeat limit reached"})
             resp.raise_for_status()
             body = resp.json()
         except requests.RequestException as exc:  # IR-07: runtime unavailable

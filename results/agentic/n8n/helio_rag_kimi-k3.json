@@ -1,0 +1,479 @@
+{
+ "id": "a5edf529d7e1f638",
+ "name": "Helio support desk (rag:kimi-k3)",
+ "nodes": [
+  {
+   "id": "00000001-0000-4000-8000-000000000000",
+   "name": "Start",
+   "type": "n8n-nodes-base.manualTrigger",
+   "typeVersion": 1,
+   "position": [
+    0,
+    300
+   ],
+   "parameters": {}
+  },
+  {
+   "id": "e9fb5c18-0000-4000-8000-000000000000",
+   "name": "Reset system",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    220,
+    300
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/reset",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({system: \"rag:kimi-k3\"}) }}"
+   }
+  },
+  {
+   "id": "1db7890d-0000-4000-8000-000000000000",
+   "name": "Get events",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    440,
+    300
+   ],
+   "parameters": {
+    "method": "GET",
+    "url": "http://127.0.0.1:8765/events",
+    "options": {
+     "timeout": 900000
+    }
+   }
+  },
+  {
+   "id": "00000002-0000-4000-8000-000000000000",
+   "name": "Loop over events",
+   "type": "n8n-nodes-base.splitInBatches",
+   "typeVersion": 3,
+   "position": [
+    660,
+    300
+   ],
+   "parameters": {
+    "batchSize": 1,
+    "options": {}
+   }
+  },
+  {
+   "id": "90f72655-0000-4000-8000-000000000000",
+   "name": "Policy change?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    880,
+    300
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "da92f225-1111-4000-8000-000000000000",
+       "leftValue": "={{ $json.type }}",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       },
+       "rightValue": "update"
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "5caea745-0000-4000-8000-000000000000",
+   "name": "Withdraw old policy",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1100,
+    120
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/forget",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({system: \"rag:kimi-k3\", doc_id: $json.replaces}) }}"
+   }
+  },
+  {
+   "id": "e92c0a47-0000-4000-8000-000000000000",
+   "name": "Publish new policy",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1320,
+    120
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/teach",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({system: \"rag:kimi-k3\", doc_id: $('Loop over events').item.json.doc_id, title: $('Loop over events').item.json.title, text: $('Loop over events').item.json.text}) }}"
+   }
+  },
+  {
+   "id": "11c31246-0000-4000-8000-000000000000",
+   "name": "Answer ticket",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1100,
+    420
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/ask",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({system: \"rag:kimi-k3\", ticket: $json.id, question: $json.question}) }}"
+   }
+  },
+  {
+   "id": "ec232238-0000-4000-8000-000000000000",
+   "name": "Verified?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    1320,
+    420
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "5f5ca734-1111-4000-8000-000000000000",
+       "leftValue": "={{ $json.stated }}",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "7f7e603a-0000-4000-8000-000000000000",
+   "name": "Send reply",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1540,
+    320
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/log",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({system: \"rag:kimi-k3\", ticket: $('Loop over events').item.json.id, action: 'reply'}) }}"
+   }
+  },
+  {
+   "id": "fdca4804-0000-4000-8000-000000000000",
+   "name": "Escalate to agent",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1540,
+    540
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/log",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({system: \"rag:kimi-k3\", ticket: $('Loop over events').item.json.id, action: 'escalate'}) }}"
+   }
+  },
+  {
+   "id": "7f6d95ac-0000-4000-8000-000000000000",
+   "name": "Agent resolved?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    1760,
+    540
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "baecb552-1111-4000-8000-000000000000",
+       "leftValue": "={{ $('Loop over events').item.json.resolution ? 'yes' : 'no' }}",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       },
+       "rightValue": "yes"
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "73c1c209-0000-4000-8000-000000000000",
+   "name": "Teach resolution",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1980,
+    480
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/teach",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({system: \"rag:kimi-k3\", doc_id: $('Loop over events').item.json.resolution.doc_id, title: $('Loop over events').item.json.resolution.title, text: $('Loop over events').item.json.resolution.text}) }}"
+   }
+  },
+  {
+   "id": "366eb9a8-0000-4000-8000-000000000000",
+   "name": "Score run",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    880,
+    60
+   ],
+   "parameters": {
+    "method": "GET",
+    "url": "http://127.0.0.1:8765/score?system=rag%3Akimi-k3",
+    "options": {
+     "timeout": 900000
+    }
+   }
+  }
+ ],
+ "connections": {
+  "Start": {
+   "main": [
+    [
+     {
+      "node": "Reset system",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Reset system": {
+   "main": [
+    [
+     {
+      "node": "Get events",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Get events": {
+   "main": [
+    [
+     {
+      "node": "Loop over events",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Loop over events": {
+   "main": [
+    [
+     {
+      "node": "Score run",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Policy change?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Policy change?": {
+   "main": [
+    [
+     {
+      "node": "Withdraw old policy",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Answer ticket",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Withdraw old policy": {
+   "main": [
+    [
+     {
+      "node": "Publish new policy",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Publish new policy": {
+   "main": [
+    [
+     {
+      "node": "Loop over events",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Answer ticket": {
+   "main": [
+    [
+     {
+      "node": "Verified?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Verified?": {
+   "main": [
+    [
+     {
+      "node": "Send reply",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Escalate to agent",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Send reply": {
+   "main": [
+    [
+     {
+      "node": "Loop over events",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Escalate to agent": {
+   "main": [
+    [
+     {
+      "node": "Agent resolved?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Agent resolved?": {
+   "main": [
+    [
+     {
+      "node": "Teach resolution",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Loop over events",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Teach resolution": {
+   "main": [
+    [
+     {
+      "node": "Loop over events",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1"
+ },
+ "active": false,
+ "pinData": {}
+}
