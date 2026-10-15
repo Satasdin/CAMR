@@ -1544,7 +1544,55 @@ def MODELS_TEXT(sp: dict) -> str:  # noqa: N802
 
 
 def RAG_TEXT(runs: dict) -> str:  # noqa: N802
-    return ""
+    def s(pipe, tag):
+        d = runs.get((pipe, tag))
+        return rag_summary(d) if d else None
+    out = []
+    for tag, name in (("kimi-k3", "Kimi K3"), ("qwen2_5_0_5b", "the 0.5B model"), ("llama3_2_3b", "the 3B model")):
+        rag = {p: s(p, tag) for p in PIPE_ORDER if p != "camr" and s(p, tag)}
+        cm = s("camr", tag)
+        if not rag:
+            continue
+        best = max(rag, key=lambda p: rag[p]["correct_exact"])
+        b = rag[best]
+        text = (f"**With {name} as the reader**, the most accurate RAG pipeline was {PIPE_NAMES[best].lower()} "
+                f"({p1(b['correct_exact'])} correct), but it also stated a wrong answer to {p1(b['wrong_exact'])} of "
+                "questions")
+        if cm:
+            text += (f"; CAMR was correct on {p1(cm['correct_exact'])}, stated a wrong answer to "
+                     f"{p1(cm['wrong_exact'])}, gave an answer about a named other meaning for "
+                     f"{p1(cm['other_meaning'])}, and declined {p1(cm['declined'])}, with "
+                     f"{cm['calls']:.2f} model calls and {cm['prompt_tokens']:.0f} prompt tokens per question against "
+                     f"{b['calls']:.2f} and {b['prompt_tokens']:.0f}")
+        out.append(text + ".")
+    ck, rr = s("check", "kimi-k3"), s("rerank", "kimi-k3")
+    if ck and rr:
+        d = runs[("check", "kimi-k3")]
+        jd = d.get("judged", {})
+        dec = [r for r in d["per_question"] if not r["stated"]]
+        dec_ok = sum(bool(jd.get(str(r["i"]), r["exact"])) for r in dec)
+        out.append(f"**CAMR's check bolted onto RAG** cut Kimi K3's wrong answers from {p1(rr['wrong_exact'])} to "
+                   f"{p1(ck['wrong_exact'])} but declined {p1(ck['declined'])}, and {dec_ok} of those {len(dec)} "
+                   "declined answers were correct: under the "
+                   "standard RAG prompt the model answers in full sentences (*… is al-Ghazali, a Muslim polymath and "
+                   "student of the Asharite school …*), and the check requires every word of the claim in one stored "
+                   "sentence. The check is built for the short answers CAMR's own prompt asks for; it is not a filter "
+                   "for any answer.")
+    out.append("**What the comparison means.** Modern RAG answers more questions, and with a strong reader it answers "
+               "more of them correctly. It does so by stating whatever its reader concludes, so roughly one answer in "
+               "five from the cloud model, and one in two from a small model, is wrong but presented as fact. CAMR "
+               "answers fewer questions and states very few wrong ones, because it reads labelled facts directly and "
+               "states nothing a stored sentence does not support; its remaining errors are answers about another "
+               "meaning that it names, which a reader can see. Where a wrong answer costs more than an unanswered "
+               "one (a customer reply, an invoice, an agent's action), that trade is the point; where coverage "
+               "matters most, a reranked RAG pipeline is the better choice. Part of CAMR's lower coverage is "
+               "retrieval, not caution: the answer was in what the reader received for "
+               f"{p1(rr['gold_in_context']) if rr else '–'} of questions with reranked RAG and "
+               f"{p1(s('camr', 'kimi-k3')['gold_in_context']) if s('camr', 'kimi-k3') else '–'} with CAMR, the same "
+               "as plain dense retrieval; CAMR has no reranker, and adding one is an obvious next step. Corrective "
+               "RAG's web fallback added nothing on this corpus, because the corpus already held the pages the "
+               "lookups would fetch.")
+    return " ".join(out)
 
 
 def DESK_TEXT(desk) -> str:  # noqa: N802
