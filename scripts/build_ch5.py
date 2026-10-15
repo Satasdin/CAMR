@@ -1615,11 +1615,78 @@ def AGENT_TEXT(agents) -> str:  # noqa: N802
 
 
 def FRESH_TEXT(fresh) -> str:  # noqa: N802
-    return ""
+    s = {t: d["summary"] for t, _, d in fresh}
+    if "llm_kimi-k3" not in s or "camr_kimi-k3" not in s:
+        return ""
+    lm, cm = s["llm_kimi-k3"], s["camr_kimi-k3"]
+    text = (f"**What the news shows.** Asked about events after its training data, Kimi K3 alone was right on "
+            f"{p1(lm['correct'])} of questions and stated a wrong answer to {p1(lm['wrong_stated'])}: *four* "
+            "journalists arrested where the item says six, *Tropical Storm Fred* where it says Fay, *at least 54* "
+            "killed in an airstrike where it says seven. With the workflow teaching each day's page as it arrives, "
+            f"the same model with CAMR was right on {p1(cm['correct'])} and stated nothing wrong "
+            f"({p1(cm['wrong_stated'])}); it declined {p1(cm['declined'])}, two questions whose answers it had read "
+            "but could not confirm.")
+    if "rag_kimi-k3" in s and "stuff_kimi-k3" in s:
+        rg, st = s["rag_kimi-k3"], s["stuff_kimi-k3"]
+        text += (f" Modern RAG over the same items reached {p1(rg['correct'])} with {p1(rg['wrong_stated'])} wrong; "
+                 f"pasting all 30 days into every prompt reached {p1(st['correct'])}, the best accuracy, at "
+                 f"{usd(st['cost_usd_per_1000_questions'])} per 1,000 questions against "
+                 f"{usd(rg['cost_usd_per_1000_questions'])} for RAG and {usd(cm['cost_usd_per_1000_questions'])} for "
+                 f"CAMR: {st['prompt_tokens'] / max(1, st['questions']):,.0f} prompt tokens per question, because "
+                 "every question carries 556 news items. On a stream that grows every day, stuffing's cost grows with "
+                 "it; a memory's does not.")
+    loc = [(n, s[t]) for t, n in (("llm_llama3_2_3b", "Llama 3B alone"), ("rag_llama3_2_3b", "Llama 3B + RAG"),
+                                  ("camr_llama3_2_3b", "Llama 3B + CAMR")) if t in s]
+    if loc:
+        text += " On the device: " + "; ".join(f"{n} {p1(x['correct'])} correct, {p1(x['wrong_stated'])} wrong"
+                                              for n, x in loc) + "."
+    pages = [d["summary"].get("pages_live") for _, _, d in fresh if d["summary"].get("pages_live") is not None]
+    if pages:
+        live = "all 30 pages were" if min(pages) >= 30 else f"at least {min(pages)} of the 30 pages were"
+        text += (f" In the reported runs {live} fetched live by n8n. n8n marked these executions as failed because an "
+                 "HTTP connection was reset, although every question had been answered and scored (50 of 50); the "
+                 "reset was not traced further.")
+    return text
 
 
 def COST_TEXT(d) -> str:  # noqa: N802
-    return ""
+    if not d:
+        return ""
+    desk = {t: x["summary"] for t, _, x in loaded("helio", DESK_SYSTEMS)}
+    fresh = {t: x["summary"] for t, _, x in loaded("fresh", FRESH_SYSTEMS)}
+    agents = {t: x["summary"] for t, _, x in loaded("agent", AGENT_CONFIGS)}
+    runs = rag_runs()
+    rows = []
+    def per(s, key):
+        return s.get(key) if s else None
+    for name, k in (("Kimi K3 alone", "llm_kimi-k3"), ("Kimi K3 + context stuffing", "stuff_kimi-k3"),
+                    ("Kimi K3 + RAG", "rag_kimi-k3"), ("Kimi K3 + CAMR", "camr_kimi-k3")):
+        rows.append(f"{name}: desk {usd(per(desk.get(k), 'cost_usd_per_1000_tickets'))}, news "
+                    f"{usd(per(fresh.get(k), 'cost_usd_per_1000_questions'))}")
+    rb = []
+    for pipe in ("dense", "rerank", "crag", "camr"):
+        r = runs.get((pipe, "kimi-k3"))
+        if r:
+            s = r["summary"]
+            rb.append(f"{PIPE_NAMES[pipe]} {usd((s['prompt_tokens'] * 3 + s['gen_tokens'] * 15) / 1e6 * 1000)}")
+    top = sorted(d["rows"], key=lambda r: -r["usd"])[:3]
+    big = "; ".join(f"{r['what'].split(': ', 1)[-1]} ({usd(r['usd'])})" for r in top)
+    stuff_news = fresh.get("stuff_kimi-k3", {}).get("cost_usd")
+    text = (f"The whole study spent {usd(d['total']['usd'])} on {d['total']['calls']:,} cloud calls. The three largest "
+            f"items were: {big}." + (f" Context stuffing on the news questions alone cost {usd(stuff_news)} for 50 "
+                                    "questions." if stuff_news else "") +
+            " Per 1,000 answers, at list price: " + "; ".join(rows) + ". On the RAG benchmark: " + "; ".join(rb) + ". ")
+    a = agents.get("kimi-k3__camr")
+    if a:
+        text += f"The agent with CAMR's memory cost {usd(a['cost_usd_per_1000_tasks'])} per 1,000 tasks. "
+    text += ("**Cheaper or more expensive?** CAMR was the cheapest way to make the cloud model useful in every "
+             "scenario where it applied, because it sends the fewest prompt tokens and, for labelled facts, often no "
+             "prompt at all; context stuffing was the most expensive, and its cost grows with the knowledge base. Most "
+             "of every cloud bill is output, and Kimi K3 bills its reasoning as output, so a short answer still costs "
+             "more than its length suggests. Local models cost nothing per answer but CPU time: with CAMR the 3B "
+             "model's desk answers took about 2 s of model time against 32–37 s with RAG or stuffing, whose prompts "
+             "were 2–4 times longer (timings from runs that shared the CPU; section ⟦sec_models⟧ gives clean speeds).")
+    return text
 
 
 # ================================================================= build
