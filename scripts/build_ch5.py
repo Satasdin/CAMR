@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import statistics
 from pathlib import Path
 
@@ -112,6 +113,54 @@ def heldout_readers() -> list[tuple[str, dict, dict]]:
         v = a["variants"]["facts+compress+reader"]
         rows.append((name, j, v))
     return rows
+
+
+def _row(prefix: str, tag: str, key: str, item: str) -> dict:
+    d = J(f"results/agentic/{prefix}_{tag}.json") or {}
+    rows = d.get("per_ticket") or d.get("per_question") or d.get("per_task") or []
+    return next((r for r in rows if r.get("ticket", r.get("id", r.get("task"))) == item), {})
+
+
+def n8n_shots() -> list[tuple[str, str]]:
+    """The n8n screenshots (docs/figures/n8n) with captions whose numbers come from the same runs' result files."""
+    desk = (J("results/agentic/helio_camr_kimi-k3.json") or {}).get("per_ticket", [])
+    acts = [r.get("action") for r in desk]
+    t20 = _row("helio", "camr_kimi-k3", "ticket", "T020")
+    agent = (J("results/agentic/agent_kimi-k3__camr.json") or {}).get("summary", {})
+    fa, fc = _row("fresh", "llm_kimi-k3", "id", "F012"), _row("fresh", "camr_kimi-k3", "id", "F012")
+    fs = (J("results/agentic/fresh_camr_kimi-k3.json") or {}).get("summary", {})
+    n_tasks = agent.get("tasks", 20)
+    handed = round(agent.get("escalated", 0) * n_tasks)
+
+    def secs(r):
+        return f"{(r.get('model_ms') or 0) / 1000:.1f} s"
+
+    return [
+        ("desk_canvas.png", f"A support-desk run in n8n (Kimi K3 + CAMR): {len(desk)} tickets answered, "
+         f"{acts.count('reply')} replies sent, {acts.count('escalate')} escalated, with the resolutions a person gave "
+         "taught back and 3 policy changes applied; each link shows how many items passed (screenshot)"),
+        ("desk_t013_escalated.png", "Inside that run, day 2, ticket T013 *How much is the bird mesh kit?*: nothing in "
+         "memory, so the answer is not stated (`stated: false`) and the ticket goes to a person; the input (left) "
+         "carries the resolution the person gives, which the workflow then teaches (screenshot)"),
+        ("desk_t020_answered.png", f"Day 3, ticket T020 *Price of the Helio bird mesh kit please*: answered "
+         f"*{t20.get('answer', '')}* from the taught resolution, with the evidence sentence and its source; one model "
+         f"call, {usd(t20.get('cost_usd'), 4)} (screenshot)"),
+        ("fresh_canvas.png", f"A current-events run in n8n (Kimi K3 + CAMR): {fs.get('pages_live', 30)} pages "
+         f"fetched live from Wikipedia and taught ({fs.get('items_taught', 0)} items), {fs.get('questions', 50)} "
+         "questions answered, one score (screenshot)"),
+        ("fresh_fetch.png", "The fetch node's output: the raw wikitext of one day's *Current events* page as fetched "
+         "live (the node retries once and continues on error, D-36) (screenshot)"),
+        ("fresh_answer_alone.png", f"Question F012 to Kimi K3 alone: a confident answer from its training data that "
+         f"is wrong for this news (*2M0437b*); {secs(fa)} of model time, {usd(fa.get('cost_usd'), 4)} (screenshot)"),
+        ("fresh_answer.png", f"The same question to Kimi K3 + CAMR: *{fc.get('answer', '')}*, with the news item it "
+         f"came from as evidence; {secs(fc)}, {usd(fc.get('cost_usd'), 4)} (screenshot)"),
+        ("agent_canvas.png", f"An operations-agent run in n8n (Kimi K3 + CAMR): {n_tasks} tasks, "
+         f"{n_tasks - handed} completed by the agent, {handed} handed to a person (screenshot)"),
+        ("agent_a20_alone.png", "Task A20 (*20 HS-400 panels on a single Volta-2 inverter?*) given to Kimi K3 without "
+         "memory: escalated, *cannot answer without inventing facts* (screenshot)"),
+        ("agent_a20_camr.png", "The same task with CAMR: the agent searches memory, reads that a Volta-2 inverter "
+         "takes at most 18 panels, and replies with the limit and two options (screenshot)"),
+    ]
 
 
 def speed() -> dict:
@@ -629,16 +678,11 @@ def implementation(c: Chapter) -> None:
         "agent** workflow hands each of 20 tasks to an agent and records whether it completed it or handed it to a "
         "person.")
     c.figure(DIAGRAMS / "n8n_desk.png", "Support-desk workflow as built in n8n (node names as in the workflow file)")
-    for name, cap in (("desk_canvas.png", "The support-desk workflow in the n8n editor (screenshot)"),
-                      ("desk_execution.png", "Execution 21 of the support-desk workflow (Kimi K3 + CAMR) in n8n: 60 "
-                       "tickets answered, 45 replies sent, 15 escalated, 6 resolutions taught, 3 policy changes "
-                       "(screenshot)"),
-                      ("fresh_canvas.png", "The current-events workflow in the n8n editor: live Wikipedia fetch with "
-                       "retries, teach each page, answer each question (screenshot)"),
-                      ("agent_canvas.png", "Execution 17 of the operations-agent workflow (Kimi K3 + CAMR): 20 tasks, "
-                       "17 completed by the agent, 3 handed to a person (screenshot)")):
-        if (FIG / "n8n" / name).exists():
-            c.figure(FIG / "n8n" / name, cap, 15.0)
+    for name, cap in n8n_shots():
+        # detail views: the input and output panels side by side (scripts/agentic/n8n_screens.py crop)
+        path = next((q for q in (FIG / "n8n" / "panels" / name, FIG / "n8n" / name) if q.exists()), None)
+        if path:
+            c.figure(path, re.sub(r"\*([^*]+)\*", "\u201c\\1\u201d", cap).replace("`", ""), 15.8)
     c.p(f"The agent ({c.next_fig()}) is a tool-using loop in the ReAct style: each turn the model writes one line, "
         "*ACTION <tool> <json>* or *DONE*; the tool runs and its result is appended. Its tools are `search_memory` "
         "(absent without memory), `calculate`, `create_invoice`, `reply` and `escalate`. A task succeeds only when "
@@ -875,6 +919,15 @@ def testing(c: Chapter) -> None:
         ["D-36", "After repeated runs Wikimedia refused the workflow's live page fetches (HTTP 403), and the news "
          "workflow stopped", "The fetch node continues on error; the gateway then uses the page as cached when the "
          "questions were written, and records which pages came live", "Pass; re-run"],
+        ["D-39", "In the news workflow a loop's *done* output fed all 30 looped pages to the next node, which n8n runs "
+         "once per item: each question was asked 30 times and 1,500 score requests reset the gateway's connection, "
+         "so n8n marked the runs as failed", "The nodes after a loop run once (*Execute Once*)", "Found in the "
+         "screenshots; scores and costs unchanged (answers per question, repeats were cache hits); re-run clean"],
+        ["D-40", "The D-37 opener rule applied only to sentences ending in *?*, so the desk request *Price of the "
+         "Helio bird mesh kit please* read *Price of the Helio* as a name and the ticket was escalated", "Requests "
+         "(*please*) and fragments without a full stop also open with a common word; the test uses the ticket as "
+         "written", "Found by re-running the desk on the final code; every CAMR desk answer identical to the reported "
+         "run; PopQA and formula extraction unchanged"],
     ]
     c.table("Defects found and retests", ["ID", "Defect", "Correction", "Retest"], defects,
             [1.7, 7.4, 4.3, 2.5], size=8.5)
@@ -1255,8 +1308,9 @@ def res_models(c: Chapter) -> None:
         "task types; the held-out re-test swapped the reader inside the verified pipeline, keeping everything else "
         f"fixed. The sweep covers {len(sw)} models from {sw[0]['params']:.2f}B to {sw[-1]['params']:.1f}B parameters, "
         f"every one on the same store and the same questions. {c.next_tab()} lists all of them, smallest first, and "
-        f"{c.next_tab()} sums them up by size class."
-        + (f" No {', '.join(miss)} model was in the sweep; the size classes cover those sizes by their neighbours."
+        f"{c.next_tab(2)} sums them up by size class."
+        + (f" No {' or '.join(miss) if len(miss) < 3 else ', '.join(miss[:-1]) + ' or ' + miss[-1]} model was in "
+           "the sweep; the size classes cover those sizes by their neighbours."
            if miss else ""))
     rows = []
     for r in sw:
@@ -1278,7 +1332,7 @@ def res_models(c: Chapter) -> None:
     c.table(f"All {len(sw)} models of the size sweep: accuracy alone → with CAMR (bold: at or above Kimi K3), decode "
             "speed with CAMR and seconds per answer with CAMR (`results/pilot/tables/model_sweep.json`; F10, F10b)",
             ["Model (parameters, quantisation)", "Long-tail facts (30 q)", "Multi-hop (30 q)", "Arithmetic (12 q)",
-             "Decode tok/s", "s / answer", "Machine"], rows, [4.3, 2.3, 2.3, 2.3, 1.3, 1.3, 1.3], size=8)
+             "Decode tok/s", "s / answer", "Machine"], rows, [4.0, 2.3, 2.3, 2.3, 1.3, 1.3, 1.6], size=8)
     fast = ", ".join(sorted({r["machine"] for r in sw} - {"C"}))
     c.p(f"Machine is the 4-core cloud machine the model ran on ({fast}: Xeon at 2.1 GHz; C: Xeon at 2.8 GHz). "
         "Accuracy is comparable across machines, speed only within one. One question is 3.3 points on the facts and "
@@ -1286,7 +1340,7 @@ def res_models(c: Chapter) -> None:
         "† One to three questions of that run failed with a runtime error; accuracy is over the answered ones (F10).")
     c.table("The sweep by size class: mean accuracy alone → with CAMR, models at Kimi K3's level, and time per answer",
             ["Size class", "Models", "Facts", "Multi-hop", "At Kimi on multi-hop", "Arithmetic helped / hurt",
-             "s / answer (median, 2.1 GHz)"], size_bands(sw, kimi), [2.0, 1.2, 2.4, 2.4, 2.2, 2.4, 2.0], size=8)
+             "s / answer (median, 2.1 GHz)"], size_bands(sw, kimi), [1.9, 1.5, 2.4, 2.4, 2.1, 2.3, 2.0], size=8)
     c.figure(REPORT / "model_sizes.png", "Every model of the sweep by name and size: accuracy alone (grey) and with "
              "CAMR (blue helps, orange hurts) on three task types, and time per answer", 16.0)
     c.p(SIZES_TEXT(sw, kimi))
@@ -1541,13 +1595,13 @@ def res_flaws(c: Chapter) -> None:
          "done for them", "Open; the grounding check flags most copied answers"],
         ["Fine-tuning wins on the trained wording", "LoRA 88.3% against memory 50.0% held-out on formulas", "Memory "
          "is weaker on exactly the trained format", "Reported; LoRA lost GSM8K (13.3% → 0%) and derived problems"],
-        ["Entity gate is rule-based", "D-15, D-31, D-32, D-37: possessives, instructions, terse phrasing and abbreviations; "
+        ["Entity gate is rule-based", "D-15, D-31, D-32, D-37, D-40: possessives, instructions, terse phrasing, abbreviations and requests; "
          "HotpotQA −1.2 points", "Wrongly withheld notes", "Fixed cases; a learned recogniser is future work"],
         ["Run-to-run variation of the 0.5B runtime", "Answers differed on 10 of 30 questions between identical runs "
          "(wrong → wrong)", "Small-model floors vary by a few points", "Open (runtime); engine prompts are identical"],
         ["Evaluation defects in the automations", "D-34: the news workflow used the support persona; D-35: a decline "
          "phrased *I can't identify* was sent as a reply; D-36: Wikimedia refused repeated live fetches; D-38: a curly "
-         "apostrophe hid declines",
+         "apostrophe hid declines; D-39: a loop asked each news question 30 times",
          "Baselines would have been scored unfairly; a workflow stopped", "Fixed and every affected run repeated "
          "before reporting"],
     ]
@@ -1764,8 +1818,12 @@ def DESK_TEXT(desk) -> str:  # noqa: N802
     text = ("**What the desk shows.** A model alone is useless here and dangerous when small. Kimi K3 knew nothing "
             f"about Helio and escalated {p1(lm['escalated'])} of tickets, but it still told two customers to clean their "
             "panels *once or twice a year*, a plausible answer that is not the company's (every 6 months). The 0.5B "
-            f"model alone answered almost everything, and {p1(s.get('llm_qwen2_5_0_5b', {}).get('wrong_replies'))} of "
-            "its replies were wrong. Given the company's documents, all three Kimi systems answered the knowledge-base "
+            f"model alone answered almost everything and sent wrong replies to "
+            f"{p1(s.get('llm_qwen2_5_0_5b', {}).get('wrong_replies'))} of tickets"
+            + (f"; the 3B model alone was no better ({p1(s['llm_llama3_2_3b']['wrong_replies'])} of tickets, fluent and "
+               "invented: *the error code E21 on your Volta-2 indicates a fault in the solar panel's voltage "
+               "regulator*)" if "llm_llama3_2_3b" in s else "")
+            + ". Given the company's documents, all three Kimi systems answered the knowledge-base "
             f"and policy tickets correctly. They differ in what they did when the answer was **not** known: CAMR sent "
             f"{p1(cm['wrong_replies'])} wrong replies, context stuffing {p1(st['wrong_replies'])} and RAG "
             f"{p1(rg['wrong_replies'])}. CAMR resolved every answerable ticket ({p1(cm['answerable_correct'])}) and "
@@ -1831,9 +1889,15 @@ def FRESH_TEXT(fresh) -> str:  # noqa: N802
             f"{p1(lm['correct'])} of questions and stated a wrong answer to {p1(lm['wrong_stated'])}: *four* "
             "journalists arrested where the item says six, *Tropical Storm Fred* where it says Fay, *at least 54* "
             "killed in an airstrike where it says seven. With the workflow teaching each day's page as it arrives, "
-            f"the same model with CAMR was right on {p1(cm['correct'])} and stated nothing wrong "
-            f"({p1(cm['wrong_stated'])}); it declined {p1(cm['declined'])}, two questions whose answers it had read "
-            "but could not confirm.")
+            f"the same model with CAMR was right on {p1(cm['correct'])} and declined {p1(cm['declined'])}, questions "
+            "whose answers it had read but could not confirm. "
+            + (f"Its one answer scored wrong ({p1(cm['wrong_stated'])}) is not an invention: *Which town in North "
+               "Kordofan did the Sudanese Armed Forces announce they had recaptured?* has two true answers in the "
+               "pages (Sodri on 25 September, al-Mazroub on 2 October); the question was written from the first, and "
+               "CAMR gave the second, with its evidence. An earlier run gave Sodri: between the two runs a Wikipedia "
+               "editor changed one item on another day's page, which was enough to change which of the two items "
+               "memory read first. Live data moves results." if cm["wrong_stated"] else
+               f"It stated nothing wrong ({p1(cm['wrong_stated'])})."))
     if "rag_kimi-k3" in s and "stuff_kimi-k3" in s:
         rg, st = s["rag_kimi-k3"], s["stuff_kimi-k3"]
         text += (f" Modern RAG over the same items reached {p1(rg['correct'])} with {p1(rg['wrong_stated'])} wrong; "
@@ -1846,14 +1910,24 @@ def FRESH_TEXT(fresh) -> str:  # noqa: N802
     loc = [(n, s[t]) for t, n in (("llm_llama3_2_3b", "Llama 3B alone"), ("rag_llama3_2_3b", "Llama 3B + RAG"),
                                   ("camr_llama3_2_3b", "Llama 3B + CAMR")) if t in s]
     if loc:
-        text += " On the device: " + "; ".join(f"{n} {p1(x['correct'])} correct, {p1(x['wrong_stated'])} wrong"
-                                              for n, x in loc) + "."
+        rows = {t: {r["id"]: r for r in d["per_question"]} for t, _, d in fresh}
+        declined = [i for i, r in rows.get("rag_llama3_2_3b", {}).items() if r["outcome"] == "declined"]
+        rescued = sum(rows.get("camr_llama3_2_3b", {}).get(i, {}).get("outcome") == "correct" for i in declined)
+        text += (" **On the device** the gap is wider: " + "; ".join(f"{n} {p1(x['correct'])} correct, "
+                                                               f"{p1(x['wrong_stated'])} wrong" for n, x in loc)
+                 + ". With the standard RAG prompt the 3B model hedged (*I don't know the specific number of "
+                 f"journalists ..., but according to the context ...*), and {rescued} of its {len(declined)} declines "
+                 "were answered correctly with CAMR; CAMR's two answers scored wrong are *Tabuk* for *Tabuk, Saudi Arabia* (right, "
+                 "missed by the exact match) and the two-answer question above.")
     pages = [d["summary"].get("pages_live") for _, _, d in fresh if d["summary"].get("pages_live") is not None]
     if pages:
         live = "all 30 pages were" if min(pages) >= 30 else f"at least {min(pages)} of the 30 pages were"
-        text += (f" In the reported runs {live} fetched live by n8n. n8n marked these executions as failed because an "
-                 "HTTP connection was reset, although every question had been answered and scored (50 of 50); the "
-                 "reset was not traced further.")
+        text += (f" In the reported runs {live} fetched live by n8n. The first news runs were marked as failed by "
+                 "n8n: a loop's *done* output carries every item it looped over, so the question list was fetched 30 "
+                 "times, each question was asked 30 times and 1,500 score requests reset the connection (D-39). "
+                 "Answers are kept per question and every repeat was an answer-cache hit, so scores and costs were "
+                 "unaffected; the nodes after a loop now run once, and Kimi K3 alone and with CAMR were repeated on "
+                 "the fixed workflow.")
     return text
 
 

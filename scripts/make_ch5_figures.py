@@ -273,7 +273,7 @@ def fig_model_sizes(out: Path) -> Path | None:
             "GSM8K. Time: PopQA, mean end to end on a 4-core CPU; light bars ran on a different machine (C), so compare "
             "times within one shade.")
     if missing:
-        note += f" No {', '.join(missing)} model was in the sweep."
+        note += f" No {', '.join(missing[:-1]) + ' or ' + missing[-1] if len(missing) > 1 else missing[0]} model was in the sweep."
     fig.text(0.01, 0.005, note, fontsize=7, color=INK2, wrap=True)
     fig.tight_layout(rect=(0, 0.03, 0.98, 0.97))
     return save(fig, out, "model_sizes.png")
