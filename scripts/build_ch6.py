@@ -94,7 +94,7 @@ def build(template: Path, out: Path) -> Path:
     c.p("On a 4-core CPU the engine needs well under 1 GB beside the model, makes 123,301 paragraphs searchable in "
         "under six minutes, and stops cleanly at every device limit (section ⟦sec_bulk⟧). Retrieval is cheap in "
         "isolation (about 29 ms) but took 56% of a 0.5B model's answer time under contention, so the 10% target was "
-        "not met for the smallest model. Models of 7B and more answered more slowly than the cloud model on this "
+        "not met for the smallest model. Models of 6B and more answered more slowly than the cloud model on this "
         "hardware, which makes 1.5–4B the useful range on a CPU-only laptop (section ⟦sec_models⟧). In the cloud, the "
         f"whole study spent {usd(tot.get('usd'))} on {tot.get('calls', 0):,} calls (section ⟦sec_cost⟧).")
     c.h3("Beyond the Research Questions")
@@ -239,7 +239,7 @@ def DECISIONS(F: dict) -> list[list[str]]:  # noqa: N802
         ["A fixed output format, and nothing else must be kept", "Fine-tuning (LoRA) can win on that format",
          "⟦sec_learning⟧: 88.3% vs 50.0%, but GSM8K 13.3% → 0%"],
         ["Offline or private use on a 16 GB CPU laptop", "1.5B model for facts, 3B for reading across documents, "
-         "with CAMR; not 7B or larger", "⟦sec_models⟧"],
+         "with CAMR; not 6B or larger", "⟦sec_models⟧"],
         ["Events after the model's training data", "Teach the source as it arrives (an automation can do it) and "
          "answer from memory", "⟦sec_agentic⟧"],
     ]

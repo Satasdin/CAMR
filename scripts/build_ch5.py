@@ -1750,7 +1750,7 @@ def MODELS_TEXT(sp: dict) -> str:  # noqa: N802
              "(0.5B or 1.5B). For multi-hop reading, 3B is the smallest model that matched the cloud model, and the "
              "gain from memory grows with the reader (section ⟦sec_gap⟧). For arithmetic, phi4-mini (3.8B) with "
              "worked examples reached 91.7%, but memory helps arithmetic only in some model families, so it is a "
-             "per-model choice. Above 7B, every model with memory answered more slowly than the cloud model on this "
+             "per-model choice. From 6B up, every model with memory answered more slowly than the cloud model on this "
              "hardware. The recommended configuration for a 16 GB CPU-only device is a **1.5B model for facts and a "
              "3B model when questions need reading across documents**, with the cloud model reserved for what memory "
              "cannot close.")
