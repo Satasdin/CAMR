@@ -80,9 +80,11 @@ question verbatim.
 ## Run
 
 ```bash
-python scripts/reproduce.py --twice                  # verified answers, lookups, large data, device limits:
+python scripts/reproduce.py --twice                  # verified answers (dev, test, held-out), lookups, large
+                                                     # data, device limits, learning formulas from corrections:
                                                      # recomputed offline from committed caches, every number
                                                      # checked, twice (no network or API key needed)
+python scripts/math_learning.py report               # what the corrections taught, held-out vs seen (F27)
 camr reproduce --config configs/default.yaml        # everything, one command (NFR-04)
 
 # or step by step
