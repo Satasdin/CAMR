@@ -236,7 +236,7 @@ def size_bands(sw: list[dict], kimi: dict) -> list[list[str]]:
         secs = [r["secs"] for r in ms if r.get("secs") and r["machine"] != "C"]  # one CPU class (2.1 GHz)
         out.append([name, str(len(ms)), f"{100 * mean('popqa', 0):.1f} → {100 * mean('popqa', 1):.1f}%",
                     f"{100 * mean('hotpotqa', 0):.1f} → {100 * mean('hotpotqa', 1):.1f}%", f"{at} of {len(hop)}",
-                    f"{sum(t > f + 1e-6 for f, t in gs)} / {sum(t < f - 1e-6 for f, t in gs)}",
+                    f"{sum(t - f > 0.05 for f, t in gs)} / {sum(f - t > 0.05 for f, t in gs)}",  # < 1 of 12 = same
                     f"{statistics.median(secs):.1f}" if secs else "–"])
     return out
 
@@ -1709,7 +1709,7 @@ def SIZES_TEXT(sw: list[dict], kimi: dict) -> str:  # noqa: N802
     hop = [mean(ms, "hotpotqa", 1) for _, ms in bands]
     secs = [med_s(ms) for _, ms in bands]
     small = bands[0][1]
-    hurt_small = sum(r["gsm8k"][1] < r["gsm8k"][0] - 1e-6 for r in small if "gsm8k" in r)
+    hurt_small = sum(r["gsm8k"][0] - r["gsm8k"][1] > 0.05 for r in small if "gsm8k" in r)
     above = [r for r in sw if r["params"] >= 5 and r.get("secs") and r["machine"] != "C"]
     slower = sum(r["secs"] > 7.7 for r in above)
     k_f, k_h = 100 * kimi.get("popqa", 0), 100 * kimi.get("hotpotqa", 0)

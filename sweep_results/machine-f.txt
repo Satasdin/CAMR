@@ -1,0 +1,23 @@
+machine: F
+nproc: 4
+MemTotal:       16479424 kB
+cpu: Intel(R) Xeon(R) Processor @ 2.10GHz
+ollama --version: ollama version is 0.35.0
+ingest: 9 min
+yi:6b sweep wall time: 25 min
+falcon3:10b sweep wall time: 33 min
+olmo2:13b sweep wall time: 59 min
+incident: olmo2:13b, 12 queries failed with HTTP 500 (llama-server EOF while saving its prompt cache, which grows on
+  top of the model weights; the same failure machine B hit with gemma2:9b). Runs with failed queries were set to
+  status='failed' (kept, not deleted); Ollama was restarted with LLAMA_ARG_CACHE_RAM=1024 (prompt cache capped at
+  1024 MiB: prefill reuse only, not outputs) and those runs were re-run. yi:6b, falcon3:10b and olmo2:13b runs 13 and
+  15 ran with the default cache.
+olmo2:13b re-run wall time: 60 min
+failed queries (status != ok): 
+  run 14 m:olmo2:13b treatment popqa: 3 failed
+  run 16 m:olmo2:13b treatment hotpotqa: 5 failed
+  run 17 m:olmo2:13b floor gsm8k: 2 failed
+  run 18 m:olmo2:13b treatment gsm8k: 2 failed
+those four runs are kept with status='failed'; their clean re-runs are runs 19, 20, 21, 22.
+final state (label m:*): 18 completed runs, one per model x benchmark x condition, 0 failed queries among them;
+only completed runs are merged (camr merge) and reported.

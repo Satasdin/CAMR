@@ -250,7 +250,7 @@ Source: `results/pilot/camr.sqlite` (labels `main`, `kimi`, `kimi-k2.6`) and `ta
 
 ---
 
-## F10. Which model sizes suit the engine (19 models, machines E, C, B and D)
+## F10. Which model sizes suit the engine (22 models, machines E, C, B, D and F)
 
 Source: `sweep_results/machine-{e,c,b,d}.sqlite`, merged into `results/pilot/camr.sqlite`; `results/pilot/tables/model_sweep.json`. Same store, same questions and same ceilings for every model. Parameter counts and quantisation are from the Ollama registry (`docs/model_registry_metadata.json`).
 
@@ -277,16 +277,20 @@ Source: `sweep_results/machine-{e,c,b,d}.sqlite`, merged into `results/pilot/cam
 | olmo2:7b (7.3B, Q4_K_M) ᵈ | 23.3 → 76.7% | 36.7 → 58.6%* | 63.6* → **83.3%** | 5.8 → 5.3 |
 | granite3.3:8b (8.2B, Q4_K_M) ᵈ | 16.7 → **80.0%** | 33.3 → 50.0% | 58.3 → 72.7%* | 5.0 → 4.6 |
 | gemma3:12b (12.2B, Q4_K_M) ᵈ | 33.3 → **79.3%*** | 30.0 → **63.0%*** | 91.7 → 90.0%* | 3.9 → 3.7 |
+| yi:6b (6B, Q4_0) ᶠ | 13.3 → 63.3% | 16.7 → 43.3% | 66.7 → 41.7% | 10.6 → 10.2 |
+| falcon3:10b (10.3B, Q4_K_M) ᶠ | 20.0 → **70.0%** | 26.7 → **56.7%** | 16.7 → 50.0% | 4.3 → 3.9 |
+| olmo2:13b (13.7B, Q4_K_M) ᶠ | 30.0 → **70.0%** | 36.7 → **53.3%** | 75.0 → 91.7% | 2.9 → 2.8 |
 | *Kimi K3 (cloud), no memory* | *66.7%* | *53.3%* | *100%* | — |
 
-ᶜ Machine C (Intel Xeon @ 2.80 GHz; the others @ 2.10 GHz): accuracies are comparable across machines, decode speeds are not. ᵇ Machine B (4 vCPU @ 2.10 GHz, 16 GB; see `sweep_results/machine-b.txt` for two runtime incidents and the clean re-runs). ᵈ Machine D (same class). \* One to three queries of that run failed with a runtime error (HTTP 500 after the llama-server process exited) and were not retried; accuracy is over the answered questions (e.g. 23/29). Logged in `sweep_results/machine-d.txt`; D-07 now makes resume re-run such runs.
+ᶜ Machine C (Intel Xeon @ 2.80 GHz; the others @ 2.10 GHz): accuracies are comparable across machines, decode speeds are not. ᵇ Machine B (4 vCPU @ 2.10 GHz, 16 GB; see `sweep_results/machine-b.txt` for two runtime incidents and the clean re-runs). ᵈ Machine D (same class). \* One to three queries of that run failed with a runtime error (HTTP 500 after the llama-server process exited) and were not retried; accuracy is over the answered questions (e.g. 23/29). Logged in `sweep_results/machine-d.txt`; D-07 now makes resume re-run such runs. ᶠ Machine F (this container, same 2.10 GHz class), added for the sizes the sweep lacked (6B, 10B, 13B; no 5B model is in the common Ollama catalogue). olmo2:13b lost 12 queries to the runtime's prompt cache (HTTP 500 when llama-server exited, as gemma2:9b did on machine B); those runs were marked failed and re-run clean with the cache capped at 1 GB (`LLAMA_ARG_CACHE_RAM=1024`; prefill reuse only, not outputs). Logged in `sweep_results/machine-f.txt`.
 
 **Findings**
 1. **From about 1.5B parameters, a small model with CAMR beats Kimi K3 on long-tail facts** (73–80% vs 66.7%). Measured against Kimi, gap closed is 1.14–1.24.
 2. **On multi-hop, about 3B is the threshold.** llama3.2:3b + CAMR reached 56.7% and gemma3:4b + CAMR 53.3%, against Kimi K3's 53.3%. Below 3B the gain is real (+20 to +33 pts) but the models do not reach Kimi.
 3. **Knowledge gains are large at every size** (+50 to +73 pts on PopQA), but the 0.5B model is the weakest *reader*. It gains least on multi-hop (+20) and is most hurt by extra notes (F8 budget sweep).
-4. **Worked-example (exemplar) memory for maths depends on the model family, not its size.** Across all 19 models it **helps 8, is neutral for 4 and hurts 7** (F10b). Across the 11 models of machines E and C it **helps 4**: falcon3:3b +33.3, phi4-mini +8.3, smollm2 +8.3, qwen2.5:3b +8.3. It is **neutral for 2** (llama3.2:3b, granite3.3:2b) and **hurts 5** (qwen2.5 0.5B/1.5B, llama3.2:1b, gemma3 1B/4B). With exemplars, phi4-mini (3.8B) reaches 91.7% on GSM8K. Reasoning routing must therefore be learned *per model*, which is exactly what the learned policy (F11) does.
-6. **Every one of the 19 models gains on knowledge tasks** (+43 to +73 pts on PopQA, +10 to +40 on HotpotQA). **18 of 19 reach or beat Kimi K3 (66.7%) on long-tail facts with CAMR**; only llama3.2:1b (63.3%) falls short. On multi-hop, **7 of 19 reach Kimi K3 (53.3%)**: llama3.2:3b, gemma3:4b and five of the eight 7–14B models.
+4. **Worked-example (exemplar) memory for maths depends on the model family, not its size.** Across all 22 models it **helps 10, is neutral for 4 and hurts 8** (F10b; a change smaller than one of the 12 questions counts as neutral). Across the 11 models of machines E and C it **helps 4**: falcon3:3b +33.3, phi4-mini +8.3, smollm2 +8.3, qwen2.5:3b +8.3. It is **neutral for 2** (llama3.2:3b, granite3.3:2b) and **hurts 5** (qwen2.5 0.5B/1.5B, llama3.2:1b, gemma3 1B/4B). With exemplars, phi4-mini (3.8B) reaches 91.7% on GSM8K. Reasoning routing must therefore be learned *per model*, which is exactly what the learned policy (F11) does.
+6. **Every one of the 22 models gains on knowledge tasks** (+40 to +73 pts on PopQA, +10 to +40 on HotpotQA). **20 of 22 reach or beat Kimi K3 (66.7%) on long-tail facts with CAMR**; llama3.2:1b and yi:6b (63.3% each) fall short. On multi-hop, **9 of 22 reach Kimi K3 (53.3%)**: llama3.2:3b, gemma3:4b and seven of the eleven 7–14B models (qwen2.5 7B and 14B, olmo2 7B and 13B, llama3.1:8b, gemma3:12b, falcon3:10b).
+7. **Machine F (6B, 10B, 13B) confirms the pattern.** falcon3:10b and olmo2:13b reach Kimi K3 on facts (70.0%) and multi-hop (56.7%, 53.3%), and olmo2:13b reaches 91.7% on GSM8K with worked examples; yi:6b, an older family, falls short of Kimi on facts (63.3%) and is hurt by exemplars (66.7 → 41.7%). falcon3:10b alone answers GSM8K in about five tokens (*#### 50*) with no working and scores 16.7%; with worked examples in memory it shows its steps and scores 50.0%. All three took 9.4–18.1 s per answer with CAMR, slower than Kimi K3 (7.7 s).
 5. **Decode speed slows 3–17% with memory** (e.g. qwen2.5:3b 13.3 → 11.0 tokens/s). The weights are untouched; the slowdown comes from attending over a longer prompt. This corrects the "decode speed unaffected" reading of F2: there is a measurable, bounded per-token cost.
 
 
@@ -900,17 +904,17 @@ The verified pipeline (chosen on the development set with the 0.5B model) was ru
 | phi4-mini (3.8B) | 60.0% | 3.0% | 18.0% | 19.0% |
 | qwen2.5:7b | 60.5% | 3.5% | 19.5% | 16.5% |
 
-**All 19 sweep models by size class** (F10; figure `report/model_sizes.png` names every model; time is the median over the 2.1 GHz machines B, D and E only, since speed is comparable only within one CPU class). The sweep has **no 5B, 10B or 13B model**; the nearest are gemma3:4b (4.3B), gemma2:9b (9.2B) and gemma3:12b (12.2B).
+**All 22 sweep models by size class** (F10; figure `report/model_sizes.png` names every model; time is the median over the 2.1 GHz machines B, D, E and F only, since speed is comparable only within one CPU class; arithmetic counts a change smaller than one of the 12 questions as no change). The sweep has **no 5B model**; machine F added 6B, 10B and 13B (yi:6b, falcon3:10b, olmo2:13b).
 
 | Size class | Models | Facts alone → CAMR | Multi-hop alone → CAMR | At Kimi K3 on multi-hop | Arithmetic helped / hurt | s / answer |
 |---|---|---|---|---|---|---|
 | About 1B (0.5B qwen2.5, 1B gemma3, 1.2B llama3.2) | 3 | 7.8 → 65.6% | 14.4 → 36.7% | 0 of 3 | 0 / 3 | 1.7 |
 | 1.5–2.5B (qwen2.5, smollm2, granite3.3) | 3 | 15.6 → 76.7% | 18.9 → 43.3% | 0 of 3 | 1 / 1 | 2.1 |
 | 3–4B (qwen2.5, falcon3, llama3.2, phi4-mini, gemma3) | 5 | 14.7 → 75.3% | 18.7 → 48.7% | 2 of 5 | 3 / 1 | 4.2 |
-| 6–9B (mistral, olmo2, qwen2.5, llama3.1, granite3.3, gemma2) | 6 | 24.4 → 75.6% | 31.7 → 53.1% | 3 of 6 | 3 / 2 | 10.0 |
-| 10–15B (gemma3 12B, qwen2.5 14B) | 2 | 23.3 → 76.3% | 38.3 → 63.1% | 2 of 2 | 1 / 1 | 16.9 |
+| 6–9B (yi, mistral, olmo2, qwen2.5, llama3.1, granite3.3, gemma2) | 7 | 22.9 → 73.8% | 29.5 → 51.7% | 3 of 7 | 3 / 3 | 9.4 |
+| 10–15B (falcon3 10B, gemma3 12B, olmo2 13B, qwen2.5 14B) | 4 | 24.2 → 73.2% | 35.0 → 59.1% | 4 of 4 | 3 / 0 | 16.9 |
 
-Facts stop improving at about 1.5B (every class from 1.5B averages 75–77% with CAMR; Kimi K3 alone 66.7%). Multi-hop keeps improving with size (37 → 63%). Time grows fastest (1.7 → 16.9 s), and every model of 6B and above was slower than Kimi K3 (7.7 s).
+**Facts stop improving at about 1.5B; reading across documents keeps improving; time grows fastest.** Memory lifts every model on long-tail facts, from a mean of 8% alone to 66% for the smallest class, and from 1.5B upwards every class averages 73–77% with CAMR: 20 of 22 models reach or beat Kimi K3's 66.7%, and a 14B model with memory is no better than a 1.5B one. Multi-hop reading is different: the class means with CAMR climb 37 → 43 → 49 → 52 → 59%, and only 9 of 22 models reach Kimi K3's 53.3% (none below 3B). Time per answer climbs faster than either: on the 2.1 GHz machines the class medians are 1.7 → 2.1 → 4.2 → 9.4 → 16.9 s, and all 11 models of 6B and above measured there took longer than Kimi K3's 7.7 s. **Where small models fall short:** worked examples lowered arithmetic for all 3 models of about 1B, and the 0.5B model gains least on multi-hop. **Where large models fall short:** speed. Their extra parameters paid off on multi-hop reading and arithmetic, not on facts. 
 
 **Findings**
 1. **In verified fact answering, a bigger reader buys nothing.** All five readers are within 1 point. 140 of the 200 questions were answered from a fact line with no model call, whatever the reader; of the other 60 (0.5B reader), 19 were answered correctly and 36 of the remaining 41 had no answer anywhere in what memory read.
@@ -978,6 +982,5 @@ Regenerate: `python scripts/make_ch5_figures.py` (F24, F28-F31), `python scripts
 
 ## Still running
 
-- F10/F30: machine F (this container) runs the size sweep for the sizes it lacked: yi:6b (6B), falcon3:10b (10B), olmo2:13b (13B), same config, store and questions as machines B-E. A container restart killed the first attempt at the start of yi:6b; it was restarted from scratch.
-- F28: the 3B reader on the RAG benchmark (its first run failed with an Ollama HTTP 500 while the gateways, n8n and two other models shared the 16 GB); queued after the sweep.
-- F30: per-model speed and memory (`results/models/speed.json`): the first attempt failed on a script bug (fixed); the 7B and phi4-mini readers are pulled again for it after the sweep.
+- F28: the 3B reader on the RAG benchmark (its first run failed with an Ollama HTTP 500 while the gateways, n8n and two other models shared the 16 GB); runs after the speed test.
+- F30: per-model speed and memory (`results/models/speed.json`): running (the 7B and phi4-mini readers were pulled again after the sweep).
