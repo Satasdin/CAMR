@@ -1404,7 +1404,7 @@ def res_flaws(c: Chapter) -> None:
          "done for them", "Open; the grounding check flags most copied answers"],
         ["Fine-tuning wins on the trained wording", "LoRA 88.3% against memory 50.0% held-out on formulas", "Memory "
          "is weaker on exactly the trained format", "Reported; LoRA lost GSM8K (13.3% → 0%) and derived problems"],
-        ["Entity gate is rule-based", "D-15, D-31, D-32: possessives, instructions and terse phrasing read as names; "
+        ["Entity gate is rule-based", "D-15, D-31, D-32, D-37: possessives, instructions, terse phrasing and abbreviations; "
          "HotpotQA −1.2 points", "Wrongly withheld notes", "Fixed cases; a learned recogniser is future work"],
         ["Run-to-run variation of the 0.5B runtime", "Answers differed on 10 of 30 questions between identical runs "
          "(wrong → wrong)", "Small-model floors vary by a few points", "Open (runtime); engine prompts are identical"],
