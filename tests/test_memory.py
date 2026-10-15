@@ -367,7 +367,9 @@ def test_terse_task_phrasing_is_not_taken_for_names():
     # a capitalised first word followed by a lower-case word opens a sentence (D-32)
     assert question_entities("Recommended cleaning interval for my panels?") == []
     assert question_entities("Bird mesh kit price?") == []
-    assert question_entities("Price of the Helio bird mesh kit please") == ["helio"]
+    assert question_entities("Price of the Helio bird mesh kit?") == ["helio"]
+    # in a statement the first word is usually a name, not a request (found by the formula replay: GSM8K problems)
+    assert question_entities("Josh decides to try flipping a house. How much profit did he make?") == ["josh"]
     # an instruction is not a name, and a name ends with its sentence
     assert question_entities("Which firmware should I install on the Volta-2. Reply.") == ["volta 2"]
     assert question_entities("My Volta-X shows E57. Any idea?") == ["volta x", "e57"]

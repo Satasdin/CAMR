@@ -55,10 +55,22 @@ def _ends_sentence(tok: str) -> bool:
     return True
 
 
+def _asks(i: int, toks: list[str], qmark: list[bool]) -> bool:
+    """The sentence that starts at token i ends with a question mark."""
+    for j in range(i, len(toks)):
+        if qmark[j]:
+            return True
+        if _ends_sentence(toks[j]):
+            return False
+    return False
+
+
 def question_entities(question: str) -> list[str]:
     """Normalised entity strings named in the question (possibly empty)."""
     out = [norm(m.group(1)) for m in _QUOTED.finditer(question)]
-    toks = [_POSSESSIVE.sub("", t) for t in _TOKEN.findall(question)]
+    found = list(_TOKEN.finditer(question))
+    toks = [_POSSESSIVE.sub("", m.group(0)) for m in found]
+    qmark = [question[m.end():m.end() + 1] == "?" for m in found]  # the token is followed by a question mark
     starts = {0} | {k + 1 for k, t in enumerate(toks) if t[-1:] in ".?!:"}
     i = 0
     while i < len(toks):
@@ -66,7 +78,9 @@ def question_entities(question: str) -> list[str]:
         nxt0 = toks[i + 1] if i + 1 < len(toks) else ""
         # a capitalised first word followed by a lower-case one opens a sentence; it is not a name ("Recommended
         # cleaning interval?", "Bird mesh kit price?", "Price of the Helio kit"); a lone word ("Fix?") neither
-        opener = i in starts and not (nxt0[:1].isupper() or nxt0[:1].isdigit()) and not _ends_sentence(t)
+        # only in a question fragment: in a statement the first word is usually a name ("Josh decides to ...")
+        opener = (i in starts and not (nxt0[:1].isupper() or nxt0[:1].isdigit()) and not _ends_sentence(t)
+                  and _asks(i, toks, qmark))
         if t[:1].isupper() and not opener and not (i in starts and t.lower().rstrip(".") in _LEADING | _OPENERS):
             j, run = i, [t]
             while j + 1 < len(toks):

@@ -790,10 +790,11 @@ def testing(c: Chapter) -> None:
         ["D-35", "The decline detector missed *I can't identify …*, so a RAG decline was sent as a reply", "Pattern "
          "widened; every desk system re-run", "Pass"],
         ["D-37", "The D-32 fix itself cut titles at abbreviations and greetings (*St. Louis Blues* → *Louis Blues*, "
-         "*A.I. Artificial Intelligence*, *the composer of Hello*), so four PopQA questions recalled different notes",
-         "Abbreviations, dotted initials and ellipses do not end a sentence; greetings are openers only at a sentence "
-         "start", "Found by the replay check; extraction identical to before D-32 on all 600 PopQA questions and 440 "
-         "formula problems; replays re-run"],
+         "*A.I. Artificial Intelligence*, *the composer of Hello*), and its opener rule dropped names that start a "
+         "statement (*Josh decides to …*), so PopQA questions and the GSM8K interference check recalled different "
+         "notes", "Abbreviations, dotted initials and ellipses do not end a sentence; greetings are openers only at a "
+         "sentence start; the opener rule applies only to a sentence that asks", "Found by the replay check; extraction "
+         "identical to before D-32 on all 600 PopQA questions and 440 formula problems; replays re-run"],
         ["D-36", "After repeated runs Wikimedia refused the workflow's live page fetches (HTTP 403), and the news "
          "workflow stopped", "The fetch node continues on error; the gateway then uses the page as cached when the "
          "questions were written, and records which pages came live", "Pass; re-run"],
