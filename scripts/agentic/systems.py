@@ -63,7 +63,8 @@ def cost_usd(model: str, prompt_tokens: int, gen_tokens: int) -> float:
 def declined(text: str) -> bool:
     from camr.memory.verify import abstention_like
 
-    return abstention_like(text) or bool(DECLINE.search(text or ""))
+    text = (text or "").replace("\u2019", "'").replace("\u2018", "'")  # "I don’t know" is a decline too (D-38)
+    return abstention_like(text) or bool(DECLINE.search(text))
 
 
 class Meter:

@@ -285,8 +285,9 @@ def run_pipeline(name: str, it: dict, rt: Retriever, call: Metered, th: dict, lo
         raise ValueError(name)
     ctx = context_of(texts)
     answer = call(RAG_PROMPT.format(question=q, context=ctx))
-    if abstention_like(answer) or re.search(r"\b(?:don'?t|do not|cannot|can't) (?:know|find|determine)\b|not "
-                                            r"(?:mentioned|provided|specified|stated|contain)", answer, re.I):
+    plain = answer.replace("\u2019", "'").replace("\u2018", "'")  # curly apostrophes decline too (D-38)
+    if abstention_like(plain) or re.search(r"\b(?:don'?t|do not|cannot|can't) (?:know|find|determine)\b|not "
+                                            r"(?:mentioned|provided|specified|stated|contain)", plain, re.I):
         stated = False
     if name == "check" and stated:
         notes_by_text = {n.text: n for n in notes}

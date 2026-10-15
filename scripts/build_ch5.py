@@ -789,6 +789,9 @@ def testing(c: Chapter) -> None:
          "topic", "Persona per scenario", "Pass; re-run"],
         ["D-35", "The decline detector missed *I can't identify …*, so a RAG decline was sent as a reply", "Pattern "
          "widened; every desk system re-run", "Pass"],
+        ["D-38", "Kimi K3 writes *I don’t know* with a curly apostrophe, which the decline detector missed, so 13 of "
+         "its honest declines on the news questions were scored as wrong answers", "Apostrophes normalised before "
+         "detection (gateway and RAG benchmark)", "Every result file re-checked: only that run was affected; re-run"],
         ["D-37", "The D-32 fix itself cut titles at abbreviations and greetings (*St. Louis Blues* → *Louis Blues*, "
          "*A.I. Artificial Intelligence*, *the composer of Hello*), and its opener rule dropped names that start a "
          "statement (*Josh decides to …*), so PopQA questions and the GSM8K interference check recalled different "
@@ -1423,7 +1426,8 @@ def res_flaws(c: Chapter) -> None:
         ["Run-to-run variation of the 0.5B runtime", "Answers differed on 10 of 30 questions between identical runs "
          "(wrong → wrong)", "Small-model floors vary by a few points", "Open (runtime); engine prompts are identical"],
         ["Evaluation defects in the automations", "D-34: the news workflow used the support persona; D-35: a decline "
-         "phrased *I can't identify* was sent as a reply; D-36: Wikimedia refused repeated live fetches",
+         "phrased *I can't identify* was sent as a reply; D-36: Wikimedia refused repeated live fetches; D-38: a curly "
+         "apostrophe hid declines",
          "Baselines would have been scored unfairly; a workflow stopped", "Fixed and every affected run repeated "
          "before reporting"],
     ]
