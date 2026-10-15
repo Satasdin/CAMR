@@ -1779,6 +1779,25 @@ def RAG_TEXT(runs: dict) -> str:  # noqa: N802
                      f"{cm['calls']:.2f} model calls and {cm['prompt_tokens']:.0f} prompt tokens per question against "
                      f"{b['calls']:.2f} and {b['prompt_tokens']:.0f}")
         out.append(text + ".")
+    small = {p: s(p, "qwen2_5_0_5b") for p in PIPE_ORDER if p != "camr" and s(p, "qwen2_5_0_5b")}
+    c05, ck3 = s("camr", "qwen2_5_0_5b"), s("camr", "kimi-k3")
+    if small and c05 and ck3:
+        best = max(small, key=lambda p: small[p]["correct_exact"])
+        a_, b_ = runs[("camr", "qwen2_5_0_5b")], runs[("camr", "kimi-k3")]
+        ja, jb = a_.get("judged", {}), b_.get("judged", {})
+        rb = {r["i"]: r for r in b_["per_question"]}
+        same = sum(1 for r in a_["per_question"] if ja.get(str(r["i"])) == jb.get(str(r["i"]))
+                   and r["stated"] == rb[r["i"]]["stated"])
+        rr5, rrk = s("rerank", "qwen2_5_0_5b"), s("rerank", "kimi-k3")
+        out.append(f"**With a small reader the order reverses.** CAMR with the 0.5B model was correct on "
+                   f"{p1(c05['correct_exact'])}, more than any of the eight RAG pipelines (best: "
+                   f"{PIPE_NAMES[best].lower()}, {p1(small[best]['correct_exact'])}), and stated a wrong single claim "
+                   f"for {p1(c05['wrong_exact'])} against {p1(small[best]['wrong_exact'])}. With CAMR the reader "
+                   f"hardly matters: the 0.5B model and Kimi K3 gave the same outcome on {same} of 200 questions "
+                   f"({p1(c05['correct_exact'])} against {p1(ck3['correct_exact'])} correct), because most answers come "
+                   "from a fact line with no model call. With RAG the reader is everything: reranked RAG went from "
+                   + (f"{p1(rr5['correct_exact'])} with the 0.5B model to {p1(rrk['correct_exact'])} with Kimi K3."
+                      if rr5 and rrk else "the small model to the large one."))
     ck, rr = s("check", "kimi-k3"), s("rerank", "kimi-k3")
     if ck and rr:
         d = runs[("check", "kimi-k3")]
@@ -1799,7 +1818,8 @@ def RAG_TEXT(runs: dict) -> str:  # noqa: N802
                "states nothing a stored sentence does not support; its remaining errors are answers about another "
                "meaning that it names, which a reader can see. Where a wrong answer costs more than an unanswered "
                "one (a customer reply, an invoice, an agent's action), that trade is the point; where coverage "
-               "matters most, a reranked RAG pipeline is the better choice. Part of CAMR's lower coverage is "
+               "matters most and the reader is a strong cloud model, a reranked RAG pipeline is the better choice; "
+               "with a small on-device reader, CAMR is better on both counts. Part of CAMR's lower coverage is "
                "retrieval, not caution: the answer was in what the reader received for "
                f"{p1(rr['gold_in_context']) if rr else '–'} of questions with reranked RAG and "
                f"{p1(s('camr', 'kimi-k3')['gold_in_context']) if s('camr', 'kimi-k3') else '–'} with CAMR, the same "

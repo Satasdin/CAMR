@@ -788,6 +788,11 @@ Sources: `scripts/rag_bench.py`, `results/ragbench/run_<pipeline>_<reader>.json`
 | BM25 | 29.0% | 64.0% | - | 7.0% | 31.2% | 40.5% | 176 | 1.52 | 3 | $0 |
 | Hybrid (RRF) | 37.0% | 56.0% | - | 7.0% | 39.8% | 56.5% | 191 | 1.70 | 13 | $0 |
 | Hybrid + reranker | 45.5% | 47.0% | - | 7.5% | 49.2% | 72.0% | 290 | 2.48 | 979 | $0 |
+| HyDE | 33.0% | 59.0% | - | 8.0% | 35.9% | 54.5% | 318 | 6.56 | 354 | $0 |
+| Corrective RAG | 42.0% | 46.0% | - | 12.0% | 47.7% | 71.5% | 267 | 1.86 | 1305 | $0 |
+| Reranker + abstain | 45.0% | 38.0% | - | 17.0% | 54.2% | 72.0% | 262 | 2.24 | 700 | $0 |
+| Reranker + CAMR check | 17.0% | 8.5% | - | 74.5% | 66.7% | 72.0% | 290 | 2.48 | 701 | $0 |
+| CAMR (verified) | 62.5% | 3.5% | 18.5% | 15.5% | 74.0% | 64.0% | 52 | 0.21 | 14 | $0 |
 
 **Reader: Kimi K3** (judged)
 
@@ -806,8 +811,11 @@ Sources: `scripts/rag_bench.py`, `results/ragbench/run_<pipeline>_<reader>.json`
 4. **Part of CAMR's lower coverage is retrieval.** The answer was in what the reader received for 72.0% of questions with reranked RAG and 64.0% with CAMR (the same as plain dense retrieval). CAMR has no reranker; adding one is the obvious next step.
 5. **CAMR's check is not a filter for any answer.** Bolted onto reranked RAG it cut Kimi K3's wrong answers from 21.0% to 7.0% but declined 57.0%, and 72 of those 114 declined answers were correct: under the RAG prompt the model answers in full sentences (*... is al-Ghazali, a Muslim polymath and student of the Asharite school ...*), and the check needs every claim word in one stored sentence. It is built for the short answers CAMR's own prompt asks for.
 6. **Corrective RAG's web fallback added nothing here** (71.5% = reranked), because the corpus already held the pages the lookups would fetch.
+7. **With the 0.5B reader, CAMR was the best of all nine pipelines: 62.5% correct and 3.5% wrong single claims,** against 45.5% correct and 47.0% wrong for the best RAG pipeline (reranked). It read 52 prompt tokens and spent 0.21 s of model time per question, against 260-320 tokens and 1.9-6.6 s for the RAG pipelines.
+8. **With CAMR the reader hardly matters:** the 0.5B and Kimi K3 readers gave the same outcome on 187 of 200 questions (62.5% against 63.0% correct). With RAG it matters a great deal: the same reranked pipeline went from 45.5% (0.5B) to 71.5% (Kimi K3).
+9. **The extra steps of modern RAG did not help a small reader.** HyDE (a hypothetical answer written first, then searched) was the worst pipeline after BM25 (33.0% correct, 59.0% wrong) and the slowest (two model calls, 6.6 s). Abstaining on a low reranker score cut wrong answers from 47.0% to 38.0% while correct ones stayed level (45.0%); CAMR's check on RAG answers cut them to 8.5% but declined 74.5%.
 
-Pending: the 0.5B reader with HyDE, corrective RAG, abstain, check and CAMR (the first attempt stopped on an Ollama timeout under CPU contention), and the 3B reader (dense, reranked, corrective, check, CAMR).
+Pending: the 3B reader (dense, reranked, CAMR first), queued after the size sweep.
 
 ## F29. Automations and agents: n8n workflows calling the engine
 
