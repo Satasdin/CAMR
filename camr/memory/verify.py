@@ -47,7 +47,7 @@ RELATIONS: list[tuple[str, re.Pattern, tuple[str, ...]]] = [(n, re.compile(q, re
                                           "administrative center", "capital and largest city", "capital city")),
     ("country", r"\bcountry\b|\bnation\b", ("country", "country of origin", "sovereign state", "nation")),
     ("genre", r"\bgenres?\b|\bkind of music\b|\bstyle of music\b", ("genre", "genres")),
-    ("occupation", r"\boccupation\b|\bprofession\b|\bjob\b|\bfor a living\b|\bwork as\b",
+    ("occupation", r"\boccupation\b|\bprofession\b|(?<!per )\bjob\b|\bfor a living\b|\bwork as\b",
      ("occupation", "occupations", "occupation(s)", "profession")),
     ("religion", r"\breligio(?:n|us)\b|\bfaith\b", ("religion", "religious affiliation", "denomination")),
     ("sport", r"\bsports?\b", ("sport", "sports", "discipline")),
@@ -348,9 +348,11 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
         return Verdict(False, "no subject", words, relation=rel and rel[0], confidence=conf)
     level = {id(u): aboutness(u, names) for u in units}
     top = max(level.values())  # when memory has a note titled with the subject, only that subject's notes count
-    if top == 0 and not _names_something(question):
-        # the question names no entity and its lookup phrases ("hours is the support desk open") are in no note:
-        # it is about its topic words, and a supporting sentence must share at least half of them (D-33)
+    if top == 0 and not rel and not _names_something(question):
+        # the question names no entity, asks no known relation, and its lookup phrases ("hours is the support desk
+        # open") are in no note: it is about its topic words, and a supporting sentence must share at least half of
+        # them (D-33). A question with a known relation names its subject even in lower case ("the religion of
+        # refuge"), so it keeps the strict subject check.
         level = {id(u): topical(u, topic_words(question)) for u in units}
         top = max(level.values())
     best: tuple[float, int, Unit] | None = None

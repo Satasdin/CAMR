@@ -425,8 +425,11 @@ def implementation(c: Chapter) -> None:
     c.p("A question that names nothing (*What hours is the support desk open?*) cannot pass the subject check, and "
         "the first automation runs showed this withheld correct answers (defect D-33, section ⟦sec_agentic⟧). Such a "
         "question is now anchored by its topic words *T(q)*, its content words of three or more letters other than "
-        "question words, matched on their first five letters:")
-    c.eq(r"\text{about}(u,q)=\mathbb{1}\left[\left|T(q)\cap\text{tok}_5(u)\right|\ge\tfrac{1}{2}\left|T(q)\right|\right]\quad\text{when }q\text{ names no entity}", key="eq_topic")
+        "question words, matched on their first five letters. The rule applies only when the question names no "
+        "entity, asks no known relation, and no note is about its lookup phrase; every PopQA question asks a known "
+        "relation, so the benchmark results are untouched (a first version also applied it to *What is the religion "
+        "of refuge?* and let a wrong answer through; the replay check caught it):")
+    c.eq(r"\text{about}(u,q)=\mathbb{1}\left[\left|T(q)\cap\text{tok}_5(u)\right|\ge\tfrac{1}{2}\left|T(q)\right|\right]\quad\text{when }q\text{ names nothing and asks no known relation}", key="eq_topic")
     c.p("Three further rules complete the answerer. **The fact reader**: when a fact line about the subject carries "
         "the asked relation, its value is the answer and no model is called. **Knowing a subject**: memory counts as "
         "knowing a subject only if a note is titled with it; a note that merely mentions it does not stop a lookup "

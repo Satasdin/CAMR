@@ -315,3 +315,6 @@ def test_a_question_that_names_nothing_is_anchored_by_its_topic_words():
     assert check("How many days do I have to return unused equipment?", "45 days", units).supported
     assert not check("Is there a discount for schools?", "45 days", units).supported
     assert not check("Which cable do I need for the LB-13 battery?", "CAN cable", units).supported
+    # a question with a known relation names its subject even in lower case: no topic anchoring (found by replay)
+    religions = [Unit("Islam", "Islam is an Abrahamic religion.")]
+    assert not check("What is the religion of refuge?", "Islam", religions).supported
