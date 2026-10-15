@@ -6,11 +6,11 @@
   "hallucinated_actions": 0.0,
   "escalated": 0.15,
   "steps_per_task": 1.6,
-  "seconds_per_task": 1.7084999999999997,
-  "prompt_tokens": 15383,
-  "gen_tokens": 6109,
-  "cost_usd": 0.1378,
-  "cost_usd_per_1000_tasks": 6.89
+  "seconds_per_task": 0.001,
+  "prompt_tokens": 15263,
+  "gen_tokens": 6078,
+  "cost_usd": 0.137,
+  "cost_usd_per_1000_tasks": 6.85
  },
  "per_task": [
   {
@@ -398,7 +398,7 @@
    "hallucinated_action": false,
    "escalated": false,
    "steps": 1,
-   "wall_s": 8.58,
+   "wall_s": 0.0,
    "calls": 1,
    "prompt_tokens": 392,
    "gen_tokens": 245,
@@ -537,7 +537,7 @@
    "hallucinated_action": false,
    "escalated": false,
    "steps": 1,
-   "wall_s": 7.23,
+   "wall_s": 0.0,
    "calls": 1,
    "prompt_tokens": 435,
    "gen_tokens": 110,
@@ -567,7 +567,7 @@
    "hallucinated_action": false,
    "escalated": false,
    "steps": 1,
-   "wall_s": 6.26,
+   "wall_s": 0.0,
    "calls": 1,
    "prompt_tokens": 399,
    "gen_tokens": 143,
@@ -597,7 +597,7 @@
    "hallucinated_action": false,
    "escalated": false,
    "steps": 1,
-   "wall_s": 5.33,
+   "wall_s": 0.0,
    "calls": 1,
    "prompt_tokens": 398,
    "gen_tokens": 96,
@@ -653,22 +653,22 @@
     {
      "tool": "escalate",
      "args": {
-      "reason": "Customer asked for the warranty on the HS-700 panel, but memory contains no information about an HS-700 panel (only HS-400 and HS-520 warranties are stored). Cannot answer without inventing facts."
+      "reason": "Customer asked about the warranty terms for the HS-700 panel, but no warranty information for the HS-700 panel exists in memory. Cannot answer without inventing facts."
      }
     }
    ],
    "done": true,
-   "transcript": "\nACTION search_memory {\"query\": \"A customer asks for the warranty on the HS-700 panel. Handle the request.\"}\nObservation: Nothing relevant is stored in memory.\n\nACTION search_memory {\"query\": \"HS-700 panel warranty terms duration coverage\"}\nObservation: - HS-400 solar panel: The HS-400 is Helio Solar's standard monocrystalline panel. It is rated at 400 watts. The HS-400 has a 25-year product warranty. The HS-400 costs $420 per panel.\n- HS-520 bifacial panel: The HS-520 is a bifacial panel rated at 520 watts. The HS-520 has a 30-year product warranty. The HS-520 costs $610 per panel.\n- Returns policy: Unused equipment can be returned within 45 days. Every return needs an RMA number, which starts with HLX-.\n\nACTION escalate {\"reason\": \"Customer asked for the warranty on the HS-700 panel, but memory contains no information about an HS-700 panel (only HS-400 and HS-520 warranties are stored). Cannot answer without inventing facts.\"}\nObservation: done\n",
+   "transcript": "\nACTION search_memory {\"query\": \"A customer asks for the warranty on the HS-700 panel. Handle the request.\"}\nObservation: Nothing relevant is stored in memory.\n\nACTION search_memory {\"query\": \"HS-700 panel warranty terms duration coverage\"}\nObservation: Nothing relevant is stored in memory.\n\nACTION escalate {\"reason\": \"Customer asked about the warranty terms for the HS-700 panel, but no warranty information for the HS-700 panel exists in memory. Cannot answer without inventing facts.\"}\nObservation: done\n",
    "success": true,
    "hallucinated_action": false,
    "escalated": true,
    "steps": 2,
-   "wall_s": 6.75,
+   "wall_s": 0.0,
    "calls": 2,
-   "prompt_tokens": 849,
-   "gen_tokens": 303,
-   "model_ms": 13077.4,
-   "cost_usd": 0.007092
+   "prompt_tokens": 729,
+   "gen_tokens": 272,
+   "model_ms": 11314.3,
+   "cost_usd": 0.006267
   },
   {
    "task": "A18",
