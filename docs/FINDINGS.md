@@ -5,7 +5,7 @@ number below was produced by the code in this repository, and the file it comes
 from is named. Nothing here is estimated or synthetic. Runs still in progress are
 listed at the end, and this log is updated as they finish.
 
-Last updated: 2026-10-01.
+Last updated: 2026-10-15.
 
 ---
 
@@ -773,6 +773,150 @@ Development draw, Qwen 0.5B calculator, held-out / reworded / derived: v1 56.7 /
 
 **Limits.** The 0.5B model cannot apply the arithmetic series or Heron's formula even with its own corrected solution in front of it (it rewrites `n/2 * (2a + (n-1)d)` as `n * (a + (n-1)d)`); no check can fix a wrong formula built from the right numbers, and the grounding check does not claim to. On combinations it got worse after correction (50% → 0%): it copied the prompt's sample equation (`2*x + 4 = 19`), and the grounding check flagged most of those answers. With 6 problems per family a family's figure moves in steps of 17 points.
 
+
+## F28. Modern RAG pipelines against CAMR (one corpus, one question set)
+
+Sources: `scripts/rag_bench.py`, `results/ragbench/run_<pipeline>_<reader>.json` (with `summary_judged`), `results/ragbench/thresholds.json`, `results/ragbench/corpus.json`; figures `report/rag_outcomes.png`, `report/rag_errors.png`, `report/rag_tradeoff.png`, `report/rag_cost.png`, diagram `diagrams/rag_pipelines.png`.
+
+**Set-up.** One store built from every page the frozen lookups read for the development, test and held-out sets (972 pages -> 9,989 documents -> 10,443 notes, 46.9 MB, lead sentences plus one note per infobox fact, as CAMR stores them). Every pipeline searches the same store and is scored on the same 200 held-out PopQA questions. RAG pipelines use LangChain's standard RAG prompt (rlm/rag-prompt) and five passages: dense (cosine top 5), BM25 (FTS5), hybrid (dense 20 + BM25 20, reciprocal-rank fusion, k = 60), hybrid + cross-encoder reranker (ms-marco-MiniLM-L-6-v2), HyDE, corrective RAG (the reranker's best score grades retrieval; incorrect -> the same frozen web lookups CAMR uses; ambiguous -> both), reranker + abstain, and reranker + CAMR's verification check. Thresholds were chosen on the 200 development questions only: abstain 5.3; corrective RAG 4.77 / 7.57. Answers exact matching marks wrong were judged by Kimi K3; CAMR's answers about a named other meaning (*Happy (2011 film): ...*) are counted apart from wrong ones, since a plain RAG answer never names its meaning.
+
+**Reader: Qwen 0.5B** (judged)
+
+| Pipeline | Correct | Wrong, stated | Other meaning (named) | Declined | Precision | Gold in context | Prompt tokens | Model s | Retrieval CPU ms | USD / 1,000 q |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Dense (naive RAG) | 43.5% | 50.0% | - | 6.5% | 46.5% | 64.0% | 259 | 3.88 | 12 | $0 |
+| BM25 | 29.0% | 64.0% | - | 7.0% | 31.2% | 40.5% | 176 | 1.52 | 3 | $0 |
+| Hybrid (RRF) | 37.0% | 56.0% | - | 7.0% | 39.8% | 56.5% | 191 | 1.70 | 13 | $0 |
+| Hybrid + reranker | 45.5% | 47.0% | - | 7.5% | 49.2% | 72.0% | 290 | 2.48 | 979 | $0 |
+
+**Reader: Kimi K3** (judged)
+
+| Pipeline | Correct | Wrong, stated | Other meaning (named) | Declined | Precision | Gold in context | Prompt tokens | Model s | Retrieval CPU ms | USD / 1,000 q |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Dense (naive RAG) | 68.0% | 20.0% | - | 12.0% | 77.3% | 64.0% | 305 | 5.40 | 12 | $3.08 |
+| Hybrid + reranker | 71.5% | 21.0% | - | 7.5% | 77.3% | 72.0% | 336 | 5.69 | 2922 | $3.33 |
+| Corrective RAG | 71.5% | 20.5% | - | 8.0% | 77.7% | 71.5% | 314 | 5.30 | 5539 | $2.99 |
+| Reranker + CAMR check | 36.0% | 7.0% | - | 57.0% | 83.7% | 72.0% | 336 | 5.69 | 2951 | $3.33 |
+| CAMR (verified) | 63.0% | 4.0% | 20.5% | 12.5% | 72.0% | 64.0% | 65 | 1.80 | 373 | $1.01 |
+
+**Findings**
+1. **With a strong reader, modern RAG answers more and states more wrong answers.** Reranked and corrective RAG were correct on 71.5% with Kimi K3, but about one answer in five (20.5-21.0%) was wrong and stated as fact. CAMR was correct on 63.0%, stated a wrong single claim for 4.0%, answered about a named other meaning for 20.5%, and declined 12.5%. Counting only single claims, 94% of what CAMR stated as a fact was right, against 77% for reranked RAG.
+2. **With a small reader, RAG is mostly wrong.** The 0.5B model with the best RAG pipeline (reranked) was correct on 45.5% and wrong on 47.0%; with BM25 alone, wrong on 64.0%.
+3. **CAMR is far cheaper per answer.** 0.27 model calls and 65 prompt tokens per question (most answers come from a fact line with no model call) against one call and about 300 tokens for every RAG pipeline: $1.01 per 1,000 questions with Kimi K3 against $2.99-3.33.
+4. **Part of CAMR's lower coverage is retrieval.** The answer was in what the reader received for 72.0% of questions with reranked RAG and 64.0% with CAMR (the same as plain dense retrieval). CAMR has no reranker; adding one is the obvious next step.
+5. **CAMR's check is not a filter for any answer.** Bolted onto reranked RAG it cut Kimi K3's wrong answers from 21.0% to 7.0% but declined 57.0%, and 72 of those 114 declined answers were correct: under the RAG prompt the model answers in full sentences (*... is al-Ghazali, a Muslim polymath and student of the Asharite school ...*), and the check needs every claim word in one stored sentence. It is built for the short answers CAMR's own prompt asks for.
+6. **Corrective RAG's web fallback added nothing here** (71.5% = reranked), because the corpus already held the pages the lookups would fetch.
+
+Pending: the 0.5B reader with HyDE, corrective RAG, abstain, check and CAMR (the first attempt stopped on an Ollama timeout under CPU contention), and the 3B reader (dense, reranked, corrective, check, CAMR).
+
+## F29. Automations and agents: n8n workflows calling the engine
+
+Sources: `scripts/agentic/` (gateway, systems, agent, workflow builder, scenario data), `data/agentic/helio.json`, `data/agentic/fresh.json`, `results/agentic/helio_*.json`, `agent_*.json`, `fresh_*.json`, workflow files `results/agentic/n8n/*.json`; figures `report/agentic_desk.png`, `report/agentic_agent.png`, `report/agentic_matrix.png`, `report/agentic_fresh.png`, diagrams `diagrams/automation.png`, `diagrams/n8n_desk.png`, `diagrams/agent_loop.png`, n8n screenshots `figures/n8n/*.png`.
+
+**Set-up.** A gateway on localhost serves four systems behind one interface (reset, teach, forget, ask): the model alone; context stuffing (the whole knowledge base in every prompt); modern RAG (hybrid search, cross-encoder reranker, top 5, LangChain prompt); and CAMR (verified memory). Each answer is metered: model calls, tokens, seconds, US dollars at Moonshot's list price. n8n 2.43.6 (Node 24) runs three workflows headless with standard nodes only (Manual Trigger, HTTP Request, Loop Over Items, IF, No Operation): a **support desk** for an invented company (Helio Solar: 14 documents, 3 policy changes, 60 tickets over 8 days; a ticket nobody can answer is escalated, and a person's resolution is taught back), an **operations agent** (20 tasks with tools: search memory, calculate, create invoice, reply, escalate; a task succeeds only if every check on its tool calls holds; an invoice or reply with a number or fact that is not the company's is a *hallucinated action*), and a **current-events digest** (30 daily Wikipedia *Current events* pages fetched live, 556 items taught, 50 questions written by Kimi K3 from single items with the answer copied verbatim; cost of writing them $0.24).
+
+**Support desk (60 tickets)**
+
+| System | Correct reply | Wrong reply | Escalated | Answerable resolved | Unknowable escalated | Prompt tok/ticket | USD / 1,000 |
+|---|---|---|---|---|---|---|---|
+| Qwen 0.5B alone | 8.3% | 81.7% | 10.0% | 8.9% | 13.3% | 81 | $0 |
+| Llama 3B + context stuffing | 70.0% | 5.0% | 25.0% | 93.3% | 93.3% | 632 | $0 |
+| Llama 3B + RAG | 33.3% | 0.0% | 66.7% | 44.4% | 100.0% | 279 | $0 |
+| Qwen 0.5B + CAMR | 56.7% | 6.7% | 36.7% | 75.6% | 93.3% | 164 | $0 |
+| Llama 3B + CAMR | 68.3% | 0.0% | 31.7% | 91.1% | 100.0% | 146 | $0 |
+| Kimi K3 alone | 0.0% | 3.3% | 96.7% | 0.0% | 93.3% | 134 | $3.80 |
+| Kimi K3 + context stuffing | 71.7% | 1.7% | 26.7% | 95.6% | 93.3% | 687 | $4.04 |
+| Kimi K3 + RAG | 71.7% | 5.0% | 23.3% | 95.6% | 93.3% | 335 | $2.68 |
+| Kimi K3 + CAMR | 75.0% | 0.0% | 25.0% | 100.0% | 100.0% | 204 | $2.62 |
+
+**Desk findings**
+1. **A model alone is useless or dangerous here.** Kimi K3 escalated almost everything (it knows nothing about Helio) yet told two customers to clean their panels *once or twice a year*, not the company's six months. The 0.5B model alone sent wrong replies to 81.7% of tickets.
+2. **With Kimi K3, all three memories answered the knowledge-base and policy tickets; they differ on what they did not know.** CAMR sent 0 wrong replies, resolved every answerable ticket and escalated every unknowable one; stuffing sent 1 wrong reply, RAG 3.
+3. **A wrong reply stops a desk from learning.** *Which cable connects the Lumen LB-13 battery?* RAG told the customer *CAN cable* (from an unrelated error-code note) all three times it was asked: nobody saw it, so nothing was taught. CAMR escalated it the first time, a person answered *CB-3*, the answer was taught, and both later tickets were answered *Helio CB-3 cable*.
+4. **Cost per 1,000 tickets with Kimi K3:** CAMR $2.62, RAG $2.68, stuffing $4.04 (687 prompt tokens per ticket against 204 for CAMR; stuffing grows with every document added).
+5. **On the device:** the 3B model with CAMR resolved 68.3% with 0 wrong replies; with stuffing 70.0% with 5.0% wrong, but each answer read 4.3 times the prompt (632 against 146 tokens). With the standard RAG prompt the 3B model hedged (*I don't know where RMA numbers start, but I do know that they start with HLX-*), so 14 answerable tickets went to a person. The 0.5B model with CAMR sent 4 wrong replies (6.7%), all of one flaw: the check accepted a claim made only of the subject's own name (*Lumen LB-13* for *Which cable ...?*) or another of its attributes (*10-year firmware*); no known relation covers *cable* or *firmware*.
+6. **D-33 (found here):** before the fix CAMR with Kimi K3 sent 0 wrong replies but escalated 48.3% of tickets, including 14 it could answer: questions such as *What hours is the support desk open?* name no product, so the subject check had nothing to anchor to. Topic anchoring (applied only when the question names nothing and asks no known relation) took it to 75.0%, still with 0 wrong.
+
+Pending: Llama 3B alone (its run stopped on an Ollama timeout under CPU contention).
+
+**Agent (20 tasks)**
+
+| Agent | Succeeded | Hallucinated action | Escalated | Tool calls/task | USD / 1,000 |
+|---|---|---|---|---|---|
+| Llama 3B, no memory | 0.0% | 95.0% | 0.0% | 1.05 | $0 |
+| Llama 3B + RAG | 30.0% | 45.0% | 0.0% | 1.50 | $0 |
+| Llama 3B + CAMR | 25.0% | 20.0% | 10.0% | 2.10 | $0 |
+| Kimi K3, no memory | 15.0% | 0.0% | 100.0% | 1.00 | $3.62 |
+| Kimi K3 + RAG | 100.0% | 0.0% | 15.0% | 1.45 | $5.84 |
+| Kimi K3 + CAMR | 100.0% | 0.0% | 15.0% | 1.60 | $6.89 |
+
+**Agent findings**
+1. **With a strong model, memory is the difference between doing nothing and doing everything.** Kimi K3 without memory escalated all 20 tasks (*I do not have the unit price for HS-400 panels ... I must not invent prices*), correct only for the three tasks nobody could do. With either memory it completed all 20 with no hallucinated action: it computed invoice totals with the calculator (*12*420 + 180 + 35*12 = 5640*), combined a learned resolution with a price (36 panels on two Volta-2 inverters, $15,120) and handed the HS-700 warranty, financing and Volta-X price requests to a person.
+2. **A 3B model is not a dependable agent with either memory.** Without memory it invented invoices and replies on 95% of tasks; with RAG it succeeded on 30% with 45% hallucinated actions; with CAMR on 25% with 20% hallucinated actions. Memory's main effect at this size is fewer invented actions, and CAMR's was the largest.
+3. **D-32 (found here):** before the fix the Kimi K3 + CAMR agent succeeded on 80%: terse task phrasing (*Recommended cleaning interval?*, *E57. Any idea?*) was read as names no note mentions, so the entity gate returned nothing.
+
+**Current events (50 questions)**
+
+| System | Correct | Wrong, stated | Declined | Pages live / cached | USD / 1,000 |
+|---|---|---|---|---|---|
+| Llama 3B alone | 2.0% | 0.0% | 98.0% | 30 / 0 | $0 |
+| Kimi K3 alone | 22.0% | 12.0% | 66.0% | 30 / 0 | $14.74 |
+| Kimi K3 + stuffing | 100.0% | 0.0% | 0.0% | 30 / 0 | $89.20 |
+| Kimi K3 + RAG | 98.0% | 2.0% | 0.0% | 30 / 0 | $3.31 |
+| Kimi K3 + CAMR | 96.0% | 0.0% | 4.0% | 30 / 0 | $1.96 |
+
+**News findings**
+1. **After its training data, the cloud model alone mostly declines, and more than a third of what it states is wrong.** Kimi K3 alone: 22% correct, 12% wrong (*four* journalists where the item says six; *Tropical Storm Fred* for Fay; *at least 54* killed where it says seven), 66% declined.
+2. **Taught as the workflow fetched them, the pages made it right:** CAMR 96% correct and 0% wrong (two answers it had read but could not confirm were declined), RAG 98% with 2% wrong, stuffing 100%.
+3. **Stuffing's accuracy is bought with tokens:** every question carried all 556 items (about 29,000 prompt tokens), $89.20 per 1,000 questions against $3.31 for RAG and $1.96 for CAMR. On a stream that grows daily, stuffing's cost grows with it.
+4. All 30 pages were fetched live in the reported runs. n8n marked the news executions as failed because an HTTP connection was reset, although every question was answered and scored (50 of 50); the reset was not traced further.
+5. Llama 3B alone declined 98% of news questions. Pending: Llama 3B with RAG and with CAMR.
+
+**Defects found by the automations (all fixed and the affected runs repeated):** D-32 (terse phrasing read as names), D-33 (questions that name nothing withheld), D-34 (the news workflow first used the support persona, so the cloud model refused news as off topic), D-35 (*I can't identify ...* not recognised as a decline, so a RAG decline was sent as a reply), D-36 (Wikimedia refused repeated live fetches with HTTP 403: the fetch node now continues on error and the gateway teaches the page as cached when the questions were written, recording which pages came live), D-38 (*I don't know* written with a curly apostrophe not recognised as a decline: 13 of Kimi K3's news declines had been scored as wrong; only that run was affected).
+
+## F30. Which model to run CAMR with
+
+Sources: `results/verified/answers_heldout_sa*.json`, `results/verified/judged_heldout.json`, the 19-model sweep (F10, F10b), `results/models/speed.json` (pending); figure `report/model_choice.png`.
+
+The verified pipeline (chosen on the development set with the 0.5B model) was run on the held-out set with the reader swapped, everything else fixed (judged):
+
+| Reader | Correct | Wrong, stated | Other meaning (named) | Not confirmed |
+|---|---|---|---|---|
+| qwen2.5:0.5b | 60.5% | 3.0% | 17.5% | 19.0% |
+| qwen2.5:1.5b | 60.5% | 3.5% | 18.0% | 18.0% |
+| llama3.2:3b | 61.0% | 3.0% | 18.5% | 17.5% |
+| phi4-mini (3.8B) | 60.0% | 3.0% | 18.0% | 19.0% |
+| qwen2.5:7b | 60.5% | 3.5% | 19.5% | 16.5% |
+
+**Findings**
+1. **In verified fact answering, a bigger reader buys nothing.** All five readers are within 1 point. 140 of the 200 questions were answered from a fact line with no model call, whatever the reader; of the other 60 (0.5B reader), 19 were answered correctly and 36 of the remaining 41 had no answer anywhere in what memory read.
+2. **Reading across documents does need a bigger reader:** on HotpotQA (F13) memory added +23, +30.5 and +34.5 points for 0.5B, 1.5B and 3B, and only from 3B did a small model with memory match the cloud model. In the automations the 3B model sent no wrong replies with CAMR, the 0.5B model 4 (F29).
+3. **Recommendation for a 16 GB CPU-only device:** a 1.5B model for facts, a 3B model when questions need reading across documents or a reply goes to a customer; 7B and larger answered more slowly than the cloud model on this hardware (F10b). Clean per-model speed and memory (load time, seconds per answer, tokens per second, resident memory) are pending in `results/models/speed.json`.
+
+## F31. What the cloud model cost
+
+Source: `results/costs/kimi_costs.json` (`python scripts/kimi_costs.py`: every Kimi call the project made, from the logged token counts, at Moonshot's list price: kimi-k3 $3 input, $15 output per million tokens; output includes reasoning tokens; cached-input discounts not applied, so these are upper bounds); figures `report/kimi_costs.png`, `report/cost_compare.png`.
+
+- **Total so far: $32.58 for 6,143 calls** (3.1 M input, 1.6 M output tokens). Largest items: learning formulas $8.74 (every correction round, incl. two stopped runs), the automations $7.32 (of which $4.46 was context stuffing on 50 news questions), judging answers $6.90.
+- **Per 1,000 answers with Kimi K3:** desk: alone $3.80, stuffing $4.04, RAG $2.68, CAMR $2.62; news: alone $14.74, stuffing $89.20, RAG $3.31, CAMR $1.96; agent: no memory $3.62, RAG $5.84, CAMR $6.89 (more tool calls per task); RAG benchmark: reranked $3.33, corrective $2.99, CAMR $1.01.
+- **CAMR was the cheapest way to make the cloud model useful in every scenario but the agent**, because it sends the fewest prompt tokens and, for labelled facts, often none; stuffing was the most expensive, up to 45 times CAMR on the news. Most of every bill is output, and Kimi K3 bills its reasoning as output.
+- Local models cost nothing per answer; their price is CPU time. With CAMR the 3B model's desk answers took about 2 s of model time against 32-37 s with RAG or stuffing (prompts 2-4 times longer; these runs shared the CPU, so the ratio, not the seconds, is the result).
+
+## Defects found in this round
+
+| ID | Defect | Found by | Fix | Retest |
+|---|---|---|---|---|
+| D-31 | Instructions at the start of a sentence (*Give the amount ...*) read as names; the right correction withheld for 33 of 60 reworded problems | Formula development draw | Instructions at any sentence start are not names | Replays identical |
+| D-32 | Terse ticket phrasing (*Recommended cleaning interval?*, *E57. Any idea?*) read as names | Agent tasks | Openers and sentence ends handled | Agent 80% -> 100% |
+| D-33 | Questions that name nothing withheld (14 of 45 answerable desk tickets) | n8n desk | Topic anchoring, only without a name or a known relation | Desk 51.7% -> 75.0%, 0 wrong; PopQA replays identical |
+| D-34 | News workflow used the support persona | Kimi K3's news answers | Persona per scenario | Re-run |
+| D-35 | *I can't identify* not recognised as a decline | Desk RAG reply | Pattern widened | Every desk system re-run |
+| D-36 | Wikimedia refused repeated live fetches (403) | News workflow | Continue on error; cached page; pages counted | Re-run (all 30 live) |
+| D-37 | D-32 itself cut titles (*St. Louis Blues*, *A.I. ...*, *the composer of Hello*) and dropped names that start a statement (*Josh decides ...*) | `reproduce.py` (test, held-out, maths replays failed) | Abbreviations, initials, ellipses; greetings only at a sentence start; opener rule only in a sentence that asks | Extraction identical to pre-D-32 on 600 PopQA questions and 440 formula problems; all replays pass |
+| D-38 | *I don't know* with a curly apostrophe not recognised as a decline | News results | Apostrophes normalised | Only Kimi K3 alone on the news affected; re-run |
+
+The first version of the D-33 fix also applied to *What is the religion of refuge?* (a PopQA question with a lower-case subject) and let Kimi K3's wrong *Islam* through as verified; the replay check caught it and the rule was narrowed to questions that ask no known relation.
+
 ---
 
 ## Screenshots and figures
@@ -794,11 +938,20 @@ Development draw, Qwen 0.5B calculator, held-out / reworded / derived: v1 56.7 /
 | `figures/report/math_learning_curve.png` | F27 held-out accuracy as corrections accumulate; seen vs unseen after learning |
 | `figures/report/math_ablation.png` | F27 one correction stored as rule, worked example or both |
 | `figures/report/math_lora_vs_memory.png` | F27 LoRA per epoch against memory on the same corrections |
+| `figures/report/verified_outcomes.png` | F24 held-out outcomes: verified memory against the models alone |
+| `figures/report/rag_outcomes.png`, `rag_errors.png`, `rag_tradeoff.png`, `rag_cost.png` | F28 RAG pipelines and CAMR: outcomes, where wrong answers come from, accuracy against errors and time, what each reads |
+| `figures/report/agentic_desk.png`, `agentic_agent.png`, `agentic_matrix.png`, `agentic_fresh.png` | F29 support desk, agent (with every task), current events |
+| `figures/report/model_choice.png` | F30 verified pipeline with five readers |
+| `figures/report/kimi_costs.png`, `cost_compare.png` | F31 cloud spend by experiment; cost per 1,000 answers by kind of memory |
+| `figures/diagrams/verified_flow.png`, `rag_pipelines.png`, `automation.png`, `n8n_desk.png`, `agent_loop.png`, `math_loop.png` | How verified answering, the RAG pipelines, the automations, the agent and learning from corrections work |
+| `figures/n8n/desk_canvas.png`, `desk_execution.png`, `agent_canvas.png`, `fresh_canvas.png`, `executions_list.png` | The n8n workflows and finished executions (screenshots) |
 
-Regenerate: `python scripts/make_math_figures.py` (F27), `python scripts/make_figures.py` and `python scripts/screenshot_inspector.py --run-dir results/pilot --out docs/figures/inspector --label grow-100`.
+Regenerate: `python scripts/make_ch5_figures.py` (F24, F28-F31), `python scripts/make_diagrams.py`, `python scripts/make_math_figures.py` (F27), `python scripts/make_figures.py` and `python scripts/screenshot_inspector.py --run-dir results/pilot --out docs/figures/inspector --label grow-100`.
 
 ---
 
 ## Still running
 
-Nothing. All runs reported above are complete.
+- F28: the 0.5B reader with HyDE, corrective RAG, abstain, check and CAMR; the 3B reader (dense, reranked, corrective, check, CAMR); judging of those runs.
+- F29: Llama 3B alone on the desk (re-run after an Ollama timeout); Llama 3B with RAG and with CAMR on the news.
+- F30: per-model speed and memory (`results/models/speed.json`).

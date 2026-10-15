@@ -320,10 +320,10 @@ def fig_costs(out: Path) -> Path | None:
     ys = range(len(items))
     ax.barh(list(ys), [v for _, v in items], color=BLUE, height=0.6)
     for y, (_, v) in zip(ys, items):
-        ax.text(v, y, f" ${v:.2f}", va="center", fontsize=8, color=INK2)
+        ax.text(v, y, f" \\${v:.2f}", va="center", fontsize=8, color=INK2)
     ax.set_yticks(list(ys), [k for k, _ in items])
-    style(ax, xlabel="USD at Moonshot list price (input $3, output $15 per million tokens)", grid="x")
-    ax.set_title(f"Kimi K3 spend across the project: ${d['total']['usd']:.2f} for {d['total']['calls']:,} calls",
+    style(ax, xlabel="USD at Moonshot list price (input \\$3, output \\$15 per million tokens)", grid="x")
+    ax.set_title(f"Kimi K3 spend across the project: \\${d['total']['usd']:.2f} for {d['total']['calls']:,} calls",
                  loc="left")
     fig.tight_layout()
     return save(fig, out, "kimi_costs.png")
@@ -456,10 +456,58 @@ def fig_agent_matrix(out: Path) -> Path | None:
     return save(fig, out, "agentic_matrix.png")
 
 
+def fig_cost_compare(out: Path) -> Path | None:
+    """Cloud cost per 1,000 answers for the same model with each kind of memory, in every scenario measured."""
+    def load(path):
+        f = AG / path
+        return json.loads(f.read_text())["summary"] if f.exists() else None
+    scen = [("Support desk\n(60 tickets)", "helio_{}_kimi-k3.json", "cost_usd_per_1000_tickets"),
+            ("Current events\n(50 questions)", "fresh_{}_kimi-k3.json", "cost_usd_per_1000_questions")]
+    systems = [("llm", "alone", GREY), ("stuff", "context stuffing", ORANGE), ("rag", "modern RAG", BLUE),
+               ("camr", "CAMR", GREEN)]
+    rows = []
+    for label, pat, key in scen:
+        rows.append((label, [(load(pat.format(s)) or {}).get(key) for s, _, _ in systems]))
+    ag = [("Agent\n(20 tasks)", [(load(f"agent_kimi-k3__{m}.json") or {}).get("cost_usd_per_1000_tasks")
+                                  for m in ("none", None, "rag", "camr")] if True else [])]
+    ag[0][1][1] = None
+    rows += ag
+    runs = rag_runs()
+    rb = []
+    for s in ("llm", "stuff", "rag", "camr"):
+        d = runs.get(("kimi-k3", {"rag": "rerank", "camr": "camr"}.get(s, "")))
+        if d:
+            m = d["summary"]
+            rb.append((m["prompt_tokens"] * 3 + m["gen_tokens"] * 15) / 1e6 * 1000)
+        else:
+            rb.append(None)
+    rows.append(("RAG benchmark\n(200 questions)", rb))
+    fig, ax = plt.subplots(figsize=(10.4, 4.2), facecolor=SURF)
+    w = 0.2
+    for k, (s, name, col) in enumerate(systems):
+        xs, ys = [], []
+        for i, (_, vals) in enumerate(rows):
+            if vals[k] is not None:
+                xs.append(i + (k - 1.5) * w)
+                ys.append(vals[k])
+        ax.bar(xs, ys, width=w * 0.92, color=col, label=f"Kimi K3 {name}")
+        for x, y in zip(xs, ys):
+            ax.text(x, y * 1.04, f"\\${y:.2f}" if y < 10 else f"\\${y:.0f}", ha="center", va="bottom",
+                    fontsize=7, color=INK2)
+    ax.set_xticks(range(len(rows)), [r[0] for r in rows], fontsize=8.5)
+    ax.set_yscale("log")
+    ax.set_ylim(0.8, 300)
+    style(ax, ylabel="USD per 1,000 answers (log scale)", grid="y")
+    ax.legend(frameon=False, fontsize=8, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.18))
+    ax.set_title("What the same cloud model costs with each kind of memory", loc="left")
+    fig.tight_layout()
+    return save(fig, out, "cost_compare.png")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="docs/figures/report")
     o = Path(ap.parse_args().out)
     o.mkdir(parents=True, exist_ok=True)
-    for f in (fig_verified, fig_rag_errors, fig_agent_matrix, fig_rag_outcomes, fig_rag_tradeoff, fig_rag_cost, fig_models, fig_desk, fig_agent, fig_fresh, fig_costs):
+    for f in (fig_verified, fig_rag_errors, fig_agent_matrix, fig_rag_outcomes, fig_rag_tradeoff, fig_rag_cost, fig_models, fig_desk, fig_agent, fig_fresh, fig_costs, fig_cost_compare):
         f(o)
