@@ -1236,6 +1236,8 @@ def res_rag(c: Chapter) -> None:
                        "declined"),
                       ("rag_tradeoff.png", "Accuracy against wrong statements, and accuracy against model time, for "
                        "every pipeline and reader"),
+                      ("rag_errors.png", "Where the wrong answers come from: the answer was in what the reader got "
+                       "(misread) or it was not (answered anyway)"),
                       ("rag_cost.png", "What each pipeline reads and what reading costs (0.5B reader): answer in "
                        "context, prompt tokens, retrieval CPU time")):
         if (REPORT / name).exists():
@@ -1322,6 +1324,9 @@ def res_agentic(c: Chapter) -> None:
         if (REPORT / "agentic_agent.png").exists():
             c.figure(REPORT / "agentic_agent.png", "Operations agent: tasks completed correctly and hallucinated "
                      "actions", 14.5)
+        if (REPORT / "agentic_matrix.png").exists():
+            c.figure(REPORT / "agentic_matrix.png", "Every agent task in every configuration: succeeded, handed to a "
+                     "person, failed, or a hallucinated action", 15.8)
     c.p(AGENT_TEXT(agents))
     tr = agent_trace(agents)
     if tr:
@@ -1388,6 +1393,9 @@ def res_cost(c: Chapter) -> None:
                 size=8.5)
         if (REPORT / "kimi_costs.png").exists():
             c.figure(REPORT / "kimi_costs.png", "Kimi K3 spend across the project", 14.5)
+    if (REPORT / "cost_compare.png").exists():
+        c.figure(REPORT / "cost_compare.png", "What the same cloud model costs per 1,000 answers with each kind of "
+                 "memory, in every scenario measured (log scale)", 15.8)
     c.p(COST_TEXT(d))
 
 
