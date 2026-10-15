@@ -374,3 +374,15 @@ def test_terse_task_phrasing_is_not_taken_for_names():
     # names and initials are unchanged
     assert question_entities("Who wrote J. K. Rowling's first book?") == ["j k rowling"]
     assert question_entities("Were Scott Derrickson and Ed Wood of the same nationality?") == ["scott derrickson", "ed wood"]
+
+
+def test_titles_with_abbreviations_and_greetings_stay_whole():
+    from camr.memory.entities import question_entities
+
+    # the D-32 sentence-end rule cut these titles (found by the replay check); abbreviations, dotted initials and an
+    # ellipsis inside a title do not end a sentence, and a greeting word is an opener only at the start
+    assert question_entities("What sport does St. Louis Blues play?") == ["st louis blues"]
+    assert question_entities("Who was the screenwriter for A.I. Artificial Intelligence?") == ["i artificial intelligence"]
+    assert question_entities("Who was the producer of Viruddh... Family Comes First?") == ["viruddh family comes first"]
+    assert question_entities("Who was the composer of Hello?") == ["hello"]
+    assert question_entities("Hello, how long is the warranty on the HS-400 panel?") == ["hs 400"]

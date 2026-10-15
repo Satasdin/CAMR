@@ -22,9 +22,11 @@ _LEADING = {"what", "who", "whom", "whose", "which", "when", "where", "why", "ho
 # instructions and openers that start a sentence of a task ("Find its area.", "Give the amount to the cent.")
 _LEADING |= {"find", "give", "compute", "calculate", "work", "add", "convert", "use", "using", "solve", "determine",
              "express", "write", "list", "show", "round", "starting", "suppose", "if", "after", "each", "every",
-             "one", "there", "please", "let", "assume", "given", "estimate", "say", "explain", "reply", "handle",
-             "create", "send", "check", "answer", "describe", "tell", "ask", "help", "any", "hi", "hello", "thanks",
-             "dear"}
+             "one", "there", "please", "let", "assume", "given", "estimate", "say", "explain"}
+# words that open a terse request or a greeting ("Reply with the fix.", "Any idea?", "Hello, …"); only at the start
+# of a sentence, since elsewhere they are titles ("the composer of Hello", "Help!")
+_OPENERS = {"reply", "handle", "create", "send", "check", "answer", "describe", "ask", "help", "any", "hi", "hello",
+            "thanks", "dear"}
 _TOKEN = re.compile(r"[\w'’.&-]+", re.UNICODE)
 _POSSESSIVE = re.compile(r"['’]s?$")
 _ARTICLE = re.compile(r"^(?:the|a|an) ")
@@ -39,9 +41,18 @@ def norm(text: str) -> str:
     return " ".join(re.findall(r"\w+", text, re.UNICODE))
 
 
+_ABBREV = {"st", "mt", "mr", "mrs", "ms", "dr", "jr", "sr", "no", "vs", "co", "inc", "ltd", "ft", "vol", "pt"}
+
+
 def _ends_sentence(tok: str) -> bool:
-    """A token that closes a sentence ("Volta-2.", "E57?"), other than an initial ("J.")."""
-    return tok[-1:] in ".?!:" and not re.fullmatch(r"[A-Z]\.", tok)
+    """A token that closes a sentence ("Volta-2.", "E57?"); not an initial ("J."), dotted initials ("A.I."), a
+    title abbreviation ("St.") or an ellipsis inside a title ("Viruddh... Family Comes First")."""
+    if tok[-1:] not in ".?!:":
+        return False
+    if tok.endswith(".") and (re.fullmatch(r"(?:[A-Za-z]\.)+", tok) or tok.endswith("...")
+                              or tok[:-1].lower() in _ABBREV):
+        return False
+    return True
 
 
 def question_entities(question: str) -> list[str]:
@@ -56,13 +67,13 @@ def question_entities(question: str) -> list[str]:
         # a capitalised first word followed by a lower-case one opens a sentence; it is not a name ("Recommended
         # cleaning interval?", "Bird mesh kit price?", "Price of the Helio kit"); a lone word ("Fix?") neither
         opener = i in starts and not (nxt0[:1].isupper() or nxt0[:1].isdigit()) and not _ends_sentence(t)
-        if t[:1].isupper() and not opener and not (i in starts and t.lower().rstrip(".") in _LEADING):
+        if t[:1].isupper() and not opener and not (i in starts and t.lower().rstrip(".") in _LEADING | _OPENERS):
             j, run = i, [t]
             while j + 1 < len(toks):
                 nxt = toks[j + 1]
                 if _ends_sentence(toks[j]):  # a name ends with its sentence ("E57. Any idea?", "Volta-2. Reply")
                     break
-                if j + 1 in starts and nxt.lower().rstrip(".") in _LEADING:  # the sentence ended ("122.5 J. How")
+                if j + 1 in starts and nxt.lower().rstrip(".") in _LEADING | _OPENERS:  # sentence ended ("J. How")
                     break
                 if nxt[:1].isupper() or nxt[:1].isdigit():
                     run.append(nxt)
@@ -79,7 +90,7 @@ def question_entities(question: str) -> list[str]:
                 else:
                     break
             span = _ARTICLE.sub("", norm(" ".join(run)))
-            if len(span) >= 3 and span not in _LEADING:
+            if len(span) >= 3 and span not in _LEADING and not (i in starts and span in _OPENERS):
                 out.append(span)
             i = j + 1
         else:

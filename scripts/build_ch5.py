@@ -682,8 +682,9 @@ TEST_CASES = [
      "duplicate", "Stopped at all three; 0 duplicates in 14,104 notes. Pass (11 tests)"],
     ["TC-64", "Formulas", "A wrong training answer; a correction stored; held-out problems",
      "Correction recalled; calculator evaluates or solves; grounding flagged", "Pass (replayed offline)"],
-    ["TC-65", "Entities (D-31, D-32)", "Instructions at the start of a sentence; terse ticket phrasing",
-     "Not taken for names", "Pass (3 regression tests)"],
+    ["TC-65", "Entities (D-31, D-32, D-37)", "Instructions at the start of a sentence; terse ticket phrasing; "
+     "titles with *St.*, *A.I.*, *Hello*", "Instructions not taken for names; titles kept whole", "D-37 found by "
+     "the replay check; fixed. Pass (4 regression tests)"],
     ["TC-66", "Runner", "Ollama aborts with *token repeat limit*", "Empty answer recorded; run continues", "Pass"],
     ["TC-67", "Automation gateway", "n8n workflows: 60 tickets, 20 tasks, 30 live pages",
      "Every workflow completes (exit 0); every answer metered", "Failed when Wikimedia refused fetches (D-36); fixed. Pass (n8n 2.43.6)"],
@@ -776,6 +777,11 @@ def testing(c: Chapter) -> None:
          "topic", "Persona per scenario", "Pass; re-run"],
         ["D-35", "The decline detector missed *I can't identify …*, so a RAG decline was sent as a reply", "Pattern "
          "widened; every desk system re-run", "Pass"],
+        ["D-37", "The D-32 fix itself cut titles at abbreviations and greetings (*St. Louis Blues* → *Louis Blues*, "
+         "*A.I. Artificial Intelligence*, *the composer of Hello*), so four PopQA questions recalled different notes",
+         "Abbreviations, dotted initials and ellipses do not end a sentence; greetings are openers only at a sentence "
+         "start", "Found by the replay check; extraction identical to before D-32 on all 600 PopQA questions and 440 "
+         "formula problems; replays re-run"],
         ["D-36", "After repeated runs Wikimedia refused the workflow's live page fetches (HTTP 403), and the news "
          "workflow stopped", "The fetch node continues on error; the gateway then uses the page as cached when the "
          "questions were written, and records which pages came live", "Pass; re-run"],
@@ -1141,8 +1147,10 @@ def res_repro(c: Chapter) -> None:
         "in a row) with no API key in the environment and no network**: the cloud model's answers were replayed by a "
         "stand-in that builds the identical request. The harness also caught a real fault: two answer runs had seen "
         "slightly different web pages because one had fetched what the other missed; freezing the web cache fixed it. "
-        "After each engine fix in this increment (D-31, D-32, D-33) the verified-answer replays were rerun and were "
-        "identical, so the fixes changed no PopQA result.")
+        "It caught a second fault in this increment: the replays after D-32 failed on the test, held-out and formula "
+        "checks because the D-32 fix had cut titles such as *St. Louis Blues* (D-37). After that was fixed, entity "
+        "extraction was identical to the pre-D-32 code on all 600 PopQA questions and 440 formula problems, and the "
+        "replays were rerun.")
 
 
 # ================================================================= 5.9 Results (model choice, RAG, automations, cost)
