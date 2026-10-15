@@ -85,6 +85,11 @@ python scripts/reproduce.py --twice                  # verified answers (dev, te
                                                      # recomputed offline from committed caches, every number
                                                      # checked, twice (no network or API key needed)
 python scripts/math_learning.py report               # what the corrections taught, held-out vs seen (F27)
+python scripts/rag_bench.py report                   # nine modern RAG pipelines vs CAMR on one corpus (F28)
+python scripts/agentic/gateway.py &                  # automation gateway (llm / stuff / rag / camr) on :8765
+python scripts/agentic/n8n_workflows.py run --systems camr:kimi-k3   # n8n support desk, agent, news (F29)
+python scripts/kimi_costs.py                         # every cloud call the project made, in US dollars
+python scripts/build_ch5.py --template proposal.docx # Chapter 5 and 6 (build_ch6.py) from the results files
 camr reproduce --config configs/default.yaml        # everything, one command (NFR-04)
 
 # or step by step

@@ -25,7 +25,11 @@ AG = ROOT / "results/agentic"
 PRICE = {"kimi-k3": (3.0, 15.0)}  # USD per million input / output tokens (Moonshot list price)
 SYSTEM = ("You are the customer support assistant of Helio Solar. Answer the customer's question in one or two "
           "sentences. If you do not know the answer, say that you don't know.")
-DECLINE = re.compile(r"\b(?:don'?t|do not|cannot|can'?t|unable to) (?:know|find|determine|answer|confirm|provide)|"
+# per scenario: the instruction, what the documents are called, and the turn labels
+PERSONAS = {"helio": (SYSTEM, "company documents", "Customer", "Assistant"),
+            "fresh": ("You are a news assistant. Answer the question in one or two sentences. If you do not know the "
+                      "answer, say that you don't know.", "news items", "Question", "Answer")}
+DECLINE = re.compile(r"\b(?:don'?t|do not|cannot|can'?t|unable to) (?:know|find|determine|answer|confirm|provide|identify|tell|say|give|specify|share)|"
                      r"\bI (?:don'?t|do not) have\b|\bI'?m sorry\b|\bI am sorry\b|"
                      r"\bnot (?:mentioned|provided|specified|stated|available|in the)|\bno (?:specific )?"
                      r"(?:information|details|data)\b|\bI'?m not sure\b|\bI am not sure\b|\bnot sure\b", re.I)
@@ -89,8 +93,9 @@ class Meter:
 class System:
     """Documents by id; subclasses answer from them."""
 
-    def __init__(self, model: str):
+    def __init__(self, model: str, scenario: str = "helio"):
         self.model = model
+        self.persona = PERSONAS[scenario]
         self.docs: dict[str, tuple[str, str]] = {}
         self.reader = Meter(runner(model), model)
 
@@ -118,7 +123,8 @@ class LLMOnly(System):
         pass
 
     def answer(self, question):
-        return {"answer": self.reader.generate(f"{SYSTEM}\n\nCustomer: {question}\nAssistant:").text.strip()}
+        system, _, asker, answerer = self.persona
+        return {"answer": self.reader.generate(f"{system}\n\n{asker}: {question}\n{answerer}:").text.strip()}
 
 
 class Stuffing(System):
@@ -126,7 +132,8 @@ class Stuffing(System):
 
     def answer(self, question):
         kb = "\n".join(f"- {t}: {x}" for t, x in self.docs.values())
-        p = f"{SYSTEM} Use the company documents below.\n\nDocuments:\n{kb}\n\nCustomer: {question}\nAssistant:"
+        system, docs, asker, answerer = self.persona
+        p = f"{system} Use the {docs} below.\n\nDocuments:\n{kb}\n\n{asker}: {question}\n{answerer}:"
         return {"answer": self.reader.generate(p).text.strip(), "context_words": len(kb.split())}
 
 
@@ -134,8 +141,8 @@ class RAG(System):
     kind = "rag"
     _ce = None
 
-    def __init__(self, model: str):
-        super().__init__(model)
+    def __init__(self, model: str, scenario: str = "helio"):
+        super().__init__(model, scenario)
         self.dir = Path(tempfile.mkdtemp(prefix="agentic-rag-"))
         self.engine, self.store = build_store(self.dir / "rag.sqlite")
         if RAG._ce is None:
@@ -165,8 +172,8 @@ class RAG(System):
 class CAMR(System):
     kind = "camr"
 
-    def __init__(self, model: str):
-        super().__init__(model)
+    def __init__(self, model: str, scenario: str = "helio"):
+        super().__init__(model, scenario)
         from camr.memory.answer import READ, VerifiedAnswerer
 
         self.dir = Path(tempfile.mkdtemp(prefix="agentic-camr-"))
@@ -210,6 +217,6 @@ def forget_doc(store, doc_id: str) -> int:
 KINDS = {"llm": LLMOnly, "stuff": Stuffing, "rag": RAG, "camr": CAMR}
 
 
-def make(spec: str) -> System:
+def make(spec: str, scenario: str = "helio") -> System:
     kind, model = spec.split(":", 1)
-    return KINDS[kind](model)
+    return KINDS[kind](model, scenario)

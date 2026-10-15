@@ -160,7 +160,7 @@ def fresh_workflow(spec: str) -> dict:
     days, qs = "Loop over days", "Loop over questions"
     fetch = {"id": "00000021-0000-4000-8000-000000000000", "name": "Fetch page from Wikipedia",
              "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [880, 380],
-             "retryOnFail": True, "maxTries": 5, "waitBetweenTries": 5000,
+             "retryOnFail": True, "maxTries": 2, "waitBetweenTries": 3000, "onError": "continueRegularOutput",
              "parameters": {"method": "GET", "url": "https://en.wikipedia.org/w/index.php",
                             "sendQuery": True, "queryParameters": {"parameters": [
                                 {"name": "title", "value": "={{ $json.page }}"}, {"name": "action", "value": "raw"}]},

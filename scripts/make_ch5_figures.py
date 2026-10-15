@@ -47,10 +47,13 @@ def fig_rag_outcomes(out: Path) -> Path | None:
         return None
     fig, axes = plt.subplots(1, len(readers), figsize=(4.2 * len(readers) + 1.2, 4.4), facecolor=SURF, sharey=True)
     axes = [axes] if len(readers) == 1 else list(axes)
+    pipes = [p for p in ORDER if any((r, p) in runs for r, _ in readers)]
+    ys = list(range(len(pipes)))[::-1]
     for ax, (reader, name) in zip(axes, readers):
-        pipes = [p for p in ORDER if (reader, p) in runs]
-        ys = list(range(len(pipes)))[::-1]
         for y, p in zip(ys, pipes):
+            if (reader, p) not in runs:
+                ax.text(1, y, "not run", va="center", fontsize=7, color=INK2)
+                continue
             s = summ(runs[(reader, p)])
             c, w, d = 100 * s["correct_exact"], 100 * s["wrong_exact"], 100 * s["declined"]
             ax.barh(y, c, color=GREEN, edgecolor=SURF, linewidth=1.5, height=0.7)
@@ -177,7 +180,8 @@ def fig_models(out: Path) -> Path | None:
 
 
 def _desk_rows():
-    names = [("llm_llama3_2_3b", "3B alone"), ("stuff_llama3_2_3b", "3B + whole KB in prompt"),
+    names = [("llm_qwen2_5_0_5b", "0.5B alone"), ("llm_llama3_2_3b", "3B alone"),
+             ("stuff_llama3_2_3b", "3B + whole KB in prompt"),
              ("rag_llama3_2_3b", "3B + modern RAG"), ("camr_qwen2_5_0_5b", "0.5B + CAMR"),
              ("camr_llama3_2_3b", "3B + CAMR"), ("llm_kimi-k3", "Kimi alone"),
              ("stuff_kimi-k3", "Kimi + whole KB in prompt"), ("rag_kimi-k3", "Kimi + modern RAG"),
@@ -314,10 +318,137 @@ def fig_costs(out: Path) -> Path | None:
     return save(fig, out, "kimi_costs.png")
 
 
+def fig_verified(out: Path) -> Path | None:
+    """Held-out set: what each system says, judged; the four outcomes stacked."""
+    jd = ROOT / "results/verified/judged_heldout.json"
+    if not jd.exists():
+        return None
+    d = json.loads(jd.read_text())
+    f = d["files"]
+    rows = []
+    for fname, var, label in (("answers_heldout.json", "old", "0.5B reads memory,\nevery answer stated"),
+                              ("answers_heldout_sa.json", "facts+compress+reader", "0.5B + verified memory\n(CAMR)"),
+                              ("answers_heldout_sa.json", "+kimi+cross", "0.5B + verified memory,\nKimi cross-check")):
+        v = f.get(fname, {}).get(var)
+        if not v:
+            continue
+        if var == "old":  # unchecked: every first answer stated
+            u = v["unchecked"]
+            rows.append((label, u["correct"], u["wrong"], 0.0, 1 - u["correct"] - u["wrong"]))
+        else:
+            x = v["verified"]
+            rows.append((label, x["correct"], x["hallucinated"], x["other_meaning"], x["unconfirmed"]))
+    for model, label in (("kimi-k3", "Kimi K3 alone\n(cloud, closed-book)"), ("llama3.2:3b", "Llama 3B alone"),
+                         ("qwen2.5:0.5b", "Qwen 0.5B alone")):
+        c = d.get("closed", {}).get(model)
+        if c:
+            rows.append((label, c["correct"], c["wrong"], 0.0, 1 - c["correct"] - c["wrong"]))
+    fig, ax = plt.subplots(figsize=(8.6, 4.2), facecolor=SURF)
+    ys = list(range(len(rows)))[::-1]
+    for y, (label, c, w, o, u) in zip(ys, rows):
+        left = 0.0
+        for val, col in ((c, GREEN), (w, RED), (o, BLUE), (u, GREY)):
+            ax.barh(y, 100 * val, left=left, color=col, edgecolor=SURF, linewidth=1.5, height=0.68)
+            if val >= 0.05:
+                ax.text(left + 50 * val, y, f"{100 * val:.1f}" if val < 0.1 else f"{100 * val:.0f}", ha="center",
+                        va="center", fontsize=7.5, color="white")
+            left += 100 * val
+    ax.set_yticks(ys, [r[0] for r in rows], fontsize=8)
+    ax.set_xlim(0, 100)
+    style(ax, xlabel="% of 200 held-out PopQA questions (judged)", grid="x")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in (GREEN, RED, BLUE, GREY)]
+    ax.legend(handles, ["correct", "wrong, stated as fact", "about another meaning (named)", "not confirmed / declined"],
+              frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.45, -0.16), ncol=4)
+    ax.set_title("Held-out questions: how often each system states a wrong fact", loc="left")
+    fig.tight_layout()
+    return save(fig, out, "verified_outcomes.png")
+
+
+def fig_rag_errors(out: Path) -> Path | None:
+    """Why wrong answers happen: the gold answer was in what the reader got (it misread) or it was not (retrieval
+    missed and the reader answered anyway)."""
+    runs = rag_runs()
+    readers = [(r, n) for r, n in READERS if any((r, p) in runs for p in ORDER)]
+    if not readers:
+        return None
+    fig, axes = plt.subplots(1, len(readers), figsize=(4.2 * len(readers) + 1.2, 4.2), facecolor=SURF, sharey=True)
+    axes = [axes] if len(readers) == 1 else list(axes)
+    pipes = [p for p in ORDER if any((r, p) in runs for r, _ in readers)]
+    ys = list(range(len(pipes)))[::-1]
+    for ax, (reader, name) in zip(axes, readers):
+        for y, p in zip(ys, pipes):
+            if (reader, p) not in runs:
+                ax.text(1, y, "not run", va="center", fontsize=7, color=INK2)
+                continue
+            d = runs[(reader, p)]
+            judged = d.get("judged", {})
+            rows = d["per_question"]
+            ok = lambda r: judged.get(str(r["i"]), r["exact"])  # noqa: E731
+            wrong = [r for r in rows if r["stated"] and not ok(r)]
+            misread = 100 * sum(r["gold_in_context"] for r in wrong) / len(rows)
+            missed = 100 * sum(not r["gold_in_context"] for r in wrong) / len(rows)
+            ax.barh(y, misread, color=ORANGE, edgecolor=SURF, linewidth=1.5, height=0.68)
+            ax.barh(y, missed, left=misread, color=RED, edgecolor=SURF, linewidth=1.5, height=0.68)
+            if misread >= 5:
+                ax.text(misread / 2, y, f"{misread:.0f}", ha="center", va="center", fontsize=7.5, color="white")
+            if missed >= 5:
+                ax.text(misread + missed / 2, y, f"{missed:.0f}", ha="center", va="center", fontsize=7.5,
+                        color="white")
+        ax.set_yticks(ys, [PIPE_LABEL[p] for p in pipes])
+        ax.set_xlim(0, 70)
+        style(ax, xlabel="wrong answers stated, % of 200 questions", grid="x")
+        ax.set_title(name, loc="left")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in (ORANGE, RED)]
+    fig.legend(handles, ["the answer was in what it read (misread)", "the answer was not in what it read (answered "
+                         "anyway)"], frameon=False, fontsize=8.5, loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.03))
+    fig.suptitle("Where the wrong answers come from", x=0.01, ha="left", fontsize=10.5, fontweight="bold")
+    fig.tight_layout(rect=(0, 0.05, 1, 0.95))
+    return save(fig, out, "rag_errors.png")
+
+
+def fig_agent_matrix(out: Path) -> Path | None:
+    cfgs = [("llama3_2_3b__none", "3B, none"), ("llama3_2_3b__rag", "3B + RAG"), ("llama3_2_3b__camr", "3B + CAMR"),
+            ("kimi-k3__none", "Kimi, none"), ("kimi-k3__rag", "Kimi + RAG"), ("kimi-k3__camr", "Kimi + CAMR")]
+    rows = [(n, json.loads((AG / f"agent_{t}.json").read_text())["per_task"]) for t, n in cfgs
+            if (AG / f"agent_{t}.json").exists()]
+    if not rows:
+        return None
+    tasks = [t["task"] for t in rows[0][1]]
+    fig, ax = plt.subplots(figsize=(10.4, 0.5 * len(rows) + 1.6), facecolor=SURF)
+    for y, (name, per) in enumerate(rows):
+        by = {t["task"]: t for t in per}
+        for x, tid in enumerate(tasks):
+            t = by.get(tid, {})
+            if t.get("success"):
+                col, mark = GREEN, ""
+            elif t.get("hallucinated_action"):
+                col, mark = RED, "!"
+            elif t.get("escalated"):
+                col, mark = GREY, "→"
+            else:
+                col, mark = ORANGE, "×"
+            ax.add_patch(plt.Rectangle((x + 0.05, len(rows) - 1 - y + 0.08), 0.9, 0.84, color=col))
+            if mark:
+                ax.text(x + 0.5, len(rows) - 1 - y + 0.5, mark, ha="center", va="center", fontsize=8, color="white")
+    ax.set_xlim(0, len(tasks))
+    ax.set_ylim(0, len(rows))
+    ax.set_xticks([x + 0.5 for x in range(len(tasks))], tasks, fontsize=7, rotation=90)
+    ax.set_yticks([len(rows) - 1 - y + 0.5 for y in range(len(rows))], [n for n, _ in rows], fontsize=8)
+    for s in ax.spines.values():
+        s.set_visible(False)
+    ax.tick_params(length=0)
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in (GREEN, GREY, ORANGE, RED)]
+    ax.legend(handles, ["succeeded", "handed to a person (→)", "failed (×)", "hallucinated action (!)"],
+              frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.32), ncol=4)
+    ax.set_title("Every agent task, every configuration (A17–A19 should be handed to a person)", loc="left")
+    fig.tight_layout()
+    return save(fig, out, "agentic_matrix.png")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="docs/figures/report")
     o = Path(ap.parse_args().out)
     o.mkdir(parents=True, exist_ok=True)
-    for f in (fig_rag_outcomes, fig_rag_tradeoff, fig_rag_cost, fig_models, fig_desk, fig_agent, fig_fresh, fig_costs):
+    for f in (fig_verified, fig_rag_errors, fig_agent_matrix, fig_rag_outcomes, fig_rag_tradeoff, fig_rag_cost, fig_models, fig_desk, fig_agent, fig_fresh, fig_costs):
         f(o)

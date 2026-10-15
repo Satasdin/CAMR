@@ -160,7 +160,8 @@ def fresh_score(spec: str) -> dict:
                "prompt_tokens": sum(r["prompt_tokens"] or 0 for r in rows),
                "gen_tokens": sum(r["gen_tokens"] or 0 for r in rows),
                "cost_usd": round(sum(r["cost_usd"] or 0 for r in rows), 4),
-               "items_taught": st.get("items", 0), "pages_taught": st.get("pages", 0)}
+               "items_taught": st.get("items", 0), "pages_taught": st.get("pages", 0),
+               "pages_live": st.get("pages_live", 0), "pages_cached": st.get("pages_cached", 0)}
     summary["cost_usd_per_1000_questions"] = round(summary["cost_usd"] / n * 1000, 2)
     out = {"system": spec, "scenario": "fresh", "summary": summary, "per_question": rows}
     path = ROOT / "results/agentic" / f"fresh_{spec.replace(':', '_').replace('.', '_')}.json"
@@ -226,7 +227,7 @@ class Handler(BaseHTTPRequestHandler):
                     AGENTS[spec]["results"][task["id"]] = res
                     return self._send(res)
                 if path == "/reset":
-                    s = systems.make(spec)
+                    s = systems.make(spec, body.get("scenario", "helio"))
                     if body.get("scenario", "helio") == "helio":
                         for d in DATA["kb"]:
                             s.teach("kb:" + d["title"], d["title"], d["text"])
@@ -241,7 +242,14 @@ class Handler(BaseHTTPRequestHandler):
                 if path == "/teach_wikitext":  # a Current events page as fetched by the workflow: one note per item
                     import fresh_data
 
-                    items = fresh_data.parse(body.get("wikitext") or "")
+                    text = body.get("wikitext")
+                    live = isinstance(text, str) and text.lstrip().startswith(("*", "{", "<", "="))
+                    if not live:  # the live fetch failed (Wikimedia refused it): the page as cached when the
+                        import datetime as dt  # questions were written
+
+                        text = fresh_data.fetch(dt.date.fromisoformat(body["date"]))
+                    st["pages_live" if live else "pages_cached"] = st.get("pages_live" if live else "pages_cached", 0) + 1
+                    items = fresh_data.parse(text or "")
                     for k, item in enumerate(items):
                         st["system"].teach(f"{body['page']}#{k}", f"Current events, {body['date']}", item)
                     st["items"] = st.get("items", 0) + len(items)

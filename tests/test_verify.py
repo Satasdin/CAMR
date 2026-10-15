@@ -302,3 +302,16 @@ def test_memory_similar_but_about_something_else_still_triggers_a_lookup(tmp_pat
     assert learned.reason == "memory had it" and "Madrid" not in r.context  # similar, about Puntland
     r, learned = eager_recall(engine, WebLookup(web, min_interval_s=0), q, touch=False, subject_aware=True)
     assert learned.looked_up and "Madrid" in r.context
+
+
+def test_a_question_that_names_nothing_is_anchored_by_its_topic_words():
+    # D-33: customer questions often name no person, place or product; the answer must then come from a sentence
+    # that shares the question's topic, and a true sentence about something else still does not count
+    units = [Unit("Support hours", "The Helio support desk is open from 07:00 to 19:00, Monday to Saturday."),
+             Unit("Returns policy", "Unused equipment can be returned within 45 days."),
+             Unit("Volta-2 error E34", "Error E34 on a Volta-2 means battery communication was lost: reseat the "
+                                       "CAN cable.")]
+    assert check("What hours is the support desk open?", "07:00 to 19:00", units).supported
+    assert check("How many days do I have to return unused equipment?", "45 days", units).supported
+    assert not check("Is there a discount for schools?", "45 days", units).supported
+    assert not check("Which cable do I need for the LB-13 battery?", "CAN cable", units).supported

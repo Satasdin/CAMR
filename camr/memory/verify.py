@@ -211,6 +211,34 @@ def subject_names(question: str) -> list[str]:
     return [n for n in dict.fromkeys(names) if n]  # short names too ("W." is a film): see aboutness
 
 
+# words a question uses to ask, not to say what it is about ("How many days do I have to ...")
+_ASKING = {"how", "many", "much", "long", "often", "when", "where", "why", "whom", "whose", "can", "could", "would",
+           "should", "will", "may", "need", "use", "get", "you", "your", "our", "me", "my", "we", "us", "there", "any",
+           "now", "per", "hi", "hello", "please", "tell", "know", "want", "one", "some", "about"}
+
+
+def _names_something(question: str) -> bool:
+    """A capitalised word after the first ("director of W.?", "the HS-400 panel") names something; "I" does not."""
+    words = [w.strip("\"'“”‘’()?,.!:;") for w in question.split()[1:]]
+    return any(w[:1].isupper() and w not in ("I", "I'm", "I've", "I'd", "I'll") for w in words)
+
+
+def topic_words(question: str) -> list[str]:
+    """What a question that names nothing is about: its content words ("What hours is the support desk open?" ->
+    hours, support, desk, open). Customer questions often name no person, place or product."""
+    words = [w for w in norm(question).split() if len(w) >= 3 and w not in _FRAME and w not in _ASKING]
+    return list(dict.fromkeys(words))
+
+
+def topical(unit: Unit, topic: list[str]) -> int:
+    """1 when the unit shares at least half of the question's topic words (a word matches by its first five
+    letters: "returned" for "return", "installs" for "install"), else 0."""
+    if not topic:
+        return 0
+    toks = {t[:5] for t in norm(unit.render()).split()}
+    return int(sum(w[:5] in toks for w in topic) * 2 >= len(topic))
+
+
 def aboutness(unit: Unit, names: list[str]) -> int:
     """2: the unit's note is titled with a name the question gives; 1: its title contains the name, or the unit
     mentions it; 0: neither. A name that is only part of a longer one ("Son" in "Son contento") counts as 1."""
@@ -320,6 +348,11 @@ def check(question: str, answer: str, units: list[Unit], *, min_coverage: float 
         return Verdict(False, "no subject", words, relation=rel and rel[0], confidence=conf)
     level = {id(u): aboutness(u, names) for u in units}
     top = max(level.values())  # when memory has a note titled with the subject, only that subject's notes count
+    if top == 0 and not _names_something(question):
+        # the question names no entity and its lookup phrases ("hours is the support desk open") are in no note:
+        # it is about its topic words, and a supporting sentence must share at least half of them (D-33)
+        level = {id(u): topical(u, topic_words(question)) for u in units}
+        top = max(level.values())
     best: tuple[float, int, Unit] | None = None
     candidates: list[tuple[float, Unit]] = []
     for u in units:
