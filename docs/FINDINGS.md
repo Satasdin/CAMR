@@ -919,7 +919,17 @@ The verified pipeline (chosen on the development set with the 0.5B model) was ru
 **Findings**
 1. **In verified fact answering, a bigger reader buys nothing.** All five readers are within 1 point. 140 of the 200 questions were answered from a fact line with no model call, whatever the reader; of the other 60 (0.5B reader), 19 were answered correctly and 36 of the remaining 41 had no answer anywhere in what memory read.
 2. **Reading across documents does need a bigger reader:** on HotpotQA (F13) memory added +23, +30.5 and +34.5 points for 0.5B, 1.5B and 3B, and only from 3B did a small model with memory match the cloud model. In the automations the 3B model sent no wrong replies with CAMR, the 0.5B model 4 (F29).
-3. **Recommendation for a 16 GB CPU-only device:** a 1.5B model for facts, a 3B model when questions need reading across documents or a reply goes to a customer; 7B and larger answered more slowly than the cloud model on this hardware (F10b). Clean per-model speed and memory (load time, seconds per answer, tokens per second, resident memory) are pending in `results/models/speed.json`.
+3. **Recommendation for a 16 GB CPU-only device:** a 1.5B model for facts, a 3B model when questions need reading across documents or a reply goes to a customer; 7B and larger answered more slowly than the cloud model on this hardware (F10b). Measured alone on the 4-core CPU (`results/models/speed.json`, 30 held-out questions each with the note memory found, up to 32 generated tokens, temperature 0):
+
+| Reader | s / answer (median) | Generated tokens / s | Prompt tokens / s | RAM of the runtime |
+|---|---|---|---|---|
+| qwen2.5:0.5b | 0.31 | 54.5 | 525 | 0.66 GB |
+| qwen2.5:1.5b | 0.52 | 22.2 | 326 | 1.31 GB |
+| llama3.2:3b | 1.02 | 11.6 | 150 | 2.82 GB |
+| phi4-mini (3.8B) | 0.99 | 9.9 | 131 | 3.63 GB |
+| qwen2.5:7b | 2.04 | 5.4 | 72 | 4.78 GB |
+
+Load times (9-219 s) are not comparable: the first three models loaded cold from disk after a container restart, the last two had just been downloaded and sat in the page cache. Every reader answers a single note in about 2 s or less; it is the reading of many notes (multi-hop, RAG prompts) and long answers (arithmetic) that make large models slow (F10b).
 
 ## F31. What the cloud model cost
 
@@ -983,4 +993,3 @@ Regenerate: `python scripts/make_ch5_figures.py` (F24, F28-F31), `python scripts
 ## Still running
 
 - F28: the 3B reader on the RAG benchmark (its first run failed with an Ollama HTTP 500 while the gateways, n8n and two other models shared the 16 GB); runs after the speed test.
-- F30: per-model speed and memory (`results/models/speed.json`): running (the 7B and phi4-mini readers were pulled again after the sweep).
