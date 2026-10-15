@@ -118,6 +118,80 @@ def speed() -> dict:
     return (J("results/models/speed.json") or {}).get("models", {})
 
 
+# Machine each sweep model ran on (sweep_results/machine-*.sqlite and their notes); unlisted models ran on E.
+SWEEP_MACHINE = {"gemma3:1b": "C", "smollm2:1.7b": "C", "granite3.3:2b": "C", "falcon3:3b": "C", "phi4-mini:3.8b": "C",
+                 "qwen2.5:7b": "B", "llama3.1:8b": "B", "gemma2:9b": "B", "qwen2.5:14b": "B",
+                 "mistral:7b": "D", "olmo2:7b": "D", "granite3.3:8b": "D", "gemma3:12b": "D",
+                 "yi:6b": "F", "falcon3:10b": "F", "olmo2:13b": "F"}
+SIZE_BANDS = [(0, 1.3, "About 1B"), (1.3, 2.9, "1.5–2.5B"), (2.9, 5.0, "3–4B"), (5.0, 10.0, "6–9B"),
+              (10.0, 99, "10–15B")]
+
+
+def sweep_models() -> list[dict]:
+    """Every model of the size sweep, smallest first: accuracy alone and with CAMR per benchmark, parameters and
+    quantisation from the Ollama registry, decode speed and mean seconds per answer with CAMR (PopQA), and the
+    benchmarks whose latest run had failed queries."""
+    import sqlite3
+
+    rows = J("results/pilot/tables/model_sweep.json") or []
+    meta = J("docs/model_registry_metadata.json") or {}
+    db = sqlite3.connect(f"file:{RES / 'pilot/camr.sqlite'}?mode=ro", uri=True)
+    latest = {(lab, cond, b): rid for lab, cond, b, rid in db.execute(
+        "SELECT label, condition, benchmark, MAX(run_id) FROM run WHERE status='completed' AND label LIKE 'm:%' "
+        "GROUP BY label, condition, benchmark")}
+    out: dict[str, dict] = {}
+    for r in rows:
+        m = r["model"]
+        size = meta.get(m, {}).get("parameter_size", "0B")
+        d = out.setdefault(m, {"model": m, "machine": SWEEP_MACHINE.get(m, "E"), "failed": set(),
+                               "params": float(size[:-1]) / 1000 if size.endswith("M") else float(size.rstrip("B")),
+                               "quant": meta.get(m, {}).get("quantization", "?")})
+        d[r["benchmark"]] = (r["floor"], r["with_memory"])
+        if r["benchmark"] == "popqa":
+            d["tok_s"] = r.get("decode_tok_s_memory")
+        for cond in ("floor", "treatment"):
+            rid = latest.get((f"m:{m}", cond, r["benchmark"]))
+            if rid and db.execute("SELECT COUNT(*) FROM query_log WHERE run_id=? AND status!='ok'", (rid,)).fetchone()[0]:
+                d["failed"].add(r["benchmark"])
+        rid = latest.get((f"m:{m}", "treatment", "popqa"))
+        if rid and r["benchmark"] == "popqa":
+            d["secs"] = db.execute("SELECT AVG(e2e_latency_ms)/1000 FROM query_log WHERE run_id=? AND status='ok'",
+                                   (rid,)).fetchone()[0]
+    return sorted(out.values(), key=lambda d: d["params"])
+
+
+def sweep_kimi() -> dict[str, float]:
+    rows = J("results/pilot/tables/model_sweep.json") or []
+    return {r["benchmark"]: r["ceiling_kimi"] for r in rows if r.get("ceiling_kimi") is not None}
+
+
+def missing_sizes(sw: list[dict]) -> list[str]:
+    return [f"{s}B" for s, lo, hi in ((5, 4.5, 6.0), (10, 9.5, 11.5), (13, 12.5, 14.0))
+            if not any(lo <= r["params"] < hi for r in sw)]
+
+
+def _band(sw: list[dict]) -> list[tuple[str, list[dict]]]:
+    return [(name, [r for r in sw if lo <= r["params"] < hi]) for lo, hi, name in SIZE_BANDS
+            if any(lo <= r["params"] < hi for r in sw)]
+
+
+def size_bands(sw: list[dict], kimi: dict) -> list[list[str]]:
+    out = []
+    for name, ms in _band(sw):
+        def mean(b, i):
+            v = [r[b][i] for r in ms if b in r]
+            return statistics.mean(v) if v else 0.0
+        hop = [r["hotpotqa"][1] for r in ms if "hotpotqa" in r]
+        at = sum(t >= kimi.get("hotpotqa", 9) - 1e-6 for t in hop)
+        gs = [r["gsm8k"] for r in ms if "gsm8k" in r]
+        secs = [r["secs"] for r in ms if r.get("secs") and r["machine"] != "C"]  # one CPU class (2.1 GHz)
+        out.append([name, str(len(ms)), f"{100 * mean('popqa', 0):.1f} → {100 * mean('popqa', 1):.1f}%",
+                    f"{100 * mean('hotpotqa', 0):.1f} → {100 * mean('hotpotqa', 1):.1f}%", f"{at} of {len(hop)}",
+                    f"{sum(t > f + 1e-6 for f, t in gs)} / {sum(t < f - 1e-6 for f, t in gs)}",
+                    f"{statistics.median(secs):.1f}" if secs else "–"])
+    return out
+
+
 def costs() -> dict | None:
     return J("results/costs/kimi_costs.json")
 
@@ -1174,20 +1248,48 @@ def res_repro(c: Chapter) -> None:
 
 def res_models(c: Chapter) -> None:
     c.h3("Which Model to Run CAMR With", key="sec_models")
-    c.p("Two experiments answer this. The 19-model sweep measured what memory adds to each model on three task types; "
-        "the held-out re-test swapped the reader inside the verified pipeline, keeping everything else fixed. "
-        f"{c.next_tab()} condenses the sweep to the models that matter for the choice.")
-    c.table("Selected models from the 19-model sweep: accuracy alone → with CAMR, and speed (pilot questions; F10)",
-            ["Model (parameters)", "Long-tail facts", "Multi-hop", "Arithmetic", "Decode tok/s", "s / answer"],
-            [["qwen2.5 0.5B", "6.7 → 66.7%", "10.0 → 30.0%", "25.0 → 16.7%", "48.9", "1.4–1.9"],
-             ["qwen2.5 1.5B", "10.0 → **80.0%**", "16.7 → 50.0%", "58.3 → 41.7%", "19.9", "2.1–2.8"],
-             ["llama3.2 3B", "23.3 → 73.3%", "16.7 → **56.7%**", "75.0 → 75.0%", "10.4", "4.2–5.4"],
-             ["phi4-mini 3.8B", "13.3 → **80.0%**", "10.0 → 40.0%", "83.3 → **91.7%**", "10.7", "–"],
-             ["qwen2.5 7B", "23.3 → 70.0%", "36.7 → **60.0%**", "83.3 → 83.3%", "6.0", "8.3–11.4"],
-             ["qwen2.5 14B", "13.3 → 73.3%", "46.7 → **63.3%**", "66.7 → **91.7%**", "3.0", "17.7–23.9"],
-             ["*Kimi K3 (cloud), no memory*", "*66.7%*", "*53.3%*", "*100%*", "–", "*7.7–18.8*"]],
-            [3.4, 2.6, 2.6, 2.6, 1.9, 2.0], size=9)
-    c.figure(FIG / "fig_model_sweep.png", "Accuracy without and with CAMR for all 19 models, by size", 15.0)
+    sw = sweep_models()
+    kimi = sweep_kimi()
+    miss = missing_sizes(sw)
+    c.p(f"Two experiments answer this. The {len(sw)}-model sweep measured what memory adds to each model on three "
+        "task types; the held-out re-test swapped the reader inside the verified pipeline, keeping everything else "
+        f"fixed. The sweep covers {len(sw)} models from {sw[0]['params']:.2f}B to {sw[-1]['params']:.1f}B parameters, "
+        f"every one on the same store and the same questions. {c.next_tab()} lists all of them, smallest first, and "
+        f"{c.next_tab()} sums them up by size class."
+        + (f" No {', '.join(miss)} model was in the sweep; the size classes cover those sizes by their neighbours."
+           if miss else ""))
+    rows = []
+    for r in sw:
+        cells = []
+        for b in ("popqa", "hotpotqa", "gsm8k"):
+            if b not in r:
+                cells.append("–")
+                continue
+            f, t = r[b]
+            at_kimi = kimi.get(b) is not None and t >= kimi[b] - 1e-6
+            cells.append(f"{100 * f:.1f} → " + (f"**{100 * t:.1f}%**" if at_kimi else f"{100 * t:.1f}%")
+                         + (" †" if b in r["failed"] else ""))
+        rows.append([f"{r['model']} ({r['params']:.{2 if r['params'] < 1 else 1}f}B, {r['quant']})", *cells,
+                     f"{r['tok_s']:.1f}" if r.get("tok_s") else "–", f"{r['secs']:.1f}" if r.get("secs") else "–",
+                     r["machine"]])
+    rows.append(["*Kimi K3 (cloud), no memory*",
+                 *[f"*{100 * kimi[b]:.1f}%*" if kimi.get(b) is not None else "–" for b in ("popqa", "hotpotqa", "gsm8k")],
+                 "–", "*7.7*", "cloud"])
+    c.table(f"All {len(sw)} models of the size sweep: accuracy alone → with CAMR (bold: at or above Kimi K3), decode "
+            "speed with CAMR and seconds per answer with CAMR (`results/pilot/tables/model_sweep.json`; F10, F10b)",
+            ["Model (parameters, quantisation)", "Long-tail facts (30 q)", "Multi-hop (30 q)", "Arithmetic (12 q)",
+             "Decode tok/s", "s / answer", "Machine"], rows, [4.3, 2.3, 2.3, 2.3, 1.3, 1.3, 1.3], size=8)
+    fast = ", ".join(sorted({r["machine"] for r in sw} - {"C"}))
+    c.p(f"Machine is the 4-core cloud machine the model ran on ({fast}: Xeon at 2.1 GHz; C: Xeon at 2.8 GHz). "
+        "Accuracy is comparable across machines, speed only within one. One question is 3.3 points on the facts and "
+        "multi-hop sets and 8.3 points on arithmetic, so a gap of one or two questions between two models is noise. "
+        "† One to three questions of that run failed with a runtime error; accuracy is over the answered ones (F10).")
+    c.table("The sweep by size class: mean accuracy alone → with CAMR, models at Kimi K3's level, and time per answer",
+            ["Size class", "Models", "Facts", "Multi-hop", "At Kimi on multi-hop", "Arithmetic helped / hurt",
+             "s / answer (median, 2.1 GHz)"], size_bands(sw, kimi), [2.0, 1.2, 2.4, 2.4, 2.2, 2.4, 2.0], size=8)
+    c.figure(REPORT / "model_sizes.png", "Every model of the sweep by name and size: accuracy alone (grey) and with "
+             "CAMR (blue helps, orange hurts) on three task types, and time per answer", 16.0)
+    c.p(SIZES_TEXT(sw, kimi))
     rows = []
     sp = speed()
     for name, j, v in heldout_readers():
@@ -1532,6 +1634,46 @@ def scorecard(c: Chapter) -> None:
 
 
 # ----------------------------------------------------------------- narrative written from the results
+
+
+def SIZES_TEXT(sw: list[dict], kimi: dict) -> str:  # noqa: N802
+    """What the size classes show, every number from the sweep."""
+    bands = _band(sw)
+
+    def mean(ms, b, i):
+        v = [r[b][i] for r in ms if b in r]
+        return 100 * statistics.mean(v) if v else 0.0
+
+    def med_s(ms):  # one CPU class only (machines B, D, E at 2.1 GHz): speed is comparable within a class
+        v = [r["secs"] for r in ms if r.get("secs") and r["machine"] != "C"]
+        return statistics.median(v) if v else 0.0
+
+    def of(k, n):
+        return f"all {n}" if k == n else f"{k} of {n}"
+
+    facts = [mean(ms, "popqa", 1) for _, ms in bands]
+    hop = [mean(ms, "hotpotqa", 1) for _, ms in bands]
+    secs = [med_s(ms) for _, ms in bands]
+    small = bands[0][1]
+    hurt_small = sum(r["gsm8k"][1] < r["gsm8k"][0] - 1e-6 for r in small if "gsm8k" in r)
+    above = [r for r in sw if r["params"] >= 5 and r.get("secs") and r["machine"] != "C"]
+    slower = sum(r["secs"] > 7.7 for r in above)
+    k_f, k_h = 100 * kimi.get("popqa", 0), 100 * kimi.get("hotpotqa", 0)
+    reach_f = sum(r["popqa"][1] >= kimi.get("popqa", 9) - 1e-6 for r in sw if "popqa" in r)
+    return (
+        f"**Facts stop improving at about 1.5B; reading across documents keeps improving; time grows fastest.** "
+        f"Memory lifts every model on long-tail facts, from a mean of {mean(small, 'popqa', 0):.0f}% alone to "
+        f"{facts[0]:.0f}% for the smallest class, and from 1.5B upwards every class averages "
+        f"{min(facts[1:]):.0f}–{max(facts[1:]):.0f}% with CAMR: {of(reach_f, len(sw))} models reach or beat Kimi K3's "
+        f"{k_f:.1f}%, and a 14B model with memory is no better than a 1.5B one. Multi-hop reading is different: the "
+        f"class means with CAMR climb {' → '.join(f'{h:.0f}' for h in hop)}%, and only "
+        f"{sum(r['hotpotqa'][1] >= kimi.get('hotpotqa', 9) - 1e-6 for r in sw if 'hotpotqa' in r)} of {len(sw)} "
+        f"models reach Kimi K3's {k_h:.1f}% (none below 3B). Time per answer climbs faster than either: on the "
+        f"2.1 GHz machines the class medians are {' → '.join(f'{s:.1f}' for s in secs)} s, and {of(slower, len(above))} "
+        f"models of 6B and above measured there took longer than Kimi K3's 7.7 s. **Where small models fall short:** "
+        f"worked examples lowered arithmetic for {of(hurt_small, len(small))} models of about 1B, and the 0.5B model "
+        "gains least on multi-hop. **Where large models fall short:** speed. Their extra parameters paid off on "
+        "multi-hop reading and arithmetic, not on facts. ")
 
 
 def MODELS_TEXT(sp: dict) -> str:  # noqa: N802

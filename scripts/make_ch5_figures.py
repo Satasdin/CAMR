@@ -190,6 +190,95 @@ def fig_models(out: Path) -> Path | None:
     return save(fig, out, "model_choice.png")
 
 
+# Machine each sweep model ran on (sweep_results/machine-*.sqlite; F10 footnotes; unlisted = machine E). Accuracy is
+# comparable across machines; speed only within one.
+SWEEP_MACHINE = {"gemma3:1b": "C", "smollm2:1.7b": "C", "granite3.3:2b": "C", "falcon3:3b": "C", "phi4-mini:3.8b": "C",
+                 "qwen2.5:7b": "B", "llama3.1:8b": "B", "gemma2:9b": "B", "qwen2.5:14b": "B",
+                 "mistral:7b": "D", "olmo2:7b": "D", "granite3.3:8b": "D", "gemma3:12b": "D",
+                 "yi:6b": "F", "falcon3:10b": "F", "olmo2:13b": "F"}
+SIZE_BANDS = [(0, 1.3, "about 1B"), (1.3, 2.9, "1.5–2.5B"), (2.9, 5.0, "3–4B"), (5.0, 10.0, "6–9B"),
+              (10.0, 99, "10–15B")]
+
+
+def _params_b(s: str) -> float:
+    return float(s[:-1]) / 1000 if s.endswith("M") else float(s.rstrip("B"))
+
+
+def fig_model_sizes(out: Path) -> Path | None:
+    """Every model of the size sweep by name: accuracy alone -> with CAMR on three task types, and answer time."""
+    by = mrf.sweep()
+    if not by:
+        return None
+    lat = mrf.latency()
+    models = sorted(by, key=lambda m: _params_b(by[m]["params"]))
+    n = len(models)
+    ys = list(range(n))[::-1]  # smallest model on top
+    benches = [("popqa", "Long-tail facts (PopQA, 30 q)"), ("hotpotqa", "Multi-hop (HotpotQA, 30 q)"),
+               ("gsm8k", "Arithmetic (GSM8K, 12 q)")]
+    fig, axes = plt.subplots(1, 4, figsize=(10.6, 0.36 * n + 2.0), facecolor=SURF, sharey=True,
+                             gridspec_kw={"width_ratios": [1, 1, 1, 0.8]})
+    bands = [(lo, hi, name) for lo, hi, name in SIZE_BANDS
+             if any(lo <= _params_b(by[m]["params"]) < hi for m in models)]
+    for ax in axes:
+        for k, (lo, hi, _) in enumerate(bands):
+            rows = [y for y, m in zip(ys, models) if lo <= _params_b(by[m]["params"]) < hi]
+            if k % 2 == 0:
+                ax.axhspan(min(rows) - 0.5, max(rows) + 0.5, color="#f2f1ed", zorder=0)
+    for ax, (b, title) in zip(axes, benches):
+        kimi = next((by[m][b]["ceiling_kimi"] for m in models if b in by[m] and by[m][b].get("ceiling_kimi")), None)
+        for y, m in zip(ys, models):
+            r = by[m].get(b)
+            if not r:
+                continue
+            f, t = 100 * r["floor"], 100 * r["with_memory"]
+            col = BLUE if t > f + 0.5 else ORANGE if t < f - 0.5 else GREY
+            ax.plot([f, t], [y, y], color=col, linewidth=2, zorder=2, solid_capstyle="round")
+            ax.scatter([f], [y], s=26, color="#5b6270", zorder=3, edgecolor=SURF, linewidth=1)
+            ax.scatter([t], [y], s=34, color=col, zorder=4, edgecolor=SURF, linewidth=1)
+            ax.text(t + (3 if t >= f else -3), y, f"{t:.0f}", va="center", ha="left" if t >= f else "right",
+                    fontsize=7, color=INK2)
+        if kimi is not None:
+            ax.axvline(100 * kimi, color=INK2, linestyle=":", linewidth=1.2, zorder=1)
+            ax.text(100 * kimi, n - 0.35, f"Kimi K3 {100 * kimi:.0f}", ha="center", va="bottom", fontsize=7,
+                    color=INK2)
+        ax.set_xlim(-4, 112)
+        ax.set_xticks([0, 25, 50, 75, 100])
+        style(ax, xlabel="% correct", grid="x")
+        ax.set_title(title, loc="left", fontsize=8.5)
+    ax = axes[3]
+    secs = [lat.get(m) for m in models]
+    for y, m, s in zip(ys, models, secs):
+        if s is None:
+            continue
+        ax.barh(y, s, color=BLUE if SWEEP_MACHINE.get(m, "E") != "C" else "#7fb0e8", height=0.62, zorder=2)
+        ax.text(s + 0.3, y, f"{s:.1f}", va="center", fontsize=7, color=INK2)
+    ax.set_xlim(0, max(s for s in secs if s) * 1.22)
+    ax.axvline(7.7, color=INK2, linestyle=":", linewidth=1.2, zorder=1)
+    ax.text(7.7, n - 0.35, "Kimi K3 7.7", ha="center", va="bottom", fontsize=7, color=INK2)
+    style(ax, xlabel="seconds per answer", grid="x")
+    ax.set_title("Time per answer with CAMR", loc="left", fontsize=8.5)
+    labels = [f"{m.replace(':', ' ')}  ({_params_b(by[m]['params']):.{2 if _params_b(by[m]['params']) < 1 else 1}f}B)"
+              for m in models]
+    axes[0].set_yticks(ys, labels, fontsize=8)
+    axes[0].set_ylim(-0.6, n + 0.4)
+    for lo, hi, name in bands:
+        rows = [y for y, m in zip(ys, models) if lo <= _params_b(by[m]["params"]) < hi]
+        axes[3].text(1.03, (min(rows) + max(rows)) / 2, name, transform=axes[3].get_yaxis_transform(),
+                     rotation=-90, va="center", ha="left", fontsize=7.5, color=INK2)
+    fig.suptitle("Every model in the size sweep: grey dot alone, coloured dot with CAMR (blue helps, orange hurts)",
+                 x=0.01, ha="left", fontsize=10, fontweight="bold")
+    missing = [f"{s}B" for s, lo, hi in ((5, 4.5, 6.0), (10, 9.5, 11.5), (13, 12.5, 14.0))
+               if not any(lo <= _params_b(by[m]["params"]) < hi for m in models)]
+    note = ("Same store, same questions for every model; one question is 3.3 points on PopQA and HotpotQA and 8.3 on "
+            "GSM8K. Time: PopQA, mean end to end on a 4-core CPU; light bars ran on a different machine (C), so compare "
+            "times within one shade.")
+    if missing:
+        note += f" No {', '.join(missing)} model was in the sweep."
+    fig.text(0.01, 0.005, note, fontsize=7, color=INK2, wrap=True)
+    fig.tight_layout(rect=(0, 0.03, 0.98, 0.97))
+    return save(fig, out, "model_sizes.png")
+
+
 def _desk_rows():
     names = [("llm_qwen2_5_0_5b", "0.5B alone"), ("llm_llama3_2_3b", "3B alone"),
              ("stuff_llama3_2_3b", "3B + whole KB in prompt"),
@@ -509,5 +598,5 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="docs/figures/report")
     o = Path(ap.parse_args().out)
     o.mkdir(parents=True, exist_ok=True)
-    for f in (fig_verified, fig_rag_errors, fig_agent_matrix, fig_rag_outcomes, fig_rag_tradeoff, fig_rag_cost, fig_models, fig_desk, fig_agent, fig_fresh, fig_costs, fig_cost_compare):
+    for f in (fig_model_sizes, fig_verified, fig_rag_errors, fig_agent_matrix, fig_rag_outcomes, fig_rag_tradeoff, fig_rag_cost, fig_models, fig_desk, fig_agent, fig_fresh, fig_costs, fig_cost_compare):
         f(o)

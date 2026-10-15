@@ -56,13 +56,15 @@ def _ends_sentence(tok: str) -> bool:
 
 
 def _asks(i: int, toks: list[str], qmark: list[bool]) -> bool:
-    """The sentence that starts at token i ends with a question mark."""
+    """The sentence that starts at token i asks for something: it ends with a question mark, says "please", or is
+    a fragment that runs to the end of the text without a full stop ("Price of the Helio bird mesh kit please").
+    A statement ends with a full stop ("Josh decides to try flipping a house.")."""
     for j in range(i, len(toks)):
-        if qmark[j]:
+        if qmark[j] or toks[j].lower().strip(".,!") == "please":
             return True
         if _ends_sentence(toks[j]):
             return False
-    return False
+    return True
 
 
 def question_entities(question: str) -> list[str]:

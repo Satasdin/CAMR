@@ -36,12 +36,18 @@ def wid(spec: str) -> str:
     return hashlib.sha1(spec.encode()).hexdigest()[:16]
 
 
-def http(name, pos, method, path, body=None):
+def http(name, pos, method, path, body=None, once=False):
+    """An HTTP Request node. ``once``: run one request whatever the number of incoming items. A loop's "done" output
+    carries every item it looped over, and n8n runs the next node once per item (defect D-39: the news workflow
+    asked its 50 questions 30 times and sent 1,500 score requests)."""
     p = {"method": method, "url": GW + path, "options": {"timeout": 900000}}
     if body is not None:
         p.update(sendBody=True, specifyBody="json", jsonBody=body)
-    return {"id": hashlib.sha1(name.encode()).hexdigest()[:8] + "-0000-4000-8000-000000000000", "name": name,
+    node = {"id": hashlib.sha1(name.encode()).hexdigest()[:8] + "-0000-4000-8000-000000000000", "name": name,
             "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": pos, "parameters": p}
+    if once:
+        node["executeOnce"] = True
+    return node
 
 
 def if_node(name, pos, left, operator, right=None):
@@ -85,7 +91,7 @@ def workflow(spec: str) -> dict:
         http("Teach resolution", [1980, 480], "POST", "/teach",
              f"={{{{ JSON.stringify({{system: {s}, doc_id: {ev}.resolution.doc_id, title: {ev}.resolution.title, "
              f"text: {ev}.resolution.text}}) }}}}"),
-        http("Score run", [880, 60], "GET", f"/score?system={quote(spec)}"),
+        http("Score run", [880, 60], "GET", f"/score?system={quote(spec)}", once=True),
     ]
 
     def to(*names):
@@ -120,8 +126,8 @@ def agent_workflow(config: str, gw: str) -> dict:
     c = json.dumps(config)
     loop = "Loop over tasks"
 
-    def h(name, pos, method, path, body=None):
-        n = http(name, pos, method, path, body)
+    def h(name, pos, method, path, body=None, once=False):
+        n = http(name, pos, method, path, body, once)
         n["parameters"]["url"] = gw + path
         return n
 
@@ -139,7 +145,7 @@ def agent_workflow(config: str, gw: str) -> dict:
          "typeVersion": 1, "position": [1100, 300], "parameters": {}},
         {"id": "00000014-0000-4000-8000-000000000000", "name": "Hand to a person", "type": "n8n-nodes-base.noOp",
          "typeVersion": 1, "position": [1100, 460], "parameters": {}},
-        h("Score agent", [660, 120], "GET", f"/agent/score?config={quote(config)}"),
+        h("Score agent", [660, 120], "GET", f"/agent/score?config={quote(config)}", once=True),
     ]
     conn = {"Start": {"main": [[{"node": "Get tasks", "type": "main", "index": 0}]]},
             "Get tasks": {"main": [[{"node": loop, "type": "main", "index": 0}]]},
@@ -181,12 +187,12 @@ def fresh_workflow(spec: str) -> dict:
         http("Teach page", [1100, 380], "POST", "/teach_wikitext",
              f"={{{{ JSON.stringify({{system: {s}, page: $('{days}').item.json.page, "
              f"date: $('{days}').item.json.date, wikitext: $json.wikitext}}) }}}}"),
-        http("Get questions", [880, 120], "GET", "/fresh/questions"),
+        http("Get questions", [880, 120], "GET", "/fresh/questions", once=True),
         {"id": "00000023-0000-4000-8000-000000000000", "name": qs, "type": "n8n-nodes-base.splitInBatches",
          "typeVersion": 3, "position": [1100, 120], "parameters": {"batchSize": 1, "options": {}}},
         http("Answer question", [1320, 200], "POST", "/ask",
              f"={{{{ JSON.stringify({{system: {s}, ticket: $json.id, question: $json.question}}) }}}}"),
-        http("Score", [1320, 20], "GET", f"/fresh/score?system={quote(spec)}"),
+        http("Score", [1320, 20], "GET", f"/fresh/score?system={quote(spec)}", once=True),
     ]
     one = lambda n: [[{"node": n, "type": "main", "index": 0}]]  # noqa: E731
     conn = {"Start": {"main": one("Reset system")}, "Reset system": {"main": one("Get pages")},

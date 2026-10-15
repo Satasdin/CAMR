@@ -888,6 +888,18 @@ The verified pipeline (chosen on the development set with the 0.5B model) was ru
 | phi4-mini (3.8B) | 60.0% | 3.0% | 18.0% | 19.0% |
 | qwen2.5:7b | 60.5% | 3.5% | 19.5% | 16.5% |
 
+**All 19 sweep models by size class** (F10; figure `report/model_sizes.png` names every model; time is the median over the 2.1 GHz machines B, D and E only, since speed is comparable only within one CPU class). The sweep has **no 5B, 10B or 13B model**; the nearest are gemma3:4b (4.3B), gemma2:9b (9.2B) and gemma3:12b (12.2B).
+
+| Size class | Models | Facts alone → CAMR | Multi-hop alone → CAMR | At Kimi K3 on multi-hop | Arithmetic helped / hurt | s / answer |
+|---|---|---|---|---|---|---|
+| About 1B (0.5B qwen2.5, 1B gemma3, 1.2B llama3.2) | 3 | 7.8 → 65.6% | 14.4 → 36.7% | 0 of 3 | 0 / 3 | 1.7 |
+| 1.5–2.5B (qwen2.5, smollm2, granite3.3) | 3 | 15.6 → 76.7% | 18.9 → 43.3% | 0 of 3 | 1 / 1 | 2.1 |
+| 3–4B (qwen2.5, falcon3, llama3.2, phi4-mini, gemma3) | 5 | 14.7 → 75.3% | 18.7 → 48.7% | 2 of 5 | 3 / 1 | 4.2 |
+| 6–9B (mistral, olmo2, qwen2.5, llama3.1, granite3.3, gemma2) | 6 | 24.4 → 75.6% | 31.7 → 53.1% | 3 of 6 | 3 / 2 | 10.0 |
+| 10–15B (gemma3 12B, qwen2.5 14B) | 2 | 23.3 → 76.3% | 38.3 → 63.1% | 2 of 2 | 1 / 1 | 16.9 |
+
+Facts stop improving at about 1.5B (every class from 1.5B averages 75–77% with CAMR; Kimi K3 alone 66.7%). Multi-hop keeps improving with size (37 → 63%). Time grows fastest (1.7 → 16.9 s), and every model of 6B and above was slower than Kimi K3 (7.7 s).
+
 **Findings**
 1. **In verified fact answering, a bigger reader buys nothing.** All five readers are within 1 point. 140 of the 200 questions were answered from a fact line with no model call, whatever the reader; of the other 60 (0.5B reader), 19 were answered correctly and 36 of the remaining 41 had no answer anywhere in what memory read.
 2. **Reading across documents does need a bigger reader:** on HotpotQA (F13) memory added +23, +30.5 and +34.5 points for 0.5B, 1.5B and 3B, and only from 3B did a small model with memory match the cloud model. In the automations the 3B model sent no wrong replies with CAMR, the 0.5B model 4 (F29).
