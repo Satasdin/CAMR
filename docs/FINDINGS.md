@@ -970,6 +970,6 @@ Regenerate: `python scripts/make_ch5_figures.py` (F24, F28-F31), `python scripts
 
 ## Still running
 
-- F28: the 0.5B reader with HyDE, corrective RAG, abstain, check and CAMR; the 3B reader (dense, reranked, corrective, check, CAMR); judging of those runs.
-- F29: Llama 3B alone on the desk (re-run after an Ollama timeout); Llama 3B with RAG and with CAMR on the news.
-- F30: per-model speed and memory (`results/models/speed.json`).
+- F10/F30: machine F (this container) runs the size sweep for the sizes it lacked: yi:6b (6B), falcon3:10b (10B), olmo2:13b (13B), same config, store and questions as machines B-E. A container restart killed the first attempt at the start of yi:6b; it was restarted from scratch.
+- F28: the 3B reader on the RAG benchmark (its first run failed with an Ollama HTTP 500 while the gateways, n8n and two other models shared the 16 GB); queued after the sweep.
+- F30: per-model speed and memory (`results/models/speed.json`): the first attempt failed on a script bug (fixed); the 7B and phi4-mini readers are pulled again for it after the sweep.
