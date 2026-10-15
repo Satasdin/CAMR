@@ -1,0 +1,237 @@
+{
+ "id": "78d77fd2680b297a",
+ "name": "Helio operations agent (llama3.2:3b+camr)",
+ "nodes": [
+  {
+   "id": "00000011-0000-4000-8000-000000000000",
+   "name": "Start",
+   "type": "n8n-nodes-base.manualTrigger",
+   "typeVersion": 1,
+   "position": [
+    0,
+    300
+   ],
+   "parameters": {}
+  },
+  {
+   "id": "b9287594-0000-4000-8000-000000000000",
+   "name": "Get tasks",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    220,
+    300
+   ],
+   "parameters": {
+    "method": "GET",
+    "url": "http://127.0.0.1:8766/agent/tasks",
+    "options": {
+     "timeout": 900000
+    }
+   }
+  },
+  {
+   "id": "00000012-0000-4000-8000-000000000000",
+   "name": "Loop over tasks",
+   "type": "n8n-nodes-base.splitInBatches",
+   "typeVersion": 3,
+   "position": [
+    440,
+    300
+   ],
+   "parameters": {
+    "batchSize": 1,
+    "options": {}
+   }
+  },
+  {
+   "id": "bd9eaa67-0000-4000-8000-000000000000",
+   "name": "Run agent on task",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    660,
+    380
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8766/agent/run",
+    "options": {
+     "timeout": 900000
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({config: \"llama3.2:3b+camr\", task: $json.id}) }}"
+   }
+  },
+  {
+   "id": "ca27570b-0000-4000-8000-000000000000",
+   "name": "Completed by the agent?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    880,
+    380
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "de7a265a-1111-4000-8000-000000000000",
+       "leftValue": "={{ $json.escalated }}",
+       "operator": {
+        "type": "boolean",
+        "operation": "false",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "00000013-0000-4000-8000-000000000000",
+   "name": "Record completion",
+   "type": "n8n-nodes-base.noOp",
+   "typeVersion": 1,
+   "position": [
+    1100,
+    300
+   ],
+   "parameters": {}
+  },
+  {
+   "id": "00000014-0000-4000-8000-000000000000",
+   "name": "Hand to a person",
+   "type": "n8n-nodes-base.noOp",
+   "typeVersion": 1,
+   "position": [
+    1100,
+    460
+   ],
+   "parameters": {}
+  },
+  {
+   "id": "70bb1301-0000-4000-8000-000000000000",
+   "name": "Score agent",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    660,
+    120
+   ],
+   "parameters": {
+    "method": "GET",
+    "url": "http://127.0.0.1:8766/agent/score?config=llama3.2%3A3b%2Bcamr",
+    "options": {
+     "timeout": 900000
+    }
+   }
+  }
+ ],
+ "connections": {
+  "Start": {
+   "main": [
+    [
+     {
+      "node": "Get tasks",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Get tasks": {
+   "main": [
+    [
+     {
+      "node": "Loop over tasks",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Loop over tasks": {
+   "main": [
+    [
+     {
+      "node": "Score agent",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Run agent on task",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Run agent on task": {
+   "main": [
+    [
+     {
+      "node": "Completed by the agent?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Completed by the agent?": {
+   "main": [
+    [
+     {
+      "node": "Record completion",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Hand to a person",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Record completion": {
+   "main": [
+    [
+     {
+      "node": "Loop over tasks",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Hand to a person": {
+   "main": [
+    [
+     {
+      "node": "Loop over tasks",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1"
+ },
+ "active": false,
+ "pinData": {}
+}
