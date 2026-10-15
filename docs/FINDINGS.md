@@ -798,6 +798,16 @@ Sources: `scripts/rag_bench.py`, `results/ragbench/run_<pipeline>_<reader>.json`
 | Reranker + CAMR check | 17.0% | 8.5% | - | 74.5% | 66.7% | 72.0% | 290 | 2.48 | 701 | $0 |
 | CAMR (verified) | 62.5% | 3.5% | 18.5% | 15.5% | 74.0% | 64.0% | 52 | 0.21 | 14 | $0 |
 
+**Reader: Llama 3B** (judged)
+
+| Pipeline | Correct | Wrong, stated | Other meaning (named) | Declined | Precision | Gold in context | Prompt tokens | Model s | Retrieval CPU ms | USD / 1,000 q |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Dense (naive RAG) | 53.5% | 14.0% | - | 32.5% | 79.3% | 64.0% | 247 | 5.96 | 12 | $0 |
+| Hybrid + reranker | 56.0% | 15.5% | - | 28.5% | 78.3% | 72.0% | 277 | 6.26 | 993 | $0 |
+| Corrective RAG | 55.0% | 15.5% | - | 29.5% | 78.0% | 71.5% | 255 | 5.81 | 1102 | $0 |
+| Reranker + CAMR check | 37.0% | 9.5% | - | 53.5% | 79.6% | 72.0% | 277 | 6.26 | 628 | $0 |
+| CAMR (verified) | 63.5% | 3.5% | 20.0% | 13.0% | 73.0% | 64.0% | 49 | 0.57 | 13 | $0 |
+
 **Reader: Kimi K3** (judged)
 
 | Pipeline | Correct | Wrong, stated | Other meaning (named) | Declined | Precision | Gold in context | Prompt tokens | Model s | Retrieval CPU ms | USD / 1,000 q |
@@ -819,7 +829,10 @@ Sources: `scripts/rag_bench.py`, `results/ragbench/run_<pipeline>_<reader>.json`
 8. **With CAMR the reader hardly matters:** the 0.5B and Kimi K3 readers gave the same outcome on 187 of 200 questions (62.5% against 63.0% correct). With RAG it matters a great deal: the same reranked pipeline went from 45.5% (0.5B) to 71.5% (Kimi K3).
 9. **The extra steps of modern RAG did not help a small reader.** HyDE (a hypothetical answer written first, then searched) was the worst pipeline after BM25 (33.0% correct, 59.0% wrong) and the slowest (two model calls, 6.6 s). Abstaining on a low reranker score cut wrong answers from 47.0% to 38.0% while correct ones stayed level (45.0%); CAMR's check on RAG answers cut them to 8.5% but declined 74.5%.
 
-Pending: the 3B reader (dense, reranked, CAMR first), queued after the size sweep.
+10. **The 3B reader confirms the pattern between the two:** CAMR 63.5% correct with 3.5% wrong single claims; the best RAG pipeline (reranked) 56.0% correct with 15.5% wrong. Under the standard RAG prompt the 3B model hedges and declines 28.5-32.5% of questions (as on the desk, F29), so its RAG answers are more often right when given (precision about 78%) than the 0.5B model's (49%), but it answers fewer.
+11. **CAMR's accuracy does not depend on the reader:** 62.5% (0.5B), 63.5% (3B), 63.0% (Kimi K3). The reranked RAG pipeline: 45.5%, 56.0%, 71.5%. Memory that answers from labelled facts makes a small model as good as a large one on this task; RAG makes the reader the bottleneck.
+
+The 3B reader ran five of the nine pipelines (dense, reranked, corrective, check, CAMR; the others are covered by the 0.5B reader). Its runs used Ollama with the prompt cache capped at 1 GB (F10, machine F); the cap affects prefill reuse only, not answers.
 
 ## F29. Automations and agents: n8n workflows calling the engine
 
@@ -935,7 +948,7 @@ Load times (9-219 s) are not comparable: the first three models loaded cold from
 
 Source: `results/costs/kimi_costs.json` (`python scripts/kimi_costs.py`: every Kimi call the project made, from the logged token counts, at Moonshot's list price: kimi-k3 $3 input, $15 output per million tokens; output includes reasoning tokens; cached-input discounts not applied, so these are upper bounds); figures `report/kimi_costs.png`, `report/cost_compare.png`.
 
-- **Total so far: $33.03 for 6,345 calls** (3.1 M input, 1.6 M output tokens). Largest items: learning formulas $8.74 (every correction round, incl. two stopped runs), the automations $7.32 (of which $4.46 was context stuffing on 50 news questions), judging answers $7.34.
+- **Total: $33.36 for 6,456 calls** (3.1 M input, 1.6 M output tokens). Largest items: learning formulas $8.74 (every correction round, incl. two stopped runs), the automations $7.32 (of which $4.46 was context stuffing on 50 news questions), judging answers $7.67.
 - **Per 1,000 answers with Kimi K3:** desk: alone $3.80, stuffing $4.04, RAG $2.68, CAMR $2.62; news: alone $14.74, stuffing $89.20, RAG $3.31, CAMR $1.98; agent: no memory $3.62, RAG $5.84, CAMR $6.85 (more tool calls per task); RAG benchmark: reranked $3.33, corrective $2.99, CAMR $1.01.
 - **CAMR was the cheapest way to make the cloud model useful in every scenario but the agent**, because it sends the fewest prompt tokens and, for labelled facts, often none; stuffing was the most expensive, up to 45 times CAMR on the news. Most of every bill is output, and Kimi K3 bills its reasoning as output.
 - Local models cost nothing per answer; their price is CPU time. With CAMR the 3B model's desk answers took about 2 s of model time against 32-37 s with RAG or stuffing (prompts 2-4 times longer; these runs shared the CPU, so the ratio, not the seconds, is the result).
@@ -992,4 +1005,4 @@ Regenerate: `python scripts/make_ch5_figures.py` (F24, F28-F31), `python scripts
 
 ## Still running
 
-- F28: the 3B reader on the RAG benchmark (its first run failed with an Ollama HTTP 500 while the gateways, n8n and two other models shared the 16 GB); runs after the speed test.
+Nothing: every run reported here has finished.
