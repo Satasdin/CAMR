@@ -108,6 +108,10 @@ def check_verified_test(tmp: Path):
     return _verified("test", tmp)
 
 
+def check_verified_heldout(tmp: Path):
+    return _verified("heldout", tmp)
+
+
 def check_lookup_dev(tmp: Path) -> tuple[bool, str]:
     exp = json.loads((ROOT / "results/verified/lookup_dev.json").read_text())
     # replay every lookup from the cache, offline, into a scratch copy of the result
@@ -179,7 +183,8 @@ def _math_summary(d: dict) -> dict:
     out = {k: v for k, v in d.items() if k not in drop}
     for key in ("rows", "before_rows"):
         for split, rows in d.get(key, {}).items():
-            out[f"{key}/{split}"] = [(r["question"], r["pred"], r["correct"], r["used_memory"]) for r in rows]
+            out[f"{key}/{split}"] = [(r["question"], r["pred"], r["correct"], r["used_memory"], r.get("grounded"))
+                                      for r in rows]
     out["learning_log"] = [(r["round"], r["family"], r["pred"], r["corrected"]) for r in d.get("learning_log", [])]
     return out
 
@@ -210,7 +215,8 @@ def check_math(tmp: Path) -> tuple[bool, str]:
 
 
 CHECKS = {"tests": check_tests, "lookup-dev": check_lookup_dev, "verified-dev": check_verified_dev,
-          "verified-test": check_verified_test, "bulk": check_bulk, "governor": check_governor,
+          "verified-test": check_verified_test,
+          "verified-heldout": check_verified_heldout, "bulk": check_bulk, "governor": check_governor,
           "math": check_math}
 
 

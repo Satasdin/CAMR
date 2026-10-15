@@ -563,6 +563,12 @@ def runner(model: str, offline: bool):
 
     from camr.models.runner import CachedRunner
 
+    if offline and model.startswith("kimi"):  # a replay needs the request's shape, not the key
+        from camr.config import Config
+        from camr.models.runner import ReplayOnlyRunner
+
+        r = ReplayOnlyRunner(Config.load(ROOT / "results/learn/config.yaml").ceiling_model)
+        return CachedRunner(RepeatGuard(r), OUT / "answers.sqlite", offline=True)
     spec = importlib.util.spec_from_file_location("el", ROOT / "scripts/eager_learning.py")
     el = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(el)

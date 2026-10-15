@@ -601,39 +601,60 @@ Sources: `docs/results/scenarios_v3.json`, `docs/figures/scenarios/{fetch_new,fo
 
 ## F24. Answers that are verified or not stated as fact
 
-Sources: `camr/memory/verify.py`, `camr/memory/answer.py`, `scripts/verified_qa.py`, `results/verified/answers_dev*.json`, `results/verified/judged_dev.json`, `results/verified/answers_test*.json`, `results/verified/judged_test.json`.
+Sources: `camr/memory/verify.py`, `camr/memory/answer.py`, `scripts/verified_qa.py`, `results/verified/answers_dev*.json`, `results/verified/judged_dev.json`, `results/verified/answers_test*.json`, `results/verified/judged_test.json`, `results/verified/answers_heldout*.json`, `results/verified/judged_heldout.json`, `camr/memory/eager.py` (`knows_subject`).
 
 Every short factual answer is checked against what memory read before it is stated: its words must all occur in one sentence or fact line (grounding), that unit must be about what the question names (subject), a labelled fact supports only its own relation, and (strict) the answer must be the kind asked for and a plain sentence must state the relation. A fact line that answers the question is read directly, with no model call. A name that means several things is never silently resolved: the answer says which one it is about, or gives each. What cannot be confirmed is offered only as a lead, marked unverified.
 
-Lookups were improved first: infobox facts as one note each; meanings named exactly as asked, and the name's own article first (D-24, D-29); no searches for "director of X" (D-25) or for fragments of a name already found (D-26); the search page when the search API is rate limited (D-27), the article page when the summary API is (D-30). On the development set the answer was in what was read for **73.0%** of questions, 66.5% on the test stream (the earlier lookups found it for about 52% of the stream's questions); recorded from the frozen cache (`lookup_*.json`).
+Lookups were improved first: infobox facts as one note each; meanings named exactly as asked, and the name's own article first (D-24, D-29); no searches for "director of X" (D-25) or for fragments of a name already found (D-26); the search page when the search API is rate limited (D-27), the article page when the summary API is (D-30). On the development set the answer was in what was read for **73.0%** of questions, 72.0% on the held-out set, 66.5% on the test stream (the earlier lookups found it for about 52% of the stream's questions); recorded from the frozen cache (`lookup_*.json`).
 
 Development set (200 PopQA questions, ids and subjects disjoint from the stream; everything below was chosen here). Correct and wrong as judged by Kimi K3 where exact matching disagrees (exact matching gives the same ordering, `answers_dev*.json`):
 
 | Pipeline | correct | hallucinated | about another meaning (named) | not confirmed |
 |---|---|---|---|---|
 | Before: 0.5B reads, every answer stated | 45.0% | **51.5%** | - | - |
-| Verified, 0.5B, infobox facts | 46.5% | 5.0% | 20.0% | 28.5% |
-| + fact reader and compression | 55.0% | 3.5% | 18.0% | 23.5% |
-| **+ strict checks (chosen)** | **54.0%** | **2.5%** | 17.0% | 26.5% |
-| + 3B second reader | 55.0% | 3.0% | 17.5% | 24.5% |
-| + Kimi K3 second reader and cross-check | 55.0% | 4.0% | 17.5% | 23.5% |
+| Verified, 0.5B: the old pipeline's answers checked | 42.0% | 9.0% | 20.5% | 28.5% |
+| + infobox facts | 48.0% | 5.0% | 20.0% | 27.0% |
+| + fact reader and compression | 55.5% | 3.5% | 18.0% | 23.0% |
+| + strict checks (answer type, relation stated) | 55.5% | 2.5% | 17.5% | 24.5% |
+| **+ look the subject up when memory has no note about it (chosen)** | **59.0%** | **2.5%** | 20.5% | 18.0% |
+| chosen + Kimi K3 second reader and cross-check | 60.0% | 3.0% | 21.0% | 16.0% |
+| strict + 3B second reader (round 1) | 57.0% | 3.0% | 18.0% | 22.0% |
+| strict + read every note that names the subject | 55.0% | 3.0% | 18.0% | 24.0% |
+| strict + hybrid (keyword) recall | 54.5% | 2.5% | 15.0% | 28.0% |
+| chosen + hybrid recall | 59.0% | 2.5% | 20.5% | 18.0% |
 
-The second readers add one point of correct answers and up to 1.5 points of hallucination: the answer is usually not in what memory read, and a larger model reading the same notes cannot find it either. The chosen pipeline runs on the 0.5B model alone. "About another meaning" answers are true statements about a named meaning of a shared name ("Jeff F. King (Damage (2009 film))" when the question meant the 1992 film).
+Round 2 found why answers about Spain and other plain names were unconfirmed: memory already held notes that merely *mentioned* the subject, so the eager lookup thought it knew it and never fetched the article. Memory now "knows" a subject only if a note's title is about it (`knows_subject`); otherwise the subject is looked up (+3.5 points correct, hallucination unchanged). Reading every note that names the subject and hybrid recall did not help here and stay off for answering (hybrid recall is on for large stores, F25). The second readers add a point of correct answers and up to 1.5 points of hallucination: the answer is usually not in what memory read, and a larger model reading the same notes cannot find it either. The chosen pipeline runs on the 0.5B model alone. "About another meaning" answers are true statements about a named meaning of a shared name ("Jeff F. King (Damage (2009 film))" when the question meant the 1992 film).
 
-**Test stream** (the 200 questions of F19, answered with the configuration chosen above; memory starts empty and learns as it goes; every system judged the same way, `judged_test.json`). Protocol: the web is fetched once into a cache; every variant then answers from that frozen cache, so all see the same pages and a replay reproduces every answer (F26):
+**Held-out set** (200 new PopQA questions, disjoint in ids and subjects from the development set and the stream, drawn after every choice above was made and answered once; the web fetched into a frozen cache in five passes, the answer in what was read for 72.0%; `answers_heldout*.json`, `judged_heldout.json`):
 
-| System | correct | wrong, stated as fact |
-|---|---|---|
-| **0.5B + verified memory (chosen)** | **49.0%** | **4.5%** (and 14.0% true answers about a named other meaning; 32.5% honestly not confirmed) |
-| 0.5B + verified memory, Kimi K3 second reader + cross-check | 51.0% | 5.0% (16.5% another meaning) |
-| Before: 0.5B reads, every answer stated | 46.5% | 50.5% |
-| Kimi K3, closed-book (cloud) | 68.0% | 31.0% |
-| gpt-oss 20B, closed-book | 23.0% | 76.0% |
-| llama3.2 3B, closed-book | 20.5% | 79.5% |
-| qwen2.5 1.5B, closed-book | 15.5% | 78.5% |
-| qwen2.5 0.5B, closed-book | 13.0% | 87.0% |
+| System | correct | wrong, stated as fact | about another meaning (named) | not confirmed |
+|---|---|---|---|---|
+| **0.5B + verified memory (chosen)** | **60.5%** | **3.0%** | 17.5% | 19.0% |
+| 0.5B + verified memory, Kimi K3 second reader + cross-check | 62.5% | 4.5% | 19.0% | 14.0% |
+| Old pipeline, answers checked | 42.5% | 10.0% | 20.5% | 27.0% |
+| Before: 0.5B reads, every answer stated | 47.0% | 52.0% | - | - |
+| Kimi K3, closed-book (cloud) | 67.5% | 31.5% | - | - |
+| llama3.2 3B, closed-book | 20.0% | 80.0% | - | - |
+| qwen2.5 0.5B, closed-book | 11.5% | 88.5% | - | - |
 
-Exact matching (no judge): chosen 44.5% correct, 7.5% hallucinated; the judge's extra correct answers are aliases and spellings ("Empress Wenxian" for Dugu Qieluo, "Christian" for Christianity, "Garowe" for "Garoowe"). A frozen 0.5B model with verified memory answers more than twice as many questions correctly as a 20B model and states a wrong fact as true about one time in twenty, against about one time in three for the cloud model. What it does not know it says it could not confirm, with its best lead.
+On questions no choice was made on, the frozen 0.5B model with verified memory states a wrong fact about one time in thirty-three, against about one time in three for the cloud model answering from its weights, and answers 60.5% correctly against the cloud model's 67.5%.
+
+**Test stream** (the 200 questions of F19; memory starts empty and learns as it goes; every system judged the same way, `judged_test.json`). The subject-aware rows are a second use of this stream (round 2 was chosen on the development set, but the stream had already been seen in round 1); the held-out set above is the clean test:
+
+| System | correct | wrong, stated as fact | about another meaning (named) | not confirmed |
+|---|---|---|---|---|
+| **0.5B + verified memory, subject-aware (chosen)** | **52.5%** | **5.0%** | 14.5% | 28.0% |
+| same, Kimi K3 second reader + cross-check | 54.5% | 5.5% | 17.5% | 22.5% |
+| 0.5B + verified memory, round 1 (strict) | 49.0% | 4.5% | 14.0% | 32.5% |
+| Old pipeline, answers checked | 40.5% | 8.0% | 23.5% | 28.0% |
+| Before: 0.5B reads, every answer stated | 47.5% | 50.5% | - | - |
+| Kimi K3, closed-book (cloud) | 68.0% | 31.0% | - | - |
+| gpt-oss 20B, closed-book | 23.0% | 76.0% | - | - |
+| llama3.2 3B, closed-book | 20.5% | 79.5% | - | - |
+| qwen2.5 1.5B, closed-book | 15.5% | 78.5% | - | - |
+| qwen2.5 0.5B, closed-book | 13.0% | 87.0% | - | - |
+
+The judge's extra correct answers over exact matching are aliases and spellings ("Empress Wenxian" for Dugu Qieluo, "Christian" for Christianity, "Garowe" for "Garoowe").
 
 ## F25. Large data: searchable at once, vectors in the background, within the device's limits
 
@@ -663,10 +684,94 @@ Corpus: every paragraph of the HotpotQA dev (distractor) and 2WikiMultihopQA dev
 | verified-dev, verified-test | every variant of F24: recall, ranking, compression, verification, scoring (answers read from the answer cache by exact request) | every question's status, claim, correctness and first answer |
 | bulk | ingest of the measured questions' 5,201 paragraphs (8,287 notes) with real embeddings, then dense and hybrid recall@10 on 600 questions | 83.67% dense, 95.13% hybrid |
 | governor | the device-limit tests (stop at each limit, resume without duplicates) | all pass |
+| math | every maths run and ablation of F27, offline: the corrections made, the curve, every problem's answer (model answers replayed by exact request) | every problem's prediction, correctness and grounding, every correction |
 
 Last run (`results/reproduce_last.txt`): **12/12 checks passed, twice in a row, with no API key in the environment and no network** (the cloud model's answers are replayed by a stand-in that builds the identical request).
 
 What makes this hold: every web response and every model answer is stored by its exact request (`web_cache_*.sqlite`, `answers.sqlite`, judge verdicts in `judge.sqlite`) and every embedding by its exact text (`vectors.sqlite`); decoding is greedy; ties in ranking break by note id. The web is the one thing that changes, so it is read once (`fetch`) and frozen: answering never goes online (the first harness run caught answer runs that had fetched what an earlier variant missed, so variants saw slightly different pages; fixed by freezing).
+
+## F27. Learning formulas from corrections: generalisation, not memorisation
+
+Sources: `scripts/math_learning.py`, `scripts/math_lora.py`, `results/math/run_*.json`, `results/math/ablate_*.json`, `results/math/examples_*.json`, `results/math/lora_vs_memory.json`, `results/math/dev/` (the development draw), figures `report/math_learning_curve.png`, `report/math_ablation.png`, `report/math_lora_vs_memory.png`.
+
+**The test.** Ten formula families: six a model may know (compound interest, arithmetic and geometric series, Heron's formula, combinations, kinetic energy) and four **invented** ones it cannot know (the *zorbit* operation a⊛b = 3a − 2b + ab; *glim* units, 1 glim = 7 trell = 84 pom; the *Kessler fee*, 4% of the order plus $2.50 an item; the *Vantor score* V = 2w + h²/4). Each family has 6 training problems, 6 held-out problems (new numbers), the same 6 held-out problems reworded, and 4 **derived** problems the rule was never shown solving (the formula inverted, e.g. "a fee of $30.20 on 6 items: what was the order?", or applied twice, "(4 zorbit 4) zorbit 4"). The model is frozen. A training round asks one training problem per family; only when the answer is wrong is it corrected, once: the rule and that problem worked through are stored in memory (the engine's external weights). Evaluation is then the standard check for overfitting: seen against unseen problems, other wording, derived problems, a learning curve, a memorisation probe and unrelated problems (GSM8K) for interference.
+
+Two ways to answer: **calculator** (the model writes the formula as one expression, or as an equation with one unknown letter, and the engine evaluates or solves it: the model sets the problem up, the calculator does the arithmetic) and **reason** (the model works the arithmetic out itself). Every answer is also checked for **grounding**: the expression must use every number the problem gives (a percentage may appear as a fraction).
+
+**Protocol.** The method was developed on one draw of problems (seed 31; four versions, `results/math/dev/v1-v4`) and the numbers below come from a **fresh draw (seed 47) that shares no problem with it, run once after the method was frozen**. Every model answer is cached by its exact request, so `python scripts/reproduce.py --only math` replays every run offline and checks every outcome.
+
+### Before and after correction (fresh draw)
+
+| | corrections | held-out | reworded | derived | invented formulas, held-out | seen (corrected) | gap seen − unseen |
+|---|---|---|---|---|---|---|---|
+| Qwen 0.5B, calculator: before | - | 15.0% | 15.0% | 2.5% | 0.0% | - | - |
+| Qwen 0.5B, calculator: **after** | 34 | **50.0%** | **48.3%** | **22.5%** | **70.8%** | 68.3% | +18.3 |
+| Qwen 0.5B, reason: before | - | 5.0% | 3.3% | 5.0% | 0.0% | - | - |
+| Qwen 0.5B, reason: after | 40 | 35.0% | 20.0% | 7.5% | 33.3% | 53.3% | +18.3 |
+| Kimi K3, calculator: before | - | 60.0% | 60.0% | 60.0% | 0.0% | - | - |
+| Kimi K3, calculator: **after** | **4** | **100%** | **100%** | **100%** | **100%** | 100% | **0.0** |
+
+Kimi K3 already knew the six known formulas (100% before); it was corrected once on each invented one, and from those four corrections it solved every held-out, reworded and derived problem, including inverting the Kessler fee (it wrote `0.04*x + 2.50*6 = 30.20`) and nesting the zorbit operation (`3*(3*4 - 2*4 + 4*4) - 2*4 + (3*4 - 2*4 + 4*4)*4`), neither of which any correction showed. On invented formulas the 0.5B model went from 0% to 70.8% held-out, 62.5% reworded and 50.0% derived.
+
+Held-out accuracy as corrections accumulate (calculator mode): 0.5B 15.0% → 50.0% after round 1 (9 corrections) → 48.3% → 50.0% → 50.0% (34 corrections); invented formulas 0% → 58.3% → 70.8% and stays there. Kimi K3 60% → 100% after round 1 and stays there. Accuracy on new problems rises with the first correction and does not fall as more are stored, the opposite of overfitting. In reason mode the 0.5B peaks after round 1 (45.0%) and drifts to 35.0% by round 6: its own arithmetic, not the rule, is what fails (the calculator mode with the same corrections holds at 50%).
+
+### Why this is learning and not memorisation
+
+1. **New numbers.** Every held-out, reworded and derived problem has numbers no correction contains, and the answer is accepted only within 0.2% of the true value.
+2. **No copying.** A wrong answer to a new problem that equals a stored training answer is the sign of a model replaying what it was shown: 3 of 61 wrong answers (0.5B, calculator), 4 of 87 (reason), none for Kimi K3. The grounding check catches the rest of that failure: answers built from the problem's own numbers were right 59% of the time (61 of 103), answers that were not, 12% (7 of 57).
+3. **Other words.** Reworded problems ("Convert 28 glims into poms" for "How many pom are in 28 glim?") score within 2 points of the original wording for the 0.5B (48.3% against 50.0%) and equal for Kimi K3.
+4. **Derived problems need the rule, not the example.** One correction per family, stored three ways (`results/math/ablate_*.json`):
+
+| One correction per formula, stored as | held-out | reworded | derived |
+|---|---|---|---|
+| nothing (before) | 15.0% | 15.0% | 2.5% |
+| the worked example only | 40.0% | 21.7% | **2.5%** |
+| the rule only | 35.0% | 25.0% | **20.0%** |
+| the rule and the worked example (what learning stores) | **50.0%** | **45.0%** | 20.0% |
+
+   (Qwen 0.5B, calculator.) A worked example alone helps on problems that look like it and does nothing for derived ones; the rule is what the small model derives from. Kimi K3 scores 100% on all three in every storage: it recovers the general rule from one worked example ("12 zorbit 12 = 3*12 − 2*12 + 12*12 = 156") and inverts and nests it.
+5. **Seen against unseen.** The gap is 0 for Kimi K3. For the 0.5B it is 18 points because a problem it was corrected on brings back its own worked solution (memory doing its job), not because held-out accuracy falls: held-out never dropped as corrections were added.
+6. **No interference.** On 30 unrelated GSM8K problems, with every correction in memory: Kimi K3 96.7% with and without. Qwen 0.5B 3/30 → 2/30 (calculator) and 6/30 → 5/30 (reason): in each run a correction note was recalled for 3 of the 30 and one answer changed; in calculator mode it was an unrelated note (the Vantor score, for a question about bolts of fibre) that turned a right answer wrong.
+
+### Fine-tuning on the same corrections (LoRA) against memory
+
+Same base model in one runtime (Qwen2.5-0.5B-Instruct, full precision, Hugging Face, greedy decoding, the same prompt), the same training problems (4 per family; 2 more per family to choose the epoch, as one would), fresh draw. LoRA: rank 16 on the attention projections, trained to write the formula and the expression; memory: the same 40 corrections stored, weights untouched (`results/math/lora_vs_memory.json`).
+
+| LoRA epoch | training loss | training problems | validation | held-out |
+|---|---|---|---|---|
+| 1 | 0.882 | 27.5% | 30.0% | 28.3% |
+| 3 | 0.051 | 72.5% | 65.0% | 71.7% |
+| 6 (best on validation) | 0.006 | 95.0% | 80.0% | 88.3% |
+
+| | seen | held-out | reworded | derived | GSM8K (unrelated) |
+|---|---|---|---|---|---|
+| base model | 27.5% | 23.3% | 26.7% | 7.5% | 13.3% |
+| memory (40 corrections, weights frozen) | 85.0% | 50.0% | 31.7% | **25.0%** | **13.3%** |
+| LoRA, epoch 6 | **95.0%** | **88.3%** | **48.3%** | 17.5% | **0.0%** |
+
+By the usual check the fine-tune is **well fitted, not overfitted**: held-out accuracy rose with every epoch alongside the training accuracy, 95% seen against 88% held-out, the epoch chosen on validation, and no wrong answer repeats a training answer (0 of 38). It learned the formulas well enough to apply them to numbers it never saw. What it learned is tied to how the problems were put: reworded problems fall to 48% (-40 points), and on derived problems it pushes the given result through the forward formula ("an account holds $2,251.10 after 6 years at 7%: what was deposited?" -> `2251.10*(1+7/100)**6`), the trained template applied, not the rule inverted. And it lost what it could do before: on GSM8K it fell from 13.3% to 0%, every answer now in the trained "Formula: ... ####" form with an invented formula ("Profit = Value after repairs - Initial cost ... #### 80000+50000*(1+150/100)"). Memory gains less on the trained wording, more on derived problems, leaves everything else as it was, and is undone by deleting a note. In this runtime, with all 40 corrections stored, 16 of memory's 71 wrong answers repeated a training answer (against 3 of 61 in the Ollama run, where only wrong answers were corrected).
+
+### How answers change once corrected (fresh draw, Qwen 0.5B, calculator)
+
+| Problem | Before | After one correction |
+|---|---|---|
+| What is 5 zorbit 7? (36) | `5 * 7 + 5` → 40 | `3*5 - 2*7 + 5*7` → 36 |
+| Convert 28 glims into poms. (2352) | `28 * 12` → 336 | `28 * 84` → 2352 |
+| A Vantor score of 16 and h = 4: what is w? (6) | `16 = 4*w` → solved: 4 | `2*w + 4**2/4 = 16` → solved: 6 |
+| 12 kg with kinetic energy 1536 J: how fast? (16) | `12 * 9.81 + 1536 / 1536` → 118.7 | `1536 = 1/2 * 12 * v**2` → solved: 16 |
+| Kinetic energy of 8 kg at 23 m/s (2116) | `0.5 * 8 * 23 ** 2 / 2` → 1058 | `1/2 * 8 * 23**2` → 2116 |
+
+The model also wrote its own result after the expression ("= 10" for 5 zorbit 7, "v = 25.33" for the speed); those were wrong, and the calculator, which evaluates or solves what the model set up, makes them irrelevant.
+
+### What changed in the engine (and was found on the development draw)
+
+- **At most one note per source title in a context** (`memory.per_title`, off by default): six corrections of one rule reached the 0.5B as six near-copies, and it echoed all of them (arithmetic series: 0% after six corrections in v1). Now it reads the rule and the nearest worked example.
+- **Entity gate defect (D-31):** every sentence of a task starts with a capital, and "Give the amount to the cent", "Add up its first 11 terms", "Find its area" and "Convert 11 glims" were read as names no note mentions, so the right correction was withheld for 33 of 60 reworded problems. Instructions at the start of any sentence are no longer names, and a name ends at a sentence boundary. The verified-answer replays (F24, F26) are identical after the fix.
+- **Solver and grounding** in the calculator; an Ollama "token repeat limit" abort becomes a failed answer, not a crashed run.
+
+Development draw, Qwen 0.5B calculator, held-out / reworded / derived: v1 56.7 / 28.3 / 5.0; v2 51.7 / 30.0 / 10.0; v3 51.7 / 33.3 / 17.5; **v4 (frozen) 51.7 / 43.3 / 17.5**; the fresh draw gave 50.0 / 48.3 / 22.5.
+
+**Limits.** The 0.5B model cannot apply the arithmetic series or Heron's formula even with its own corrected solution in front of it (it rewrites `n/2 * (2a + (n-1)d)` as `n * (a + (n-1)d)`); no check can fix a wrong formula built from the right numbers, and the grounding check does not claim to. On combinations it got worse after correction (50% → 0%): it copied the prompt's sample equation (`2*x + 4 = 19`), and the grounding check flagged most of those answers. With 6 problems per family a family's figure moves in steps of 17 points.
 
 ---
 
@@ -686,8 +791,11 @@ What makes this hold: every web response and every model answer is stored by its
 | `figures/inspector/main_*.png` | Final pilot: dashboard with `ceiling_rag` and residual gap, ablation and budget sweep, traces, store |
 | `figures/inspector/control_*.png` | The baseline engine, for comparison |
 | `figures/inspector/budget-0128_*.png` | The 128-token configuration (best on single-hop) |
+| `figures/report/math_learning_curve.png` | F27 held-out accuracy as corrections accumulate; seen vs unseen after learning |
+| `figures/report/math_ablation.png` | F27 one correction stored as rule, worked example or both |
+| `figures/report/math_lora_vs_memory.png` | F27 LoRA per epoch against memory on the same corrections |
 
-Regenerate: `python scripts/make_figures.py` and `python scripts/screenshot_inspector.py --run-dir results/pilot --out docs/figures/inspector --label grow-100`.
+Regenerate: `python scripts/make_math_figures.py` (F27), `python scripts/make_figures.py` and `python scripts/screenshot_inspector.py --run-dir results/pilot --out docs/figures/inspector --label grow-100`.
 
 ---
 
