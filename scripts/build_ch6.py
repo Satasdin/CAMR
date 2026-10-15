@@ -187,11 +187,56 @@ def build(template: Path, out: Path) -> Path:
 
 
 def CH6_EXTRA(F: dict) -> str:  # noqa: N802
-    return ""
+    d, a, fr = F["desk"], F["agents"], F["fresh"]
+    text = ("**Can its answers be trusted?** More than a model's own. Verification cut the 0.5B model's wrong stated "
+            f"answers from 52% to {p1(F['v'].get('hallucinated'))} on held-out questions, and every remaining wrong "
+            "answer quoted a stored line; what it cannot catch is a wrong page (section ⟦sec_verified⟧). ")
+    text += ("**Can a frozen model keep learning?** Yes, as long as what it learns is text it reads: from lookups "
+             "(10.0% → 43.5% on new questions) and from corrections (four corrections taught the cloud model every "
+             "invented formula, including derived uses no correction showed). Fine-tuning learned the trained wording "
+             "better but forgot unrelated skills (section ⟦sec_learning⟧). ")
+    if "camr_kimi-k3" in d and "rag_kimi-k3" in d and "stuff_kimi-k3" in d:
+        c, r, s = d["camr_kimi-k3"], d["rag_kimi-k3"], d["stuff_kimi-k3"]
+        text += ("**Do automations need such an engine?** Where knowledge is private and changes, a model alone is "
+                 "useless or wrong, and any of the three memories made it useful. What separated them was what they "
+                 f"did when they did not know: CAMR sent {p1(c['wrong_replies'])} wrong replies to customers against "
+                 f"{p1(r['wrong_replies'])} for RAG and {p1(s['wrong_replies'])} for context stuffing, and because it "
+                 "escalated what it did not know, people's answers were taught back and the desk learned; RAG's wrong "
+                 "replies were never seen by a person, so the same wrong answer was repeated (section ⟦sec_agentic⟧). ")
+    if "kimi-k3__camr" in a:
+        text += (f"With memory, the cloud agent completed {p1(a['kimi-k3__camr']['success'])} of its tasks with no "
+                 "hallucinated action; without it, it completed only the tasks that required doing nothing. ")
+    if "camr_kimi-k3" in fr and "llm_kimi-k3" in fr:
+        text += (f"On news after its training data, the cloud model alone stated a wrong answer to "
+                 f"{p1(fr['llm_kimi-k3']['wrong_stated'])} of questions; with CAMR's memory of the workflow's pages it "
+                 f"was correct on {p1(fr['camr_kimi-k3']['correct'])} with {p1(fr['camr_kimi-k3']['wrong_stated'])} "
+                 "wrong. ")
+    return text
 
 
 def DECISIONS(F: dict) -> list[list[str]]:  # noqa: N802
-    return []
+    return [
+        ["Private, changing knowledge (support, operations); a wrong answer has a cost", "CAMR with the strongest "
+         "reader allowed; escalate what is not supported and teach the answer back", "⟦sec_agentic⟧: 0 wrong "
+         "replies; the desk learned from its escalations"],
+        ["A small, stable knowledge base and a cloud model", "Context stuffing is simplest, but costs more per "
+         "question as the base grows and still states wrong answers", "⟦sec_agentic⟧, ⟦sec_cost⟧"],
+        ["A large document collection; coverage matters more than an occasional wrong answer", "Hybrid search with "
+         "a reranker (modern RAG)", "⟦sec_ragresult⟧"],
+        ["The same, but wrong answers are costly", "Modern RAG retrieval with CAMR's check, or CAMR", "⟦sec_ragresult⟧"],
+        ["Questions that chain two entities", "CAMR's entity bridging with a reader of 3B or more", "⟦sec_retrieval⟧, "
+         "⟦sec_gap⟧"],
+        ["Arithmetic or multi-step reasoning", "A stronger model, or a calculator tool; not memory", "⟦sec_gap⟧, "
+         "⟦sec_learning⟧"],
+        ["A new rule or formula learned from a few corrections", "Store the rule and a worked example; let a "
+         "calculator do the arithmetic", "⟦sec_learning⟧"],
+        ["A fixed output format, and nothing else must be kept", "Fine-tuning (LoRA) can win on that format",
+         "⟦sec_learning⟧: 88.3% vs 50.0%, but GSM8K 13.3% → 0%"],
+        ["Offline or private use on a 16 GB CPU laptop", "1.5B model for facts, 3B for reading across documents, "
+         "with CAMR; not 7B or larger", "⟦sec_models⟧"],
+        ["Events after the model's training data", "Teach the source as it arrives (an automation can do it) and "
+         "answer from memory", "⟦sec_agentic⟧"],
+    ]
 
 
 def main() -> None:
