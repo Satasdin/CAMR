@@ -820,6 +820,7 @@ Sources: `scripts/agentic/` (gateway, systems, agent, workflow builder, scenario
 | System | Correct reply | Wrong reply | Escalated | Answerable resolved | Unknowable escalated | Prompt tok/ticket | USD / 1,000 |
 |---|---|---|---|---|---|---|---|
 | Qwen 0.5B alone | 8.3% | 81.7% | 10.0% | 8.9% | 13.3% | 81 | $0 |
+| Llama 3B alone | 3.3% | 75.0% | 21.7% | 4.4% | 6.7% | 76 | $0 |
 | Llama 3B + context stuffing | 70.0% | 5.0% | 25.0% | 93.3% | 93.3% | 632 | $0 |
 | Llama 3B + RAG | 33.3% | 0.0% | 66.7% | 44.4% | 100.0% | 279 | $0 |
 | Qwen 0.5B + CAMR | 56.7% | 6.7% | 36.7% | 75.6% | 93.3% | 164 | $0 |
@@ -837,7 +838,8 @@ Sources: `scripts/agentic/` (gateway, systems, agent, workflow builder, scenario
 5. **On the device:** the 3B model with CAMR resolved 68.3% with 0 wrong replies; with stuffing 70.0% with 5.0% wrong, but each answer read 4.3 times the prompt (632 against 146 tokens). With the standard RAG prompt the 3B model hedged (*I don't know where RMA numbers start, but I do know that they start with HLX-*), so 14 answerable tickets went to a person. The 0.5B model with CAMR sent 4 wrong replies (6.7%), all of one flaw: the check accepted a claim made only of the subject's own name (*Lumen LB-13* for *Which cable ...?*) or another of its attributes (*10-year firmware*); no known relation covers *cable* or *firmware*.
 6. **D-33 (found here):** before the fix CAMR with Kimi K3 sent 0 wrong replies but escalated 48.3% of tickets, including 14 it could answer: questions such as *What hours is the support desk open?* name no product, so the subject check had nothing to anchor to. Topic anchoring (applied only when the question names nothing and asks no known relation) took it to 75.0%, still with 0 wrong.
 
-Pending: Llama 3B alone (its run stopped on an Ollama timeout under CPU contention).
+7. **The 3B model alone is no better than the 0.5B one:** 3.3% correct and 75.0% wrong replies, all fluent (*The error code E21 on your Volta-2 indicates a fault in the solar panel's voltage regulator*; Helio's manual says nothing of the kind). (Its first run stopped on an Ollama timeout under CPU contention and was repeated.)
+8. **D-40 (found here):** re-running the CAMR desk systems on the final code escalated ticket T020 (*Price of the Helio bird mesh kit please*): the D-37 fix applied the opener rule only to sentences ending in a question mark, so *Price of the Helio* was read as a name. The rule now also covers requests (*please*) and fragments without a full stop; the unit test now uses the ticket as written. After the fix every ticket answer of the three CAMR desk systems is identical to the reported run.
 
 **Agent (20 tasks)**
 
@@ -848,7 +850,7 @@ Pending: Llama 3B alone (its run stopped on an Ollama timeout under CPU contenti
 | Llama 3B + CAMR | 25.0% | 20.0% | 10.0% | 2.10 | $0 |
 | Kimi K3, no memory | 15.0% | 0.0% | 100.0% | 1.00 | $3.62 |
 | Kimi K3 + RAG | 100.0% | 0.0% | 15.0% | 1.45 | $5.84 |
-| Kimi K3 + CAMR | 100.0% | 0.0% | 15.0% | 1.60 | $6.89 |
+| Kimi K3 + CAMR | 100.0% | 0.0% | 15.0% | 1.60 | $6.85 |
 
 **Agent findings**
 1. **With a strong model, memory is the difference between doing nothing and doing everything.** Kimi K3 without memory escalated all 20 tasks (*I do not have the unit price for HS-400 panels ... I must not invent prices*), correct only for the three tasks nobody could do. With either memory it completed all 20 with no hallucinated action: it computed invoice totals with the calculator (*12*420 + 180 + 35*12 = 5640*), combined a learned resolution with a price (36 panels on two Volta-2 inverters, $15,120) and handed the HS-700 warranty, financing and Volta-X price requests to a person.
@@ -860,19 +862,21 @@ Pending: Llama 3B alone (its run stopped on an Ollama timeout under CPU contenti
 | System | Correct | Wrong, stated | Declined | Pages live / cached | USD / 1,000 |
 |---|---|---|---|---|---|
 | Llama 3B alone | 2.0% | 0.0% | 98.0% | 30 / 0 | $0 |
+| Llama 3B + RAG | 62.0% | 2.0% | 36.0% | 30 / 0 | $0 |
+| Llama 3B + CAMR | 88.0% | 4.0% | 8.0% | 30 / 0 | $0 |
 | Kimi K3 alone | 22.0% | 12.0% | 66.0% | 30 / 0 | $14.74 |
 | Kimi K3 + stuffing | 100.0% | 0.0% | 0.0% | 30 / 0 | $89.20 |
 | Kimi K3 + RAG | 98.0% | 2.0% | 0.0% | 30 / 0 | $3.31 |
-| Kimi K3 + CAMR | 96.0% | 0.0% | 4.0% | 30 / 0 | $1.96 |
+| Kimi K3 + CAMR | 94.0% | 2.0% | 4.0% | 30 / 0 | $1.98 |
 
 **News findings**
 1. **After its training data, the cloud model alone mostly declines, and more than a third of what it states is wrong.** Kimi K3 alone: 22% correct, 12% wrong (*four* journalists where the item says six; *Tropical Storm Fred* for Fay; *at least 54* killed where it says seven), 66% declined.
-2. **Taught as the workflow fetched them, the pages made it right:** CAMR 96% correct and 0% wrong (two answers it had read but could not confirm were declined), RAG 98% with 2% wrong, stuffing 100%.
-3. **Stuffing's accuracy is bought with tokens:** every question carried all 556 items (about 29,000 prompt tokens), $89.20 per 1,000 questions against $3.31 for RAG and $1.96 for CAMR. On a stream that grows daily, stuffing's cost grows with it.
-4. All 30 pages were fetched live in the reported runs. n8n marked the news executions as failed because an HTTP connection was reset, although every question was answered and scored (50 of 50); the reset was not traced further.
-5. Llama 3B alone declined 98% of news questions. Pending: Llama 3B with RAG and with CAMR.
+2. **Taught as the workflow fetched them, the pages made it right:** CAMR 94% correct, RAG 98%, stuffing 100%. CAMR's one *wrong* answer is not an invention: *Which town in North Kordofan did the Sudanese Armed Forces announce they had recaptured?* has two true answers in the pages (Sodri on 25 September, al-Mazroub on 2 October); the question was written from the first item, and CAMR, with evidence, gave the second. In the earlier run it gave Sodri: between the two runs a Wikipedia editor changed one item on the 14 October page (a link in another *re-captured* item), which was enough to change which of the two items memory read first. Live data moves results; the reported run is the later one, on the final code.
+3. **Stuffing's accuracy is bought with tokens:** every question carried all 556 items (about 29,000 prompt tokens), $89.20 per 1,000 questions against $3.31 for RAG and $1.98 for CAMR. On a stream that grows daily, stuffing's cost grows with it.
+4. All 30 pages were fetched live in the reported runs. **D-39 (traced while taking the screenshots):** n8n marked the news executions as failed because a loop's *done* output carries every item it looped over and n8n runs the next node once per item: *Get questions* ran 30 times, so each of the 50 questions was asked 30 times (1,500 answers), and *Score* sent 1,500 requests until the gateway reset the connection. Scores and costs were unaffected (answers are kept per question and every repeat was an answer-cache hit, so no model call or charge was repeated); per-question times of those runs are cache-hit times and are not reported. The nodes after a loop now run once; Kimi K3 alone and with CAMR were re-run on the fixed workflow (Kimi K3 alone: every answer identical).
+5. **On the device:** Llama 3B alone declined 98% of news questions; with RAG it answered 62%, with CAMR 88%, reading 161 prompt tokens per question against RAG's 380 (2.8 s of model time per answer against 9.9 s). RAG's prompt made the 3B model hedge (*I don't know the specific number of journalists ..., but according to the context ...*): 17 of its 18 declines were answered correctly by CAMR. CAMR's two *wrong* answers are *Tabuk* for *Tabuk, Saudi Arabia* (right, scored wrong by the exact match) and the two-answer question above.
 
-**Defects found by the automations (all fixed and the affected runs repeated):** D-32 (terse phrasing read as names), D-33 (questions that name nothing withheld), D-34 (the news workflow first used the support persona, so the cloud model refused news as off topic), D-35 (*I can't identify ...* not recognised as a decline, so a RAG decline was sent as a reply), D-36 (Wikimedia refused repeated live fetches with HTTP 403: the fetch node now continues on error and the gateway teaches the page as cached when the questions were written, recording which pages came live), D-38 (*I don't know* written with a curly apostrophe not recognised as a decline: 13 of Kimi K3's news declines had been scored as wrong; only that run was affected).
+**Defects found by the automations (all fixed and the affected runs repeated):** D-32 (terse phrasing read as names), D-33 (questions that name nothing withheld), D-34 (the news workflow first used the support persona, so the cloud model refused news as off topic), D-35 (*I can't identify ...* not recognised as a decline, so a RAG decline was sent as a reply), D-36 (Wikimedia refused repeated live fetches with HTTP 403: the fetch node now continues on error and the gateway teaches the page as cached when the questions were written, recording which pages came live), D-38 (*I don't know* written with a curly apostrophe not recognised as a decline: 13 of Kimi K3's news declines had been scored as wrong; only that run was affected), D-39 (loop fan-out in the news workflow: questions asked 30 times, score requests reset the connection; results unaffected), D-40 (the D-37 fix lost the desk request *Price of the Helio bird mesh kit please*; fixed, desk answers identical to the reported run).
 
 ## F30. Which model to run CAMR with
 
@@ -910,7 +914,7 @@ Facts stop improving at about 1.5B (every class from 1.5B averages 75–77% with
 Source: `results/costs/kimi_costs.json` (`python scripts/kimi_costs.py`: every Kimi call the project made, from the logged token counts, at Moonshot's list price: kimi-k3 $3 input, $15 output per million tokens; output includes reasoning tokens; cached-input discounts not applied, so these are upper bounds); figures `report/kimi_costs.png`, `report/cost_compare.png`.
 
 - **Total so far: $32.58 for 6,143 calls** (3.1 M input, 1.6 M output tokens). Largest items: learning formulas $8.74 (every correction round, incl. two stopped runs), the automations $7.32 (of which $4.46 was context stuffing on 50 news questions), judging answers $6.90.
-- **Per 1,000 answers with Kimi K3:** desk: alone $3.80, stuffing $4.04, RAG $2.68, CAMR $2.62; news: alone $14.74, stuffing $89.20, RAG $3.31, CAMR $1.96; agent: no memory $3.62, RAG $5.84, CAMR $6.89 (more tool calls per task); RAG benchmark: reranked $3.33, corrective $2.99, CAMR $1.01.
+- **Per 1,000 answers with Kimi K3:** desk: alone $3.80, stuffing $4.04, RAG $2.68, CAMR $2.62; news: alone $14.74, stuffing $89.20, RAG $3.31, CAMR $1.98; agent: no memory $3.62, RAG $5.84, CAMR $6.85 (more tool calls per task); RAG benchmark: reranked $3.33, corrective $2.99, CAMR $1.01.
 - **CAMR was the cheapest way to make the cloud model useful in every scenario but the agent**, because it sends the fewest prompt tokens and, for labelled facts, often none; stuffing was the most expensive, up to 45 times CAMR on the news. Most of every bill is output, and Kimi K3 bills its reasoning as output.
 - Local models cost nothing per answer; their price is CPU time. With CAMR the 3B model's desk answers took about 2 s of model time against 32-37 s with RAG or stuffing (prompts 2-4 times longer; these runs shared the CPU, so the ratio, not the seconds, is the result).
 
@@ -926,6 +930,8 @@ Source: `results/costs/kimi_costs.json` (`python scripts/kimi_costs.py`: every K
 | D-36 | Wikimedia refused repeated live fetches (403) | News workflow | Continue on error; cached page; pages counted | Re-run (all 30 live) |
 | D-37 | D-32 itself cut titles (*St. Louis Blues*, *A.I. ...*, *the composer of Hello*) and dropped names that start a statement (*Josh decides ...*) | `reproduce.py` (test, held-out, maths replays failed) | Abbreviations, initials, ellipses; greetings only at a sentence start; opener rule only in a sentence that asks | Extraction identical to pre-D-32 on 600 PopQA questions and 440 formula problems; all replays pass |
 | D-38 | *I don't know* with a curly apostrophe not recognised as a decline | News results | Apostrophes normalised | Only Kimi K3 alone on the news affected; re-run |
+| D-39 | A loop's *done* output fed every looped item to the next node: news questions asked 30 times, 1,500 score requests reset the gateway connection | n8n screenshots (1,500 runs of *Answer question*) | Nodes after a loop run once (*Execute Once*) | Scores and costs unchanged (answers per question, repeats were cache hits); news re-run clean |
+| D-40 | The D-37 opener rule (only in sentences ending with *?*) read *Price of the Helio* as a name in the desk request *... kit please* | Re-running the desk on the final code (T020 escalated) | Requests (*please*) and unpunctuated fragments also open with a common word; test uses the ticket as written | Every CAMR desk answer identical to the reported run; PopQA and formula extraction unchanged |
 
 The first version of the D-33 fix also applied to *What is the religion of refuge?* (a PopQA question with a lower-case subject) and let Kimi K3's wrong *Islam* through as verified; the replay check caught it and the rule was narrowed to questions that ask no known relation.
 
