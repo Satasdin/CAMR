@@ -63,7 +63,16 @@ def rag_runs() -> dict[tuple[str, str], dict]:
 
 
 def rag_summary(d: dict) -> dict:
-    return d.get("summary_judged") or d["summary"]
+    """The run's summary (judged when the judge has run), with CAMR's answers about a named other meaning counted
+    apart from wrong ones: they state which meaning they are about, which a plain RAG answer never does."""
+    s = dict(d.get("summary_judged") or d["summary"])
+    judged = d.get("judged", {})
+    rows = d["per_question"]
+    n = len(rows) or 1
+    ok = lambda r: judged.get(str(r["i"]), r["exact"])  # noqa: E731
+    s["other_meaning"] = sum(r["stated"] and not ok(r) and bool(r.get("ambiguous")) for r in rows) / n
+    s["wrong_exact"] = sum(r["stated"] and not ok(r) and not r.get("ambiguous") for r in rows) / n
+    return s
 
 
 DESK_SYSTEMS = [("llm_qwen2_5_0_5b", "Qwen 0.5B alone"), ("llm_llama3_2_3b", "Llama 3B alone"),
@@ -1209,15 +1218,16 @@ def res_rag(c: Chapter) -> None:
             if not d:
                 continue
             s = rag_summary(d)
-            rows.append([PIPE_NAMES[pipe], p1(s["correct_exact"]), p1(s["wrong_exact"]), p1(s["declined"]),
-                         p1(s["precision"]), p1(s["gold_in_context"]), f"{s['prompt_tokens']:.0f}",
+            rows.append([PIPE_NAMES[pipe], p1(s["correct_exact"]), p1(s["wrong_exact"]),
+                         p1(s["other_meaning"]) if s["other_meaning"] else "–", p1(s["declined"]),
+                         p1(s["gold_in_context"]), f"{s['prompt_tokens']:.0f}", f"{s['calls']:.2f}",
                          f"{s['model_s']:.2f}", f"{s['cpu_ms']:.0f}"])
         if rows:
             c.table(f"RAG pipelines and CAMR, 200 held-out questions, reader {name} "
                     f"(`results/ragbench/run_*_{tag}.json`)",
-                    ["Pipeline", "Correct", "Wrong, stated", "Declined", "Precision", "Gold in context",
-                     "Prompt tokens", "Model s", "Retrieval CPU ms"], rows,
-                    [3.6, 1.5, 1.6, 1.5, 1.6, 1.6, 1.5, 1.4, 1.6], size=8.5)
+                    ["Pipeline", "Correct", "Wrong, stated", "Other meaning (named)", "Declined", "Gold in context",
+                     "Prompt tokens", "Model calls", "Model s", "Retrieval CPU ms"], rows,
+                    [3.4, 1.4, 1.5, 1.6, 1.4, 1.5, 1.4, 1.3, 1.2, 1.4], size=8)
     for name, cap in (("rag_outcomes.png", "Outcomes of every pipeline per reader: correct, wrong but stated, "
                        "declined"),
                       ("rag_tradeoff.png", "Accuracy against wrong statements, and accuracy against model time, for "

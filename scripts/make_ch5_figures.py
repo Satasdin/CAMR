@@ -37,7 +37,15 @@ def rag_runs() -> dict[tuple[str, str], dict]:
 
 
 def summ(d: dict) -> dict:
-    return d.get("summary_judged") or d["summary"]
+    """Judged summary when available; CAMR's answers about a named other meaning are counted apart from wrong ones."""
+    s = dict(d.get("summary_judged") or d["summary"])
+    judged = d.get("judged", {})
+    rows = d["per_question"]
+    n = len(rows) or 1
+    ok = lambda r: judged.get(str(r["i"]), r["exact"])  # noqa: E731
+    s["other_meaning"] = sum(r["stated"] and not ok(r) and bool(r.get("ambiguous")) for r in rows) / n
+    s["wrong_exact"] = sum(r["stated"] and not ok(r) and not r.get("ambiguous") for r in rows) / n
+    return s
 
 
 def fig_rag_outcomes(out: Path) -> Path | None:
@@ -56,9 +64,11 @@ def fig_rag_outcomes(out: Path) -> Path | None:
                 continue
             s = summ(runs[(reader, p)])
             c, w, d = 100 * s["correct_exact"], 100 * s["wrong_exact"], 100 * s["declined"]
+            o = 100 * s["other_meaning"]
             ax.barh(y, c, color=GREEN, edgecolor=SURF, linewidth=1.5, height=0.7)
             ax.barh(y, w, left=c, color=ORANGE, edgecolor=SURF, linewidth=1.5, height=0.7)
-            ax.barh(y, d, left=c + w, color=GREY, edgecolor=SURF, linewidth=1.5, height=0.7)
+            ax.barh(y, o, left=c + w, color=BLUE, edgecolor=SURF, linewidth=1.5, height=0.7)
+            ax.barh(y, d, left=c + w + o, color=GREY, edgecolor=SURF, linewidth=1.5, height=0.7)
             ax.text(c / 2, y, f"{c:.0f}", ha="center", va="center", fontsize=7.5, color="white")
             if w >= 6:
                 ax.text(c + w / 2, y, f"{w:.0f}", ha="center", va="center", fontsize=7.5, color="white")
@@ -66,9 +76,10 @@ def fig_rag_outcomes(out: Path) -> Path | None:
         ax.set_xlim(0, 100)
         style(ax, xlabel="% of 200 held-out questions", grid="x")
         ax.set_title(name, loc="left")
-    handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in (GREEN, ORANGE, GREY)]
-    fig.legend(handles, ["correct", "wrong, stated as fact", "declined / not confirmed"], frameon=False, fontsize=8.5,
-               loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.04))
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in (GREEN, ORANGE, BLUE, GREY)]
+    fig.legend(handles, ["correct", "wrong, stated as fact", "about another meaning, named (CAMR only)",
+                         "declined / not confirmed"], frameon=False, fontsize=8.5, loc="lower center", ncol=4,
+               bbox_to_anchor=(0.5, -0.04))
     fig.suptitle("Modern RAG pipelines and CAMR: same corpus, same reader, same questions", x=0.01, ha="left",
                  fontsize=10.5, fontweight="bold")
     fig.tight_layout(rect=(0, 0.04, 1, 0.96))
@@ -384,7 +395,7 @@ def fig_rag_errors(out: Path) -> Path | None:
             judged = d.get("judged", {})
             rows = d["per_question"]
             ok = lambda r: judged.get(str(r["i"]), r["exact"])  # noqa: E731
-            wrong = [r for r in rows if r["stated"] and not ok(r)]
+            wrong = [r for r in rows if r["stated"] and not ok(r) and not r.get("ambiguous")]
             misread = 100 * sum(r["gold_in_context"] for r in wrong) / len(rows)
             missed = 100 * sum(not r["gold_in_context"] for r in wrong) / len(rows)
             ax.barh(y, misread, color=ORANGE, edgecolor=SURF, linewidth=1.5, height=0.68)
