@@ -359,3 +359,18 @@ def test_sentence_initial_instructions_are_not_names():
     assert question_entities("A crop's width index is 11. Find its Vantor score.") == ["vantor"]
     assert question_entities("Find the author of The Hobbit.") == ["hobbit"]
     assert question_entities("Who wrote J. K. Rowling's first book?") == ["j k rowling"]
+
+
+def test_terse_task_phrasing_is_not_taken_for_names():
+    from camr.memory.entities import question_entities
+
+    # a capitalised first word followed by a lower-case word opens a sentence (D-32)
+    assert question_entities("Recommended cleaning interval for my panels?") == []
+    assert question_entities("Bird mesh kit price?") == []
+    assert question_entities("Price of the Helio bird mesh kit please") == ["helio"]
+    # an instruction is not a name, and a name ends with its sentence
+    assert question_entities("Which firmware should I install on the Volta-2. Reply.") == ["volta 2"]
+    assert question_entities("My Volta-X shows E57. Any idea?") == ["volta x", "e57"]
+    # names and initials are unchanged
+    assert question_entities("Who wrote J. K. Rowling's first book?") == ["j k rowling"]
+    assert question_entities("Were Scott Derrickson and Ed Wood of the same nationality?") == ["scott derrickson", "ed wood"]

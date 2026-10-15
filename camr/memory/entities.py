@@ -22,7 +22,9 @@ _LEADING = {"what", "who", "whom", "whose", "which", "when", "where", "why", "ho
 # instructions and openers that start a sentence of a task ("Find its area.", "Give the amount to the cent.")
 _LEADING |= {"find", "give", "compute", "calculate", "work", "add", "convert", "use", "using", "solve", "determine",
              "express", "write", "list", "show", "round", "starting", "suppose", "if", "after", "each", "every",
-             "one", "there", "please", "let", "assume", "given", "estimate", "say", "explain"}
+             "one", "there", "please", "let", "assume", "given", "estimate", "say", "explain", "reply", "handle",
+             "create", "send", "check", "answer", "describe", "tell", "ask", "help", "any", "hi", "hello", "thanks",
+             "dear"}
 _TOKEN = re.compile(r"[\w'’.&-]+", re.UNICODE)
 _POSSESSIVE = re.compile(r"['’]s?$")
 _ARTICLE = re.compile(r"^(?:the|a|an) ")
@@ -37,6 +39,11 @@ def norm(text: str) -> str:
     return " ".join(re.findall(r"\w+", text, re.UNICODE))
 
 
+def _ends_sentence(tok: str) -> bool:
+    """A token that closes a sentence ("Volta-2.", "E57?"), other than an initial ("J.")."""
+    return tok[-1:] in ".?!:" and not re.fullmatch(r"[A-Z]\.", tok)
+
+
 def question_entities(question: str) -> list[str]:
     """Normalised entity strings named in the question (possibly empty)."""
     out = [norm(m.group(1)) for m in _QUOTED.finditer(question)]
@@ -45,10 +52,16 @@ def question_entities(question: str) -> list[str]:
     i = 0
     while i < len(toks):
         t = toks[i]
-        if t[:1].isupper() and not (i in starts and t.lower().rstrip(".") in _LEADING):
+        nxt0 = toks[i + 1] if i + 1 < len(toks) else ""
+        # a capitalised first word followed by a lower-case one opens a sentence; it is not a name ("Recommended
+        # cleaning interval?", "Bird mesh kit price?", "Price of the Helio kit"); a lone word ("Fix?") neither
+        opener = i in starts and not (nxt0[:1].isupper() or nxt0[:1].isdigit()) and not _ends_sentence(t)
+        if t[:1].isupper() and not opener and not (i in starts and t.lower().rstrip(".") in _LEADING):
             j, run = i, [t]
             while j + 1 < len(toks):
                 nxt = toks[j + 1]
+                if _ends_sentence(toks[j]):  # a name ends with its sentence ("E57. Any idea?", "Volta-2. Reply")
+                    break
                 if j + 1 in starts and nxt.lower().rstrip(".") in _LEADING:  # the sentence ended ("122.5 J. How")
                     break
                 if nxt[:1].isupper() or nxt[:1].isdigit():
