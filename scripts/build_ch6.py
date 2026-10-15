@@ -169,15 +169,18 @@ def build(template: Path, out: Path) -> Path:
              ["3", "**Better checks.** The kind check withheld correct answers (*al-Ghazali*), and the check cannot tell "
               "a wrong page from a right one.", "Coverage and wrong-stated rate on the held-out set; source agreement "
               "across two pages before stating"],
-             ["4", "**Better lookups.** The answer was in what was read for 52–73% of questions: the lookup sets the "
+             ["4", "**A reranker in CAMR's recall, and a stricter claim check.** Reranked RAG put the answer in "
+              "front of the reader more often (72% against 64%), and the 0.5B reader got answers past the check that "
+              "only repeated the subject's name.", "Correct and wrong-stated rates on the held-out set and the desk"],
+             ["5", "**Better lookups.** The answer was in what was read for 52–73% of questions: the lookup sets the "
               "ceiling.", "Answer-in-text rate on a fresh stream; Wikidata for disambiguation"],
-             ["5", "**Closing the reading gap of small models.** 76% of the 0.5B model's multi-hop misses had the answer "
+             ["6", "**Closing the reading gap of small models.** 76% of the 0.5B model's multi-hop misses had the answer "
               "in context.", "Correct-when-in-context on HotpotQA and 2Wiki, n ≥ 200"],
-             ["6", "**A learned entity recogniser.** The rule-based entity gate caused D-15, D-31 and D-32.",
+             ["7", "**A learned entity recogniser.** The rule-based entity gate caused D-15, D-31, D-32 and D-37.",
               "Abstention on answerable and unanswerable questions; full-support recall"],
-             ["7", "**Sessioned memory.** Recency could not help on independent questions; conversations are not "
+             ["8", "**Sessioned memory.** Recency could not help on independent questions; conversations are not "
               "independent.", "A sessioned benchmark (LongMemEval or LoCoMo) with and without recency"],
-             ["8", "**Phones and a physical laptop.** Timings came from laptop-class cloud machines.", "NFR-02, peak "
+             ["9", "**Phones and a physical laptop.** Timings came from laptop-class cloud machines.", "NFR-02, peak "
               "memory and battery per 100 answers on two phones and one laptop"]],
             [1.6, 8.0, 6.3], size=9)
     return c.save(out)

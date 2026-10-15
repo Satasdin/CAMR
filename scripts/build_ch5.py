@@ -1407,6 +1407,16 @@ def res_flaws(c: Chapter) -> None:
          "sourced answer", "Open: the source is shown with every answer"],
         ["Checks too strict for some correct answers", "*al-Ghazali* withheld (kind check expects a capital); 14 of "
          "45 answerable desk tickets withheld before D-33", "Lower coverage", "D-33 fixed; the kind check is open"],
+        ["CAMR's recall has no reranker", "Answer in what the reader got: 64% with CAMR against 72% with reranked "
+         "RAG on the same corpus (section ⟦sec_ragresult⟧)", "Lower coverage than the best RAG pipeline",
+         "Open: add the cross-encoder to CAMR's recall"],
+        ["The check trusts a claim that only names the subject or another of its attributes", "0.5B desk replies "
+         "*Lumen LB-13* for *Which cable …?* and *10-year firmware* for the latest firmware were stated; no known "
+         "relation covers *cable* or *firmware*", "4 wrong desk replies with the 0.5B reader (none with 3B or Kimi K3)",
+         "Open: require a claim word beyond the subject's own name"],
+        ["Small readers hedge under the standard RAG prompt", "Llama 3B: *I don't know where RMA numbers start, but "
+         "… they start with HLX-*", "14 answerable desk tickets escalated by the 3B + RAG system", "Reported; "
+         "prompt-specific"],
         ["The lookup sets the ceiling", "Answer in the fetched text for 52% (stream) to 72–73% (held-out, "
          "development) of questions", "Up to a quarter of questions cannot be answered from memory", "Open"],
         ["Retrieval share of answer time (NFR-02)", "56% for the 0.5B model in the pilot profile; about 20% after "
