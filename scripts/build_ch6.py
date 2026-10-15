@@ -31,6 +31,7 @@ def facts() -> dict:
     f["fresh"] = {t: d["summary"] for t, _, d in ch5.loaded("fresh", ch5.FRESH_SYSTEMS)}
     f["rag"] = {k: ch5.rag_summary(d) for k, d in ch5.rag_runs().items()}
     f["costs"] = ch5.costs() or {}
+    f["sweep"] = ch5.sweep_models()
     return f
 
 
@@ -99,10 +100,12 @@ def build(template: Path, out: Path) -> Path:
     c.h3("Beyond the Research Questions")
     c.p(CH6_EXTRA(F))
     c.h3("Contribution and Boundaries")
+    sw = F["sweep"]
     c.p("The study contributes: (1) an open-source memory engine whose read path is measured to suit small models; "
         "(2) verified answering that states a fact only when memory supports it, with its source; (3) learning "
         "without training, by lookup and by correction, measured against fine-tuning and token-level memory; (4) a "
-        "size map of nineteen models and a reader study showing where memory pays off; (5) a head-to-head comparison "
+        f"size map of {len(sw)} models ({sw[0]['params']:.1f}B to {sw[-1]['params']:.0f}B) and a reader study showing "
+        "where memory pays off; (5) a head-to-head comparison "
         "with eight modern RAG pipelines on one corpus; (6) automations in n8n and a tool-using agent that show where "
         "an engine is needed and what it costs; and (7) CAMR Personal, a released desktop application. The conclusions "
         "hold for English questions, frozen quantised models on 4-core CPUs with 16 GB of memory, the sample sizes "

@@ -33,10 +33,12 @@ def model_rss_mb() -> float:
 def prompts(n: int) -> list[str]:
     d = json.loads((ROOT / "results/verified/answers_heldout_sa.json").read_text())
     rows = next(iter(d["variants"].values()))["per_question"]
-    qs = {it["i"]: it["question"] for it in json.loads((ROOT / "results/verified/heldout.json").read_text())}
+    qs = {it["i"]: it["question"] for it in json.loads((ROOT / "results/verified/heldout.json").read_text())["items"]}
     out = []
     for r in rows:
         ev = r.get("evidence") or ""
+        if not ev:  # the same reading task for every model: a question and the line memory found for it
+            continue
         out.append("Use the notes below to answer. Answer the question with a short phrase copied from the notes. "
                    f"Do not explain.\n\nNotes:\n- {ev}\n\nQuestion: {qs.get(r['i'], '')}\nAnswer:")
         if len(out) >= n:
