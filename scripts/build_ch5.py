@@ -21,6 +21,10 @@ _spec = importlib.util.spec_from_file_location("build_chapter5", HERE / "build_c
 old = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(old)
 
+_pspec = importlib.util.spec_from_file_location("ch5_plain", HERE / "ch5_plain.py")
+plain = importlib.util.module_from_spec(_pspec)
+_pspec.loader.exec_module(plain)
+
 Chapter, pct, ROOT = old.Chapter, old.pct, old.ROOT
 FIG, DIAGRAMS, REPORT = old.FIG, old.DIAGRAMS, old.REPORT
 REPO_URL = old.REPO_URL
@@ -167,6 +171,53 @@ def speed() -> dict:
     return (J("results/models/speed.json") or {}).get("models", {})
 
 
+def plain_facts() -> dict:
+    """The numbers the plain-language summary and section openers quote, from the same files as the chapter."""
+    import subprocess
+
+    jf = J("results/verified/judged_heldout.json") or {}
+    verified = (jf.get("files", {}).get("answers_heldout_sa.json", {}).get("facts+compress+reader", {})
+                .get("verified", {}))
+    closed = jf.get("closed", {})
+    sw, kimi = sweep_models(), sweep_kimi()
+    runs = rag_runs()
+
+    def summ(pipe, tag):
+        d = runs.get((pipe, tag))
+        return rag_summary(d) if d else {}
+
+    def best(tag):
+        rag = {pp: summ(pp, tag) for pp in PIPE_ORDER if pp != "camr" and summ(pp, tag)}
+        return rag[max(rag, key=lambda pp: rag[pp]["correct_exact"])] if rag else {}
+
+    b05, bk, c05, ck = best("qwen2_5_0_5b"), best("kimi-k3"), summ("camr", "qwen2_5_0_5b"), summ("camr", "kimi-k3")
+    desk = {t: d["summary"] for t, _, d in loaded("helio", DESK_SYSTEMS)}
+    agents = {t: d["summary"] for t, _, d in loaded("agent", AGENT_CONFIGS)}
+    fresh = {t: d["summary"] for t, _, d in loaded("fresh", FRESH_SYSTEMS)}
+    try:
+        out = subprocess.run(["python", "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider"],
+                             cwd=ROOT, capture_output=True, text=True, timeout=300).stdout
+        n_tests = int(re.search(r"(\d+) tests? collected", out).group(1))
+    except Exception:  # noqa: BLE001
+        n_tests = None
+    return {
+        "verified": verified, "kimi_closed": closed.get("kimi-k3", {}), "alone_05": closed.get("qwen2.5:0.5b", {}),
+        "n_models": len(sw), "min_b": sw[0]["params"], "max_b": sw[-1]["params"],
+        "reach_kimi": sum(r["popqa"][1] >= kimi.get("popqa", 9) - 1e-6 for r in sw if "popqa" in r),
+        "rag": {"c05": c05.get("correct_exact"), "c05w": c05.get("wrong_exact"), "r05": b05.get("correct_exact"),
+                "r05w": b05.get("wrong_exact"), "ck": ck.get("correct_exact"), "ckw": ck.get("wrong_exact"),
+                "rk": bk.get("correct_exact"), "rkw": bk.get("wrong_exact")},
+        "desk_alone": desk.get("llm_kimi-k3", {}).get("escalated"),
+        "desk_answerable": desk.get("camr_kimi-k3", {}).get("answerable_correct"),
+        "agent_alone": agents.get("kimi-k3__none", {}).get("success"),
+        "agent_camr": agents.get("kimi-k3__camr", {}).get("success"),
+        "news_camr": fresh.get("camr_kimi-k3", {}).get("correct"),
+        "news_alone": fresh.get("llm_kimi-k3", {}).get("correct"),
+        "cost": (costs() or {}).get("total", {"usd": 0, "calls": 0}),
+        "n_tests": n_tests if n_tests is not None else "all",
+    }
+
+
 # Machine each sweep model ran on (sweep_results/machine-*.sqlite and their notes); unlisted models ran on E.
 SWEEP_MACHINE = {"gemma3:1b": "C", "smollm2:1.7b": "C", "granite3.3:2b": "C", "falcon3:3b": "C", "phi4-mini:3.8b": "C",
                  "qwen2.5:7b": "B", "llama3.1:8b": "B", "gemma2:9b": "B", "qwen2.5:14b": "B",
@@ -253,41 +304,49 @@ def git_count() -> tuple[int, int]:
 # ================================================================= 5.1 Introduction
 
 
-def introduction(c: Chapter) -> None:
+def introduction(c: Chapter, F: dict) -> None:
     c.h2("Introduction")
+    plain.box(c, plain.AT_A_GLANCE(F), title="Chapter 5 at a glance")
     c.p("This chapter reports what was built, how it was tested, and what the measurements showed, including where "
-        "the system failed. The project follows the AI and machine learning route of the departmental guidelines, "
-        "with one difference that shapes the whole chapter: the language models are **not** trained. They run with "
-        "frozen weights, and everything the system learns is stored outside them, in a memory engine called CAMR "
-        "(Capability-Adaptive Memory Retrieval). The parts that *are* fitted to data, a router and an escalation "
-        "cascade, were tuned by cross-validation on training questions only, and two fine-tuned models (LoRA) were "
-        "trained as baselines to test the proposal's claim that memory beats retraining.")
-    c.p("Four things were built. (1) The **memory engine**: a write path that turns documents into screened notes in "
-        "one SQLite file, and a read path that decides per question how much memory a small model should read. (2) "
-        "**Verified answering**: an answer is stated as fact only when a stored sentence supports it; otherwise it is "
-        "withheld or handed on. (3) **Learning without training**: looking things up when memory has nothing, and "
-        "learning formulas from corrections. (4) **Applications**: CAMR Personal, a desktop assistant, and a gateway "
-        "that lets workflow automations (n8n) and tool-using agents call the engine.")
-    c.p("Each was evaluated against named baselines: the same model without memory, a frontier cloud model (Kimi K3), "
-        "eight modern retrieval-augmented generation (RAG) pipelines, context stuffing, and fine-tuning. Every number "
-        "in this chapter comes from a results file in the repository, and the file is named. Results are reported "
-        "the way they came out. Section ⟦sec_scorecard⟧ opens the results with a scorecard that marks each claim as "
-        "met in full, met in part, or not met, and section ⟦sec_flaws⟧ lists every flaw found, with its cause.")
+        "the system failed. One idea runs through it: the language models are used **as downloaded and are never "
+        "retrained**. Everything the system learns is kept outside the model, in a memory engine called CAMR "
+        "(Capability-Adaptive Memory Retrieval). Only a few small settings were tuned, always on practice questions, "
+        "and two retrained models (LoRA, a cheap way of retraining) were built purely for comparison, to test the "
+        "proposal's claim that memory beats retraining.")
+    c.p("Four things were built. (1) The **memory engine**, which files documents as short notes in a single "
+        "database file and decides, for each question, which notes a small model should read. (2) **Verified "
+        "answering**, which states an answer as fact only when a stored note supports it, and otherwise says so or "
+        "passes the question on. (3) **Learning without retraining**, by looking up what memory lacks and by keeping "
+        "corrections. (4) **Applications**: CAMR Personal, a desktop assistant, and a gateway that lets business "
+        "automations (built in n8n) and agents (models that carry out tasks with tools) use the engine.")
+    c.p("Each was compared with alternatives: the same model without memory, a large cloud model (Kimi K3), eight "
+        "popular ways of giving a model documents (retrieval-augmented generation, RAG), pasting every document into "
+        "every question (context stuffing), and retraining. Every number in this chapter comes from a results file "
+        "in the repository, and results are reported the way they came out. Section ⟦sec_scorecard⟧ opens the "
+        "results with a scorecard that marks each claim as met, partly met, or not met, and section ⟦sec_flaws⟧ "
+        "lists every flaw found, with its cause.")
     c.table("Where each part of the system is described and evaluated",
             ["Component", "What it does", "Implemented in", "Evaluated in"],
-            [["Memory engine (write and read paths)", "Stores documents as notes; per question: retrieve, gate, "
-              "bridge, pack under a token budget", "⟦sec_impl⟧", "⟦sec_retrieval⟧, ⟦sec_gap⟧"],
+            [["Memory engine", "Files documents as short notes; for each question, finds the notes that matter, "
+              "keeps only those about the right subject, and fits them within a size limit", "⟦sec_impl⟧",
+              "⟦sec_retrieval⟧, ⟦sec_gap⟧"],
              ["Verified answering", "States an answer only when a stored sentence supports it", "⟦sec_verify_impl⟧",
               "⟦sec_verified⟧, ⟦sec_ragresult⟧"],
              ["Learning without training", "Looks up what memory lacks; learns formulas from corrections",
               "⟦sec_learn_impl⟧", "⟦sec_learning⟧"],
-             ["Large data and device limits", "Bulk ingest that is searchable at once; a governor that stops at "
-              "the device's limits", "⟦sec_bulk_impl⟧", "⟦sec_bulk⟧"],
-             ["Learned routing", "Chooses memory budget or cloud per question", "⟦sec_policy_impl⟧", "⟦sec_policy⟧"],
+             ["Large data and device limits", "Loads large document collections so they are searchable at once, "
+              "and stops safely before the computer runs out of memory or disk", "⟦sec_bulk_impl⟧", "⟦sec_bulk⟧"],
+             ["Learned routing", "Decides for each question how much memory to read, or whether to ask the cloud "
+              "model", "⟦sec_policy_impl⟧", "⟦sec_policy⟧"],
              ["CAMR Personal", "Desktop assistant with memory", "⟦sec_app⟧", "⟦sec_apptest⟧, ⟦sec_appres⟧"],
-             ["Automation gateway", "n8n workflows and agents call any system through one interface",
+             ["Automation gateway", "Lets business automations (n8n) and agents use CAMR or any other answering "
+              "system in the same way",
               "⟦sec_gateway⟧", "⟦sec_agentic⟧, ⟦sec_cost⟧"]],
             [3.6, 5.6, 2.8, 3.9], size=9.5)
+    c.p(f"{c.next_tab()} explains in plain words the terms used throughout the chapter. Each main section also "
+        "explains a term briefly, in brackets, the first time it appears there, so a section can be read on its own.")
+    c.table("Key terms in plain words", ["Term", "What it means"], [[t, m] for t, m in plain.GLOSSARY],
+            [4.2, 11.7], size=9, key="tab_glossary")
     c.p(f"The work was done in increments, each ending with a measured result that decided the next step. "
         f"{c.next_fig()} shows the sequence as recorded in the repository's history.")
     c.figure(REPORT / "timeline.png", "Development increments reconstructed from the git history; each marked step is "
@@ -1367,10 +1426,13 @@ def res_models(c: Chapter) -> None:
 def res_rag(c: Chapter) -> None:
     runs = rag_runs()
     c.h3("CAMR Against Modern RAG Pipelines", key="sec_ragresult")
-    c.p("All nine pipelines of section ⟦sec_rag_def⟧ answered the 200 held-out questions from the same store of "
-        "10,443 notes. Correct and wrong are judged as in section ⟦sec_verified⟧; *declined* means the pipeline "
-        "said it did not know (or, for CAMR and the check, did not state an answer). Gold in context is whether the "
-        "reference answer appears anywhere in what the reader was given.")
+    c.p("All nine methods of section ⟦sec_rag_def⟧ (eight RAG designs and CAMR) answered the same 200 held-out "
+        "questions from the same store of 10,443 notes. How to read the tables: *Correct* and *Wrong answer stated* "
+        "are judged as in section ⟦sec_verified⟧. *Same-name mix-up* is an answer about another person or thing "
+        "with the same name, which CAMR labels (only CAMR does this). *Said it did not know* means the method gave "
+        "no answer (for CAMR and the check: it did not state one). *Answer was in what it read* shows whether the "
+        "right answer was anywhere in the text the model was given: when it was not, no model could answer. "
+        "*Text read*, *Model time* and *Search time* show the cost of each answer.")
     for tag, name in (("qwen2_5_0_5b", "Qwen 2.5 0.5B"), ("llama3_2_3b", "Llama 3.2 3B"), ("kimi-k3", "Kimi K3")):
         rows = []
         for pipe in PIPE_ORDER:
@@ -1648,9 +1710,12 @@ def scorecard(c: Chapter) -> None:
           .get("facts+compress+reader", {}).get("verified", {}))
     desk = {t: d["summary"] for t, _, d in loaded("helio", DESK_SYSTEMS)}
     agents = {t: d["summary"] for t, _, d in loaded("agent", AGENT_CONFIGS)}
+    sw, kimi = sweep_models(), sweep_kimi()
+    reach = sum(r["popqa"][1] >= kimi.get("popqa", 9) - 1e-6 for r in sw if "popqa" in r)
     rows = [
-        ["Long-tail facts: a small model with memory matches the cloud model", "19-model sweep; PopQA",
-         "18 of 19 models reach or beat Kimi K3 closed-book (66.7%) with memory", "**Met**"],
+        ["Long-tail facts: a small model with memory matches the cloud model", f"{len(sw)}-model sweep; PopQA",
+         f"{reach} of {len(sw)} models reach or beat Kimi K3 closed-book ({100 * kimi.get('popqa', 0):.1f}%) with "
+         "memory", "**Met**"],
         ["Multi-hop: memory closes part of the gap", "HotpotQA, n = 200", "3B + CAMR 54.0% vs Kimi K3 51.8%; "
          "0.5B gains +23 points but stays far below", "**Met for ≥ 3B; partial for 0.5B**"],
         ["Second hop found without a graph", "2Wiki retrieval, n = 500", "Full-support recall 35.8% → 78.4% at the "
@@ -2027,8 +2092,10 @@ def results(c: Chapter) -> None:
 
 def build(template: Path, out: Path, declaration: str | None) -> Path:
     c = Chapter(template)
+    F = plain_facts()
+    plain.install(c, F)
     c.h1("System Implementation, Testing and Evaluation")
-    introduction(c)
+    introduction(c, F)
     environment(c)
     datasets(c)
     implementation(c)
