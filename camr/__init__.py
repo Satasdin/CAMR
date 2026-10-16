@@ -5,4 +5,4 @@ model on a consumer laptop, plus the harness that measures how much of the
 small-versus-large capability gap it closes.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.4.0"
