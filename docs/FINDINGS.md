@@ -5,7 +5,19 @@ number below was produced by the code in this repository, and the file it comes
 from is named. Nothing here is estimated or synthetic. Runs still in progress are
 listed at the end, and this log is updated as they finish.
 
-Last updated: 2026-10-15.
+Last updated: 2026-10-16.
+
+
+## Headline results (latest round: F10, F28-F31)
+
+| Question | What was measured | Section |
+|---|---|---|
+| Which model size to run CAMR with? | 22 models from 0.5B to 14.8B, alone and with CAMR. Facts stop improving at about 1.5B (every class from 1.5B averages 73-77% with CAMR; Kimi K3 alone 66.7%). Multi-hop keeps improving with size (37% -> 59%). Every model of 6B and above was slower than Kimi K3 (7.7 s per answer). No 5B model was tested. | F10, F30 |
+| How fast, how much memory? | One short answer from one note: 0.31 s / 0.66 GB (0.5B), 0.52 s / 1.3 GB (1.5B), 1.0 s / 2.8 GB (3B), 2.0 s / 4.8 GB (7B). | F30 |
+| CAMR against modern RAG? | Nine pipelines, one corpus, 200 held-out questions, three readers. CAMR: 62.5 / 63.5 / 63.0% correct (0.5B / 3B / Kimi K3), 3.5-4.0% wrong single claims. Best RAG: 45.5 / 56.0 / 71.5% correct, 47.0 / 15.5 / 21.0% wrong. CAMR wins outright with small readers; with the cloud reader RAG answers more and states about five times as many wrong answers. | F28 |
+| Do automations need the engine? | n8n desk: Kimi K3 + CAMR 75.0% resolved, 0 wrong replies, every unknowable ticket escalated and the person's answer taught back. Agent: Kimi K3 0% -> 100% of tasks with memory. Live news: Kimi K3 alone 22% correct and 12% wrong; with CAMR 94%; Llama 3B 2% -> 88%. | F29 |
+| What did the cloud model cost? | $33.36 for 6,456 calls in the whole study. Per 1,000 answers CAMR was the cheapest way to use Kimi K3 in every scenario but the agent (news: $1.98 against $3.31 RAG and $89.20 stuffing). | F31 |
+| What went wrong? | D-31 to D-40, each fixed and re-run; the last two: n8n loops asked each news question 30 times (D-39; results unaffected) and an entity fix lost one desk ticket (D-40; desk answers identical after the fix). 204 tests pass; `reproduce.py --twice`: 16/16 identical. | Defects table |
 
 ---
 
