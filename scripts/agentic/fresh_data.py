@@ -59,7 +59,8 @@ def fetch(d: dt.date) -> str:
 
     from camr.memory.fetch import USER_AGENT
 
-    cache = ROOT / "data/agentic/fresh_pages" / (page_title(d).replace("/", "_") + ".wiki")
+    # a file name every platform accepts (Windows refuses ':' and the other reserved characters)
+    cache = ROOT / "data/agentic/fresh_pages" / (re.sub(r'[\\/:*?"<>|]', "_", page_title(d)) + ".wiki")
     if cache.exists():
         return cache.read_text()
     for attempt in range(6):
