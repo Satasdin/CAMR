@@ -425,6 +425,11 @@ def PLAIN(F: dict) -> dict[str, list[str]]:  # noqa: N802
                     "behind."],
         "sec_examples": ["Real answers, word for word, with and without memory, so the numbers above can be seen in "
                          "practice."],
+        "sec_skills": ["Some things are better learned as weights than as notes: a way of solving a problem, taught by "
+                       "correction. The trick is to keep those weights in memory too, as small add-ons (skill cards), "
+                       "and attach one only when memory says the question needs it. The cards solved 90% of new "
+                       "problems, more than one adapter merged into the model, and left unrelated maths alone, where "
+                       "the merged adapter changed 36 answers out of 200."],
         "sec_learning": ["Can a model learn without being retrained? For knowledge, yes: CAMR looks up what it does "
                          "not know and keeps it, and it learns invented formulas from corrections (the cloud model "
                          "was right every time after four corrections; the smallest model went from 0% to 70.8% on "

@@ -313,7 +313,9 @@ def hotpot200() -> dict | None:
 
     db = ROOT / "results" / "hotpot200" / "camr.sqlite"
     if not db.exists():
-        return None
+        # The study's database was never committed; its table is kept, as first built, in summary.json
+        frozen = ROOT / "results" / "hotpot200" / "summary.json"
+        return {"rows": json.loads(frozen.read_text())["rows"], "text": ""} if frozen.exists() else None
     c = sqlite3.connect(db)
     q = ("SELECT r.label, r.condition, q.question_id, s.value, q.e2e_latency_ms FROM run r JOIN query_log q USING(run_id) "
          "JOIN score s USING(query_id) WHERE s.metric='em' AND q.status='ok' AND r.status='completed' AND r.run_id IN "

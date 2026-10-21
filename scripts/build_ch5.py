@@ -262,7 +262,10 @@ def sweep_models() -> list[dict]:
 
 def sweep_kimi() -> dict[str, float]:
     rows = J("results/pilot/tables/model_sweep.json") or []
-    return {r["benchmark"]: r["ceiling_kimi"] for r in rows if r.get("ceiling_kimi") is not None}
+    out = {r["benchmark"]: r["ceiling_kimi"] for r in rows if r.get("ceiling_kimi") is not None}
+    if not out:  # a pilot rebuilt by scripts/rebuild_pilot.py: Kimi K3's scores as F9 records them
+        out = {k: v for k, v in (J("results/pilot/tables/kimi_ceiling.json") or {}).items() if k != "source"}
+    return out
 
 
 def missing_sizes(sw: list[dict]) -> list[str]:
@@ -319,6 +322,14 @@ def introduction(c: Chapter, F: dict) -> None:
         "passes the question on. (3) **Learning without retraining**, by looking up what memory lacks and by keeping "
         "corrections. (4) **Applications**: CAMR Personal, a desktop assistant, and a gateway that lets business "
         "automations (built in n8n) and agents (models that carry out tasks with tools) use the engine.")
+    c.p("The results settle into one design, which this chapter calls **a frozen reader with a learning memory**, in "
+        "three tiers. The **facts tier** is notes any model can read, each with its source: facts learned as weights "
+        "failed (retrained adapters and a weight-based datastore stayed near 13% where notes reached 72%). The **skill "
+        "tier** holds what weights do learn better than notes, procedures taught by correction, as small adapters "
+        "(*skill cards*) that memory attaches to the model only for the questions that need them, so they cannot "
+        "disturb anything else (section ⟦sec_skills⟧). The **link tier** is a handful of numbers per model that learn "
+        "from feedback when that model's answers can be trusted. The model's own weights never change in any tier; "
+        "switching to another model means rebuilding its skill cards and link from the same stored corrections.")
     c.p("Each was compared with alternatives: the same model without memory, a large cloud model (Kimi K3), eight "
         "popular ways of giving a model documents (retrieval-augmented generation, RAG), pasting every document into "
         "every question (context stuffing), and retraining. Every number in this chapter comes from a results file "
@@ -334,6 +345,8 @@ def introduction(c: Chapter, F: dict) -> None:
               "⟦sec_verified⟧, ⟦sec_ragresult⟧"],
              ["Learning without training", "Looks up what memory lacks; learns formulas from corrections",
               "⟦sec_learn_impl⟧", "⟦sec_learning⟧"],
+             ["Skill cards", "Compiles corrections into small adapters that memory attaches only when a question "
+              "needs one", "⟦sec_skills⟧", "⟦sec_skills⟧"],
              ["Large data and device limits", "Loads large document collections so they are searchable at once, "
               "and stops safely before the computer runs out of memory or disk", "⟦sec_bulk_impl⟧", "⟦sec_bulk⟧"],
              ["Learned routing", "Decides for each question how much memory to read, or whether to ask the cloud "
@@ -1278,6 +1291,66 @@ def res_learning(c: Chapter) -> None:
         "to stay within 1.3 points of exact recall, and then was no faster than exact search in RAM.")
 
 
+def res_skills(c: Chapter) -> None:
+    d = J("results/skills/skill_cards.json")
+    if not d:
+        return
+    c.h3("Skill Cards: Weights That Memory Attaches", key="sec_skills")
+    cond, cl = d["conditions"], d["control_large"]["conditions"]
+    pc = lambda k, s: f"{100 * cond[k][s]['all']:.1f}%"  # noqa: E731
+    c.p("The previous section found a split. Facts trained into weights were barely learned, but a procedure trained "
+        "into weights from the same 40 corrections generalised better than notes did (88.3% against 50.0% on unseen "
+        "problems), at a price: merged into the model, the adapter cost it an unrelated skill. A **skill card** keeps "
+        "the gain and drops the price by attaching weights only where memory says they belong. Each formula family "
+        "gets its own small adapter, trained only on that family's corrections. For each problem the engine recalls "
+        "the stored corrections exactly as before, and the family of the best admitted note names the card to "
+        "attach; when memory abstains, or its best note is not a correction, no card is attached and the model "
+        "answers alone. The card is removed after the answer, and the model's own weights never change.")
+    c.p(f"The setup repeats the corrections experiment: the same fresh draw of problems, the same 40 corrections and "
+        f"20 validation problems, Qwen2.5-0.5B, rank-16 adapters. The merged adapter keeps the earlier choice of "
+        f"{d['merged_epochs']} epochs; the cards' length was chosen once on the validation problems "
+        f"({d['card_epoch']} epochs). Every condition ran in one runtime, so the base model's scores differ slightly "
+        f"from the earlier run ({c.next_tab()}).")
+    c.table("Skill cards against one merged adapter (`results/skills/skill_cards.json`)",
+            ["Condition", "Seen", "Held-out", "Reworded", "Derived", "GSM8K (30)"],
+            [["Base model", pc("base", "train"), pc("base", "test"), pc("base", "rephrased"), pc("base", "derived"),
+              pc("base", "gsm8k")],
+             ["Memory notes", pc("memory", "train"), pc("memory", "test"), pc("memory", "rephrased"),
+              f"**{pc('memory', 'derived')}**", pc("memory", "gsm8k")],
+             ["One merged adapter", pc("merged", "train"), pc("merged", "test"), pc("merged", "rephrased"),
+              pc("merged", "derived"), pc("merged", "gsm8k")],
+             ["**Skill card, routed by memory**", f"**{pc('card', 'train')}**", f"**{pc('card', 'test')}**",
+              pc("card", "rephrased"), pc("card", "derived"), pc("card", "gsm8k")],
+             ["Skill card, right family given", pc("card-oracle", "train"), pc("card-oracle", "test"),
+              pc("card-oracle", "rephrased"), pc("card-oracle", "derived"), pc("card-oracle", "gsm8k")],
+             ["Notes + skill card", pc("notes+card", "train"), pc("notes+card", "test"),
+              f"**{pc('notes+card', 'rephrased')}**", pc("notes+card", "derived"), pc("notes+card", "gsm8k")]],
+            [5.0, 1.9, 2.0, 2.0, 1.9, 2.2], size=9)
+    m, k = cl["merged"], cl["card"]
+    c.p(f"Thirty unrelated problems can only show a direction, so the control was repeated on the first "
+        f"{d['control_large']['n']} GSM8K problems, nothing retrained ({c.next_fig()}). The merged adapter took the "
+        f"model from {100 * cl['base']['accuracy']:.1f}% to {100 * m['accuracy']:.1f}% and changed "
+        f"{m['lost_vs_base'] + m['gained_vs_base']} answers it had no business touching ({m['lost_vs_base']} broken, "
+        f"{m['gained_vs_base']} fixed; exact paired test p = 0.065). The cards left it at "
+        f"{100 * k['accuracy']:.1f}% and changed {k['lost_vs_base'] + k['gained_vs_base']} ({k['lost_vs_base']} "
+        f"broken, {k['gained_vs_base']} fixed): memory attached a card to {d['control_large']['cards_attached']} of the "
+        f"{d['control_large']['n']} problems.")
+    if (REPORT / "skill_cards.png").exists():
+        c.figure(REPORT / "skill_cards.png", "Skill cards against one merged adapter: accuracy on the corrected "
+                 "families (left) and on 200 unrelated GSM8K problems with 95% bootstrap intervals (right)", 15.5)
+    c.p("**Where it was perfect.** Routed by memory, the cards scored as well as when the right family was given "
+        "(90.0% held-out both ways): memory chose the right card for every seen, held-out and derived problem. "
+        "Weights retrieved from memory beat weights merged into the model on new problems (90.0% against 85.0%) and "
+        "disturbed five times fewer unrelated answers. **Where it was not.** Notes stayed best on derived problems, "
+        "where the rule must be used in a new way (22.5% against 5.0% with a card): a card learns a procedure's "
+        "form, the notes carry its meaning. Notes and card together were best on reworded problems (70.0%, with no "
+        "problem lost against the base model), so the two tiers do different jobs. A card was still attached to 13% "
+        "of unrelated problems, and the merged adapter's harm is only borderline significant at this size.")
+    c.p("Building the router found one defect before any result was taken: it first chose the best-ranked *skill* "
+        "note among those admitted, and a test with an unrelated note ranked first showed a card attached to an "
+        "unrelated question. Only the best admitted note may name a card now.")
+
+
 def res_bulk(c: Chapter) -> None:
     c.h3("Large Data and the Device's Limits", key="sec_bulk")
     c.table("Large data (`results/bulk/ingest.json`, `scale.json`, `limits.json`)", ["Measure", "Result"],
@@ -1666,6 +1739,15 @@ def res_flaws(c: Chapter) -> None:
          "apostrophe hid declines; D-39: a loop asked each news question 30 times",
          "Baselines would have been scored unfairly; a workflow stopped", "Fixed and every affected run repeated "
          "before reporting"],
+        ["Defects found by a code review of CAMR Personal", "RAM read as 0 MB on macOS and Windows, so the RAM "
+         "reserve never applied; an edited file taught again learned nothing; an approval could not be taken back; "
+         "personal questions without *my* or *I* were looked up online (5, 2 and 3 web requests); a forgotten note's "
+         "words stayed in the store file (free pages and the keyword index)", "Device-safety and privacy promises "
+         "broken on some machines and questions", "Fixed, each with a test that fails on the old code; 0 web requests "
+         "for personal questions; all replays identical"],
+        ["Skill-card router", "Took the best-ranked skill note among the admitted ones, so a card could be attached "
+         "beside an unrelated best note", "A skill leaking into unrelated questions", "Fixed before any result was "
+         "taken; only the best note may name a card"],
     ]
     c.table("Flaw catalogue", ["Flaw", "Evidence", "Consequence", "Status"], rows, [3.3, 5.6, 3.6, 3.4], size=8.5)
 
@@ -1742,6 +1824,9 @@ def scorecard(c: Chapter) -> None:
         ["Memory beats fine-tuning", "Same documents / same corrections", "Facts: 71.7% vs 13.3%. Formulas: LoRA "
          "higher on trained wording (88.3% vs 50.0%), lower on derived problems and lost GSM8K",
          "**Met for facts; mixed for formulas**"],
+        ["Weights help without harm when memory attaches them", "Skill cards, same corrections; 200 GSM8K controls",
+         "Held-out 90.0% (merged adapter 85.0%, notes 55.0%); 7 unrelated answers changed against 36",
+         "**Met; derived problems still need notes**"],
         ["Large data within device limits", "123,301 paragraphs; governor", "Searchable in 335 s; stops at every "
          "limit; 0 duplicates", "**Met**"],
         ["Retrieval ≤ 10% of answer time (NFR-02)", "Device profile", "56% for 0.5B (contention); met only for "
@@ -2078,6 +2163,7 @@ def results(c: Chapter) -> None:
     res_multihop(c)
     old.worked_examples(c)
     res_learning(c)
+    res_skills(c)
     res_agentic(c)
     res_cost(c)
     res_bulk(c)
