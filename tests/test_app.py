@@ -137,7 +137,15 @@ def test_forget_removes_notes_and_vectors(assistant):
     sid = assistant.sources(kind="note")[0]["source_id"]
     assert assistant.forget(sid) == 1
     assert not assistant.sources(kind="note")
-    assert b"Project Falcon" not in assistant.store.path.read_bytes()  # not left behind in the file's free pages
+    data = assistant.store.path.read_bytes().lower()  # the keyword index keeps words lower-cased and one by one
+    assert b"falcon" not in data and b"kickoff" not in data  # not in free pages, not in the keyword index
+
+
+def test_forget_leaves_no_words_when_fts_secure_delete_is_unavailable(assistant):
+    assistant._fts_secure = False  # an older SQLite: forget() rebuilds the keyword index instead
+    assistant.teach("The garage door code is Wanjala-7731.", title="Garage")
+    assistant.forget(assistant.sources(kind="note")[0]["source_id"])
+    assert b"wanjala" not in assistant.store.path.read_bytes().lower()
     assert assistant.ask("Where is the Project Falcon kickoff on Monday?").sources == []
     assert assistant.teach("Project Falcon kickoff is in room 3B on Monday.", title="Falcon") == 1  # can re-teach
 
