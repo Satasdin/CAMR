@@ -1,0 +1,165 @@
+{
+  "label": "CAMR scenarios: hand-written fixtures for scripts/engine_bench.py. Not LongMemEval; invented for this bench. Probes marked from_brief are the ones that found gaps when CAMR Personal was reviewed; the others are extra probes of the same kind.",
+  "today": "2026-10-21",
+  "how_taught": "kind 'note' = Assistant.teach(text) as the Memory panel or 'remember that ...' stores it (no date in the text); kind 'chat' = the app's chat memory, 'On <date> the user said: <text>'.",
+  "base_notes": [
+    {"key": "base-dentist", "title": "Dentist", "text": "Dentist appointment moved to Thursday 9 October at 14:30 with Dr. Wanjiru at Upper Hill Dental."},
+    {"key": "base-wifi", "title": "Wi-Fi", "text": "The home router admin page is 192.168.8.1. The guest network is called Sunbird-Guest."},
+    {"key": "base-camr", "title": "Project CAMR", "text": "Project CAMR supervisor meeting every second Tuesday. Chapter 5 is due to the supervisor on 20 October."},
+    {"key": "base-mum", "title": "Mum's birthday", "text": "Mum's birthday is on 17 November. She wants a hardcover cookbook and a visit, not flowers."},
+    {"key": "base-car", "title": "Car", "text": "The car is a 2014 Toyota Fielder. The next service is due at 95,000 km at the Kenyatta Avenue garage."},
+    {"key": "base-sister", "title": "Sister", "text": "My sister Njoki lives in Eldoret and works as a pharmacist at the referral hospital."},
+    {"key": "base-gas", "title": "Cooking gas", "text": "The cooking gas cylinder is a 13 kg Pro Gas; the supplier on Ngong Road refills it for 3,200 shillings."},
+    {"key": "base-chama", "title": "Chama", "text": "The family chama meets on the last Sunday of the month; my monthly contribution is 5,000 shillings."},
+    {"key": "base-plants", "title": "Plants", "text": "Water the balcony plants every Monday and Thursday; the aloe only needs water every two weeks."},
+    {"key": "base-bills", "title": "Bills", "text": "The internet bill from Zuku is paid on the 28th by M-Pesa, paybill 320320."},
+    {"key": "base-friend", "title": "Kamau", "text": "Kamau from university now teaches chemistry at Alliance High School."},
+    {"key": "base-book", "title": "Book club", "text": "The book club is reading Dust by Yvonne Adhiambo Owuor; we meet at Kamau's place on the first Saturday."},
+    {"key": "base-shoes", "title": "Running shoes", "text": "My running shoes are Asics Gel-Nimbus, bought in August for 14,000 shillings."},
+    {"key": "base-laptop", "title": "Laptop", "text": "The laptop warranty with Hotpoint runs until March 2027; the receipt is in the blue folder."},
+    {"key": "base-vet", "title": "Cat", "text": "Our cat Pilipili sees the vet at Westlands Animal Clinic; her vaccinations are due in January."},
+    {"key": "base-church", "title": "Choir", "text": "Choir practice is on Wednesday evenings at 6 pm at St. Andrew's."},
+    {"key": "base-lunch", "title": "Lunch", "text": "Kevin at work recommended Mama Oliech's restaurant for lunch; it is on Marcus Garvey Road."},
+    {"key": "base-water", "title": "Water", "text": "The water delivery from Keringet comes on Tuesdays; we take four 20-litre bottles a week."},
+    {"key": "base-bank", "title": "Bank", "text": "The car loan with Co-op Bank ends in June 2027; the monthly instalment is 18,500 shillings."},
+    {"key": "base-garden", "title": "Shamba", "text": "The shamba in Limuru has 40 tea bushes and a small plot of sukuma wiki."}
+  ],
+  "scenarios": [
+    {
+      "id": "office-floor", "ability": "A3", "from_brief": true,
+      "teach": [
+        {"key": "office-old", "kind": "note", "text": "My office is on the 3rd floor of Delta House."},
+        {"key": "office-new", "kind": "note", "text": "Update: my office moved to the 5th floor."}
+      ],
+      "questions": [{"q": "Which floor is my office on?", "needed": [["office-new"]], "stale": ["office-old"], "rule": "newest"}]
+    },
+    {
+      "id": "gp-switch", "ability": "A3", "from_brief": false,
+      "teach": [
+        {"key": "doctor-old", "kind": "chat", "date": "2026-03-04", "text": "My GP is Dr. Otieno at the Avenue clinic."},
+        {"key": "doctor-new", "kind": "chat", "date": "2026-09-18", "text": "I changed GPs, I now see Dr. Chebet at Nairobi West clinic."}
+      ],
+      "questions": [{"q": "Who is my GP?", "needed": [["doctor-new"]], "stale": ["doctor-old"], "rule": "newest"}]
+    },
+    {
+      "id": "gym-fee", "ability": "A3", "from_brief": false,
+      "teach": [
+        {"key": "gym-old", "kind": "note", "text": "The gym membership costs 4,500 shillings a month."},
+        {"key": "gym-new", "kind": "note", "text": "The gym membership costs 5,200 shillings a month from October."}
+      ],
+      "questions": [{"q": "How much is the gym membership each month?", "needed": [["gym-new"]], "stale": ["gym-old"], "rule": "newest"}]
+    },
+    {
+      "id": "electrician", "ability": "A4", "from_brief": true,
+      "teach": [
+        {"key": "elec-oct", "kind": "chat", "date": "2026-10-13", "text": "The electrician came today and fixed the kitchen socket."},
+        {"key": "elec-sep", "kind": "chat", "date": "2026-09-02", "text": "The electrician fixed the bathroom light."}
+      ],
+      "questions": [{"q": "What did the electrician fix last week?", "needed": [["elec-oct"]], "out_of_window": ["elec-sep"], "rule": "temporal"}]
+    },
+    {
+      "id": "haircut", "ability": "A4", "from_brief": false,
+      "teach": [
+        {"key": "hair-1", "kind": "chat", "date": "2026-08-09", "text": "Got a haircut at Kinyozi Bora in Kilimani."},
+        {"key": "hair-2", "kind": "chat", "date": "2026-10-17", "text": "Got a haircut at the barber near the office, 400 shillings."}
+      ],
+      "questions": [{"q": "Where did I get my hair cut this month?", "needed": [["hair-2"]], "out_of_window": ["hair-1"], "rule": "temporal"}]
+    },
+    {
+      "id": "vegetarian", "ability": "A6", "from_brief": true,
+      "teach": [{"key": "veg", "kind": "note", "text": "I am vegetarian and I don't eat fish either."}],
+      "questions": [{"q": "Can you suggest a dinner place for Friday?", "needed": [["veg"]], "rule": "all"}]
+    },
+    {
+      "id": "fear-of-flying", "ability": "A6", "from_brief": false,
+      "teach": [{"key": "flying", "kind": "note", "text": "I get very anxious on planes and avoid flying whenever I can."}],
+      "questions": [{"q": "What's the best way to get to Mombasa next month?", "needed": [["flying"]], "rule": "all"}]
+    },
+    {
+      "id": "lactose", "ability": "A6", "from_brief": false,
+      "teach": [{"key": "lactose", "kind": "chat", "date": "2026-07-22", "text": "Milk upsets my stomach, I think I'm lactose intolerant."}],
+      "questions": [{"q": "Any ideas for a quick breakfast before work?", "needed": [["lactose"]], "rule": "all"}]
+    },
+    {
+      "id": "blood-type", "ability": "A7", "from_brief": true,
+      "teach": [],
+      "questions": [{"q": "What is my blood type?", "rule": "abstain"}]
+    },
+    {
+      "id": "unknown-personal", "ability": "A7", "from_brief": false,
+      "teach": [],
+      "questions": [
+        {"q": "What is my passport number?", "rule": "abstain"},
+        {"q": "When is my brother's wedding?", "rule": "abstain"},
+        {"q": "What is the registration number of my motorbike?", "rule": "abstain"}
+      ]
+    }
+  ],
+  "counting": {
+    "id": "running-count", "ability": "A5", "from_brief": true,
+    "note": "N dated runs taught as chat memory. N=7 is the brief's probe (all in October 2026, asked 'this month'); N=30 and N=100 go back one run every other day and ask for the total (no month name in the question: the entity gate treats one as a name, which the A6 probe already shows).",
+    "sizes": [7, 30, 100],
+    "question_small": "How many times did I go running this month?",
+    "question_large": "How many times have I gone running in total?",
+    "routes": ["around Karura Forest", "along Ngong Road", "on the Arboretum trail", "around the estate", "at Nyayo Stadium track", "up Riverside Drive", "through Uhuru Park", "along the Kiambu Road"],
+    "distances_km": [3, 4, 5, 6, 7, 8, 10, 12],
+    "times": ["before work", "in the evening", "at sunrise", "after lunch", "with Kamau", "in the rain"]
+  },
+  "forget": {
+    "id": "pin-hint", "ability": "A8", "from_brief": true,
+    "text": "My bank PIN hint is the year we moved to Kisumu",
+    "traces": ["Kisumu", "kisumu", "KISUMU", "PIN hint", "pin hint"],
+    "personal_questions": [
+      "What is my blood type?", "What is my bank PIN hint?", "Which floor is my office on?",
+      "When is the dentist appointment?", "What did Sarah say about the trip?", "Where do we keep the spare key?",
+      "How many times did I go running this month?", "What did the electrician fix last week?"
+    ],
+    "control_question": "Who directed The Loudwater Mystery?"
+  },
+  "needles": {
+    "note": "Distinct personal facts taught as notes; each question paraphrases its fact. Used at 1k, 10k and 100k notes (A1, A9), with LongMemEval chat turns as the filler.",
+    "items": [
+      {"key": "n01", "text": "My gym locker at Westgate Fitness is number 214.", "q": "What's my locker number at the gym?"},
+      {"key": "n02", "text": "The spare house key is hidden under the blue flowerpot by the back door.", "q": "Where is the spare key to the house?"},
+      {"key": "n03", "text": "My car insurance with Jubilee renews on 3 February.", "q": "When does my car insurance renew?"},
+      {"key": "n04", "text": "Kibet's son Tumaini is allergic to peanuts.", "q": "What is Tumaini allergic to?"},
+      {"key": "n05", "text": "My library card number at the Kenya National Library is KNL-55821.", "q": "What's my library card number?"},
+      {"key": "n06", "text": "Our landlord Mr. Gitau wants the rent paid by the 5th of each month.", "q": "By what date does Mr. Gitau want the rent?"},
+      {"key": "n07", "text": "I lent my camping tent to Otieno in July and he still has it.", "q": "Who has my camping tent?"},
+      {"key": "n08", "text": "My grandmother's village is Kangema in Murang'a.", "q": "Where is my grandmother's village?"},
+      {"key": "n09", "text": "I booked Juma the plumber for Saturday at 10 am to fix the shower.", "q": "When is the plumber coming?"},
+      {"key": "n10", "text": "The Wi-Fi at the Naivasha cottage is called LakeView-5G.", "q": "What's the Wi-Fi network called at the Naivasha cottage?"},
+      {"key": "n11", "text": "My daughter's swimming lessons are on Wednesdays at 4 pm at the Parklands Baptist pool.", "q": "When does my daughter have swimming lessons?"},
+      {"key": "n12", "text": "I keep my passport in the grey document box in the bedroom wardrobe.", "q": "Where do I keep my passport?"},
+      {"key": "n13", "text": "Dr. Mwangi said to take the blood pressure tablets with breakfast.", "q": "When should I take my blood pressure tablets?"},
+      {"key": "n14", "text": "My bicycle lock code is 7391.", "q": "What's the code for my bike lock?"},
+      {"key": "n15", "text": "The last oil change on the Fielder was at 84,500 km.", "q": "At what mileage was the Fielder's last oil change?"},
+      {"key": "n16", "text": "Wanjiru's wedding is in Nanyuki on 12 December.", "q": "Where is Wanjiru getting married?"},
+      {"key": "n17", "text": "I owe Achieng 2,500 shillings for the concert tickets.", "q": "How much do I owe Achieng?"},
+      {"key": "n18", "text": "My favourite tea is Kericho Gold with ginger.", "q": "Which tea do I like best?"},
+      {"key": "n19", "text": "The school fees for Term 2 are due on 5 May.", "q": "When are the Term 2 school fees due?"},
+      {"key": "n20", "text": "Our neighbour's dog is called Simba and barks at the postman.", "q": "What's the name of the neighbour's dog?"},
+      {"key": "n21", "text": "I planted avocado seedlings along the north fence in March.", "q": "What did I plant along the north fence?"},
+      {"key": "n22", "text": "My staff number at Safaricom is S-30417.", "q": "What is my staff number at work?"},
+      {"key": "n23", "text": "The electricity token meter number is 37184420915.", "q": "What's the meter number for buying electricity tokens?"},
+      {"key": "n24", "text": "Baba Imani fixes our gate motor; he charges 1,500 shillings a visit.", "q": "How much does Baba Imani charge to fix the gate motor?"},
+      {"key": "n25", "text": "The family photo album is on the top shelf of the study, behind the atlas.", "q": "Where is the family photo album?"}
+    ]
+  },
+  "no_memory": {
+    "note": "Questions memory holds nothing for (A10). general: asked of the scenario base store, which holds no general knowledge. absent: personal questions about people and things no note mentions, asked of the needle stores.",
+    "general": [
+      "Who wrote Things Fall Apart?", "What is the boiling point of water at sea level?", "What is the capital of Australia?",
+      "How many legs does a spider have?", "What is photosynthesis?", "Who painted the Mona Lisa?",
+      "What is the largest planet in the solar system?", "In what year did Kenya gain independence?",
+      "How do I convert Celsius to Fahrenheit?", "What is the square root of 144?", "Who discovered penicillin?",
+      "What language is spoken in Brazil?"
+    ],
+    "absent": [
+      "What did Dr. Achola say about my knee?", "When is Baraka's football practice?", "Where did I park the Probox at JKIA?",
+      "What colour is Njeri's new car?", "Which hotel did we book in Diani?", "What's the gate code at the Kileleshwa flat?",
+      "How much did the Ruiru plot cost?", "When does Muthoni's flight from Dubai land?", "What did Wekesa lend me last year?",
+      "Which school does Zawadi go to?", "What is the name of Chepkoech's bakery?", "When is the Kitengela borehole being drilled?"
+    ]
+  }
+}
