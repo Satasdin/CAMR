@@ -37,7 +37,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "results" / "bench"
+OUT = Path(os.environ.get("CAMR_BENCH_OUT", ROOT / "results" / "bench")).expanduser()  # scores of this run
 RECORDS = OUT / "records"
 FIXTURE = ROOT / "tests" / "fixtures" / "engine_bench" / "camr_scenarios.json"
 WORK = Path(os.environ.get("CAMR_BENCH_HOME", Path.home() / ".cache" / "camr-bench")).expanduser()
@@ -45,8 +45,10 @@ LME_DIR = WORK / "longmemeval"
 CACHE = WORK / "embeddings.sqlite"
 SUBSET = WORK / "lme_subset.jsonl"
 FILLER = WORK / "filler.jsonl"
-STORES = WORK / "stores"
-TMP = WORK / "tmp"
+# Per-checkout scratch: two worktrees running the bench at once each set their own (the vector cache is shared).
+STORES = Path(os.environ.get("CAMR_BENCH_STORES", WORK / "stores")).expanduser()
+TMP = Path(os.environ.get("CAMR_BENCH_TMP", WORK / "tmp")).expanduser()
+TODAY = "2026-10-21"  # the CAMR scenarios' "today"
 
 SEED = 13
 PER_TYPE = 40  # LongMemEval questions per type (all 30 abstention questions are kept)
@@ -215,10 +217,13 @@ def note_keys(engine, docs) -> dict[str, frozenset[str]]:
     return {k: frozenset(v) for k, v in out.items()}
 
 
-def ask(a, spec, keys: dict[str, frozenset[str]], preview: bool = False) -> dict:
+def ask(a, spec, keys: dict[str, frozenset[str]], preview: bool = False, capture: list | None = None) -> dict:
+    """Score one question on the app's read path. ``capture`` (a list) receives the RecallResult."""
     from camr.eval.abilities import Cand, score
 
     r = a.engine.recall(spec.question)
+    if capture is not None:
+        capture.append(r)
     cands = [Cand(keys=keys.get(c.note.checksum, frozenset()), tokens=c.tokens, text=c.note.text,
                   similarity=c.similarity, rank=c.rank, eligible=c.eligible, admitted=c.admitted,
                   via_bridge=c.via is not None) for c in r.candidates]
@@ -447,11 +452,20 @@ def cmd_embed(a) -> None:
     shutil.rmtree(TMP / "embed-probe", ignore_errors=True)
 
 
-def run_lme(emb, limit: int | None = None) -> None:
+def context_row(spec, recall, qtype: str, question_date: str, answer) -> dict:
+    """What a reader model gets for one question: the exact notes text the app puts in its prompt."""
+    return {"qid": spec.qid, "ability": spec.ability, "suite": spec.suite, "type": qtype, "question": spec.question,
+            "question_date": question_date, "answer": str(answer), "context": recall.context,
+            "abstained": bool(recall.abstained), "context_tokens": recall.context_tokens}
+
+
+def run_lme(emb, limit: int | None = None, contexts: Path | None = None) -> None:
+    """Score the sampled LongMemEval questions into records/lme.jsonl; with ``contexts``, write each question's
+    context there instead (and leave the records alone)."""
     from camr.eval.abilities import lme_spec
 
-    path = RECORDS / "lme.jsonl"
-    done = {r["qid"] for r in read_jsonl(path)}
+    path = contexts or RECORDS / "lme.jsonl"
+    done = set() if contexts else {r["qid"] for r in read_jsonl(path)}
     rows = list(read_jsonl(SUBSET))[:limit]
     t0, n = time.time(), 0
     for item in rows:
@@ -463,12 +477,16 @@ def run_lme(emb, limit: int | None = None) -> None:
         asst = make_assistant(home, emb)
         docs = list(lme_docs(item))
         summary = asst.engine.ingest([d for _, d in docs])
-        rec = ask(asst, spec, note_keys(asst.engine, docs))
+        got: list = []
+        rec = ask(asst, spec, note_keys(asst.engine, docs), capture=got)
         rec["notes_in_store"] = asst.store.count()
         rec["ingest_s"] = round(summary.elapsed_s, 2)
         asst.close()
         shutil.rmtree(home, ignore_errors=True)
-        append_jsonl(path, rec)
+        if contexts:
+            append_jsonl(path, context_row(spec, got[0], item["question_type"], item["question_date"], item["answer"]))
+        else:
+            append_jsonl(path, rec)
         n += 1
         if n % 10 == 0:
             say(f"lme {n + len(done)}/{len(rows)}  ({(time.time() - t0) / n:.1f} s/question)")
@@ -500,11 +518,19 @@ def base_store(emb, name: str, fx: dict):
     return asst, docs
 
 
-def run_camr(emb) -> list[dict]:
+def run_camr(emb, contexts: list | None = None) -> list[dict]:
+    """The CAMR scenario suites; ``contexts`` (a list) also receives each question's context row."""
     from camr.eval.abilities import Spec
 
     fx = fixture()
     out = []
+
+    def probe(asst, spec, keys, qtype, answer):
+        got: list = []
+        rec = ask(asst, spec, keys, preview=True, capture=got)
+        if contexts is not None:
+            contexts.append(context_row(spec, got[0], qtype, TODAY, answer))
+        return rec
     for sc in fx["scenarios"]:
         asst, docs = base_store(emb, f"camr-{sc['id']}", fx)
         docs += [teach_item(asst, t) for t in sc["teach"]]
@@ -514,7 +540,7 @@ def run_camr(emb) -> list[dict]:
                         needed=[frozenset(g) for g in q.get("needed", [])], stale=frozenset(q.get("stale", [])),
                         out_of_window=frozenset(q.get("out_of_window", [])), rule=q["rule"],
                         meta={"probe": sc["id"], "from_brief": sc["from_brief"]})
-            out.append(ask(asst, spec, keys, preview=True))
+            out.append(probe(asst, spec, keys, f"camr/{sc['id']}", q.get("answer", "")))
         asst.close()
     # A5: counting N logged runs
     cnt = fx["counting"]
@@ -536,14 +562,15 @@ def run_camr(emb) -> list[dict]:
             docs.append(teach_item(asst, item))
         spec = Spec(f"count-{n}", "A5", f"camr-count-{n}", question, needed=[frozenset([k]) for k in runs],
                     rule="all", meta={"probe": cnt["id"], "from_brief": n == 7, "events": n})
-        out.append(ask(asst, spec, note_keys(asst.engine, docs), preview=True))
+        answer = cnt["answer_small"] if n <= 7 else cnt["answer_large"].format(n=n)
+        out.append(probe(asst, spec, note_keys(asst.engine, docs), f"camr/{cnt['id']}", answer))
         asst.close()
     # A10: general questions asked of a store of personal notes only
     asst, docs = base_store(emb, "camr-general", fx)
     keys = note_keys(asst.engine, docs)
-    for i, q in enumerate(fx["no_memory"]["general"]):
-        out.append(ask(asst, Spec(f"general-{i:02d}", "A10", "general-on-personal", q, rule="no_harm"), keys,
-                       preview=True))
+    for i, (q, gold) in enumerate(zip(fx["no_memory"]["general"], fx["no_memory"]["general_answers"])):
+        out.append(probe(asst, Spec(f"general-{i:02d}", "A10", "general-on-personal", q, rule="no_harm"), keys,
+                         "camr/general", gold))
     asst.close()
     for d in TMP.glob("camr-*"):
         shutil.rmtree(d, ignore_errors=True)
@@ -799,6 +826,22 @@ def run_scales(scales, repeats: int) -> None:
         say(f"scale {label}: {json.dumps({k: v for k, v in info.items()})} recall {recall:.2f}")
 
 
+def cmd_contexts(a) -> None:
+    """The exact context each LongMemEval question and CAMR probe gets, for reading by real models:
+    results/bench/contexts_<label>.jsonl (scores are not touched)."""
+    out = OUT / f"contexts_{a.label}.jsonl"
+    out.unlink(missing_ok=True)
+    emb = make_embedder()
+    say("contexts: CAMR scenarios")
+    rows: list[dict] = []
+    run_camr(emb, contexts=rows)
+    say("contexts: LongMemEval")
+    run_lme(emb, a.limit, contexts=out)
+    lme = list(read_jsonl(out))
+    out.write_text("".join(json.dumps(r) + "\n" for r in lme + rows))
+    say(f"wrote {len(lme) + len(rows)} contexts to {out}")
+
+
 def cmd_run(a) -> None:
     only = set(a.only.split(",")) if a.only else {"camr", "a8", "lme", "scale"}
     RECORDS.mkdir(parents=True, exist_ok=True)
@@ -950,7 +993,9 @@ def cmd_report(a) -> None:
 
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("cmd", choices=["fetch", "prepare", "prepare-m", "embed", "run", "report", "all", "scale"])
+    p.add_argument("cmd", choices=["fetch", "prepare", "prepare-m", "embed", "run", "report", "all", "scale",
+                                   "contexts"])
+    p.add_argument("--label", default="baseline", help="contexts: written to results/bench/contexts_<label>.jsonl")
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--per-type", type=int, default=PER_TYPE)
     p.add_argument("--scales", type=lambda s: tuple(int(x) for x in s.split(",")), default=SCALES)
