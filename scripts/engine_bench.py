@@ -629,6 +629,11 @@ def cmd_scale(a) -> None:
         else:
             asst = make_assistant(home, emb)
             docs, planned = filler_plan(asst.engine, n - len(needles))
+            if planned < n - len(needles):  # never label a smaller store with the size asked for
+                asst.close()
+                shutil.rmtree(home, ignore_errors=True)
+                raise SystemExit(f"the filler makes only {planned} notes, short of {n - len(needles)}: "
+                                 f"a {label} store needs more filler than `prepare` collected")
             t0 = time.time()
 
             def stream():
