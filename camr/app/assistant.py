@@ -26,9 +26,11 @@ The class is UI-agnostic; ``camr/app/server.py`` serves the web front end.
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import os
 import re
+import sqlite3
 import threading
 import time
 from dataclasses import asdict, dataclass, field
@@ -44,7 +46,7 @@ from camr.memory.adapter import QueryAdapter
 from camr.memory.eager import knows_subject, learn_meanings, learn_pages
 from camr.memory.embedder import Embedder, OllamaEmbedder
 from camr.memory.engine import MemoryEngine
-from camr.memory.fetch import WebLookup, embedding_rank, is_personal
+from camr.memory.fetch import WebLookup, embedding_rank, subjects
 from camr.memory.note import Document
 from camr.memory.sleep import sleep as run_sleep
 from camr.memory.store import SQLiteVectorStore
@@ -113,7 +115,43 @@ CREATE TABLE IF NOT EXISTS app_turn (
     conversation_id INTEGER,
     sources_json   TEXT
 );
+CREATE TABLE IF NOT EXISTS app_file (
+    doc_id  TEXT PRIMARY KEY,   -- file-<name>: the source a taught file's notes belong to
+    sha256  TEXT NOT NULL,      -- of the text learned, so teaching the same file again can tell if it changed
+    at      TIMESTAMP NOT NULL
+);
 """
+
+# ---------------------------------------------------------------------- privacy: what may be looked up online
+# A question about the user's own life never leaves the machine: it is not looked up, and its answer is not
+# cross-checked online. ``fetch.is_personal`` (first-person words) is what the research pipeline measured and is left
+# as it is; running real questions through it showed three gaps, closed here:
+#   * "US" in capitals is the country, not "us" ("the capital of the US" was never looked up);
+#   * reported speech is about someone the user knows ("What did Sarah say about the trip?" sent "Sarah");
+#   * a personal errand asked without a pronoun ("When is the dentist appointment?" sent "dentist appointment").
+# A name only the user's own notes mention is never sent either (``Assistant._private_names``).
+_FIRST_PERSON = re.compile(r"\b(?:my|mine|me|myself|i|i'm|i've|i'd|i'll|our|ours|ourselves|we|we're|we've|us)\b",
+                           re.I)
+_REPORTED = re.compile(r"\b(?:did|does|do|has|have|had)\s+(?:[\w'’-]+\s+){1,3}?(?:say|tell|text|mention|ask|promise)\b",
+                       re.I)
+# Words of the user's own errands, money, health and access. They mark a question as personal only when it names
+# no one ("When is the dentist appointment?"), so "When is Beyoncé's birthday?" is still looked up.
+PRIVATE_LIFE = {"appointment", "appointments", "meeting", "meetings", "booking", "bookings", "reservation",
+                "reservations", "password", "passwords", "passcode", "pin", "wifi", "salary", "payslip", "rent",
+                "prescription", "prescriptions", "diagnosis", "deadline", "deadlines", "birthday", "anniversary"}
+# Where a note came from: the user (private) or the world (a looked-up page or a pack).
+PRIVATE_KINDS = ("note", "file", "chat", "learned")
+
+
+def is_about_user(question: str) -> bool:
+    """True when the question is about the user's own life, so it is answered from memory or not at all."""
+    if any(m.group(0) != "US" for m in _FIRST_PERSON.finditer(question)):
+        return True
+    if _REPORTED.search(question):
+        return True
+    words = set(re.findall(r"[a-z]+", question.lower()))
+    names_someone = any(w[:1].isupper() for w in question.split()[1:])  # past the opening "What", "When", ...
+    return bool(words & PRIVATE_LIFE) and not names_someone
 
 # Prompt F: prompt D (chosen on a development set and confirmed on two held-out sets, D-13 and D-16) with rule 3
 # asking to be taught instead of only saying "I don't know", and answering first when the notes have it (D-19, where
@@ -309,6 +347,8 @@ class Assistant:
             f"memory-{re.sub(r'[^A-Za-z0-9]+', '-', self.embedder.name)}.sqlite"
         self.store = SQLiteVectorStore(self.home / db, dim=self.embedder.dim, embedder_name=self.embedder.name,
                                        check_same_thread=False)
+        # Forget means gone: SQLite otherwise leaves a deleted note's text readable in the file's free pages.
+        self.store.conn.execute("PRAGMA secure_delete = ON")
         self.store.conn.executescript(APP_SCHEMA)
         cols = {r[1] for r in self.store.conn.execute("PRAGMA table_info(app_turn)")}
         for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT"), ("learned_json", "TEXT"),
@@ -393,7 +433,13 @@ class Assistant:
         return summary.accepted
 
     def teach_file(self, name: str, data: bytes) -> int:
-        """Store a text, Markdown or PDF file (PDF needs the optional ``pypdf`` package)."""
+        """Store a text, Markdown or PDF file (PDF needs the optional ``pypdf`` package). Returns notes learned."""
+        return self.learn_file(name, data)["notes"]
+
+    def learn_file(self, name: str, data: bytes) -> dict:
+        """Learn a file. Teaching a file of the same name again replaces what was learned from it if its text
+        changed (an edited file used to be skipped as already ingested, so memory kept the old version), and does
+        nothing if it did not. Returns {"notes", "replaced" (notes of the old version removed), "unchanged"}."""
         if name.lower().endswith(".pdf"):
             try:
                 from pypdf import PdfReader  # type: ignore
@@ -404,10 +450,30 @@ class Assistant:
             text = "\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(data)).pages)
         else:
             text = data.decode("utf-8", errors="replace")
-        return self.teach(text, title=Path(name).stem, kind="file", doc_id=f"file-{name}")
+        doc_id = f"file-{name}"
+        digest = hashlib.sha256(text.strip().encode()).hexdigest()
+        with self._lock:
+            c = self.store.conn
+            row = c.execute("SELECT sha256 FROM app_file WHERE doc_id=?", (doc_id,)).fetchone()
+            old = [r[0] for r in c.execute("SELECT source_id FROM source WHERE dataset='file' AND doc_id=?", (doc_id,))]
+            if row and row[0] == digest and old:
+                return {"notes": 0, "replaced": 0, "unchanged": True}
+            st = self.governor.check(upcoming_mb=len(text) * 4 / 1e6)  # before the old version is removed
+            if not st.ok:
+                raise RuntimeError(f"not stored: this device is at its limit ({st.reason}: {st.detail})")
+            # The old version goes first: notes it shares with the new one would otherwise be rejected as duplicates
+            # and then lost with it.
+            replaced = sum(self.store.delete_source(sid) for sid in old)
+            notes = self.teach(text, title=Path(name).stem, kind="file", doc_id=doc_id)
+            with c:
+                c.execute("INSERT OR REPLACE INTO app_file(doc_id, sha256, at) VALUES (?, ?, ?)", (doc_id, digest, _now()))
+        return {"notes": notes, "replaced": replaced, "unchanged": False}
 
     @_locked
     def forget(self, source_id: int) -> int:
+        with self.store.conn:  # a forgotten file is learned afresh if it is taught again
+            self.store.conn.execute("DELETE FROM app_file WHERE doc_id IN (SELECT doc_id FROM source WHERE"
+                                    " source_id=? AND dataset='file')", (source_id,))
         return self.store.delete_source(source_id)
 
     # ------------------------------------------------------------ conversations
@@ -527,11 +593,12 @@ class Assistant:
         with self._lock:
             recall = self.engine.recall(question)
         learned = None
-        personal = is_personal(question)
+        personal = is_about_user(question)
+        local_only = personal or bool(self._private_names(question))  # nothing about it is sent online
         # Eager learning: memory has nothing on this, or only notes that look similar but are about something else
         # (results/verified, subject-aware lookups: +3.5 points of verified answers on the development set)
         missing = recall.abstained or (_short_factual(question) and not knows_subject(self.engine, question, recall))
-        if missing and self.learn_online and not personal:
+        if missing and self.learn_online and not local_only:
             yield {"type": "lookup", "conversation_id": conversation_id}
             found = self.lookup.lookup(question)
             added = 0
@@ -584,7 +651,7 @@ class Assistant:
         if factual:
             verification = _verification(question, answer, units)
             if verification["status"] != "verified" and claim(answer) and verification.get("reason") != "no answer given":
-                better = self._second_opinion(question, answer, units)
+                better = self._second_opinion(question, answer, units, online=not local_only)
                 if better is not None:
                     answer, verification = better
             if self.verified_only and verification["status"] != "verified" and claim(answer):
@@ -606,9 +673,10 @@ class Assistant:
                                               doc_id=f"chat-{turn.turn_id}") > 0
         yield {"type": "done", "turn": turn.as_dict()}
 
-    def _second_opinion(self, question: str, answer: str, units) -> tuple[str, dict] | None:
+    def _second_opinion(self, question: str, answer: str, units, online: bool = True) -> tuple[str, dict] | None:
         """An unconfirmed short answer: ask the second-opinion model (if set) to read the same memory, and check
-        each claim from the answer's own article (if lookups are on). Only a confirmed claim replaces the answer."""
+        each claim from the answer's own article (if lookups are on and ``online``: never for a question that must
+        stay on this machine). Only a confirmed claim replaces the answer."""
         claims = [answer]
         if self.check_model and self.check_model != self.model:
             runner = OllamaRunner(LocalModelConfig(name=self.check_model, host=self.host, max_tokens=64,
@@ -629,7 +697,7 @@ class Assistant:
                                           "source": v.evidence.title, "revised_from": claim(answer)}
                 claims.append(other)
         rel = relation_of(question)
-        if self.learn_online and rel and rel[0] in CROSS:
+        if self.learn_online and online and rel and rel[0] in CROSS:
             for c in claims:
                 with self._lock:
                     v, page = cross_verify(self.engine, self.lookup, question, c)
@@ -640,6 +708,24 @@ class Assistant:
                         out["revised_from"] = claim(answer)
                     return claim(c), out
         return None
+
+    @_locked
+    def _private_names(self, question: str) -> list[str]:
+        """Names in the question that only the user's own notes, files, chats or approved answers mention, and no
+        looked-up page or pack does: someone or something the user knows. They are never sent online."""
+        out = []
+        for name in subjects(question):
+            if not name[:1].isupper():
+                continue
+            try:
+                kinds = {r[0] for r in self.store.conn.execute(
+                    "SELECT DISTINCT s.dataset FROM note_fts f JOIN note n ON n.note_id = f.rowid"
+                    " JOIN source s USING(source_id) WHERE note_fts MATCH ?", ('"' + name.replace('"', '""') + '"',))}
+            except sqlite3.OperationalError:
+                kinds = set(PRIVATE_KINDS)  # cannot tell: keep it on this machine
+            if kinds & set(PRIVATE_KINDS) and not any(k == "web" or k.startswith("pack:") for k in kinds):
+                out.append(name)
+        return out
 
     @_locked
     def _log(self, turn: Turn) -> int:
@@ -674,14 +760,23 @@ class Assistant:
         return out  # type: ignore[return-value]
 
     # ------------------------------------------------------------ feedback
-    def feedback(self, turn_id: int, helpful: bool) -> None:
-        """Thumbs up stores the approved answer as memory: the model gets better without changing weights."""
-        with self._lock, self.store.conn:
+    @_locked
+    def feedback(self, turn_id: int, helpful: bool) -> dict:
+        """Thumbs up stores the approved answer as memory: the model gets better without changing weights. Thumbs
+        down takes back an approval given before (a wrong answer approved by mistake used to stay in memory).
+        Returns {"learned": notes added, "forgotten": notes removed}."""
+        row = self.store.conn.execute("SELECT question, answer FROM app_turn WHERE turn_id=?", (turn_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"no answer {turn_id}")
+        with self.store.conn:
             self.store.conn.execute("UPDATE app_turn SET feedback=? WHERE turn_id=?", (1 if helpful else -1, turn_id))
         if helpful:
-            q, a = self.store.conn.execute("SELECT question, answer FROM app_turn WHERE turn_id=?",
-                                           (turn_id,)).fetchone()
-            self.teach(f"Q: {q}\nA: {a}", kind="learned", doc_id=f"learned-{turn_id}")
+            q, a = row
+            return {"learned": self.teach(f"Q: {q}\nA: {a}", kind="learned", doc_id=f"learned-{turn_id}"),
+                    "forgotten": 0}
+        approved = self.store.conn.execute("SELECT source_id FROM source WHERE dataset='learned' AND doc_id=?",
+                                           (f"learned-{turn_id}",)).fetchall()
+        return {"learned": 0, "forgotten": sum(self.store.delete_source(r[0]) for r in approved)}
 
     # ------------------------------------------------------------ learning: lookups, packs, sleep
     @_locked

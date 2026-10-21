@@ -238,9 +238,14 @@ function finish(el, t) {
   const up = $(".up", el), down = $(".down", el), copy = $(".copy", el);
   if (copy) copy.onclick = () => { navigator.clipboard?.writeText(t.answer); toast("Copied"); };
   if (up) up.onclick = async () => { await api("/api/feedback", { method: "POST", body: { turn_id: t.turn_id, helpful: true } });
-    up.classList.add("on"); up.textContent = "👍 Learned"; toast("Saved to memory: CAMR will reuse this answer"); refresh(); };
-  if (down) down.onclick = async () => { await api("/api/feedback", { method: "POST", body: { turn_id: t.turn_id, helpful: false } });
-    down.classList.add("on"); toast("Thanks, noted. Tip: correct it with “remember that …”"); };
+    up.classList.add("on"); up.textContent = "👍 Learned"; down?.classList.remove("on");
+    toast("Saved to memory: CAMR will reuse this answer"); refresh(); };
+  if (down) down.onclick = async () => {
+    const r = await api("/api/feedback", { method: "POST", body: { turn_id: t.turn_id, helpful: false } });
+    down.classList.add("on");
+    if (up) { up.classList.remove("on"); up.textContent = "👍 Teach this"; }
+    toast(r.forgotten ? "Taken back: this answer is no longer in memory" : "Thanks, noted. Tip: correct it with “remember that …”");
+    if (r.forgotten) refresh(); };
 }
 
 async function send(text) {
@@ -297,14 +302,19 @@ document.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.
 
 // ---------- teaching ----------
 async function teachFiles(files) {
-  let total = 0;
+  let total = 0, updated = 0, same = 0;
   for (const f of files) {
     const buf = new Uint8Array(await f.arrayBuffer()); let bin = "";
     for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    try { total += (await api("/api/teach", { method: "POST", body: { filename: f.name, data_base64: btoa(bin) } })).notes; }
+    try {
+      const r = await api("/api/teach", { method: "POST", body: { filename: f.name, data_base64: btoa(bin) } });
+      total += r.notes; if (r.unchanged) same++; else if (r.replaced) updated++;
+    }
     catch (e) { toast(`${f.name}: ${e.message}`); }
   }
-  toast(`✦ Learned ${total} memor${total === 1 ? "y" : "ies"} from ${files.length} file${files.length === 1 ? "" : "s"}`); refresh();
+  const extra = [updated ? `${updated} updated to the new version` : "", same ? `${same} already up to date` : ""].filter(Boolean);
+  toast(`✦ Learned ${total} memor${total === 1 ? "y" : "ies"} from ${files.length} file${files.length === 1 ? "" : "s"}`
+        + (extra.length ? ` (${extra.join(", ")})` : "")); refresh();
 }
 $("#file-input").onchange = (e) => { teachFiles([...e.target.files]); e.target.value = ""; };
 function openTeach() { $("#teach-dlg").showModal(); $("#teach-text").focus(); }

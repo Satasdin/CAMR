@@ -14,14 +14,17 @@ and turns that into limits every long-running job respects (``Governor.check``):
 * the read path chooses how much to read (token budget) and how to search (exact or
   the learned index, and how many clusters) to meet a latency target (``plan``).
 
-Every figure comes from the operating system (``/proc``, ``statvfs``) or a timed run on
-this machine; nothing is a guess about hardware.
+Every figure comes from the operating system (``/proc``, ``statvfs``; ``sysctl`` and
+``vm_stat`` on macOS, ``GlobalMemoryStatusEx`` on Windows) or a timed run on this machine;
+nothing is a guess about hardware.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shutil
+import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -92,17 +95,71 @@ def others_cpu_share(window_s: float = 0.5) -> float | None:
     return max(0.0, (b[0] - a[0]) - (sb - sa)) / total
 
 
+def vm_stat_available_mb(text: str) -> float:
+    """Available RAM from macOS ``vm_stat`` output: free plus inactive pages, as psutil counts it
+    (``vm_stat`` already reports free pages without the speculative ones)."""
+    m = re.search(r"page size of (\d+) bytes", text)
+    page = int(m.group(1)) if m else 4096
+    pages: dict[str, int] = {}
+    for line in text.splitlines():
+        key, _, val = line.partition(":")
+        val = val.strip().rstrip(".")
+        if val.isdigit():
+            pages[key.strip()] = int(val)
+    return (pages.get("Pages free", 0) + pages.get("Pages inactive", 0)) * page / MB
+
+
+def _darwin_ram() -> tuple[float, float]:
+    import ctypes
+    import ctypes.util
+    import subprocess
+
+    libc = ctypes.CDLL(ctypes.util.find_library("c"))
+    total, size = ctypes.c_uint64(0), ctypes.c_size_t(8)
+    if libc.sysctlbyname(b"hw.memsize", ctypes.byref(total), ctypes.byref(size), None, 0) != 0:
+        return 0.0, 0.0
+    out = subprocess.run(["/usr/bin/vm_stat"], capture_output=True, text=True, timeout=5).stdout
+    return total.value / MB, vm_stat_available_mb(out)
+
+
+def _windows_ram() -> tuple[float, float]:
+    import ctypes
+
+    class MemoryStatusEx(ctypes.Structure):
+        _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+
+    st = MemoryStatusEx()
+    st.dwLength = ctypes.sizeof(MemoryStatusEx)
+    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):  # type: ignore[attr-defined]
+        return 0.0, 0.0
+    return st.ullTotalPhys / MB, st.ullAvailPhys / MB
+
+
 def _ram() -> tuple[float, float]:
     info = _meminfo()
     if info:
         return info.get("MemTotal", 0.0), info.get("MemAvailable", info.get("MemFree", 0.0))
-    try:  # without /proc (macOS, Windows): psutil when present
+    try:  # without /proc: psutil when present
         import psutil  # type: ignore
 
         vm = psutil.virtual_memory()
         return vm.total / MB, vm.available / MB
     except Exception:  # noqa: BLE001
-        return 0.0, 0.0
+        pass
+    # The packaged app ships without psutil: ask the operating system directly, or the RAM reserve is never
+    # enforced on macOS and Windows (it read 0 MB there and the check skipped itself).
+    try:
+        if sys.platform == "darwin":
+            return _darwin_ram()
+        if sys.platform == "win32":
+            return _windows_ram()
+    except Exception:  # noqa: BLE001
+        pass
+    return 0.0, 0.0
 
 
 @dataclass
@@ -208,7 +265,7 @@ class Governor:
         for f in self.store_path.parent.glob(self.store_path.name + "*"):  # the store, its WAL and journal
             if f.is_file():
                 total += f.stat().st_size
-        ivf = self.store_path.with_suffix(self.store_path.suffix + ".ivf")
+        ivf = self.store_path.with_suffix(".ivf")  # where sleep builds the index (SQLiteVectorStore.ivf_dir)
         if ivf.is_dir():
             total += sum(f.stat().st_size for f in ivf.iterdir() if f.is_file())
         return total / MB

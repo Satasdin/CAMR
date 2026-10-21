@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from camr.device import DeviceProfile, Governor, Limits, plan, probe
+from camr.device import DeviceProfile, Governor, Limits, plan, probe, vm_stat_available_mb
 from camr.memory.bulk import bulk_ingest, read_folder, read_jsonl
 from camr.memory.note import Document
 from test_learning import fresh_engine
@@ -23,6 +23,23 @@ def docs(n, start=0):
 def test_probe_reads_the_real_machine(tmp_path):
     p = probe(tmp_path)
     assert p.ram_total_mb > 0 and p.cpu_count >= 1 and p.disk_free_mb > 0
+
+
+def test_macos_available_ram_is_free_plus_inactive_pages():
+    out = ("Mach Virtual Memory Statistics: (page size of 16384 bytes)\n"
+           "Pages free:                               10240.\n"
+           "Pages active:                            500000.\n"
+           "Pages inactive:                           6144.\n"
+           "Pages speculative:                        2048.\n")
+    assert vm_stat_available_mb(out) == (10240 + 6144) * 16384 / (1024 * 1024)
+
+
+def test_the_store_size_counts_the_learned_index(tmp_path):
+    store = tmp_path / "m.sqlite"
+    store.write_bytes(b"x" * 1024 * 1024)
+    (tmp_path / "m.ivf").mkdir()  # where sleep builds the index (SQLiteVectorStore.ivf_dir)
+    (tmp_path / "m.ivf" / "vectors.npy").write_bytes(b"x" * 2 * 1024 * 1024)
+    assert Governor(store, Limits()).store_mb() == 3.0
 
 
 def test_the_governor_names_the_limit_that_stops_work(tmp_path):

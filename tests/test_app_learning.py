@@ -59,6 +59,32 @@ def test_a_personal_question_is_never_looked_up_and_asks_to_be_taught(assistant,
     assert "ask the user to tell you" in assistant._http.prompts[-1]
 
 
+def test_what_counts_as_a_question_about_the_user():
+    from camr.app.assistant import is_about_user
+
+    for q in ("When is the dentist appointment?", "What did Sarah say about the Nairobi trip?",
+              "What's the wifi password?", "when did I last see the dentist", "Where do we keep the spare key?"):
+        assert is_about_user(q), q
+    for q in ("What is the capital of the US?", "Who directed The Loudwater Mystery?",
+              "When is Beyoncé's birthday?", "What is photosynthesis?"):
+        assert not is_about_user(q), q
+
+
+def test_personal_questions_without_a_pronoun_never_leave_the_machine(assistant, web):
+    for q in ("When is the dentist appointment?", "What did Sarah say about the Nairobi trip?"):
+        turn = assistant.ask(q)
+        assert turn.learned is None and turn.ask_to_teach, q
+    assert web.calls == []
+
+
+def test_a_name_only_the_users_notes_mention_is_never_sent(assistant, web):
+    assistant.teach("Wanjiku Kamau is my sister's business partner.", title="People")
+    assistant.ask("Who founded the company of Wanjiku Kamau?")
+    assert web.calls == []  # a name the user told it about, and no public source knows
+    assistant.ask("Who directed The Loudwater Mystery?")
+    assert web.calls  # a public subject is still looked up
+
+
 def test_learning_online_can_be_turned_off(assistant, web):
     assistant.save_settings(learn_online=False)
     turn = assistant.ask("Who directed The Loudwater Mystery?")

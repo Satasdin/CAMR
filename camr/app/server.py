@@ -235,14 +235,14 @@ def make_handler(app: App):
             if path == "/api/conversations":
                 return self._json({"id": a.new_conversation()})
             if path == "/api/feedback":
-                a.feedback(int(data["turn_id"]), bool(data["helpful"]))
-                return self._json({"ok": True})
+                try:
+                    return self._json({"ok": True, **a.feedback(int(data["turn_id"]), bool(data["helpful"]))})
+                except KeyError as exc:
+                    return self._json({"error": str(exc)}, 404)
             if path == "/api/teach":
                 if data.get("data_base64") is not None:
-                    n = a.teach_file(data["filename"], base64.b64decode(data["data_base64"]))
-                else:
-                    n = a.teach(data.get("text", ""), title=data.get("title", ""))
-                return self._json({"notes": n})
+                    return self._json(a.learn_file(data["filename"], base64.b64decode(data["data_base64"])))
+                return self._json({"notes": a.teach(data.get("text", ""), title=data.get("title", ""))})
             if path == "/api/packs/install":
                 try:
                     return self._json(a.install_pack(str(data.get("name", ""))))

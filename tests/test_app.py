@@ -108,11 +108,36 @@ def test_thumbs_up_learns_the_answer_and_export_hides_text(assistant):
     assert "question" in assistant.export_feedback(include_text=True)["turns"][0]
 
 
+def test_thumbs_down_takes_back_an_approval(assistant):
+    assistant.teach("The guest Wi-Fi network is called Sunbird-Guest.", title="Wi-Fi")
+    turn = assistant.ask("What is the guest Wi-Fi network called?")
+    assert assistant.feedback(turn.turn_id, True) == {"learned": 1, "forgotten": 0}
+    assert assistant.feedback(turn.turn_id, False) == {"learned": 0, "forgotten": 1}
+    assert not assistant.sources(kind="learned") and assistant.stats()["not_helpful"] == 1
+    assert assistant.feedback(turn.turn_id, True)["learned"] == 1  # approving again learns it again
+    with pytest.raises(KeyError):
+        assistant.feedback(9999, True)
+
+
+def test_teaching_an_edited_file_replaces_the_old_version(assistant):
+    v1 = "The office alarm code is 1122. The plants are watered on Mondays."
+    assert assistant.teach_file("office.md", v1.encode()) >= 1
+    assert assistant.learn_file("office.md", v1.encode()) == {"notes": 0, "replaced": 0, "unchanged": True}
+    v2 = "The office alarm code is 7788. The plants are watered on Mondays."
+    r = assistant.learn_file("office.md", v2.encode())
+    assert r["notes"] >= 1 and r["replaced"] >= 1 and not r["unchanged"]
+    files = assistant.sources(kind="file")
+    assert len(files) == 1 and "7788" in files[0]["text"] and "1122" not in files[0]["text"]
+    assert assistant.forget(files[0]["source_id"]) >= 1
+    assert assistant.learn_file("office.md", v2.encode())["notes"] >= 1  # forgotten, so learned afresh
+
+
 def test_forget_removes_notes_and_vectors(assistant):
     assistant.teach("Project Falcon kickoff is in room 3B on Monday.", title="Falcon")
     sid = assistant.sources(kind="note")[0]["source_id"]
     assert assistant.forget(sid) == 1
     assert not assistant.sources(kind="note")
+    assert b"Project Falcon" not in assistant.store.path.read_bytes()  # not left behind in the file's free pages
     assert assistant.ask("Where is the Project Falcon kickoff on Monday?").sources == []
     assert assistant.teach("Project Falcon kickoff is in room 3B on Monday.", title="Falcon") == 1  # can re-teach
 

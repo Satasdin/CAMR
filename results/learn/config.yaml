@@ -1,0 +1,109 @@
+# The run configuration `camr learn --config configs/learn.yaml` writes here (Workspace dumps it on the
+# first run). Committed so scripts/reproduce.py and the experiment scripts that read it work on a fresh
+# clone; data paths are relative to this file.
+seed: 13
+run_dir: .
+extra_conditions: []
+local_model:
+  backend: ollama
+  name: qwen2.5:0.5b
+  host: http://127.0.0.1:11434
+  max_tokens: 256
+  timeout_s: 300.0
+  keep_alive: 30m
+  num_ctx: 4096
+  think: null
+  num_thread: null
+ceiling_model:
+  backend: openai_compat
+  name: kimi-k3
+  host: http://127.0.0.1:11434
+  api_key_env: MOONSHOT_API_KEY
+  think: null
+  base_url: https://api.moonshot.ai/v1
+  temperature: null
+  max_tokens: 4096
+  effort: medium
+  timeout_s: 300
+  max_retries: 4
+  backoff_base_s: 2.0
+embedder:
+  backend: bge
+  name: BAAI/bge-small-en-v1.5
+  dim: 384
+  query_instruction: 'Represent this sentence for searching relevant passages: '
+  device: cpu
+  batch_size: 32
+  torch_threads: null
+tokenizer:
+  backend: regex
+  name: null
+memory:
+  write_policy: verbatim
+  screening: true
+  chunk_tokens: 96
+  chunk_overlap: 16
+  min_note_tokens: 3
+  max_note_tokens: 160
+  importance: heuristic
+  retrieval_policy: composite
+  weights:
+    similarity: 0.6
+    recency: 0.15
+    importance: 0.25
+  recency_decay: 0.99
+  normalise_similarity: true
+  k: 20
+  token_budget: 512
+  keyword_k: 0
+  per_title: 0
+  packing: greedy_stop
+  write_back: false
+  graph_layer: false
+  clock_step_hours: 1.0
+  min_similarity: 0.5
+  similarity_margin: 0.15
+  entity_gate: false
+  expansion: entity
+  expansion_seeds: 3
+  expansion_per_seed: 2
+  reasoning_memory: exemplars
+  exemplar_max_tokens: 400
+benchmarks:
+  popqa:
+    path: ../../data/popqa/test.tsv
+    corpus: ../../data/popqa/corpus_learn.jsonl
+    n: 30
+    extra_corpus_questions: 0
+    exemplars: null
+  hotpotqa:
+    path: ../../data/hotpotqa/hotpot_dev_distractor_v1.json
+    corpus: null
+    n: 30
+    extra_corpus_questions: 100
+    exemplars: null
+  gsm8k:
+    path: ../../data/gsm8k/test.jsonl
+    corpus: null
+    n: 12
+    extra_corpus_questions: 0
+    exemplars: ../../data/gsm8k/train.jsonl
+primary_metric:
+  popqa: contains
+  hotpotqa: em
+  2wikimultihopqa: em
+  gsm8k: accuracy
+analysis:
+  bootstrap: 2000
+  ci: 0.95
+  min_denominator: 0.05
+profile:
+  repeats: 3
+  n: 10
+  benchmark: hotpotqa
+  warmup: 2
+ablation:
+  benchmarks: []
+  variants: []
+  budget_sweep: []
+  sweep_base: full
