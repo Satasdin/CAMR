@@ -347,8 +347,16 @@ class Assistant:
             f"memory-{re.sub(r'[^A-Za-z0-9]+', '-', self.embedder.name)}.sqlite"
         self.store = SQLiteVectorStore(self.home / db, dim=self.embedder.dim, embedder_name=self.embedder.name,
                                        check_same_thread=False)
-        # Forget means gone: SQLite otherwise leaves a deleted note's text readable in the file's free pages.
+        # Forget means gone: SQLite otherwise leaves a deleted note's text readable in the file's free pages, and the
+        # keyword index (FTS5) keeps a deleted note's words in its segments until they are merged. FTS5's own
+        # secure-delete (SQLite 3.44+) removes them at once; with an older SQLite, forget() rebuilds the index.
         self.store.conn.execute("PRAGMA secure_delete = ON")
+        try:
+            with self.store.conn:
+                self.store.conn.execute("INSERT INTO note_fts(note_fts, rank) VALUES ('secure-delete', 1)")
+            self._fts_secure = True
+        except sqlite3.OperationalError:
+            self._fts_secure = False
         self.store.conn.executescript(APP_SCHEMA)
         cols = {r[1] for r in self.store.conn.execute("PRAGMA table_info(app_turn)")}
         for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT"), ("learned_json", "TEXT"),
@@ -474,7 +482,11 @@ class Assistant:
         with self.store.conn:  # a forgotten file is learned afresh if it is taught again
             self.store.conn.execute("DELETE FROM app_file WHERE doc_id IN (SELECT doc_id FROM source WHERE"
                                     " source_id=? AND dataset='file')", (source_id,))
-        return self.store.delete_source(source_id)
+        removed = self.store.delete_source(source_id)
+        if removed and not self._fts_secure:
+            with self.store.conn:  # merge the keyword index so the deleted words leave it (and its pages are wiped)
+                self.store.conn.execute("INSERT INTO note_fts(note_fts) VALUES ('optimize')")
+        return removed
 
     # ------------------------------------------------------------ conversations
     @_locked
