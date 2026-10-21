@@ -189,15 +189,31 @@ def run(a) -> None:
         print(f"{name}: {len(todo)} answers to make", flush=True)
         t_reader = time.perf_counter()
 
-        def one(job):
+        def answer(job):
             row, mem = job
             try:
                 g = r.generate(prompt_for(row, mem))
-                text, err = g.text, None
-            except Exception as exc:  # noqa: BLE001
-                g, text, err = None, "", f"{type(exc).__name__}: {exc}"[:200]
-            ok, jg = judge(row, text) if not err else (None, None)
-            return {"reader": name, "qid": row["qid"], "ability": row.get("ability"), "suite": row.get("suite"),
+                return g, g.text, None
+            except Exception as exc:  # noqa: BLE001  (a failed answer is recorded, not fatal)
+                return None, "", f"{type(exc).__name__}: {exc}"[:200]
+
+        # First every answer (a local model one at a time, in order; the cloud reader in a few parallel calls), then
+        # every verdict in parallel: a judge call takes seconds, so judging each local answer in turn kept the model
+        # idle most of the time.
+        workers = a.cloud_workers if name.startswith("kimi") else 1
+        with ThreadPoolExecutor(workers) as pool:
+            made = []
+            for k, res in enumerate(pool.map(answer, todo), 1):
+                made.append(res)
+                if k % 100 == 0:
+                    print(f"  {name}: {k}/{len(todo)} answered", flush=True)
+        with ThreadPoolExecutor(a.cloud_workers) as pool:
+            verdicts = list(pool.map(lambda jm: judge(jm[0][0], jm[1][1]) if not jm[1][2] else (None, None),
+                                     zip(todo, made)))
+        with out_path.open("a") as fh:
+            for (row, mem), (g, text, err), (ok, jg) in zip(todo, made, verdicts):
+                fh.write(json.dumps({
+                    "reader": name, "qid": row["qid"], "ability": row.get("ability"), "suite": row.get("suite"),
                     "type": row.get("type"), "memory": mem, "answer": text.strip()[:600], "error": err,
                     "correct": ok, "contains_gold": contains_gold(row, text) if not unanswerable(row) else None,
                     "declined": declined(text), "abstained_engine": row.get("abstained"),
@@ -205,17 +221,9 @@ def run(a) -> None:
                     "output_tokens": getattr(g, "generated_tokens", None),
                     "seconds": round(getattr(g, "latency_ms", 0.0) / 1000, 3),
                     "cached": bool(getattr(g, "meta", {}).get("cached")),
-                    "judge_in": getattr(jg, "prompt_tokens", None) if jg else None,
-                    "judge_out": getattr(jg, "generated_tokens", None) if jg else None}
-
-        # local models answer one at a time (one Ollama model, in order); the cloud reader in a few parallel calls
-        workers = a.cloud_workers if name.startswith("kimi") else 1
-        with ThreadPoolExecutor(workers) as pool, out_path.open("a") as fh:
-            for k, rec in enumerate(pool.map(one, todo), 1):
-                fh.write(json.dumps(rec) + "\n")
-                fh.flush()
-                if k % 50 == 0:
-                    print(f"  {name}: {k}/{len(todo)}", flush=True)
+                    "judge_in": getattr(jg, "prompt_tokens", None) if jg and not isinstance(jg, str) else None,
+                    "judge_out": getattr(jg, "generated_tokens", None) if jg and not isinstance(jg, str) else None})
+                    + "\n")
         print(f"{name}: done in {time.perf_counter() - t_reader:.0f} s", flush=True)
     report(argparse.Namespace(tag=tag))
 
