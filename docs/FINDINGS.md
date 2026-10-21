@@ -999,6 +999,21 @@ Sources: `results/skills/skill_cards.json`, `results/skills/skill_cards.md` (`py
 
 **Defect found while building it (fixed before the run).** The router first took the best-ranked *skill* note among the admitted ones; a test with a note about something else ranked first showed a card attached to an unrelated question. Only the best admitted note may name a card now (`tests/test_skills.py`).
 
+## F33. Repeated runs: the lost Llama 3B automation runs, and how much the runtime matters
+
+Sources: `results/agentic/agent_llama3_2_3b__*.json`, `results/agentic/fresh_llm_llama3_2_3b.json` (repeated on Ollama 0.35.0), `results/agentic/ollama-0.13.5/` (the same runs on Ollama 0.13.5). The result files of these four runs were never committed; they were repeated on a second machine (Apple M4) through the study's own n8n workflows (n8n 2.44.2) and gateway, with the study's Ollama version run as a standalone server.
+
+| Run | Original (F29) | Repeated, Ollama 0.35.0 | Repeated, Ollama 0.13.5 |
+|---|---|---|---|
+| Agent, Llama 3B, no memory (success / made-up action / escalated) | 0.0 / 95.0 / 0.0% | **0.0 / 95.0 / 0.0%** | 0.0 / 35.0 / 0.0% |
+| Agent, Llama 3B + RAG | 30.0 / 45.0 / 0.0% | 45.0 / 45.0 / 0.0% | 10.0 / 25.0 / 0.0% |
+| Agent, Llama 3B + CAMR | 25.0 / 20.0 / 10.0% | 30.0 / 20.0 / 15.0% | 5.0 / 20.0 / 10.0% |
+| News, Llama 3B alone (correct / wrong / declined) | 2.0 / 0.0 / 98.0% | **2.0 / 0.0 / 98.0%** | 2.0 / 4.0 / 94.0% |
+
+1. **On the study's runtime the runs reproduce**: two exactly, and the agents with memory match on made-up actions and move by one to three of 20 tasks on success (a different machine computes on a GPU, the study's on a CPU). F29's conclusion stands: with CAMR the 3B agent makes fewer than half the made-up actions it makes with RAG (20% against 45%).
+2. **The runtime is part of the result.** The same model file served by Ollama 0.13.5 often ended a task with no action at all (13 of 20 without memory), so made-up actions fell from 95% to 35% and successes with memory fell to 5-10%. Small-model agent results are reported with the serving runtime's version.
+3. Chapter 5 reports the repeated (0.35.0) runs.
+
 ## Defects found in this round
 
 | ID | Defect | Found by | Fix | Retest |

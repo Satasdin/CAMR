@@ -14,6 +14,8 @@ import importlib.util
 import json
 import re
 import statistics
+import subprocess
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -171,6 +173,21 @@ def speed() -> dict:
     return (J("results/models/speed.json") or {}).get("models", {})
 
 
+
+_TESTS: list[int | None] = []
+
+
+def test_count() -> int | None:
+    """How many automated tests the suite has, counted now (this interpreter's pytest, so the project's environment)."""
+    if not _TESTS:
+        try:
+            out = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider"],
+                                 cwd=ROOT, capture_output=True, text=True, timeout=300).stdout
+            _TESTS.append(int(re.search(r"(\d+) tests? collected", out).group(1)))
+        except Exception:  # noqa: BLE001
+            _TESTS.append(None)
+    return _TESTS[0]
+
 def plain_facts() -> dict:
     """The numbers the plain-language summary and section openers quote, from the same files as the chapter."""
     import subprocess
@@ -194,12 +211,7 @@ def plain_facts() -> dict:
     desk = {t: d["summary"] for t, _, d in loaded("helio", DESK_SYSTEMS)}
     agents = {t: d["summary"] for t, _, d in loaded("agent", AGENT_CONFIGS)}
     fresh = {t: d["summary"] for t, _, d in loaded("fresh", FRESH_SYSTEMS)}
-    try:
-        out = subprocess.run(["python", "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider"],
-                             cwd=ROOT, capture_output=True, text=True, timeout=300).stdout
-        n_tests = int(re.search(r"(\d+) tests? collected", out).group(1))
-    except Exception:  # noqa: BLE001
-        n_tests = None
+    n_tests = test_count()
     return {
         "verified": verified, "kimi_closed": closed.get("kimi-k3", {}), "alone_05": closed.get("qwen2.5:0.5b", {}),
         "n_models": len(sw), "min_b": sw[0]["params"], "max_b": sw[-1]["params"],
@@ -427,7 +439,7 @@ def environment(c: Chapter) -> None:
               "Cloud reference; the key is read from the `MOONSHOT_API_KEY` environment variable only"],
              ["Streamlit, Playwright, axe-core", "1.64.0, 1.63.0, 4.10", "Read-only inspector; browser tests, "
               "screenshots and the accessibility audit"],
-             ["pytest", "9.1.1", "203 automated tests (section ⟦sec_testing⟧)"]],
+             ["pytest", "9.1.1", f"{test_count() or 'All'} automated tests (section ⟦sec_testing⟧)"]],
             [4.2, 4.2, 7.5], size=9.5)
     c.p("Each experiment is configured by one YAML file loaded into typed dataclasses that reject unknown keys, so a "
         "misspelt setting fails instead of silently using a default (NFR-07). Every run records the hash of its full "
@@ -906,7 +918,7 @@ def testing(c: Chapter) -> None:
         "time (NFR-02), byte-identical prompts on a repeat (NFR-05), fits in 16 GB (NFR-01). Browser tests "
         "(Playwright) and an accessibility audit (axe-core, WCAG AA contrast) cover the interface. A verdict is "
         f"assigned only by comparing an observed result with an expected one written in advance. {c.next_tab()} shows "
-        "where the 203 automated tests sit.")
+        f"where the {test_count() or 'automated'} automated tests sit.")
     files = [["test_memory.py", 48, "Write and read paths, gate, entity gate, bridging, budget, per-title limit"],
              ["test_learning.py", 27, "Lookups, rate limits, privacy rule, packs, harvest, sleep"],
              ["test_verify.py", 25, "Grounding, subject, relation, kind, fact reader, topic anchoring, replay"],
@@ -1619,6 +1631,16 @@ def res_agentic(c: Chapter) -> None:
             c.figure(REPORT / "agentic_matrix.png", "Every agent task in every configuration: succeeded, handed to a "
                      "person, failed, or a hallucinated action", 15.8)
     c.p(AGENT_TEXT(agents))
+    if (RES / "agentic/ollama-0.13.5").exists():
+        c.p("**Repeated runs.** The result files of the three Llama 3B agent runs and of the Llama-alone news run were "
+            "lost after the first write-up, so those four runs were repeated on a second machine through the same n8n "
+            "workflows, on the study's Ollama version (0.35.0). The no-memory agent and the news run reproduced exactly "
+            "(0% / 95% / 0% and 2% / 0% / 98%); the agents with memory matched on made-up actions (45% with RAG, 20% "
+            "with CAMR) and moved by one to three of the 20 tasks on success (RAG 30% → 45%, CAMR 25% → 30%), which the "
+            "table above reports. A first repeat on an older Ollama (0.13.5) changed the same model's behaviour: it "
+            "often ended a task without acting (35% made-up actions without memory instead of 95%). Small-model agent "
+            "results therefore depend on the serving runtime as well as on the model, and are reported with its "
+            "version (`results/agentic/ollama-0.13.5/`).")
     tr = agent_trace(agents)
     if tr:
         c.p("One task end to end, as the agent ran it (Kimi K3 with CAMR's memory, verbatim):")
