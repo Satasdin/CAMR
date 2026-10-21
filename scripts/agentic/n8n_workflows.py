@@ -27,8 +27,10 @@ from urllib.parse import quote
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "results/agentic/n8n"
 GW = "http://127.0.0.1:8765"  # default; --gateway overrides
-N8N = "/root/n8n/node_modules/.bin/n8n"
-NODE24 = "/root/node24/bin"
+# Where n8n and Node 24 live: the study's container by default; set these to run the workflows elsewhere
+N8N_HOME = os.environ.get("CAMR_N8N_HOME", "/root/n8n")
+N8N = os.environ.get("CAMR_N8N_BIN", f"{N8N_HOME}/node_modules/.bin/n8n")
+NODE24 = os.environ.get("CAMR_NODE_BIN", "/root/node24/bin")
 LOOP = "Loop over events"
 
 
@@ -231,7 +233,7 @@ def n8n(*args, timeout=7200, broker_port=5679) -> subprocess.CompletedProcess:
     env = {**os.environ, "PATH": f"{NODE24}:{os.environ['PATH']}", "N8N_DIAGNOSTICS_ENABLED": "false",
            "N8N_RUNNERS_BROKER_PORT": str(broker_port),
            "N8N_RUNNERS_ENABLED": "false", "N8N_LOG_LEVEL": "warn", "N8N_BLOCK_ENV_ACCESS_IN_NODE": "false"}
-    return subprocess.run([N8N, *args], capture_output=True, text=True, env=env, timeout=timeout, cwd="/root/n8n")
+    return subprocess.run([N8N, *args], capture_output=True, text=True, env=env, timeout=timeout, cwd=N8N_HOME)
 
 
 def run(a) -> None:
