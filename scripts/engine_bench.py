@@ -13,6 +13,9 @@ context is something else, how many tokens, how long it took, and whether memory
     python scripts/engine_bench.py report    # results/bench/scorecard.md and scorecard.json
     python scripts/engine_bench.py all       # the five in order
 
+The 1M-note store needs more filler than LongMemEval S holds: ``fetch --with-m`` (2.7 GB), ``prepare-m``, then
+``embed --scales 1000000`` and ``run --only scale --scales 1000000``.
+
 Large files (the dataset, the vector cache, the needle stores) live in ``$CAMR_BENCH_HOME`` (default
 ``~/.cache/camr-bench``), outside the repository; scores go to ``results/bench/``.
 """
@@ -59,6 +62,10 @@ LME_FILES = {
     "longmemeval_oracle.json": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
 }
 LME_VARIANT = "longmemeval_s_cleaned.json"  # S: each question's history is ~50 sessions, mostly unrelated chat
+# M (~500 sessions per question, 2.7 GB): fetched only with --with-m, as extra filler for the 1M-note store.
+LME_M = "longmemeval_m_cleaned.json"
+LME_M_SHA256 = "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f"
+FILLER_M = WORK / "filler_m.jsonl"
 
 # What A8 wires in from the app's own test suite (forget and privacy).
 A8_TESTS = [
@@ -246,7 +253,7 @@ def cmd_fetch(a) -> None:
     import requests
 
     LME_DIR.mkdir(parents=True, exist_ok=True)
-    for name, digest in LME_FILES.items():
+    for name, digest in {**LME_FILES, **({LME_M: LME_M_SHA256} if a.with_m else {})}.items():
         path = LME_DIR / name
         if path.exists() and sha256(path) == digest:
             say("ok", path)
@@ -310,52 +317,132 @@ def cmd_prepare(a) -> None:
     say("prepared", json.dumps(meta))
 
 
-def filler_plan(engine, n_notes: int):
-    """The filler documents that make ``n_notes`` notes once screened (deterministic: the same prefix always)."""
+def iter_json_array(path: Path, chunk: int = 1 << 22):
+    """The objects of a top-level JSON array, one at a time: LongMemEval M (2.7 GB) never sits in memory whole."""
+    dec = json.JSONDecoder()
+    with open(path, encoding="utf-8") as f:
+        buf = f.read(chunk).lstrip()
+        if not buf.startswith("["):
+            raise ValueError(f"{path} is not a JSON array")
+        buf = buf[1:]
+        while True:
+            buf = buf.lstrip().lstrip(",").lstrip()
+            if buf.startswith("]"):
+                return
+            try:
+                obj, end = dec.raw_decode(buf)
+            except json.JSONDecodeError:
+                more = f.read(chunk)
+                if not more:
+                    raise
+                buf += more
+                continue
+            yield obj
+            buf = buf[end:]
+
+
+def cmd_prepare_m(a) -> None:
+    """Extra filler from LongMemEval M for the 1M-note store: history sessions that are no question's evidence and
+    not already in the S filler, in file order, until they make about ``--m-notes`` notes."""
+    src = LME_DIR / LME_M
+    if not src.exists():
+        raise SystemExit("run `engine_bench.py fetch --with-m` first")
+    say("pass 1: evidence sessions in", src.name)
+    evidence = {sid for x in iter_json_array(src) for sid in x["answer_session_ids"]}
+    evidence |= {sid for x in read_jsonl(SUBSET) for sid in x["answer_session_ids"]}
+    taken = {s["sid"] for s in read_jsonl(FILLER)}
+    say(f"pass 2: sessions ({len(evidence)} evidence sessions, {len(taken)} already in the S filler)")
+    est, n = 0, 0
+    tmp = FILLER_M.with_suffix(".part")
+    with open(tmp, "w") as f:
+        for x in iter_json_array(src):
+            for sid, day, turns in zip(x["haystack_session_ids"], x["haystack_dates"], x["haystack_sessions"]):
+                if sid in evidence or sid in taken:
+                    continue
+                taken.add(sid)
+                f.write(json.dumps({"sid": sid, "date": day, "turns": [{"role": t["role"], "content": t["content"]}
+                                                                       for t in turns]}) + "\n")
+                n += 1
+                est += sum(max(1, -(-(len(t["content"].split()) * 5 // 4 - 16) // 104)) for t in turns)
+            if est >= a.m_notes:
+                break
+    tmp.replace(FILLER_M)
+    meta = json.loads((WORK / "prepare.json").read_text()) if (WORK / "prepare.json").exists() else {}
+    meta.update({"filler_m_source": src.name, "filler_m_sha256": LME_M_SHA256, "filler_m_sessions": n,
+                 "filler_m_notes_estimate": est})
+    (WORK / "prepare.json").write_text(json.dumps(meta, indent=1))
+    say(f"wrote {n} sessions (about {est} notes) to {FILLER_M.name}")
+
+
+def filler_docs(engine, n_notes: int, made: list | None = None):
+    """The filler documents that make ``n_notes`` notes once screened, in a fixed order (the S filler, then the M
+    filler when there is one), so every store size is a prefix of the next. ``made[0]`` gets the notes made."""
     from camr.eval.abilities import lme_date
     from camr.memory.note import Document
 
     seen: set[str] = set()
-    docs, count = [], 0
-    for s in read_jsonl(FILLER):
-        day = lme_date(s["date"])
-        for j, t in enumerate(s["turns"]):
-            text = (t.get("content") or "").strip()
-            if not text:
-                continue
-            doc = Document("chat", f"{s['sid']}#{j}", f"On {day} the {t['role']} said: {text}")
-            docs.append(doc)
-            for cand in engine.write_policy.distil(doc):
-                v = engine.screener.screen(cand, seen)
-                if v.accepted:
-                    seen.add(v.checksum)
-                    count += 1
-            if count >= n_notes:
-                return docs, count
-    return docs, count
+    count = 0
+    for path in (FILLER, FILLER_M):
+        for s in read_jsonl(path):
+            day = lme_date(s["date"])
+            for j, t in enumerate(s["turns"]):
+                text = (t.get("content") or "").strip()
+                if not text:
+                    continue
+                doc = Document("chat", f"{s['sid']}#{j}", f"On {day} the {t['role']} said: {text}")
+                for cand in engine.write_policy.distil(doc):
+                    v = engine.screener.screen(cand, seen)
+                    if v.accepted:
+                        seen.add(v.checksum)
+                        count += 1
+                yield doc
+                if count >= n_notes:
+                    if made is not None:
+                        made[:] = [count]
+                    return
+    if made is not None:
+        made[:] = [count]
+
+
+def filler_capacity(engine, n_notes: int) -> int:
+    made = [0]
+    for _ in filler_docs(engine, n_notes, made):
+        pass
+    return made[0]
 
 
 def cmd_embed(a) -> None:
+    """Vectors for every note the suites will store, in chunks (resumable: what is cached is skipped)."""
     emb = make_embedder()
     probe = make_assistant(TMP / "embed-probe", emb)
     eng = probe.engine
-    texts: list[str] = []
-    for item in read_jsonl(SUBSET):
-        for _, doc in lme_docs(item):
-            texts += [c.text.strip() for c in eng.write_policy.distil(doc)]
-    docs, n = filler_plan(eng, max(a.scales) - 25)
-    for doc in docs:
-        texts += [c.text.strip() for c in eng.write_policy.distil(doc)]
-    texts = [t for t in dict.fromkeys(texts) if t]
-    todo = emb.missing(texts)
-    say(f"{len(texts)} distinct notes, {len(todo)} to embed on {emb.passage_device} (filler plan: {n} notes)")
-    todo.sort(key=len)  # similar lengths batch well
-    t0, done = time.time(), 0
-    for i in range(0, len(todo), 2048):
-        emb.passages.encode(todo[i:i + 2048])
-        done += len(todo[i:i + 2048])
-        rate = done / (time.time() - t0)
-        say(f"embedded {done}/{len(todo)} ({rate:.0f}/s, {(len(todo) - done) / rate / 60:.1f} min left)")
+
+    def texts():
+        for item in read_jsonl(SUBSET):
+            for _, doc in lme_docs(item):
+                yield from (c.text.strip() for c in eng.write_policy.distil(doc))
+        for doc in filler_docs(eng, max(a.scales) - 25):
+            yield from (c.text.strip() for c in eng.write_policy.distil(doc))
+
+    t0, seen_n, done = time.time(), 0, 0
+
+    def flush(batch):
+        nonlocal done
+        todo = sorted(emb.missing([t for t in dict.fromkeys(batch) if t]), key=len)  # similar lengths batch well
+        for i in range(0, len(todo), 2048):
+            emb.passages.encode(todo[i:i + 2048])
+            done += len(todo[i:i + 2048])
+            say(f"embedded {done} new notes ({done / (time.time() - t0):.0f}/s), {seen_n} notes looked at")
+
+    batch: list[str] = []
+    for t in texts():
+        batch.append(t)
+        seen_n += 1
+        if len(batch) >= 50_000:
+            flush(batch)
+            batch = []
+    flush(batch)
+    say(f"done: {seen_n} notes looked at, {done} embedded on {emb.passage_device}")
     probe.close()
     shutil.rmtree(TMP / "embed-probe", ignore_errors=True)
 
@@ -628,18 +715,18 @@ def cmd_scale(a) -> None:
             result = json.loads(marker.read_text())
         else:
             asst = make_assistant(home, emb)
-            docs, planned = filler_plan(asst.engine, n - len(needles))
-            if planned < n - len(needles):  # never label a smaller store with the size asked for
+            want = n - len(needles)
+            have = filler_capacity(asst.engine, want)
+            if have < want:  # never label a smaller store with the size asked for
                 asst.close()
-                shutil.rmtree(home, ignore_errors=True)
-                raise SystemExit(f"the filler makes only {planned} notes, short of {n - len(needles)}: "
-                                 f"a {label} store needs more filler than `prepare` collected")
+                raise SystemExit(f"the filler makes only {have} notes, short of {want}: a {label} store needs "
+                                 "more filler (`engine_bench.py fetch --with-m` then `prepare-m`)")
             t0 = time.time()
 
             def stream():
-                for i, d in enumerate(docs):
-                    if i and i % 20000 == 0:
-                        say(f"  {label}: {i}/{len(docs)} documents, {asst.store.count()} notes")
+                for i, d in enumerate(filler_docs(asst.engine, want)):
+                    if i and i % 50000 == 0:
+                        say(f"  {label}: {i} documents, {asst.store.count()} notes, {time.time() - t0:.0f} s")
                     yield d
             asst.engine.ingest(stream())
             for key, doc in ndocs:
@@ -863,7 +950,7 @@ def cmd_report(a) -> None:
 
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("cmd", choices=["fetch", "prepare", "embed", "run", "report", "all", "scale"])
+    p.add_argument("cmd", choices=["fetch", "prepare", "prepare-m", "embed", "run", "report", "all", "scale"])
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--per-type", type=int, default=PER_TYPE)
     p.add_argument("--scales", type=lambda s: tuple(int(x) for x in s.split(",")), default=SCALES)
@@ -871,6 +958,8 @@ def main(argv=None) -> None:
     p.add_argument("--limit", type=int, default=None, help="LongMemEval: first N sampled questions only")
     p.add_argument("--repeats", type=int, default=3, help="scale: times each question is asked for latency")
     p.add_argument("--fresh", action="store_true", help="discard earlier records of the suites run")
+    p.add_argument("--with-m", action="store_true", help="fetch: also LongMemEval M (2.7 GB, filler for 1M notes)")
+    p.add_argument("--m-notes", type=int, default=950_000, help="prepare-m: about this many notes of M filler")
     p.add_argument("--notes", type=int, default=1000)
     p.add_argument("--phase", choices=["build", "query"], default="build")
     p.add_argument("--out", default="")
@@ -884,7 +973,7 @@ def main(argv=None) -> None:
         d.mkdir(parents=True, exist_ok=True)
     steps = ["fetch", "prepare", "embed", "run", "report"] if a.cmd == "all" else [a.cmd]
     for s in steps:
-        globals()[f"cmd_{s}"](a)
+        globals()[f"cmd_{s.replace('-', '_')}"](a)
 
 
 if __name__ == "__main__":

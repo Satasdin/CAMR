@@ -79,12 +79,18 @@ Today is taken as 2026-10-21.
     500 questions, each with a history of about 50 sessions (about 115k tokens), mostly unrelated chat.
   * `longmemeval_oracle.json` (fetched, not scored: its histories hold only the evidence sessions, so it
     cannot test retrieval): sha256 `821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c`.
+  * `longmemeval_m_cleaned.json` (only for the 1M-note store, fetched with `fetch --with-m`; read in a
+    streaming way, one question at a time, so the 2.7 GB file never sits in memory): sha256
+    `9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f`, about 500 sessions per question.
 * Subsample: stratified by question type with seed 13, at most 40 per type, all 30 abstention questions:
   260 of 500 questions (single-session-user 40, single-session-assistant 40, multi-session 40,
   knowledge-update 40, temporal-reasoning 40, single-session-preference 30, abstention 30). Embedding every
   history of all 500 would take about 40 minutes on this machine; 260 keeps the whole run near an hour.
 * Needle-store filler: the sampled questions' history sessions that are no question's evidence, shuffled
-  with the same seed (10,627 sessions), cut to make exactly 1k, 10k or 100k notes with the 25 needles.
+  with the same seed (10,627 sessions, 269,243 notes), cut to make exactly 1k, 10k or 100k notes with the 25
+  needles. S holds only about 377k distinct notes in all, so the 1M store continues with LongMemEval M:
+  sessions that are no question's evidence and not already in the S filler, in file order (`prepare-m`).
+  Every size is a prefix of the next, so 1M is the 100k store plus 900k more notes.
 
 ## Running it
 
@@ -99,10 +105,17 @@ data, 0.5 GB of vectors and 0.5 GB of needle stores), never into the repository.
 8 GB of RAM: the largest process (prepare, which reads the 277 MB dataset) peaks near 1.6 GB.
 
 BGE runs on at most 4 CPU threads (`CAMR_BENCH_THREADS`), since the bench shares the machine with training
-jobs. 1M notes was not run: the store would take about 4.7 GB of disk (470 MB per 100k notes; this machine
-has under 20 GB free) and about an hour of embedding, and the machine was busy with skill-card training.
-`engine_bench.py run --only scale --scales 1000000` runs it later; until then the 10k and 100k numbers are
-the trend to extrapolate.
+jobs. The 1M-note point needs the M filler, about 730k more vectors and about 4.7 GB of disk for the store:
+
+```bash
+PYTHONPATH=. python scripts/engine_bench.py fetch --with-m
+PYTHONPATH=. python scripts/engine_bench.py prepare-m
+PYTHONPATH=. python scripts/engine_bench.py embed --scales 1000,10000,100000,1000000
+PYTHONPATH=. python scripts/engine_bench.py run --only scale --scales 1000000
+PYTHONPATH=. python scripts/engine_bench.py report
+```
+
+(`python` is the project's environment, e.g. `~/Desktop/camr-repo/.venv/bin/python`.)
 
 ## Baseline 2026-10-21
 
