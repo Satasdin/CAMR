@@ -5,7 +5,7 @@ number below was produced by the code in this repository, and the file it comes
 from is named. Nothing here is estimated or synthetic. Runs still in progress are
 listed at the end, and this log is updated as they finish.
 
-Last updated: 2026-10-16.
+Last updated: 2026-10-22.
 
 
 ## Headline results (latest round: F10, F28-F31)
@@ -16,6 +16,7 @@ Last updated: 2026-10-16.
 | How fast, how much memory? | One short answer from one note: 0.31 s / 0.66 GB (0.5B), 0.52 s / 1.3 GB (1.5B), 1.0 s / 2.8 GB (3B), 2.0 s / 4.8 GB (7B). | F30 |
 | CAMR against modern RAG? | Nine pipelines, one corpus, 200 held-out questions, three readers. CAMR: 62.5 / 63.5 / 63.0% correct (0.5B / 3B / Kimi K3), 3.5-4.0% wrong single claims. Best RAG: 45.5 / 56.0 / 71.5% correct, 47.0 / 15.5 / 21.0% wrong. CAMR wins outright with small readers; with the cloud reader RAG answers more and states about five times as many wrong answers. | F28 |
 | Do automations need the engine? | n8n desk: Kimi K3 + CAMR 75.0% resolved, 0 wrong replies, every unknowable ticket escalated and the person's answer taught back. Agent: Kimi K3 0% -> 100% of tasks with memory. Live news: Kimi K3 alone 22% correct and 12% wrong; with CAMR 94%; Llama 3B 2% -> 88%. | F29 |
+| Can weights that memory attaches beat weights merged into the model? | Skill cards (one small LoRA per formula family, attached only when memory names it): 90.0% on unseen problems against 85.0% for one merged adapter and 55.0% for notes; on 200 unrelated GSM8K problems the cards changed 7 answers, the merged adapter 36 (16.0% → 15.5% against 16.0% → 10.0%). | F32 |
 | What did the cloud model cost? | $33.36 for 6,456 calls in the whole study. Per 1,000 answers CAMR was the cheapest way to use Kimi K3 in every scenario but the agent (news: $1.98 against $3.31 RAG and $89.20 stuffing). | F31 |
 | What went wrong? | D-31 to D-40, each fixed and re-run; the last two: n8n loops asked each news question 30 times (D-39; results unaffected) and an entity fix lost one desk ticket (D-40; desk answers identical after the fix). 204 tests pass; `reproduce.py --twice`: 16/16 identical. | Defects table |
 
@@ -964,6 +965,39 @@ Source: `results/costs/kimi_costs.json` (`python scripts/kimi_costs.py`: every K
 - **Per 1,000 answers with Kimi K3:** desk: alone $3.80, stuffing $4.04, RAG $2.68, CAMR $2.62; news: alone $14.74, stuffing $89.20, RAG $3.31, CAMR $1.98; agent: no memory $3.62, RAG $5.84, CAMR $6.85 (more tool calls per task); RAG benchmark: reranked $3.33, corrective $2.99, CAMR $1.01.
 - **CAMR was the cheapest way to make the cloud model useful in every scenario but the agent**, because it sends the fewest prompt tokens and, for labelled facts, often none; stuffing was the most expensive, up to 45 times CAMR on the news. Most of every bill is output, and Kimi K3 bills its reasoning as output.
 - Local models cost nothing per answer; their price is CPU time. With CAMR the 3B model's desk answers took about 2 s of model time against 32-37 s with RAG or stuffing (prompts 2-4 times longer; these runs shared the CPU, so the ratio, not the seconds, is the result).
+
+## F32. Skill cards: weights that memory attaches, against one merged adapter
+
+Sources: `results/skills/skill_cards.json`, `results/skills/skill_cards.md` (`python scripts/skill_cards.py run`, then `control --control 200`); router `camr/memory/skills.py`, tests `tests/test_skills.py`.
+
+**The question.** F18 and F21 put facts in readable memory: weights inside the model (LoRA) or beside it (kNN-LM) learned almost none of them. F27 found the opposite for a *skill* learned from corrections: one LoRA adapter trained on the 40 corrections generalised to unseen problems far better than notes (88% against 50%), but, merged into the model, it cost an unrelated skill (GSM8K 13% → 0%). A skill card keeps the adapter's gain and drops the harm by attaching weights only where memory says they belong: one small adapter per formula family, trained only on that family's corrections; for each problem the engine recalls the stored corrections as usual, and the family of the best admitted note names the card to attach. When memory abstains, or its best note is not a correction, no card is attached. The model's weights never change.
+
+**Setup.** F27's problems (seed-47 draw, 10 families, 40 corrections, 20 validation problems), Qwen2.5-0.5B-Instruct, LoRA rank 16 on the attention projections, lr 3e-4, the merged adapter at F27's chosen 6 epochs; the cards' length chosen once on the pooled validation problems (6 epochs: 60%, **12: 90%**, 24: 90%). Every condition in one runtime (Apple M4 GPU, bfloat16), so the base numbers differ slightly from F27's (float32 on CPU).
+
+| | seen | held-out | reworded | derived | GSM8K (30) |
+|---|---|---|---|---|---|
+| base model | 27.5% | 20.0% | 26.7% | 7.5% | 6.7% |
+| memory (notes) | 85.0% | 55.0% | 40.0% | **22.5%** | 10.0% |
+| one merged LoRA | 87.5% | 85.0% | 45.0% | 2.5% | 3.3% |
+| **skill card, routed by memory** | **100.0%** | **90.0%** | 50.0% | 5.0% | 10.0% |
+| skill card, right family given | 100.0% | 90.0% | 53.3% | 5.0% | 6.7% |
+| notes + skill card | 90.0% | 81.7% | **70.0%** | 5.0% | 10.0% |
+
+**The unrelated control at a size that can show harm** (first 200 GSM8K test problems; nothing retrained):
+
+| | accuracy (95% bootstrap) | broken | fixed | answers changed | exact McNemar p |
+|---|---|---|---|---|---|
+| base model | 16.0% (11.0–21.0) | – | – | – | – |
+| one merged LoRA | 10.0% (6.0–14.5) | 24 | 12 | 36 | 0.065 |
+| skill card, routed by memory | 15.5% (10.5–20.5) | 4 | 3 | 7 | 1.000 |
+
+**Findings**
+1. **Weights retrieved from memory beat weights merged into the model** on new problems: 90.0% against 85.0% held-out, and as good as being told the right family (90.0%). Memory chose the right card for every seen, held-out and derived problem and for 54 of 60 reworded ones (96% averaged over the five splits, with "no card" counted as right for GSM8K).
+2. **They stay out of unrelated work.** Memory attached a card to 26 of 200 GSM8K problems. The cards changed 7 unrelated answers (4 broken, 3 fixed); the merged adapter changed 36 (24 broken, 12 fixed): five times the interference. The merged adapter's drop (16.0% → 10.0%) is borderline at this size (p = 0.065); the cards' is nil (p = 1.0).
+3. **Notes and cards do different jobs.** Notes + card was best on reworded problems (70.0%; 26 gained and none lost against the base model). Notes alone stayed best on derived problems (22.5%), where a rule must be used in a new way: a card learns the procedure's form, the notes carry what it means.
+4. **Where it falls short.** 13% of unrelated problems still drew a card (the three seen in the 30-problem split were already wrong without it); derived problems are not helped by cards; one 0.5B model and ten families.
+
+**Defect found while building it (fixed before the run).** The router first took the best-ranked *skill* note among the admitted ones; a test with a note about something else ranked first showed a card attached to an unrelated question. Only the best admitted note may name a card now (`tests/test_skills.py`).
 
 ## Defects found in this round
 
