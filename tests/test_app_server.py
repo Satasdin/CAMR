@@ -96,3 +96,15 @@ def test_empty_message_is_rejected_without_calling_the_model(server):
     events = [json.loads(line[6:]) for line in stream.split("\n\n") if line.startswith("data: ")]
     assert [e["type"] for e in events] == ["error"] and "empty message" in events[0]["error"]
     assert json.loads(call(server, "GET", "/api/conversations")[1]) == []  # no chat created
+
+
+def test_a_negative_or_malformed_body_length_is_refused(server):
+    """A negative Content-Length used to pass the size check, and read(-1) reads until the connection closes."""
+    import socket
+
+    for length in ("-1", "abc"):
+        with socket.create_connection(("127.0.0.1", server), timeout=5) as s:
+            s.sendall(f"POST /api/teach HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n"
+                      f"Content-Length: {length}\r\nConnection: close\r\n\r\n".encode())
+            reply = s.recv(200).decode(errors="replace")
+        assert reply.startswith("HTTP/1.0 413") or reply.startswith("HTTP/1.1 413"), reply

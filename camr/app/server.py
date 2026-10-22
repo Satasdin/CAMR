@@ -152,8 +152,11 @@ def make_handler(app: App):
             self.wfile.write(body)
 
         def _body(self) -> dict:
-            n = int(self.headers.get("Content-Length") or 0)
-            if n > MAX_BODY:
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                raise ValueError("bad Content-Length") from None
+            if n < 0 or n > MAX_BODY:  # a negative length would read until the connection closes
                 raise ValueError(f"too large: at most {MAX_BODY // 1_000_000} MB per request")
             return json.loads(self.rfile.read(n) or b"{}") if n else {}
 
