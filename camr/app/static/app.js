@@ -3,7 +3,7 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const app = $("#app"), thread = $("#thread"), input = $("#input");
-const S = { state: null, chats: [], current: null, streaming: null, rememberMode: false, lastSources: null };
+const S = { state: null, chats: [], current: null, streaming: null, rememberMode: false, lastSources: null, about: null, viewing: null, sel: null };
 const KIND = { note: "note", file: "file", chat: "said in chat", learned: "approved answer", web: "looked up online", pack: "knowledge pack" };
 // Answer action icons: 24-px line icons drawn in the text colour (paths adapted from Lucide, ISC licence).
 const svg = (d) => `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -161,6 +161,7 @@ async function openChat(id) {
   $("#chat-title").textContent = S.chats.find((c) => c.id === id)?.title || "";
   thread.innerHTML = "";
   for (const t of turns) { addUser(t.question); const el = addAssistant();
+    if (t.upload) { uploadCard(el, t.upload); continue; }
     if (!(t.sources || []).length && !t.abstained && !t.retrieval_ms) $(".recall", el)?.remove();  // small talk, "remember that"
     else renderRecall(el, t.sources, t.abstained, t.retrieval_ms, t.learned);
     finish(el, t); }
@@ -193,6 +194,7 @@ function memCard(s) {
   return `<div class="mem-card"><div class="meta"><span class="kind ${s.kind}">${KIND[s.kind] || s.kind}</span>${s.title ? `<span class="t">${esc(s.title)}</span>` : ""}
     ${s.url ? `<a class="src" href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(s.url)}">${esc(host(s.url))} ↗</a>` : ""}
     ${s.via_bridge ? `<span title="Pulled in because a recalled note names it">↳ linked</span>` : ""}
+    ${s.kind === "file" ? `<button class="src show-in-file" data-note="${s.note_id}" title="Open the file with this memory's lines highlighted">Show in file</button>` : ""}
     <span class="simbar" title="similarity ${s.similarity}"><i style="width:${Math.max(8, Math.round(100 * s.similarity))}%"></i></span></div>
     <div class="txt">${esc(s.text)}</div></div>`;
 }
@@ -277,14 +279,15 @@ function finish(el, t) {
 
 async function send(text) {
   text = text.trim(); if (!text || S.streaming) return;
-  if (S.rememberMode && !/^\s*remember/i.test(text)) text = "remember that " + text;
+  if (S.rememberMode && !S.about && !/^\s*remember/i.test(text)) text = "remember that " + text;
+  const about = S.about; clearAbout();
   input.value = ""; autosize(); app.classList.remove("empty"); $("#hero").classList.add("hidden");
   addUser(text); const el = addAssistant(); thread.scrollTop = thread.scrollHeight;
   const ctrl = new AbortController(); S.streaming = ctrl; setSending(true);
   let answer = "", conv = S.current;
   try {
     const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-      body: JSON.stringify({ message: text, conversation_id: S.current }) });
+      body: JSON.stringify({ message: text, conversation_id: S.current, about }) });
     const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
     for (;;) {
       const { value, done } = await reader.read(); if (done) break;
@@ -330,21 +333,110 @@ $("#suggestions [data-action=learning]").onclick = () => openPanel("learning");
 document.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); newChat(); } });
 
 // ---------- teaching ----------
+// ---------- files: read, learn, interview, highlight ----------
+const ACCEPT = ".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.tif,.tiff,.bmp";
 async function teachFiles(files) {
-  let total = 0, updated = 0, same = 0;
+  if (!files.length) return;
+  if (S.current == null) {  // the interview happens in a chat
+    S.current = (await api("/api/conversations", { method: "POST", body: {} })).id;
+    app.classList.remove("empty"); $("#hero").classList.add("hidden"); thread.innerHTML = "";
+  }
   for (const f of files) {
+    addUser(`📎 ${f.name}`); const el = addAssistant();
+    $(".recall summary b", el).textContent = `Reading ${f.name}…`; thread.scrollTop = thread.scrollHeight;
     const buf = new Uint8Array(await f.arrayBuffer()); let bin = "";
     for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
     try {
-      const r = await api("/api/teach", { method: "POST", body: { filename: f.name, data_base64: btoa(bin) } });
-      total += r.notes; if (r.unchanged) same++; else if (r.replaced) updated++;
-    }
-    catch (e) { toast(`${f.name}: ${e.message}`); }
+      const r = await api("/api/teach", { method: "POST", body: { filename: f.name, data_base64: btoa(bin), conversation_id: S.current } });
+      uploadCard(el, r);
+    } catch (e) { $(".recall", el)?.remove(); $(".answer", el).classList.remove("cursor"); $(".answer", el).innerHTML = `<p class="muted">⚠ ${esc(f.name)}: ${esc(e.message)}</p>`; }
+    thread.scrollTop = thread.scrollHeight;
   }
-  const extra = [updated ? `${updated} updated to the new version` : "", same ? `${same} already up to date` : ""].filter(Boolean);
-  toast(`✦ Learned ${total} memor${total === 1 ? "y" : "ies"} from ${files.length} file${files.length === 1 ? "" : "s"}`
-        + (extra.length ? ` (${extra.join(", ")})` : "")); refresh();
+  await loadChats(); refresh();
 }
+function uploadCard(el, u) {
+  $(".recall", el)?.remove(); const a = $(".answer", el); a.classList.remove("cursor");
+  const pages = (u.pages || []).filter((p) => p.image);
+  const kept = u.unchanged ? "Already in memory: this version was learned before" : u.notes ? `Kept ${u.notes} memor${u.notes === 1 ? "y" : "ies"} from it` : "";
+  a.innerHTML = `<div class="upload-card">
+    ${pages.length ? `<div class="thumbs n${Math.min(pages.length, 3)}">${pages.slice(0, 3).map((p) => `<button class="thumb" data-page="${p.index}" title="Open ${esc(u.name)}">
+      <img src="/api/files/${u.file_id}/${p.image}" alt="${esc(u.name)}, page ${p.index + 1}"><span>${p.lines ? `${p.lines} lines read` : `page ${p.index + 1}`}</span></button>`).join("")}
+      ${pages.length > 3 ? `<button class="thumb more" data-page="3">+${pages.length - 3} pages</button>` : ""}</div>` : ""}
+    <div class="up-name">📎 ${esc(u.name)}</div>
+    ${u.summary ? md(u.summary) : ""}
+    ${u.problem ? `<p class="small warn-text">${esc(u.problem)}</p>` : ""}
+    ${kept ? `<div class="saved-note">✦ ${kept}</div>` : ""}
+    ${(u.chips || []).length ? `<div class="focus"><span class="muted small">What should I focus on?</span>${u.chips.map((c) => `<button class="chip" data-focus="${esc(c)}">${esc(c)}</button>`).join("")}</div>` : ""}
+    ${(u.questions || []).length ? `<div class="asks">${u.questions.map((q) => `<button class="ask" data-q="${esc(q)}">↳ ${esc(q)}</button>`).join("")}</div>` : ""}
+  </div>`;
+  $$(".thumb", a).forEach((b) => b.onclick = () => openFile(u.file_id, +b.dataset.page));
+  $$(".chip", a).forEach((b) => b.onclick = () => focusOn(u, b.dataset.focus, b));
+  $$(".ask", a).forEach((b) => b.onclick = () => setAbout(u, b.dataset.q));
+}
+async function focusOn(u, what, btn) {
+  btn.disabled = true;
+  const el = addAssistant(); $(".recall", el)?.remove();
+  $(".answer", el).innerHTML = `<p class="muted">Looking for ${esc(what.toLowerCase())} in ${esc(u.name)}…</p>`; thread.scrollTop = thread.scrollHeight;
+  try {
+    const r = await api(`/api/files/${u.file_id}/focus`, { method: "POST", body: { focus: what, conversation_id: S.current } });
+    $(".answer", el).innerHTML = r.facts.length ? md(r.facts.map((f) => "- " + f).join("\n"))
+      + `<div class="saved-note">✦ Kept ${r.facts.length} note${r.facts.length === 1 ? "" : "s"} on ${esc(what.toLowerCase())}</div>`
+      : `<p class="muted">I couldn't find ${esc(what.toLowerCase())} in ${esc(u.name)}.</p>`;
+  } catch (e) { $(".answer", el).innerHTML = `<p class="muted">⚠ ${esc(e.message)}</p>`; }
+  $(".answer", el).classList.remove("cursor"); btn.disabled = false; refresh();
+}
+function setAbout(u, q) {
+  S.about = { file_id: u.file_id, question: q, name: u.name };
+  const bar = $("#about-bar");
+  bar.innerHTML = `<span>↳ Answering about <b>${esc(u.name)}</b>: ${esc(q)}</span><button type="button" class="x" aria-label="Stop answering about this file">✕</button>`;
+  bar.classList.remove("hidden"); $(".x", bar).onclick = clearAbout; input.focus();
+}
+function clearAbout() { S.about = null; $("#about-bar").classList.add("hidden"); }
+async function openFile(fid, page = 0, marks = null) {
+  let f; try { f = await api(`/api/files/${fid}`); } catch (e) { toast(e.message); return; }
+  S.viewing = f; S.sel = null; $("#sel-bar").classList.add("hidden");
+  $("#file-name").textContent = f.name;
+  const hit = new Set((marks || []).map((m) => m.page + ":" + m.box.join(",")));
+  const pct = (b) => `left:${100 * b[0]}%;top:${100 * b[1]}%;width:${100 * b[2]}%;height:${100 * b[3]}%`;
+  $("#file-pages").innerHTML = f.pages.filter((p) => p.image).map((p) => `<div class="vpage" data-page="${p.index}">
+      <img src="/api/files/${fid}/${p.image}" alt="${esc(f.name)}, page ${p.index + 1}" draggable="false">
+      ${p.lines.map((l) => `<i class="ln${hit.has(p.index + ":" + l.box.join(",")) ? " hit" : ""}" style="${pct(l.box)}" title="${esc(l.text)}"></i>`).join("")}
+      <div class="lasso hidden"></div></div>`).join("") || `<p class="muted">This file has no pages to show.</p>`;
+  $("#file-hint").textContent = marks ? `Highlighted: the ${marks.length} line${marks.length === 1 ? "" : "s"} this memory came from. Drag over a part to teach or ask about it.`
+    : "Boxes show what was read. Drag over a part of a page to teach or ask about just that.";
+  $("#file-dlg").showModal();
+  const first = $(".ln.hit", $("#file-pages")) || $(`.vpage[data-page="${page}"]`, $("#file-pages"));
+  first?.scrollIntoView({ block: "center" });
+  $$(".vpage", $("#file-pages")).forEach(lasso);
+}
+function lasso(pg) {
+  const box = $(".lasso", pg); let start = null;
+  const at = (e) => { const r = pg.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; };
+  pg.onpointerdown = (e) => { start = at(e); pg.setPointerCapture(e.pointerId); box.classList.remove("hidden"); draw(start, start); };
+  pg.onpointermove = (e) => { if (start) draw(start, at(e)); };
+  pg.onpointerup = async (e) => {
+    if (!start) return; const end = at(e); const b = [Math.min(start[0], end[0]), Math.min(start[1], end[1]), Math.abs(end[0] - start[0]), Math.abs(end[1] - start[1])]; start = null;
+    if (b[2] < 0.02 || b[3] < 0.01) { box.classList.add("hidden"); return; }
+    const r = await api(`/api/files/${S.viewing.file_id}/select`, { method: "POST", body: { page: +pg.dataset.page, box: b } });
+    S.sel = { page: +pg.dataset.page, box: b, text: r.text };
+    $("#sel-text").textContent = r.text || "No text in that part.";
+    $("#sel-bar").classList.toggle("hidden", false); $("#sel-teach").disabled = $("#sel-ask").disabled = !r.text;
+  };
+  function draw(a, c) { box.style.cssText = `left:${100 * Math.min(a[0], c[0])}%;top:${100 * Math.min(a[1], c[1])}%;width:${100 * Math.abs(c[0] - a[0])}%;height:${100 * Math.abs(c[1] - a[1])}%`; }
+}
+$("#file-close").onclick = () => $("#file-dlg").close();
+$("#sel-teach").onclick = async () => {
+  const r = await api(`/api/files/${S.viewing.file_id}/select`, { method: "POST", body: { page: S.sel.page, box: S.sel.box, teach: true } });
+  toast(r.notes ? "✦ Kept that part as its own memory" : "That part was already in memory"); refresh();
+};
+$("#sel-ask").onclick = () => {
+  $("#file-dlg").close(); input.value = `About “${S.viewing.name}”: “${S.sel.text.replace(/\n/g, " ")}” — `; autosize(); input.focus();
+};
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest(".show-in-file"); if (!b) return;
+  try { const h = await api(`/api/highlight/${b.dataset.note}`); openFile(h.file_id, h.boxes[0]?.page || 0, h.boxes); }
+  catch { toast("This memory has no page to show"); }
+});
 $("#file-input").onchange = (e) => { teachFiles([...e.target.files]); e.target.value = ""; };
 function openTeach() { $("#teach-dlg").showModal(); $("#teach-text").focus(); }
 $("#open-teach").onclick = openTeach;
@@ -476,6 +568,8 @@ $("#open-settings").onclick = () => {
   const s = S.state.settings; $("#set-budget").value = s.token_budget; $("#set-turns").value = s.history_turns; $("#set-chat").checked = s.remember_chat;
   $("#set-online").checked = s.learn_online; $("#set-sleep").checked = s.sleep_when_idle; $("#set-verified").checked = !!s.verified_only;
   $("#set-trust").checked = s.trust_learning !== false;
+  $("#set-vision").innerHTML = `<option value="">None</option>` + S.state.models.filter((m) => !m.embedding)
+    .map((m) => `<option value="${esc(m.name)}" ${m.name === s.vision_model ? "selected" : ""}>${esc(m.name)} (${esc(m.parameters)})</option>`).join("");
   $("#set-check").innerHTML = `<option value="">None</option>` + S.state.models.filter((m) => !m.embedding && m.name !== s.model)
     .map((m) => `<option value="${esc(m.name)}" ${m.name === s.check_model ? "selected" : ""}>${esc(m.name)} (${esc(m.parameters)})</option>`).join("");
   $("#budget-val").textContent = s.token_budget + " tokens"; $("#turns-val").textContent = s.history_turns;
@@ -488,7 +582,7 @@ $("#export-text").onchange = (e) => $("#export-link").href = "/api/export?text="
 $("#settings-save").onclick = async () => {
   await api("/api/settings", { method: "POST", body: { token_budget: +$("#set-budget").value, history_turns: +$("#set-turns").value, remember_chat: $("#set-chat").checked,
     learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked, verified_only: $("#set-verified").checked, check_model: $("#set-check").value,
-    trust_learning: $("#set-trust").checked } });
+    trust_learning: $("#set-trust").checked, vision_model: $("#set-vision").value } });
   toast("Settings saved"); refresh();
 };
 

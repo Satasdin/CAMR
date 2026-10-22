@@ -21,6 +21,10 @@ The server binds to 127.0.0.1 only. The API is used by camr/app/static/app.js:
   POST /api/packs/harvest             {"topic", "pages"}  build a pack from the web and install it (background)
   POST /api/sleep                     consolidate memory now (background; report in /api/learning)
   POST /api/cards/install             {"name"}            DELETE /api/cards/<name>   install / remove a skill-card pack
+  GET  /api/files/<id>                a file's pages and recognised lines   GET /api/files/<id>/page-<n>.jpg  a page
+  POST /api/files/<id>/focus          {"focus", "conversation_id"}  learn what to focus on in a file
+  POST /api/files/<id>/select         {"page", "box", "teach"}      the lines inside a box (and learn them)
+  GET  /api/highlight/<note_id>       where in its file a note came from
 """
 
 from __future__ import annotations
@@ -127,6 +131,9 @@ class App:
         }
 
 
+MAX_BODY = 80_000_000  # bytes per request: a large photo or PDF, base64-encoded
+
+
 def make_handler(app: App):
     class Handler(BaseHTTPRequestHandler):
         server_version = f"CAMR/{VERSION}"
@@ -146,6 +153,8 @@ def make_handler(app: App):
 
         def _body(self) -> dict:
             n = int(self.headers.get("Content-Length") or 0)
+            if n > MAX_BODY:
+                raise ValueError(f"too large: at most {MAX_BODY // 1_000_000} MB per request")
             return json.loads(self.rfile.read(n) or b"{}") if n else {}
 
         def _assistant(self) -> Assistant | None:
@@ -195,6 +204,38 @@ def make_handler(app: App):
             if path == "/api/learning":
                 a = self._assistant()
                 return a and self._json(a.learning())
+            m = re.fullmatch(r"/api/files/([0-9a-f]{16})", path)
+            if m:
+                a = self._assistant()
+                if a:
+                    try:
+                        return self._json(a.file_info(m.group(1)))
+                    except KeyError as exc:
+                        return self._json({"error": str(exc)}, 404)
+                return
+            m = re.fullmatch(r"/api/files/([0-9a-f]{16})/(page-\d+\.jpg|original\.(?:png|jpe?g|webp|gif))", path)
+            if m:
+                a = self._assistant()
+                f = a and (a.home / "files" / m.group(1) / m.group(2))
+                if not f or not f.is_file():
+                    return self._json({"error": "not found"}, 404)
+                data = f.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", mimetypes.guess_type(f.name)[0] or "image/jpeg")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "private, max-age=86400")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            m = re.fullmatch(r"/api/highlight/(\d+)", path)
+            if m:
+                a = self._assistant()
+                if a:
+                    try:
+                        return self._json(a.highlight(int(m.group(1))))
+                    except KeyError as exc:
+                        return self._json({"error": str(exc)}, 404)
+                return
             if path == "/api/export":
                 a = self._assistant()
                 with_text = parse_qs(url.query).get("text", ["0"])[0] == "1"
@@ -226,7 +267,10 @@ def make_handler(app: App):
             if not self._origin_ok():
                 return
             path = urlparse(self.path).path
-            data = self._body()
+            try:
+                data = self._body()
+            except ValueError as exc:
+                return self._json({"error": str(exc)}, 413)
             if path == "/api/setup":
                 app.start_pull(data.get("model") or DEFAULT_EMBED_MODEL)
                 return self._json({"ok": True})
@@ -242,7 +286,11 @@ def make_handler(app: App):
                     return self._json({"error": str(exc)}, 404)
             if path == "/api/teach":
                 if data.get("data_base64") is not None:
-                    return self._json(a.learn_file(data["filename"], base64.b64decode(data["data_base64"])))
+                    try:
+                        return self._json(a.learn_upload(data["filename"], base64.b64decode(data["data_base64"]),
+                                                         conversation_id=data.get("conversation_id")))
+                    except (ValueError, RuntimeError) as exc:
+                        return self._json({"error": str(exc)}, 400)
                 return self._json({"notes": a.teach(data.get("text", ""), title=data.get("title", ""))})
             if path == "/api/packs/install":
                 try:
@@ -256,6 +304,16 @@ def make_handler(app: App):
                     return self._json({"error": str(exc)}, 400)
             if path == "/api/sleep":
                 return self._json(a.sleep_now())
+            m = re.fullmatch(r"/api/files/([0-9a-f]{16})/(focus|select)", path)
+            if m:
+                try:
+                    if m.group(2) == "focus":
+                        return self._json(a.focus(m.group(1), str(data.get("focus", "Key points")),
+                                                  data.get("conversation_id")))
+                    return self._json(a.select(m.group(1), int(data.get("page", 0)), list(data.get("box", [])),
+                                               teach=bool(data.get("teach"))))
+                except (KeyError, ValueError, TypeError) as exc:
+                    return self._json({"error": str(exc)}, 400)
             if path == "/api/cards/install":
                 try:
                     return self._json(a.install_card_pack(str(data.get("name", ""))))
@@ -267,7 +325,7 @@ def make_handler(app: App):
                 changed = "model" in data and data["model"] != a.model
                 a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat",
                                                         "learn_online", "sleep_when_idle", "verified_only",
-                                                        "check_model", "trust_learning")
+                                                        "check_model", "trust_learning", "vision_model")
                                    if k in data})
                 if changed:  # load the newly chosen model now, not on the next question
                     threading.Thread(target=a.warm, daemon=True).start()
@@ -283,7 +341,7 @@ def make_handler(app: App):
             self.send_header("Connection", "close")
             self.end_headers()
             try:
-                for ev in a.events(data.get("message", ""), data.get("conversation_id")):
+                for ev in a.events(data.get("message", ""), data.get("conversation_id"), about=data.get("about")):
                     self.wfile.write(f"data: {json.dumps(ev, default=str)}\n\n".encode())
                     self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):  # user pressed stop

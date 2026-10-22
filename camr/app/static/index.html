@@ -60,11 +60,12 @@
     </section>
 
     <form class="composer" id="composer" autocomplete="off">
+      <div class="about-bar hidden" id="about-bar"></div>
       <div class="composer-box">
         <textarea id="input" rows="1" placeholder="Ask anything, or start with “remember that …”" aria-label="Message"></textarea>
         <div class="composer-row">
           <div class="left">
-            <label class="chip-btn" title="Teach a file (.txt, .md, .pdf)">＋<input type="file" id="file-input" accept=".txt,.md,.pdf" multiple hidden></label>
+            <label class="chip-btn" title="Teach a file: a photo, screenshot, receipt, PDF, Word file or text">＋<input type="file" id="file-input" accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.tif,.tiff,.bmp" multiple hidden></label>
             <button type="button" class="chip-btn toggle" id="remember-toggle" title="Store this message in memory instead of asking">✦ Remember</button>
           </div>
           <div class="right">
@@ -118,9 +119,16 @@
     <p class="muted">Notes and files become memory on this computer. Nothing is uploaded.</p>
     <input id="teach-title" placeholder="Title (optional), e.g. Car, Project X, Mum's birthday">
     <textarea id="teach-text" rows="7" placeholder="Paste anything: facts, meeting notes, recipes, docs…"></textarea>
-    <div class="drop" id="drop-zone">Drop .txt, .md or .pdf files here, or <label class="link">browse<input type="file" id="teach-files" accept=".txt,.md,.pdf" multiple hidden></label></div>
+    <div class="drop" id="drop-zone">Drop photos, screenshots, receipts, PDFs, Word or text files here, or <label class="link">browse<input type="file" id="teach-files" accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.tif,.tiff,.bmp" multiple hidden></label></div>
     <div class="dlg-actions"><button value="cancel" class="ghost">Cancel</button><button id="teach-save" value="default" class="primary">Save to memory</button></div>
   </form>
+</dialog>
+
+<dialog id="file-dlg" class="viewer">
+  <div class="viewer-head"><div><b id="file-name"></b><div class="muted small" id="file-hint"></div></div><button class="ghost sm" id="file-close">Close</button></div>
+  <div class="viewer-pages" id="file-pages"></div>
+  <div class="sel-bar hidden" id="sel-bar"><div class="sel-text" id="sel-text"></div>
+    <div class="sel-actions"><button class="primary sm" id="sel-teach">Teach this part</button><button class="ghost sm" id="sel-ask">Ask about this</button></div></div>
 </dialog>
 
 <dialog id="settings-dlg">
@@ -138,6 +146,9 @@
     <label class="field">Second opinion for unconfirmed facts
       <select id="set-check"><option value="">None</option></select>
       <small>A larger model you have installed reads the same memory when an answer is not confirmed. Its answer replaces the first only if memory (or the answer's own article) confirms it.</small></label>
+    <label class="field">Image understanding
+      <select id="set-vision"><option value="">None</option></select>
+      <small>A model on this computer that can look at photos and screenshots says what each one shows. Text in images is read on this Mac either way.</small></label>
     <label class="switch"><input type="checkbox" id="set-trust"> Learn when to trust each answer</label>
     <small class="muted switch-note">After each answer, a small learned link decides whether to state it, hold back a likely-wrong guess, or ask the second-opinion model above. It learns from your thumbs, separately for each model, and never sends anything online.</small>
     <label class="switch"><input type="checkbox" id="set-verified"> Only state facts memory confirms</label>

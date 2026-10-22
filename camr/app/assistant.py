@@ -25,11 +25,13 @@ The class is UI-agnostic; ``camr/app/server.py`` serves the web front end.
 
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import hashlib
 import json
 import os
 import re
+import shutil
 import sqlite3
 import threading
 import time
@@ -39,7 +41,7 @@ from typing import Iterator
 
 import requests
 
-from camr.app import tiers
+from camr.app import reader, tiers
 from camr.config import Config, LocalModelConfig
 from camr.device import Governor, Limits, index_threshold, probe
 from camr.memory import packs as packs_mod
@@ -121,6 +123,19 @@ CREATE TABLE IF NOT EXISTS app_turn (
     conversation_id INTEGER,
     sources_json   TEXT
 );
+CREATE TABLE IF NOT EXISTS app_upload (
+    file_id    TEXT PRIMARY KEY,    -- sha256 of the file (16 hex): its folder under <home>/files
+    name       TEXT NOT NULL,
+    doc_id     TEXT NOT NULL,       -- file-<name>: its notes; what was learned about it later is file-<name>#…
+    kind       TEXT NOT NULL,       -- text | docx | pdf | image
+    page_count INTEGER,
+    summary    TEXT,
+    chips_json TEXT,
+    questions_json TEXT,
+    seen       TEXT,                -- what the vision model said the image shows
+    problem    TEXT,
+    at         TIMESTAMP NOT NULL
+);
 CREATE TABLE IF NOT EXISTS app_card (
     pack    TEXT NOT NULL,      -- the card pack it came from
     skill   TEXT NOT NULL,      -- the skill its corrections name ("Correction: <skill>")
@@ -193,6 +208,58 @@ Answer concisely.
 
 ### Assistant
 """
+
+# ---------------------------------------------------------------------- uploads (reader.py)
+VISION_HINT = re.compile(r"vl\b|vision|llava|moondream|minicpm-v|gemma3|bakllava|granite3\.2-vision", re.I)
+
+SEE_PROMPT = """Look at this image the user saved so that you can remember it for them later.
+Text found in the image (by text recognition; it may contain errors):
+<<<
+{ocr}
+>>>
+First line: what the image is, starting with "This is" (a receipt, a photo of handwritten notes, a screenshot of …).
+Then the facts worth remembering (names, dates, amounts, totals, places, items), one per line starting with "- ".
+Use only what you can see or read in the image. At most 8 lines in all."""
+
+STUDY_PROMPT = """You have just read a file the user gave you, so that you can remember it for them.
+
+File: {name}
+What it contains:
+<<<
+{excerpt}
+>>>
+
+Reply in exactly this form, and nothing else:
+Summary: <one sentence: what this file is and what it is about>
+Question: <one short question to the user whose answer would help you remember this file correctly later, such as what it is for or whose it is; never ask about something the file already says>
+Question: <another such question, or leave this line out>"""
+
+FOCUS = {"Dates & deadlines": "every date, deadline or appointment, with what it is for",
+         "Numbers & totals": "every amount, total, price, quantity or other number that matters, with what it is",
+         "People": "every person named, with who they are or what they did",
+         "Key points": "the key points worth remembering"}
+
+FOCUS_PROMPT = """From the file below, list {what}. One per line, starting with "- ". Write each as a complete short
+sentence that still makes sense on its own later (say what it belongs to). Only what the file says. If there is
+nothing, write: none
+
+File: {name}
+<<<
+{text}
+>>>"""
+
+
+def default_questions(about: str) -> list[str]:
+    """Questions to ask about a file when the model wrote none."""
+    a = about.lower()
+    if re.search(r"receipt|invoice|bill|total|ksh|kes", a):
+        return ["What was this for?", "Should I keep track of totals like this one?"]
+    if "screenshot" in a:
+        return ["Why did you save this screenshot?"]
+    if re.search(r"handwrit|notes|whiteboard|lecture|class", a):
+        return ["Which subject or class is this from?"]
+    return ["What should I remember this file for?"]
+
 
 # A question is not knowledge about the user, so it is not kept as chat memory (defect D-14).
 _QUESTION = re.compile(r"^\s*(?:what|which|who|whom|whose|when|where|why|how|is|are|was|were|do|does|did|can|could|"
@@ -278,6 +345,8 @@ class Turn:
     link: dict | None = None
     # the skill card that answered: {"skill", "model", "expression", "value"}
     skill: dict | None = None
+    # a file the user gave: {"file_id", "name", "kind", "pages", "summary", "chips", "questions", …}
+    upload: dict | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -378,6 +447,8 @@ class Assistant:
         # The link (tiers.py): after a local answer, state it, decline, or ask the second-opinion model; learned per
         # model from the user's thumbs, starting from the reader bench. Off: every answer is stated.
         self.trust_learning = bool(saved.get("trust_learning", True))
+        # The model that looks at images ("" = none; None = the first installed one that can see).
+        self.vision: str | None = saved.get("vision_model")
         self._links: dict[str, tuple[Link, dict]] = {}
         self._http = session or requests.Session()
         self._lock = threading.RLock()
@@ -423,7 +494,7 @@ class Assistant:
         cols = {r[1] for r in self.store.conn.execute("PRAGMA table_info(app_turn)")}
         for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT"), ("learned_json", "TEXT"),
                          ("ask_to_teach", "INTEGER"), ("verification_json", "TEXT"), ("link_json", "TEXT"),
-                         ("skill_json", "TEXT")):
+                         ("skill_json", "TEXT"), ("upload_json", "TEXT")):
             if col not in cols:  # stores created by the first app version
                 self.store.conn.execute(f"ALTER TABLE app_turn ADD COLUMN {col} {typ}")
         self.engine = MemoryEngine.from_config(self.cfg, store=self.store, embedder=self.embedder,
@@ -454,7 +525,8 @@ class Assistant:
                 "remember_chat": self.remember_chat, "embed_model": self.embed_model,
                 "learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle,
                 "verified_only": self.verified_only, "check_model": self.check_model,
-                "trust_learning": self.trust_learning, "min_similarity": self.engine.min_similarity}
+                "trust_learning": self.trust_learning, "vision_model": self.vision_model(),
+                "min_similarity": self.engine.min_similarity}
 
     def warm(self, keep_alive: str = "30m") -> bool:
         """Load the chat model into memory ahead of the first question.
@@ -475,14 +547,17 @@ class Assistant:
 
     def save_settings(self, **changes) -> None:
         allowed = {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "sleep_when_idle",
-                   "verified_only", "check_model", "trust_learning"}
+                   "verified_only", "check_model", "trust_learning", "vision_model"}
         for k, v in changes.items():
-            if k in allowed:
+            if k == "vision_model":
+                self.vision = v or ""
+            elif k in allowed:
                 setattr(self, k, v)
         if "token_budget" in changes:
             self.engine.budgeter.budget = int(self.token_budget)
         data = self.settings()
         data.pop("min_similarity")
+        data["vision_model"] = self.vision  # None (pick the first that can see) is kept as such
         self.settings_path.write_text(json.dumps(data, indent=2))
 
     # ------------------------------------------------------------ teaching
@@ -508,44 +583,257 @@ class Assistant:
         return self.learn_file(name, data)["notes"]
 
     def learn_file(self, name: str, data: bytes) -> dict:
-        """Learn a file. Teaching a file of the same name again replaces what was learned from it if its text
-        changed (an edited file used to be skipped as already ingested, so memory kept the old version), and does
-        nothing if it did not. Returns {"notes", "replaced" (notes of the old version removed), "unchanged"}."""
-        if name.lower().endswith(".pdf"):
-            try:
-                from pypdf import PdfReader  # type: ignore
-            except ImportError as exc:
-                raise RuntimeError("reading PDFs needs `pip install pypdf`") from exc
-            import io
+        """Learn a file. Teaching a file of the same name again replaces what was learned from it if it changed (an
+        edited file used to be skipped as already ingested, so memory kept the old version), and does nothing if it
+        did not. Returns {"notes", "replaced" (notes of the old version removed), "unchanged"}."""
+        r = self.learn_upload(name, data, study=False)
+        return {"notes": r["notes"], "replaced": r["replaced"], "unchanged": r["unchanged"]}
 
-            text = "\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(data)).pages)
-        else:
-            text = data.decode("utf-8", errors="replace")
-        doc_id = f"file-{name}"
-        digest = hashlib.sha256(text.strip().encode()).hexdigest()
+    # ------------------------------------------------------------ uploads: read, learn, interview, highlight
+    def learn_upload(self, name: str, data: bytes, conversation_id: int | None = None, study: bool = True) -> dict:
+        """Read a file (text, Word, PDF, photo, screenshot: camr/app/reader.py), learn it, and say what was learned
+        and what to ask: {"file_id", "name", "kind", "notes", "replaced", "unchanged", "pages", "summary", "chips",
+        "questions", "seen", "problem"}. With a conversation, the summary and questions are posted in it."""
+        name = Path(name).name or "file"
+        stem, doc_id = Path(name).stem, f"file-{name}"
+        fid = reader.file_id(data)
+        digest = hashlib.sha256(data).hexdigest()
         with self._lock:
             c = self.store.conn
-            row = c.execute("SELECT sha256 FROM app_file WHERE doc_id=?", (doc_id,)).fetchone()
-            old = [r[0] for r in c.execute("SELECT source_id FROM source WHERE dataset='file' AND doc_id=?", (doc_id,))]
-            if row and row[0] == digest and old:
-                return {"notes": 0, "replaced": 0, "unchanged": True}
-            st = self.governor.check(upcoming_mb=len(text) * 4 / 1e6)  # before the old version is removed
-            if not st.ok:
-                raise RuntimeError(f"not stored: this device is at its limit ({st.reason}: {st.detail})")
-            # The old version goes first: notes it shares with the new one would otherwise be rejected as duplicates
-            # and then lost with it.
+            prev = c.execute("SELECT sha256 FROM app_file WHERE doc_id=?", (doc_id,)).fetchone()
+            old = self._file_sources(doc_id)
+            if prev and prev[0] == digest and old:
+                return {**(self._upload(fid) or {"file_id": fid, "name": name}), "notes": 0, "replaced": 0,
+                        "unchanged": True}
+            before = [r[0] for r in c.execute("SELECT file_id FROM app_upload WHERE doc_id=?", (doc_id,))]
+        folder = self.home / "files" / fid
+        reading = reader.read(name, data, folder, reader.see_binary(self.home))  # unlocked: recognition takes seconds
+        seen = self.describe_image(folder, reading) if reading.kind == "image" else ""
+        st = self.governor.check(upcoming_mb=(len(reading.text) + len(seen)) * 4 / 1e6)
+        if not st.ok:
+            raise RuntimeError(f"not stored: this device is at its limit ({st.reason}: {st.detail})")
+        with self._lock:
+            # the old version goes first: notes it shares with the new one would otherwise be rejected as duplicates
             replaced = sum(self._delete_source(sid) for sid in old)
-            notes = self.teach(text, title=Path(name).stem, kind="file", doc_id=doc_id)
+            notes = self.teach(reading.text, title=stem, kind="file", doc_id=doc_id) if reading.text.strip() else 0
+            if seen:
+                notes += self.teach(f"{stem}: {seen}", title=f"{stem} (what it shows)", kind="file",
+                                    doc_id=f"{doc_id}#seen")
             with c:
                 c.execute("INSERT OR REPLACE INTO app_file(doc_id, sha256, at) VALUES (?, ?, ?)", (doc_id, digest, _now()))
-        return {"notes": notes, "replaced": replaced, "unchanged": False}
+                c.execute("DELETE FROM app_upload WHERE doc_id=?", (doc_id,))
+        reading.save(folder)
+        for old_fid in set(before) - {fid}:  # the previous version's pages
+            shutil.rmtree(self.home / "files" / old_fid, ignore_errors=True)
+        info = {"summary": "", "chips": [], "questions": []}
+        if study:
+            info = self._study(name, reading, seen)
+        with self._lock, self.store.conn:
+            self.store.conn.execute(
+                "INSERT OR REPLACE INTO app_upload(file_id, name, doc_id, kind, page_count, summary, chips_json,"
+                " questions_json, seen, problem, at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (fid, name, doc_id, reading.kind, reading.page_count or len(reading.pages), info["summary"],
+                 json.dumps(info["chips"]), json.dumps(info["questions"]), seen, reading.problem, _now()))
+        out = {**self._upload(fid), "notes": notes, "replaced": replaced, "unchanged": False}
+        if conversation_id is not None and study:
+            with self._lock, self.store.conn:  # a chat that starts with a file is named after it
+                self.store.conn.execute(
+                    "UPDATE app_conversation SET title=? WHERE conversation_id=? AND title='New chat' AND NOT EXISTS"
+                    " (SELECT 1 FROM app_turn WHERE conversation_id=?)", (f"📎 {name}"[:60], conversation_id,
+                                                                          conversation_id))
+            turn = Turn(turn_id=None, question=f"📎 {name}", answer=out["summary"], conversation_id=conversation_id,
+                        upload=out, saved_to_memory=notes > 0)
+            out["turn_id"] = turn.turn_id = self._log(turn)
+        return out
+
+    def _file_sources(self, doc_id: str) -> list[int]:
+        """A file's sources: its text, and what was learned about it later ("<doc_id>#…")."""
+        return [r[0] for r in self.store.conn.execute(
+            "SELECT source_id FROM source WHERE dataset='file' AND (doc_id=? OR substr(doc_id, 1, ?) = ?)",
+            (doc_id, len(doc_id) + 1, doc_id + "#"))]
+
+    @_locked
+    def _upload(self, fid: str) -> dict | None:
+        r = self.store.conn.execute(
+            "SELECT name, kind, page_count, summary, chips_json, questions_json, seen, problem FROM app_upload WHERE"
+            " file_id=?", (fid,)).fetchone()
+        if r is None:
+            return None
+        folder = self.home / "files" / fid
+        try:
+            pages = [{"index": p.index, "image": p.image, "width": p.width, "height": p.height, "lines": len(p.lines)}
+                     for p in reader.Reading.load(folder).pages]
+        except (OSError, ValueError, KeyError):
+            pages = []
+        return {"file_id": fid, "name": r[0], "kind": r[1], "page_count": r[2], "summary": r[3],
+                "chips": json.loads(r[4] or "[]"), "questions": json.loads(r[5] or "[]"), "seen": r[6] or "",
+                "problem": r[7] or "", "pages": pages}
+
+    def vision_model(self) -> str:
+        """The installed model that can look at images ("" if none): the one chosen in Settings, else the first
+        installed model whose name says it sees (Qwen2.5-VL, Gemma 3, LLaVA, Moondream, …)."""
+        if self.vision is not None:
+            return self.vision
+        at, found = getattr(self, "_vision_auto", (0.0, ""))
+        if time.time() - at < 60:  # settings are read on every refresh: ask Ollama at most once a minute
+            return found
+        try:
+            names = [m["name"] for m in installed_models(self.host, session=self._http) if not m["embedding"]]
+            found = next((n for n in names if VISION_HINT.search(n)), "")
+        except Exception:  # noqa: BLE001  (Ollama not reachable: no vision now; asked again later)
+            found = ""
+        self._vision_auto = (time.time(), found)
+        return found
+
+    def describe_image(self, folder: Path, reading) -> str:
+        """What an image shows, in a few short lines, by the vision model, told the text recognised in it (so it
+        reads numbers and names rather than guessing them). "" when no vision model is installed."""
+        model = self.vision_model()
+        page = reading.pages[0] if reading.pages else None
+        if not model or page is None or not page.image:
+            return ""
+        img = base64.b64encode((folder / page.image).read_bytes()).decode()
+        ocr = "\n".join(ln["text"] for ln in page.lines)[:2500] or "(no text found)"
+        try:
+            resp = self._http.post(f"{self.host}/api/generate", json={
+                "model": model, "prompt": SEE_PROMPT.format(ocr=ocr), "images": [img], "stream": False,
+                "options": {"temperature": 0, "num_ctx": 4096, "num_predict": 300}}, timeout=600)
+            resp.raise_for_status()
+            return (resp.json().get("response") or "").strip()
+        except Exception:  # noqa: BLE001  (the text is still learned; the description is extra)
+            return ""
+
+    def _study(self, name: str, reading, seen: str) -> dict:
+        """The interview after an upload: a one-line summary, what to focus on, and one or two questions whose
+        answers help remember the file correctly (the local model writes them; set questions stand in)."""
+        excerpt = ((seen + "\n\n") if seen else "") + reading.text[:3000]
+        chips = reader.focus_chips(reading.text + "\n" + seen)
+        summary, questions = "", []
+        if self.model and excerpt.strip():
+            try:
+                out = self._runner().generate(STUDY_PROMPT.format(name=name, excerpt=excerpt)).text
+            except Exception:  # noqa: BLE001
+                out = ""
+            for line in out.splitlines():
+                line = line.strip().lstrip("-*• ").strip()
+                if line.lower().startswith("summary:") and not summary:
+                    summary = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("question:"):
+                    q = line.split(":", 1)[1].strip()
+                    if q.endswith("?") and len(q) < 160 and q not in questions:
+                        questions.append(q)
+        if not summary:
+            first = (seen.splitlines() or [""])[0].strip()
+            summary = first or (f"I read {name}: {len(reading.text.split()):,} words"
+                                + (f" on {reading.page_count} pages" if reading.page_count > 1 else "") + ".")
+        if not questions:
+            questions = default_questions(f"{name} {seen} {summary}")
+        return {"summary": summary, "chips": chips, "questions": questions[:2]}
+
+    def _reading(self, fid: str):
+        if not re.fullmatch(r"[0-9a-f]{16}", fid or ""):
+            raise KeyError(f"no file {fid}")
+        try:
+            return reader.Reading.load(self.home / "files" / fid)
+        except OSError as exc:
+            raise KeyError(f"no file {fid}") from exc
+
+    def file_info(self, fid: str) -> dict:
+        """A file's pages with every recognised line and its box, for the viewer."""
+        info, reading = self._upload(fid), self._reading(fid)
+        return {**(info or {"file_id": fid, "name": reading.name}),
+                "pages": [{"index": p.index, "image": p.image, "width": p.width, "height": p.height,
+                           "lines": [{"text": ln["text"], "box": ln["box"]} for ln in p.lines]} for p in reading.pages]}
+
+    def focus(self, fid: str, what: str, conversation_id: int | None = None) -> dict:
+        """Learn what the user asked to focus on in a file ("Dates & deadlines", …) as short notes of their own."""
+        reading, info = self._reading(fid), self._upload(fid) or {}
+        name = info.get("name") or reading.name
+        ask = FOCUS.get(what, FOCUS["Key points"])
+        text = ((info.get("seen", "") + "\n\n") if info.get("seen") else "") + reading.text[:6000]
+        facts = []
+        if self.model and text.strip():
+            try:
+                out = self._runner().generate(FOCUS_PROMPT.format(what=ask, name=name, text=text)).text
+            except Exception:  # noqa: BLE001
+                out = ""
+            for line in out.splitlines():
+                line = re.sub(r"^\s*(?:[-*•]|\d+[.)])\s*", "", line).strip()
+                if line and line.lower().rstrip(".") != "none" and len(line) < 300 and line not in facts:
+                    facts.append(line)
+        notes = 0
+        if facts:  # kept with what the file is, so each note can be found and read on its own later
+            about = f"From {name}" + (f" ({info['summary'].rstrip('.')})" if info.get("summary") else "") + ":\n"
+            notes = self.teach(about + "\n".join(facts), title=f"{Path(name).stem} ({what.lower()})", kind="file",
+                               doc_id=f"file-{name}#focus-{re.sub(r'[^a-z]+', '-', what.lower()).strip('-')}")
+        answer = ("\n".join(f"- {f}" for f in facts) if facts else f"I couldn't find {what.lower()} in {name}.")
+        out = {"facts": facts, "notes": notes, "focus": what}
+        if conversation_id is not None:
+            out["turn_id"] = self._log(Turn(turn_id=None, question=f"Focus on {what.lower()} in {name}", answer=answer,
+                                            conversation_id=conversation_id, saved_to_memory=notes > 0))
+        return out
+
+    def _about_file(self, about: dict, reply: str, conversation_id: int) -> Iterator[dict]:
+        """The user's answer to a question asked about a file: kept as a note that belongs to the file."""
+        info = self._upload(str(about.get("file_id", ""))) or {}
+        name = info.get("name") or "the file"
+        q = str(about.get("question", "")).strip()
+        with self._lock:
+            k = len(self._file_sources(f"file-{name}"))
+        what = f" ({info['summary'].rstrip('.')})" if info.get("summary") else ""  # so the note stands on its own
+        notes = self.teach(f"About the file {name}{what}: " + (f"asked “{q}”, the user said: " if q else "") + reply,
+                           title=f"{Path(name).stem} (what you told me)", kind="file", doc_id=f"file-{name}#told-{k}")
+        answer = f"Got it. I'll remember that with {name}." if notes else "I already had that."
+        yield {"type": "recall", "sources": [], "abstained": False, "retrieval_ms": 0.0, "small_talk": True,
+               "conversation_id": conversation_id, "learned": None}
+        yield {"type": "token", "text": answer}
+        turn = Turn(turn_id=None, question=reply, answer=answer, conversation_id=conversation_id,
+                    saved_to_memory=notes > 0)
+        turn.turn_id = self._log(turn)
+        yield {"type": "done", "turn": turn.as_dict()}
+
+    def select(self, fid: str, page: int, box: list[float], teach: bool = False) -> dict:
+        """The lines inside a box drawn on a page; with ``teach``, learned as a note of their own."""
+        reading = self._reading(fid)
+        lines = reader.lines_within(reading, int(page), [float(v) for v in box][:4])
+        text = reader.row_text(lines)
+        notes = 0
+        if teach and text.strip():
+            with self._lock:
+                k = len(self._file_sources(f"file-{reading.name}"))
+            notes = self.teach(text, title=f"{Path(reading.name).stem} (part you chose)", kind="file",
+                               doc_id=f"file-{reading.name}#part-{k}")
+        return {"text": text, "lines": lines, "notes": notes}
+
+    @_locked
+    def highlight(self, note_id: int) -> dict:
+        """Where a note came from in its file: the file, and the boxes of the lines the note holds."""
+        row = self.store.conn.execute("SELECT n.text, s.doc_id FROM note n JOIN source s USING(source_id) WHERE"
+                                      " n.note_id=? AND s.dataset='file'", (int(note_id),)).fetchone()
+        if row is None:
+            raise KeyError(f"note {note_id} is not from a file")
+        text, doc_id = row
+        up = self.store.conn.execute("SELECT file_id FROM app_upload WHERE doc_id=?",
+                                     (doc_id.split("#", 1)[0],)).fetchone()
+        if up is None:
+            raise KeyError(f"the file of note {note_id} has no pages")
+        reading = self._reading(up[0])
+        return {"file_id": up[0], "name": reading.name, "boxes": reader.lines_in(reading, text)}
 
     @_locked
     def forget(self, source_id: int) -> int:
         with self.store.conn:  # a forgotten file is learned afresh if it is taught again
             self.store.conn.execute("DELETE FROM app_file WHERE doc_id IN (SELECT doc_id FROM source WHERE"
                                     " source_id=? AND dataset='file')", (source_id,))
+        row = self.store.conn.execute("SELECT dataset, doc_id FROM source WHERE source_id=?", (source_id,)).fetchone()
         removed = self._delete_source(source_id)
+        if row and row[0] == "file" and "#" not in (row[1] or ""):
+            # a file: also what was learned about it later, and its pages
+            removed += sum(self._delete_source(sid) for sid in self._file_sources(row[1]))
+            for (fid,) in self.store.conn.execute("SELECT file_id FROM app_upload WHERE doc_id=?", (row[1],)).fetchall():
+                shutil.rmtree(self.home / "files" / fid, ignore_errors=True)
+            with self.store.conn:
+                self.store.conn.execute("DELETE FROM app_upload WHERE doc_id=?", (row[1],))
         if removed and not self._fts_secure:
             with self.store.conn:  # merge the keyword index so the deleted words leave it (and its pages are wiped)
                 self.store.conn.execute("INSERT INTO note_fts(note_fts) VALUES ('optimize')")
@@ -599,12 +887,14 @@ class Assistant:
         rows = self.store.conn.execute(
             "SELECT turn_id, question, answer, notes_used, abstained, grounded, retrieval_ms, generation_ms,"
             " prompt_tokens, feedback, sources_json, learned_json, ask_to_teach, verification_json, link_json,"
-            " skill_json FROM app_turn WHERE conversation_id=? ORDER BY turn_id", (conversation_id,)).fetchall()
+            " skill_json, upload_json FROM app_turn WHERE conversation_id=? ORDER BY turn_id",
+            (conversation_id,)).fetchall()
         return [Turn(turn_id=r[0], question=r[1], answer=r[2], abstained=bool(r[4]), grounded=r[5],
                      retrieval_ms=r[6] or 0.0, generation_ms=r[7] or 0.0, prompt_tokens=r[8], feedback=r[9],
                      conversation_id=conversation_id, learned=json.loads(r[11]) if r[11] else None,
                      ask_to_teach=bool(r[12]), verification=json.loads(r[13]) if r[13] else None,
                      link=json.loads(r[14]) if r[14] else None, skill=json.loads(r[15]) if r[15] else None,
+                     upload=json.loads(r[16]) if r[16] else None,
                      sources=[Source(**s) for s in json.loads(r[10] or "[]")]).as_dict() for r in rows]
 
     # ------------------------------------------------------------ asking
@@ -656,7 +946,7 @@ class Assistant:
                     raise RuntimeError(chunk["error"])
                 yield chunk.get("response", ""), chunk
 
-    def events(self, question: str, conversation_id: int | None = None) -> Iterator[dict]:
+    def events(self, question: str, conversation_id: int | None = None, about: dict | None = None) -> Iterator[dict]:
         """The answer as a stream of events: recall (what memory was read), token…, done (the Turn)."""
         question = question.strip()
         if not question:
@@ -682,6 +972,9 @@ class Assistant:
             yield {"type": "done", "turn": turn.as_dict()}
             return
 
+        if about and about.get("file_id"):  # an answer to a question asked about a file
+            yield from self._about_file(about, question, conversation_id)
+            return
         if is_small_talk(question):
             yield from self._small_talk(question, conversation_id)
             return
@@ -1016,12 +1309,13 @@ class Assistant:
             cur = self.store.conn.execute(
                 "INSERT INTO app_turn(at, model, question, answer, notes_used, abstained, grounded, retrieval_ms,"
                 " generation_ms, prompt_tokens, conversation_id, sources_json, learned_json, ask_to_teach,"
-                " verification_json, link_json, skill_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " verification_json, link_json, skill_json, upload_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (_now(), self.model or "-", turn.question, turn.answer, len(turn.sources), int(turn.abstained),
                  turn.grounded, turn.retrieval_ms, turn.generation_ms, turn.prompt_tokens, turn.conversation_id,
                  json.dumps([asdict(s) for s in turn.sources]), json.dumps(turn.learned) if turn.learned else None,
                  int(turn.ask_to_teach), json.dumps(turn.verification) if turn.verification else None,
-                 json.dumps(turn.link) if turn.link else None, json.dumps(turn.skill) if turn.skill else None))
+                 json.dumps(turn.link) if turn.link else None, json.dumps(turn.skill) if turn.skill else None,
+                 json.dumps(turn.upload) if turn.upload else None))
             if turn.conversation_id is not None:
                 self.store.conn.execute("UPDATE app_conversation SET updated_at=? WHERE conversation_id=?",
                                         (_now(), turn.conversation_id))
