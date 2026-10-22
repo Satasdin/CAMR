@@ -27,7 +27,9 @@ CACHES = [("results/verified/answers.sqlite", "F24: Kimi K3 second reader and cl
           ("results/verified/judge.sqlite", "F24/F28: Kimi K3 as judge of every answer exact matching marked wrong (verified answers and RAG pipelines)"),
           ("results/math/answers.sqlite", "F27: Kimi K3 learning formulas from corrections (incl. two stopped runs)"),
           ("results/ragbench/answers.sqlite", "F28: Kimi K3 as the reader of the RAG pipelines and CAMR"),
-          ("results/agentic/answers.sqlite", "F29: Kimi K3 in the n8n automations: support desk, agent tasks, current events (incl. writing the 50 news questions)")]
+          ("results/agentic/answers.sqlite", "F29: Kimi K3 in the n8n automations: support desk, agent tasks, current events (incl. writing the 50 news questions)"),
+          ("results/readers/answers.sqlite", "Reader bench: Kimi K3 answering 287 questions alone and with memory"),
+          ("results/readers/judge.sqlite", "Reader bench: Kimi K3 judging every reader's answers")]
 
 
 def usd(model: str, pin: int, pout: int) -> float:
@@ -64,16 +66,20 @@ def main() -> None:
         for model, (n, pin, pout, reason) in agg.items():
             rows.append({"source": path, "what": what, "model": model, "calls": n, "input_tokens": pin,
                          "output_tokens": pout, "reasoning_tokens": reason, "usd": round(usd(model, pin, pout), 4)})
+    # a source this checkout cannot read (its database stayed on the machine that ran it) keeps its last recorded rows
+    path = ROOT / "results/costs/kimi_costs.json"
+    if path.exists():
+        seen = {r["source"] for r in rows}
+        rows += [dict(r, carried=True) for r in json.loads(path.read_text())["rows"] if r["source"] not in seen]
     total = {"calls": sum(r["calls"] for r in rows), "input_tokens": sum(r["input_tokens"] for r in rows),
              "output_tokens": sum(r["output_tokens"] for r in rows), "usd": round(sum(r["usd"] for r in rows), 2)}
     out = {"prices_usd_per_million": PRICE, "price_source": "https://platform.kimi.ai/docs/pricing/chat (15 Oct 2026)",
            "rows": rows, "total": total}
-    path = ROOT / "results/costs/kimi_costs.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(out, indent=1))
     for r in rows:
         print(f"{r['usd']:8.2f} USD  {r['calls']:5d} calls  in {r['input_tokens']:>9,}  out {r['output_tokens']:>9,}  "
-              f"{r['model']:10s} {r['what']}")
+              f"{r['model']:10s} {r['what']}{' (carried)' if r.get('carried') else ''}")
     print(f"{total['usd']:8.2f} USD  {total['calls']:5d} calls  in {total['input_tokens']:>9,}  "
           f"out {total['output_tokens']:>9,}  TOTAL")
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -32,7 +33,42 @@ def facts() -> dict:
     f["rag"] = {k: ch5.rag_summary(d) for k, d in ch5.rag_runs().items()}
     f["costs"] = ch5.costs() or {}
     f["sweep"] = ch5.sweep_models()
+    f["skills"] = J("results/skills/skill_cards.json") or {}
+    f["readers"] = ch5.reader_rows() or []
+    f["abilities"] = by_ability()
+    f["link"] = J("results/link/link_baseline.json") or {}
+    f["tests"] = ch5.test_count()
     return f
+
+
+LOCAL = ("qwen2.5:0.5b", "qwen2.5:1.5b", "qwen2.5:3b")
+
+
+def pc(x: float) -> str:
+    return f"{100 * x:.0f}%"
+
+
+def span(xs: list[float]) -> str:
+    """'6%–12%' for a range of shares (one value when they round the same)."""
+    lo, hi = pc(min(xs)), pc(max(xs))
+    return lo if lo == hi else f"{lo}–{hi}"
+
+
+def by_ability(tag: str = "baseline") -> dict[str, dict[str, float]]:
+    """Right with memory, per ability and reader, on the reader bench (results/readers/answers_<tag>.jsonl)."""
+    p = ch5.RES / f"readers/answers_{tag}.jsonl"
+    n: dict[str, dict[str, list[int]]] = {}
+    if p.exists():
+        for r in map(json.loads, p.read_text().splitlines()):
+            if r["memory"] and r["correct"] is not None:
+                k = n.setdefault(r["ability"], {}).setdefault(r["reader"], [0, 0])
+                k[0] += bool(r["correct"])
+                k[1] += 1
+    return {a: {rd: right / total for rd, (right, total) in v.items()} for a, v in n.items()}
+
+
+def local_range(F: dict, ability: str) -> str:
+    return span([F["abilities"][ability][rd] for rd in LOCAL if rd in F["abilities"].get(ability, {})] or [0.0])
 
 
 def build(template: Path, out: Path) -> Path:
@@ -52,13 +88,15 @@ def build(template: Path, out: Path) -> Path:
         "alternatives a developer would actually choose between: the model alone, a frontier cloud model, modern "
         "retrieval-augmented generation, context stuffing and fine-tuning. This chapter states what the evidence "
         "established (section 6.2), what should be done because of it (6.3), and what remains open (6.4). It adds no "
-        "new results; every statement refers to the section of Chapter 5 that supports it.")
+        "new results; every statement refers to the section of Chapter 5 that supports it. The results settle into "
+        "one design, a frozen reader with a learning memory in three tiers (notes for facts, skill cards for "
+        "procedures, and a link that learns when to trust each model), and the conclusions end on it.")
 
     # ------------------------------------------------------------ 6.2
     c.h2("Conclusions")
     c.p("The conclusions answer the research questions of section 1.4 in order, then the questions the later work "
         "added: whether answers can be trusted, whether a frozen model can keep learning, and whether automations need "
-        "such an engine at all.")
+        "such an engine at all. They end with how the pieces fit together.")
     c.h3("Research Question i: Which Memory Techniques Work for a Small Model on a Device")
     c.p("Cheap, selective techniques anchored in what the question names work; the weighted composites of large-model "
         "agent memories do not. Recency and importance scoring lowered full-support recall on both multi-hop "
@@ -98,33 +136,46 @@ def build(template: Path, out: Path) -> Path:
         "hardware, which makes 1.5–4B the useful range on a CPU-only laptop (section ⟦sec_models⟧). In the cloud, the "
         f"whole study spent {usd(tot.get('usd'))} on {tot.get('calls', 0):,} calls (section ⟦sec_cost⟧).")
     c.h3("Beyond the Research Questions")
-    c.p(CH6_EXTRA(F))
+    for para in re.split(r" (?=\*\*[A-Z][^*]*\?\*\*)", CH6_EXTRA(F).strip()):  # one paragraph per question
+        c.p(para)
+    tiers = THREE_TIERS(F)
+    if tiers:
+        c.h3("The Frozen Reader and the Learning Memory")
+        for para in tiers:
+            c.p(para)
     c.h3("Contribution and Boundaries")
     sw = F["sweep"]
     c.p("The study contributes: (1) an open-source memory engine whose read path is measured to suit small models; "
         "(2) verified answering that states a fact only when memory supports it, with its source; (3) learning "
-        "without training, by lookup and by correction, measured against fine-tuning and token-level memory; (4) a "
-        f"size map of {len(sw)} models ({sw[0]['params']:.1f}B to {sw[-1]['params']:.0f}B) and a reader study showing "
-        "where memory pays off; (5) a head-to-head comparison "
-        "with eight modern RAG pipelines on one corpus; (6) automations in n8n and a tool-using agent that show where "
-        "an engine is needed and what it costs; and (7) CAMR Personal, a released desktop application. The conclusions "
-        "hold for English questions, frozen quantised models on 4-core CPUs with 16 GB of memory, the sample sizes "
-        "reported, invented company data and a stochastic cloud reference sampled once. They do not yet extend to real "
-        "users' data, to phones, or to real customer traffic.")
+        "without training, by lookup and by correction, measured against fine-tuning and token-level memory; (4) "
+        "skill cards, procedures kept as small adapters that memory attaches per question, measured against one "
+        "adapter merged into the model; (5) a link that learns from feedback, per model, when to state an answer, "
+        "decline or ask the cloud model; (6) a size map of "
+        f"{len(sw)} models ({sw[0]['params']:.1f}B to {sw[-1]['params']:.0f}B) and a reader bench of four readers on "
+        "one memory, showing where memory pays off; (7) a head-to-head comparison with eight modern RAG pipelines on "
+        "one corpus; (8) automations in n8n and a tool-using agent that show where an engine is needed and what it "
+        "costs; and (9) CAMR Personal, a released desktop application. The conclusions hold for English questions, "
+        "frozen quantised models on 4-core CPUs with 16 GB of memory, the sample sizes reported, invented company "
+        "data and a stochastic cloud reference sampled once. Skill cards were measured on one 0.5B model and "
+        f"{len(F['skills'].get('card_training', {})) or 'ten'} formula families, and the link on judged benchmark "
+        "answers rather than real users' feedback. The conclusions "
+        "do not yet extend to real users' data, to phones, or to real customer traffic.")
     c.table("Alignment from objectives to evidence and conclusions",
             ["Objective (section 1.3.2)", "Evidence (Chapter 5)", "Conclusion", "Status"],
             [["i. Investigate capability gaps and memory techniques", "⟦sec_retrieval⟧, ⟦sec_gap⟧, ⟦sec_ragresult⟧",
               "Selective, name-anchored techniques transfer; composite scoring does not; the gap is knowledge and "
               "reading, not reasoning", "Met"],
              ["ii. Design a lightweight memory engine", "⟦sec_impl⟧, ⟦sec_verify_impl⟧, ⟦sec_tests⟧, ⟦sec_defects⟧",
-              "Implemented, tested (203 tests) and changed on evidence; 38 defects found and handled", "Met"],
+              f"Implemented, tested ({F['tests'] or 'over 200'} tests) and changed on evidence; 40 numbered defects, "
+              "and six more from a code review of the application and the skill-card router, found and handled",
+              "Met"],
              ["iii. Develop it on a consumer laptop without a GPU", "⟦sec_env⟧, ⟦sec_bulk⟧, ⟦sec_appres⟧",
               "Runs on 4 cores in under 1 GB beside the model; NFR-02 not met for 0.5B", "Met on laptop-class "
               "machines, not one physical laptop"],
              ["iv. Evaluate gap closed by task type", "⟦sec_models⟧, ⟦sec_gap⟧, ⟦sec_verified⟧",
               "Facts closed; multi-hop matched from 3B; reasoning not closed", "Met"],
              ["v. Determine the best token budget", "⟦sec_gap⟧, ⟦sec_policy⟧", "128 tokens (facts), 512 (multi-hop) "
-              "for 0.5B; set per device and per question", "Met"]],
+              "for 0.5B; set per device and per question", "Met"]] + ALIGN_TIERS(F),
             [3.8, 3.6, 5.6, 2.9], size=9)
 
     # ------------------------------------------------------------ 6.3
@@ -149,11 +200,16 @@ def build(template: Path, out: Path) -> Path:
               "gate; avoid recency weighting for independent questions; tune budgets to the reader",
               "⟦sec_retrieval⟧, ⟦sec_policy⟧"],
              ["6", "Teams choosing between fine-tuning and memory", "Use memory for knowledge that changes or must "
-              "be deleted; fine-tune only for a fixed output format where nothing else must be kept",
-              "⟦sec_learning⟧: LoRA lost GSM8K (13.3% → 0%)"],
-             ["7", "Researchers", "Report hallucination (wrong stated answers) beside accuracy, judge aliases, and "
-              "use held-out sets answered once", "⟦sec_verified⟧, ⟦sec_limits⟧"],
-             ["8", "The student and supervisor", "Obtain ethics approval before collecting feedback from real users "
+              "be deleted; when a procedure must be trained, keep it as a card that memory attaches per question "
+              "rather than merging it into the model", "⟦sec_learning⟧: LoRA lost GSM8K (13.3% → 0%); "
+              "⟦sec_skills⟧: cards beat the merged adapter and disturbed fewer unrelated answers"],
+             ["7", "Developers of local assistants with a cloud fallback", "Learn when to trust each model from "
+              "users' feedback (a link per model) and price the cloud call explicitly, instead of stating every local "
+              "answer", "⟦sec_link⟧: " + LINK_EVIDENCE(F)],
+             ["8", "Researchers", "Report hallucination (wrong stated answers) beside accuracy, judge aliases, use "
+              "held-out sets answered once, and report the serving runtime's version with small-model results",
+              "⟦sec_verified⟧, ⟦sec_limits⟧, ⟦sec_agentic⟧"],
+             ["9", "The student and supervisor", "Obtain ethics approval before collecting feedback from real users "
               "of CAMR Personal; rotate the cloud key used in this study", "⟦sec_apptest⟧, ⟦sec_vc⟧"]],
             [0.8, 3.4, 6.0, 5.7], size=9)
 
@@ -163,28 +219,7 @@ def build(template: Path, out: Path) -> Path:
         "expected value.")
     c.table("Prioritised future works",
             ["Priority", "Direction and rationale", "How to evaluate"],
-            [["1", "**A user study of CAMR Personal.** Whether the assistant grows more useful as a person's memory grows "
-              "is its central claim, and no user has tested it.", "4–8 weeks, ethics approval; share of answers from "
-              "memory, thumbs-up rate, accuracy on each user's repeated questions"],
-             ["2", "**A real support queue.** The desk used an invented company; a real queue (with consent and "
-              "anonymisation) would test coverage, escalation load and wrong replies at scale.", "Wrong-reply rate and "
-              "escalations per 1,000 tickets against the current process"],
-             ["3", "**Better checks.** The kind check withheld correct answers (*al-Ghazali*), and the check cannot tell "
-              "a wrong page from a right one.", "Coverage and wrong-stated rate on the held-out set; source agreement "
-              "across two pages before stating"],
-             ["4", "**A reranker in CAMR's recall, and a stricter claim check.** Reranked RAG put the answer in "
-              "front of the reader more often (72% against 64%), and the 0.5B reader got answers past the check that "
-              "only repeated the subject's name.", "Correct and wrong-stated rates on the held-out set and the desk"],
-             ["5", "**Better lookups.** The answer was in what was read for 52–73% of questions: the lookup sets the "
-              "ceiling.", "Answer-in-text rate on a fresh stream; Wikidata for disambiguation"],
-             ["6", "**Closing the reading gap of small models.** 76% of the 0.5B model's multi-hop misses had the answer "
-              "in context.", "Correct-when-in-context on HotpotQA and 2Wiki, n ≥ 200"],
-             ["7", "**A learned entity recogniser.** The rule-based entity gate caused D-15, D-31, D-32 and D-37.",
-              "Abstention on answerable and unanswerable questions; full-support recall"],
-             ["8", "**Sessioned memory.** Recency could not help on independent questions; conversations are not "
-              "independent.", "A sessioned benchmark (LongMemEval or LoCoMo) with and without recency"],
-             ["9", "**Phones and a physical laptop.** Timings came from laptop-class cloud machines.", "NFR-02, peak "
-              "memory and battery per 100 answers on two phones and one laptop"]],
+            [[str(i), what, how] for i, (what, how) in enumerate(FUTURE(F), 1)],
             [1.6, 8.0, 6.3], size=9)
     return c.save(out)
 
@@ -217,7 +252,148 @@ def CH6_EXTRA(F: dict) -> str:  # noqa: N802
                  f"{p1(fr['llm_kimi-k3']['wrong_stated'])} of questions; with CAMR's memory of the workflow's pages it "
                  f"was correct on {p1(fr['camr_kimi-k3']['correct'])} with {p1(fr['camr_kimi-k3']['wrong_stated'])} "
                  "wrong. ")
+    if (ch5.RES / "agentic/ollama-0.13.5").exists():
+        text += ("**Do the results repeat?** The engine's own runs are deterministic. The four Llama 3B automation "
+                 "runs whose files were lost were repeated on a second machine on the study's runtime and reproduced "
+                 "(the agent without memory and the news run exactly, the agents with memory within one to three of "
+                 "20 tasks), but an older version of the same runtime changed the same model's behaviour, so "
+                 "small-model agent results hold for the runtime they were measured on (section ⟦sec_agentic⟧). ")
     return text
+
+
+def _changed(x: dict) -> int:
+    return x["lost_vs_base"] + x["gained_vs_base"]
+
+
+def _link_local(F: dict) -> dict[str, dict]:
+    return {k: v for k, v in F["link"].get("readers", {}).items() if k in LOCAL}
+
+
+def THREE_TIERS(F: dict) -> list[str]:  # noqa: N802
+    """The project's own idea (a frozen model made better by a memory that learns), concluded from the three tiers."""
+    rd, sk, lk = F["readers"], F["skills"], _link_local(F)
+    if not (rd and sk and lk):
+        return []
+    small, big = rd[0], rd[-1]
+    cond, cl = sk["conditions"], sk["control_large"]
+    card, merged = cl["conditions"]["card"], cl["conditions"]["merged"]
+    keep = [v["fixed"]["always keep"]["wrong"] for v in lk.values()]
+    learned = [v["curve"][-1]["wrong"] for v in lk.values()]
+    esc = [v["curve"][-1]["escalated"] for v in lk.values()]
+    feedback = min(v["curve"][-1]["feedback"] for v in lk.values())
+    first = ("The study began from one idea: keep a small model's weights frozen and fast, keep what it learns in a "
+             "memory outside it that any model can use, so that a better memory makes a better model. The evidence "
+             "settles that idea into three tiers around a frozen reader. **Facts belong in notes that any model "
+             "reads.** Facts trained into weights stayed near 13% where notes reached 72% (section ⟦sec_learning⟧), "
+             f"and one memory lifted every reader measured: the 0.5B model from {p1(small['alone'])} to "
+             f"{p1(small['memory'])} and the cloud model from {p1(big['alone'])} to {p1(big['memory'])}, helping far "
+             "more questions than it harmed at every size (section ⟦sec_readers⟧). **Procedures can live in weights, "
+             "if memory decides when to attach them.** A small adapter per formula family, attached only when the best "
+             f"note memory admits belongs to that family, answered {p1(cond['card']['test']['all'])} of new problems "
+             f"against {p1(cond['merged']['test']['all'])} for one adapter merged into the model, and changed "
+             f"{_changed(card)} of {cl['n']} unrelated answers against {_changed(merged)} (section ⟦sec_skills⟧). "
+             "**Trust is learned per model.** A link that reads only signals that cost nothing learned, from the "
+             f"feedback on {feedback} answers, to cut the wrong answers the local models state from {span(keep)} to "
+             f"{span(learned)} (section ⟦sec_link⟧).")
+    second = ("In that sense a better memory did make a better model: the weights never changed, and what each model "
+              "answered correctly grew with what memory held, what it attached and what it learned about the model. "
+              "Three boundaries hold. Memory does not make a small model reason better: with the same notes the 0.5B "
+              f"model stated a wrong answer to {p1(small['wrong'])} of questions against {p1(big['wrong'])} for the "
+              "cloud model, and the link removes wrong answers mostly by declining or by sending "
+              f"{span(esc)} of questions to the cloud model, not by making the small model right more often. A card "
+              "carries a procedure's form and the notes its meaning: on problems that use a rule in a new way, notes "
+              f"scored {p1(cond['memory']['derived']['all'])} and a card {p1(cond['card']['derived']['all'])}. And "
+              "the cards and the link were measured on benchmarks from judged answers: CAMR Personal does not yet "
+              "attach cards or learn a link from its users' feedback.")
+    return [first, second]
+
+
+def ALIGN_TIERS(F: dict) -> list[list[str]]:  # noqa: N802
+    """The alignment row for what the study added beyond its objectives."""
+    lk = _link_local(F)
+    if not (F["readers"] and F["skills"] and lk):
+        return []
+    keep = [v["fixed"]["always keep"]["wrong"] for v in lk.values()]
+    learned = [v["curve"][-1]["wrong"] for v in lk.values()]
+    return [["Added: one memory for every reader, with weights and trust it learns", "⟦sec_skills⟧, ⟦sec_readers⟧, "
+             "⟦sec_link⟧", "Memory lifted all four readers; cards beat a merged adapter with less harm; the link cut "
+             f"stated wrong answers from {span(keep)} to {span(learned)}", "Met on benchmarks; not yet in the app"]]
+
+
+def SKILL_DECISION(F: dict) -> list[list[str]]:  # noqa: N802
+    sk = F["skills"]
+    if not sk:
+        return []
+    cond, cl = sk["conditions"], sk["control_large"]
+    return [["A procedure learned from a few corrections, while every other skill must be kept", "A skill card per "
+             "family, attached by memory, with the notes kept beside it", f"⟦sec_skills⟧: "
+             f"{p1(cond['card']['test']['all'])} vs {p1(cond['merged']['test']['all'])} merged; "
+             f"{_changed(cl['conditions']['card'])} vs {_changed(cl['conditions']['merged'])} of {cl['n']} unrelated "
+             "answers changed"]]
+
+
+def LINK_EVIDENCE(F: dict) -> str:  # noqa: N802
+    lk = _link_local(F)
+    if not lk:
+        return "the learned link"
+    keep = [v["fixed"]["always keep"]["wrong"] for v in lk.values()]
+    learned = [v["curve"][-1]["wrong"] for v in lk.values()]
+    esc = [v["curve"][-1]["escalated"] for v in lk.values()]
+    return f"wrong stated answers {span(keep)} → {span(learned)}, with {span(esc)} of questions sent to the cloud"
+
+
+def FUTURE(F: dict) -> list[tuple[str, str]]:  # noqa: N802
+    """Prioritised future works: (direction and rationale, how to evaluate)."""
+    lk = _link_local(F)
+    gap = ""
+    if lk:
+        oracle = [v["fixed"]["oracle"]["reward"] for v in lk.values()]
+        got = [v["curve"][-1]["reward"] for v in lk.values()]
+        gap = (f" The best possible choice per question scored {min(oracle):+.2f} to {max(oracle):+.2f} against "
+               f"{min(got):+.2f} to {max(got):+.2f} for the learned link, so it lacks information, not feedback.")
+    changing = ""
+    if F["abilities"].get("A4") and F["abilities"].get("A3") and F["abilities"].get("A1"):
+        changing = (f" With memory the local readers answered {local_range(F, 'A4')} of questions about time and "
+                    f"{local_range(F, 'A3')} of facts that had changed, against {local_range(F, 'A1')} of plain "
+                    "recall.")
+    return [
+        ("**A user study of CAMR Personal.** Whether the assistant grows more useful as a person's memory grows is "
+         "its central claim, and no user has tested it.", "4–8 weeks, ethics approval; share of answers from memory, "
+         "thumbs-up rate, accuracy on each user's repeated questions"),
+        ("**The three tiers inside CAMR Personal.** The cards and the link were measured on benchmarks; the app "
+         "already records thumbs and corrections, so the link can learn from each user's feedback and a card can be "
+         "trained for a procedure once enough corrections of it have accumulated.", "Wrong stated answers and cloud "
+         "calls per 100 questions as feedback accumulates; unrelated answers changed by cards"),
+        ("**Better signals for the link.**" + gap + " Candidates: agreement between two answers or two readers, "
+         "whether the answer occurs within a single note, and the engine's reason for abstaining.", "Reward and wrong "
+         "stated answers against the oracle on the reader bench, every price for a cloud call"),
+        ("**Facts that change, and time.**" + changing + " The notes carry their dates, but a small reader must "
+         "compare them itself, and an old fact sits beside its replacement: putting the dates to work in recall and "
+         "preferring the newest fact is the first step, marking a replaced fact as superseded the second.", "Right "
+         "answers on LongMemEval's time and changed-fact questions, for every reader"),
+        ("**A real support queue.** The desk used an invented company; a real queue (with consent and "
+         "anonymisation) would test coverage, escalation load and wrong replies at scale.", "Wrong-reply rate and "
+         "escalations per 1,000 tickets against the current process"),
+        ("**Better checks.** The kind check withheld correct answers (*al-Ghazali*), and the check cannot tell a "
+         "wrong page from a right one.", "Coverage and wrong-stated rate on the held-out set; source agreement across "
+         "two pages before stating"),
+        ("**A reranker in CAMR's recall, and a stricter claim check.** Reranked RAG put the answer in front of the "
+         "reader more often (72% against 64%), and the 0.5B reader got answers past the check that only repeated the "
+         "subject's name.", "Correct and wrong-stated rates on the held-out set and the desk"),
+        ("**Skill cards beyond formulas.** Cards were trained for one 0.5B model; output formats (a desk's reply "
+         "style), tool use and larger models are untested, and a card was still attached to some unrelated "
+         "problems.", "Held-out accuracy and unrelated answers changed, per family and per model size"),
+        ("**Better lookups.** The answer was in what was read for 52–73% of questions: the lookup sets the ceiling.",
+         "Answer-in-text rate on a fresh stream; Wikidata for disambiguation"),
+        ("**Closing the reading gap of small models.** 76% of the 0.5B model's multi-hop misses had the answer in "
+         "context.", "Correct-when-in-context on HotpotQA and 2Wiki, n ≥ 200"),
+        ("**A learned entity recogniser.** The rule-based entity gate caused D-15, D-31, D-32, D-37 and D-40.",
+         "Abstention on answerable and unanswerable questions; full-support recall"),
+        ("**Sessioned memory.** Recency could not help on independent questions; conversations are not "
+         "independent.", "LongMemEval (already in the reader bench) or LoCoMo, with and without recency"),
+        ("**Phones and a physical laptop.** Timings came from laptop-class cloud machines.", "NFR-02, peak memory and "
+         "battery per 100 answers on two phones and one laptop"),
+    ]
 
 
 def DECISIONS(F: dict) -> list[list[str]]:  # noqa: N802
@@ -238,6 +414,9 @@ def DECISIONS(F: dict) -> list[list[str]]:  # noqa: N802
          "calculator do the arithmetic", "⟦sec_learning⟧"],
         ["A fixed output format, and nothing else must be kept", "Fine-tuning (LoRA) can win on that format",
          "⟦sec_learning⟧: 88.3% vs 50.0%, but GSM8K 13.3% → 0%"],
+    ] + SKILL_DECISION(F) + [
+        ["A local model, with a cloud model allowed for what it cannot answer", "A learned link per model: state, "
+         "decline or escalate, learned from users' feedback", "⟦sec_link⟧: " + LINK_EVIDENCE(F)],
         ["Offline or private use on a 16 GB CPU laptop", "1.5B model for facts, 3B for reading across documents, "
          "with CAMR; not 6B or larger", "⟦sec_models⟧"],
         ["Events after the model's training data", "Teach the source as it arrives (an automation can do it) and "
