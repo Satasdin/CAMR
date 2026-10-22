@@ -283,7 +283,8 @@ function editCode(pre, i, t) {
     try {
       const r = await api("/api/fix", { method: "POST", body: { turn_id: t.turn_id, code: $("textarea", box).value, block: i } });
       const fixed = document.createElement("pre"); const c = document.createElement("code"); c.textContent = $("textarea", box).value; fixed.appendChild(c);
-      const tag = document.createElement("div"); tag.className = "saved-note"; tag.textContent = `✦ Your fix, kept in ${r.expert}` + (r.check ? (r.check.ok ? ` · ✓ ${r.check.language} parses` : ` · ! ${r.check.error}`) : "");
+      const tag = document.createElement("div"); tag.className = "saved-note fix-tag"; tag.textContent = `✦ Your fix, kept in ${r.expert}` + (r.check ? (r.check.ok ? ` · ✓ ${r.check.language} parses` : ` · ! ${r.check.error}`) : "");
+      if (box.nextElementSibling?.classList.contains("fix-tag")) box.nextElementSibling.remove();  // one note per block
       box.replaceWith(fixed); fixed.after(tag); codeCopy(fixed.parentElement); fixButtons(fixed.parentElement, t);
       toast(`✦ Kept your fix: the next similar request will read it (${r.expert})`); refresh();
     } catch (e) { toast(e.message); save.disabled = false; }
