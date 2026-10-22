@@ -28,8 +28,8 @@ CACHES = [("results/verified/answers.sqlite", "F24: Kimi K3 second reader and cl
           ("results/math/answers.sqlite", "F27: Kimi K3 learning formulas from corrections (incl. two stopped runs)"),
           ("results/ragbench/answers.sqlite", "F28: Kimi K3 as the reader of the RAG pipelines and CAMR"),
           ("results/agentic/answers.sqlite", "F29: Kimi K3 in the n8n automations: support desk, agent tasks, current events (incl. writing the 50 news questions)"),
-          ("results/readers/answers.sqlite", "Reader bench: Kimi K3 answering 287 questions alone and with memory"),
-          ("results/readers/judge.sqlite", "Reader bench: Kimi K3 judging every reader's answers")]
+          ("results/readers/answers.sqlite", "Reader bench: Kimi K3 answering 287 questions alone and with memory, on three read paths"),
+          ("results/readers/judge.sqlite", "Reader bench: Kimi K3 judging every reader's answers, on three read paths")]
 
 
 def usd(model: str, pin: int, pout: int) -> float:

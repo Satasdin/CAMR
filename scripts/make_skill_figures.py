@@ -65,29 +65,48 @@ READER_LABEL = {"qwen2.5:0.5b": "qwen2.5 0.5B", "qwen2.5:1.5b": "qwen2.5 1.5B", 
                 "kimi-k3": "Kimi K3 (cloud)"}
 
 
-def readers(tag: str = "baseline") -> Path:
-    """Right alone and with memory, and what went wrong with memory, per reader (results/readers)."""
-    recs = [json.loads(line) for line in (ROOT / f"results/readers/answers_{tag}.jsonl").read_text().splitlines()]
-    names = [r for r in READER_LABEL if any(x["reader"] == r for x in recs)]
-    fig, ax = plt.subplots(figsize=(10.0, 4.0), facecolor=SURF)
-    w = 0.26
-    for i, name in enumerate(names):
+def _reader_shares(tag: str) -> dict[str, dict[str, float]]:
+    """Per reader on one read path: right alone, right with memory, wrong stated with memory (% of its questions)."""
+    p = ROOT / f"results/readers/answers_{tag}.jsonl"
+    if not p.exists():
+        return {}
+    recs = [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+    out = {}
+    for name in READER_LABEL:
         rs = [x for x in recs if x["reader"] == name and x["correct"] is not None]
-        alone = [x for x in rs if not x["memory"]]
-        mem = [x for x in rs if x["memory"]]
-        right_a = 100 * sum(x["correct"] for x in alone) / len(alone)
-        right_m = 100 * sum(x["correct"] for x in mem) / len(mem)
-        wrong_m = 100 * sum(1 for x in mem if not x["correct"] and not x["declined"]) / len(mem)
-        for k, (y, col, lab) in enumerate([(right_a, GREY, "right, alone"), (right_m, GREEN, "right, with memory"),
-                                            (wrong_m, ORANGE, "wrong stated, with memory")]):
-            x = i + (k - 1) * w
+        alone, mem = [x for x in rs if not x["memory"]], [x for x in rs if x["memory"]]
+        if alone and mem:
+            out[name] = {"alone": 100 * sum(x["correct"] for x in alone) / len(alone),
+                         "memory": 100 * sum(x["correct"] for x in mem) / len(mem),
+                         "wrong": 100 * sum(1 for x in mem if not x["correct"] and not x["declined"]) / len(mem)}
+    return out
+
+
+def readers(tag: str = "phase2b", before: str = "baseline", reversed_: str = "phase2") -> Path:
+    """Right alone and with memory before Phase 2 and now (the compressed read path as a marker), and wrong answers
+    stated with memory now, per reader (results/readers)."""
+    now, old, comp = _reader_shares(tag), _reader_shares(before), _reader_shares(reversed_)
+    names = [n for n in READER_LABEL if n in now]
+    fig, ax = plt.subplots(figsize=(10.4, 4.3), facecolor=SURF)
+    w = 0.2
+    bars = [("alone", now, GREY, "right, alone"), ("memory", old, "#9cc3ee", "right with memory, before Phase 2"),
+            ("memory", now, BLUE, "right with memory, now"), ("wrong", now, ORANGE, "wrong stated with memory, now")]
+    for i, name in enumerate(names):
+        for k, (key, src, col, lab) in enumerate(bars):
+            if name not in src:
+                continue
+            x, y = i + (k - 1.5) * w, src[name][key]
             ax.bar(x, y, w, color=col, edgecolor=SURF, label=lab if i == 0 else None)
-            ax.text(x, y + 1, f"{y:.0f}", ha="center", va="bottom", fontsize=7.5, color=INK2)
+            top = max(y, comp[name]["memory"] + 1) if k == 2 and name in comp else y  # clear the compressed marker
+            ax.text(x, top + 1, f"{y:.0f}", ha="center", va="bottom", fontsize=7.5, color=INK2)
+        if name in comp:
+            ax.scatter([i + 0.5 * w], [comp[name]["memory"]], marker="_", s=260, color=INK2, linewidths=1.8, zorder=4,
+                       label="right with memory, compressed (reversed)" if i == 0 else None)
     ax.set_xticks(range(len(names)), [READER_LABEL[n] for n in names])
     ax.set_ylim(0, 100)
     style(ax, ylabel="% of 287 questions", grid="y")
     ax.set_title("The same memory, read by models of every size")
-    ax.legend(frameon=False, fontsize=8, ncol=3, loc="upper left")
+    ax.legend(frameon=False, fontsize=7.5, ncol=3, loc="upper left")
     fig.tight_layout()
     return save(fig, OUT, "readers.png")
 
@@ -163,7 +182,9 @@ if __name__ == "__main__":
     skill_cards()
     if (ROOT / "results/bench/phase2/phase2b").exists():
         engine_bench()
-    if (ROOT / "results/readers/answers_baseline.jsonl").exists():
+    if (ROOT / "results/readers/answers_phase2b.jsonl").exists():
         readers()
-    if (ROOT / "results/link/link_baseline.json").exists():
-        link_tradeoff()
+    for tag in ("phase2b", "baseline"):
+        if (ROOT / f"results/link/link_{tag}.json").exists():
+            link_tradeoff(tag)
+            break

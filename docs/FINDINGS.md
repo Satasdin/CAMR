@@ -8,7 +8,7 @@ listed at the end, and this log is updated as they finish.
 Last updated: 2026-10-22.
 
 
-## Headline results (latest round: F10, F28-F31)
+## Headline results (latest round: F10, F28-F36)
 
 | Question | What was measured | Section |
 |---|---|---|
@@ -17,7 +17,10 @@ Last updated: 2026-10-22.
 | CAMR against modern RAG? | Nine pipelines, one corpus, 200 held-out questions, three readers. CAMR: 62.5 / 63.5 / 63.0% correct (0.5B / 3B / Kimi K3), 3.5-4.0% wrong single claims. Best RAG: 45.5 / 56.0 / 71.5% correct, 47.0 / 15.5 / 21.0% wrong. CAMR wins outright with small readers; with the cloud reader RAG answers more and states about five times as many wrong answers. | F28 |
 | Do automations need the engine? | n8n desk: Kimi K3 + CAMR 75.0% resolved, 0 wrong replies, every unknowable ticket escalated and the person's answer taught back. Agent: Kimi K3 0% -> 100% of tasks with memory. Live news: Kimi K3 alone 22% correct and 12% wrong; with CAMR 94%; Llama 3B 2% -> 88%. | F29 |
 | Can weights that memory attaches beat weights merged into the model? | Skill cards (one small LoRA per formula family, attached only when memory names it): 90.0% on unseen problems against 85.0% for one merged adapter and 55.0% for notes; on 200 unrelated GSM8K problems the cards changed 7 answers, the merged adapter 36 (16.0% → 15.5% against 16.0% → 10.0%). | F32 |
-| What did the cloud model cost? | $42.37 for 9,183 calls in the whole study ($9.01 of it the reader bench). Per 1,000 answers CAMR was the cheapest way to use Kimi K3 in every scenario but the agent (news: $1.98 against $3.31 RAG and $89.20 stuffing). | F31 |
+| Does a personal memory get the answer to the model? | Engine bench, ten abilities, no model in the loop, scored on the answer reaching the context: every ability higher after Phase 2 (joining 28% → 35%, changed facts 65% → 70%, time 40% → 48%, preference 67% → 76%, abstention 15% → 26%); four of five targets missed. Compression looked best under a first rule that did not check the answer and was reversed (48% against 59% whole notes; D-41). 1M notes: 76% needle recall, 8.1 s per search (disk-bound). | F34 |
+| Does a better memory make every model better? | Reader bench, 287 questions, four frozen readers: closing the engine's gaps raised right answers with memory by 1.7-5.2 points for every reader (0.5B 37% → 39%, Kimi K3 73% → 78%), no weight changed; alone 11-20%. | F35 |
+| Can each model learn when to be trusted? | The link (keep / decline / escalate, learned from feedback): wrong answers stated 27-44% → 10-14% within about 20 answers' feedback. At a cloud price of 0.3 always asking Kimi K3 scores higher (+0.38 against +0.29 to +0.33); the link wins from 0.5-0.8. | F36 |
+| What did the cloud model cost? | $55.63 for 12,814 calls in the whole study ($22.27 of it the reader bench on three read paths). Per 1,000 answers CAMR was the cheapest way to use Kimi K3 in every scenario but the agent (news: $1.98 against $3.31 RAG and $89.20 stuffing). | F31 |
 | What went wrong? | D-31 to D-42, each fixed and re-run; D-41: the engine bench scored compressed notes as reaching the model after the answer sentence had been cut, so compression was chosen and then reversed; the last two: n8n loops asked each news question 30 times (D-39; results unaffected) and an entity fix lost one desk ticket (D-40; desk answers identical after the fix). 204 tests pass; `reproduce.py --twice`: 16/16 identical. | Defects table |
 
 ---
@@ -961,7 +964,7 @@ Load times (9-219 s) are not comparable: the first three models loaded cold from
 
 Source: `results/costs/kimi_costs.json` (`python scripts/kimi_costs.py`: every Kimi call the project made, from the logged token counts, at Moonshot's list price: kimi-k3 $3 input, $15 output per million tokens; output includes reasoning tokens; cached-input discounts not applied, so these are upper bounds); figures `report/kimi_costs.png`, `report/cost_compare.png`.
 
-- **Total: $42.37 for 9,183 calls** (4.0 M input, 2.1 M output tokens), of which the reader bench (Kimi K3 answering 287 questions alone and with memory, $3.07, and judging every reader's answers, $5.94) was $9.01; before it, $33.36 for 6,456 calls. The databases of the earlier runs stayed on the machines that ran them, so `kimi_costs.py` carries their recorded rows forward when it cannot read them. Largest items: learning formulas $8.74 (every correction round, incl. two stopped runs), the automations $7.32 (of which $4.46 was context stuffing on 50 news questions), judging answers $7.67.
+- **Total: $55.63 for 12,814 calls** (5.2 M input, 2.7 M output tokens), of which the reader bench on three read paths (Kimi K3 answering 287 questions alone and with memory, $7.97, and judging every reader's answers, $14.30) was $22.27; before it, $33.36 for 6,456 calls. The databases of the earlier runs stayed on the machines that ran them, so `kimi_costs.py` carries their recorded rows forward when it cannot read them. Largest items: learning formulas $8.74 (every correction round, incl. two stopped runs), the automations $7.32 (of which $4.46 was context stuffing on 50 news questions), judging answers $7.67.
 - **Per 1,000 answers with Kimi K3:** desk: alone $3.80, stuffing $4.04, RAG $2.68, CAMR $2.62; news: alone $14.74, stuffing $89.20, RAG $3.31, CAMR $1.98; agent: no memory $3.62, RAG $5.84, CAMR $6.85 (more tool calls per task); RAG benchmark: reranked $3.33, corrective $2.99, CAMR $1.01.
 - **CAMR was the cheapest way to make the cloud model useful in every scenario but the agent**, because it sends the fewest prompt tokens and, for labelled facts, often none; stuffing was the most expensive, up to 45 times CAMR on the news. Most of every bill is output, and Kimi K3 bills its reasoning as output.
 - Local models cost nothing per answer; their price is CPU time. With CAMR the 3B model's desk answers took about 2 s of model time against 32-37 s with RAG or stuffing (prompts 2-4 times longer; these runs shared the CPU, so the ratio, not the seconds, is the result).
@@ -1058,6 +1061,55 @@ turn shown whole) is in the rendered context.
   first written and were rewritten before being kept.
 - **Retrieval time now:** 100k needle recall 88%, p50 / p95 58 / 89 ms.
 - **A million notes** (baseline read path, `results/bench/records/scale.jsonl`): 1,000,004 notes, 4.7 GB store, built in 18 min with peak RSS 0.59 GB (0.52 GB at 1k). Needle recall 76% (96% at 1k and 10k, 80% at 100k); retrieval p50 / p95 8.1 / 13.8 s, because exact search reads every vector and the store did not fit the page cache under this machine's memory pressure (an upper bound). A9 fails at 1M on recall and latency: a store this size needs an approximate index.
+
+## F35. The reader bench: the same memory, read by models of every size
+
+Source: `results/readers/` (`scripts/reader_bench.py`; answers and verdicts cached in `answers.sqlite` and
+`judge.sqlite`; reports `report_baseline.md`, `report_phase2.md`, `report_phase2b.md`); figure `report/readers.png`.
+287 questions (260 LongMemEval, 27 CAMR), four readers (qwen2.5 0.5B / 1.5B / 3B on Ollama 0.13.5, Kimi K3), each
+alone and with exactly the context CAMR Personal's memory admitted, with the app's own chat prompt; judged by Kimi K3
+with LongMemEval's per-type rules. Run on three read paths: before Phase 2, Phase 2 compressed (reversed, D-41), and
+CAMR Personal now (whole notes at 512 tokens).
+
+| Reader | Right alone | With memory, before | Compressed | Now | Wrong stated, now | Helped / harmed, now |
+|---|---|---|---|---|---|---|
+| qwen2.5 0.5B | 11% | 37% | 33% | 39% | 43% | 89 / 9 |
+| qwen2.5 1.5B | 17% | 48% | 50% | 51% | 34% | 110 / 13 |
+| qwen2.5 3B | 16% | 55% | 60% | 58% | 26% | 124 / 5 |
+| Kimi K3 | 20% | 73% | 76% | 78% | 10% | 170 / 3 |
+
+- **A better memory made every frozen reader better:** closing the engine's gaps raised right answers by 1.7 to 5.2
+  points per reader, with no weight changed. The gain grew with the reader: Kimi K3 on time questions 50% → 69%,
+  recall 88% → 91%.
+- **The compression defect showed in the answers:** the 0.5B model's recall fell from 60% to 46% on the compressed
+  contexts and came back to 60% with whole notes; Kimi K3 lost six recall questions, four with the answer cut.
+- **Where it fell short:** the context grew from about 560 to 760 tokens and the small readers paid on some kinds of
+  question (0.5B changed facts 40% → 23%; 3B time 45% compressed → 26% whole); each kind has 33-43 questions answered
+  once. Small readers still state many wrong answers, and memory lowers their abstention (1.5B: 88% alone, 71% with
+  memory on unanswerable questions).
+- Cloud cost: $9.34 (baseline), $9.49 (compressed), $7.99 (now; the alone answers were cached), as the reports
+  count them.
+
+## F36. The link: learning when to trust each model
+
+Source: `results/link/link_baseline.json`, `link_phase2b.json` (`scripts/link_learning.py`, `camr/learn/link.py`,
+tests `tests/test_link.py`); figure `report/link_tradeoff.png`. Per local reader, LinUCB over keep / decline /
+escalate to Kimi K3, from eleven free signals; reward right +1, wrong -1, decline 0 (+1 when unanswerable), cloud call
+-0.3; learned from half of the judged reader-bench answers one at a time, scored on the other half, 10 splits; no
+model called.
+
+| Reader (now) | Every answer stated: wrong | Learned link: right / wrong / sent to cloud | Link reward | Always ask Kimi K3 | Oracle |
+|---|---|---|---|---|---|
+| qwen2.5 0.5B | 44% | 57% / 10% / 59% | +0.29 | +0.38 | +0.69 |
+| qwen2.5 1.5B | 33% | 60% / 11% / 55% | +0.33 | +0.38 | +0.73 |
+| qwen2.5 3B | 27% | 58% / 14% / 39% | +0.33 | +0.38 | +0.74 |
+
+- Within about 20 answers' feedback every link stops most wrong answers; at every cloud price tried (0.1-1.2) the
+  wrong answers stated stay within 6-17%.
+- At a cloud price of 0.3, sending every question to Kimi K3 scores higher than the learned link (it did narrowly on
+  the first read path too: +0.32 against +0.26 to +0.32). The link wins from a price of 0.5 (1.5B, 3B) or 0.8
+  (every reader), keeping most questions on the device. It removes wrong answers by declining or escalating, not by
+  making the small model right; the oracle's +0.69 to +0.74 says better signals, not more feedback, are needed.
 
 ## Defects found in this round
 

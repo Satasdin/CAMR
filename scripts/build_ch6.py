@@ -34,11 +34,20 @@ def facts() -> dict:
     f["costs"] = ch5.costs() or {}
     f["sweep"] = ch5.sweep_models()
     f["skills"] = J("results/skills/skill_cards.json") or {}
-    f["readers"] = ch5.reader_rows() or []
-    f["abilities"] = by_ability()
-    f["link"] = J("results/link/link_baseline.json") or {}
+    # the reader bench and the link on the read path CAMR Personal uses now (Phase 2, whole notes at 512 tokens),
+    # with the first read path kept for before/after
+    f["readers"] = ch5.reader_rows(READ) or ch5.reader_rows() or []
+    f["readers_before"] = ch5.reader_rows() or []
+    f["abilities"] = by_ability(READ)
+    f["abilities_before"] = by_ability()
+    f["link"] = J(f"results/link/link_{ch5.LINK_TAG}.json") or {}
+    f["bench"] = ch5.bench_cards() or {}
+    f["rescore"] = J("results/bench/phase2/rescore/rescore.json") or {}
     f["tests"] = ch5.test_count()
     return f
+
+
+READ = "phase2b" if (ch5.RES / "readers/answers_phase2b.jsonl").exists() else "baseline"
 
 
 LOCAL = ("qwen2.5:0.5b", "qwen2.5:1.5b", "qwen2.5:3b")
@@ -65,6 +74,22 @@ def by_ability(tag: str = "baseline") -> dict[str, dict[str, float]]:
                 k[0] += bool(r["correct"])
                 k[1] += 1
     return {a: {rd: right / total for rd, (right, total) in v.items()} for a, v in n.items()}
+
+
+def small_time(F: dict) -> str:
+    """' (1.5B 21% → 40%; 0.5B and 3B within 5 points)': how dated notes moved each local reader on time questions."""
+    moved, flat = [], []
+    for rd in LOCAL:
+        a, b = F["abilities_before"].get("A4", {}).get(rd), F["abilities"].get("A4", {}).get(rd)
+        if a is None or b is None:
+            continue
+        name = rd.split(":")[1].upper()
+        (moved if b - a >= 0.10 else flat).append((name, a, b))
+    parts = [f"{n} {pc(a)} → {pc(b)}" for n, a, b in moved]
+    if flat:
+        parts.append(f"{' and '.join(n for n, _, _ in flat)} within {max(round(100 * abs(b - a)) for _, a, b in flat)} "
+                     "points")
+    return f" ({'; '.join(parts)})" if parts else ""
 
 
 def local_range(F: dict, ability: str) -> str:
@@ -126,7 +151,10 @@ def build(template: Path, out: Path) -> Path:
         "distracts it (section ⟦sec_gap⟧). The verified pipeline settled at 128 tokens of compressed sentences, and "
         "70% of held-out questions were answered from a fact line with no model call at all. The best budget depends on "
         "the reader and the task, which is why the device governor sets it from measured speeds and a latency target "
-        "(section ⟦sec_bulk_impl⟧) and the learned router chooses it per question (section ⟦sec_policy⟧).")
+        "(section ⟦sec_bulk_impl⟧) and the learned router chooses it per question (section ⟦sec_policy⟧). For a "
+        "personal memory read by every size of model, CAMR Personal settled on whole notes at 512 tokens: "
+        "compressing notes to the sentences nearest the question fitted more of them but cut the answers out "
+        "(section ⟦sec_bench⟧).")
     c.h3("Research Question v: Cost on the Device and in the Cloud")
     tot = F["costs"].get("total", {})
     c.p("On a 4-core CPU the engine needs well under 1 GB beside the model, makes 123,301 paragraphs searchable in "
@@ -150,7 +178,7 @@ def build(template: Path, out: Path) -> Path:
         "without training, by lookup and by correction, measured against fine-tuning and token-level memory; (4) "
         "skill cards, procedures kept as small adapters that memory attaches per question, measured against one "
         "adapter merged into the model; (5) a link that learns from feedback, per model, when to state an answer, "
-        "decline or ask the cloud model; (6) a size map of "
+        "decline or ask the cloud model; (6) an engine bench of ten abilities a personal memory needs, a size map of "
         f"{len(sw)} models ({sw[0]['params']:.1f}B to {sw[-1]['params']:.0f}B) and a reader bench of four readers on "
         "one memory, showing where memory pays off; (7) a head-to-head comparison with eight modern RAG pipelines on "
         "one corpus; (8) automations in n8n and a tool-using agent that show where an engine is needed and what it "
@@ -207,8 +235,9 @@ def build(template: Path, out: Path) -> Path:
               "users' feedback (a link per model) and price the cloud call explicitly, instead of stating every local "
               "answer", "⟦sec_link⟧: " + LINK_EVIDENCE(F)],
              ["8", "Researchers", "Report hallucination (wrong stated answers) beside accuracy, judge aliases, use "
-              "held-out sets answered once, and report the serving runtime's version with small-model results",
-              "⟦sec_verified⟧, ⟦sec_limits⟧, ⟦sec_agentic⟧"],
+              "held-out sets answered once, report the serving runtime's version with small-model results, and score "
+              "a memory by whether the answer itself reaches the model, checked by a model reading it",
+              "⟦sec_verified⟧, ⟦sec_limits⟧, ⟦sec_agentic⟧, ⟦sec_bench⟧ (D-41)"],
              ["9", "The student and supervisor", "Obtain ethics approval before collecting feedback from real users "
               "of CAMR Personal; rotate the cloud key used in this study", "⟦sec_apptest⟧, ⟦sec_vc⟧"]],
             [0.8, 3.4, 6.0, 5.7], size=9)
@@ -258,6 +287,18 @@ def CH6_EXTRA(F: dict) -> str:  # noqa: N802
                  "(the agent without memory and the news run exactly, the agents with memory within one to three of "
                  "20 tasks), but an older version of the same runtime changed the same model's behaviour, so "
                  "small-model agent results hold for the runtime they were measured on (section ⟦sec_agentic⟧). ")
+    r, b = F["rescore"], F["bench"]
+    if r and b:
+        text += ("**Can a memory be judged without a model reading it?** Only with care. The engine bench measured "
+                 "ten abilities without any model and found the gaps that were then closed, raising every ability. "
+                 "But it first counted a fact as reaching the model when its note was chosen, and under that count "
+                 "compressing notes to their sentences nearest the question looked like the best change "
+                 f"({p1(r['compress-384']['old_rule_pass'])} against {p1(r['step3-aggregate']['old_rule_pass'])}); "
+                 "it was shipped, and only a model reading the result showed that the answers had been cut out. "
+                 "Scored on whether the answer itself reached the model, compression passed "
+                 f"{p1(r['compress-384']['pass'])} against {p1(r['step3-aggregate']['pass'])} and was reversed "
+                 "(section ⟦sec_bench⟧, D-41). A memory benchmark must check the answer, and must be checked by a "
+                 "reader. ")
     return text
 
 
@@ -287,7 +328,8 @@ def THREE_TIERS(F: dict) -> list[str]:  # noqa: N802
              "reads.** Facts trained into weights stayed near 13% where notes reached 72% (section ⟦sec_learning⟧), "
              f"and one memory lifted every reader measured: the 0.5B model from {p1(small['alone'])} to "
              f"{p1(small['memory'])} and the cloud model from {p1(big['alone'])} to {p1(big['memory'])}, helping far "
-             "more questions than it harmed at every size (section ⟦sec_readers⟧). **Procedures can live in weights, "
+             "more questions than it harmed at every size (section ⟦sec_readers⟧)." + better_memory(F) +
+             " **Procedures can live in weights, "
              "if memory decides when to attach them.** A small adapter per formula family, attached only when the best "
              f"note memory admits belongs to that family, answered {p1(cond['card']['test']['all'])} of new problems "
              f"against {p1(cond['merged']['test']['all'])} for one adapter merged into the model, and changed "
@@ -300,12 +342,34 @@ def THREE_TIERS(F: dict) -> list[str]:  # noqa: N802
               "Three boundaries hold. Memory does not make a small model reason better: with the same notes the 0.5B "
               f"model stated a wrong answer to {p1(small['wrong'])} of questions against {p1(big['wrong'])} for the "
               "cloud model, and the link removes wrong answers mostly by declining or by sending "
-              f"{span(esc)} of questions to the cloud model, not by making the small model right more often. A card "
+              f"{span(esc)} of questions to the cloud model, not by making the small model right more often; with "
+              "the improved memory, sending every question to the cloud model scored higher than any learned link "
+              f"unless a cloud call is priced at {cross_price(F)} of a right answer or more. A card "
               "carries a procedure's form and the notes its meaning: on problems that use a rule in a new way, notes "
               f"scored {p1(cond['memory']['derived']['all'])} and a card {p1(cond['card']['derived']['all'])}. And "
               "the cards and the link were measured on benchmarks from judged answers: CAMR Personal does not yet "
               "attach cards or learn a link from its users' feedback.")
     return [first, second]
+
+
+def better_memory(F: dict) -> str:
+    """The direct test of 'a better memory makes a better model': the same frozen readers, before and after the
+    engine's gaps were closed."""
+    before = {r["reader"]: r for r in F.get("readers_before", [])}
+    now = {r["reader"]: r for r in F["readers"]}
+    if READ == "baseline" or not before or set(before) != set(now):
+        return ""
+    gains = [now[k]["memory"] - before[k]["memory"] for k in now]
+    if min(gains) <= 0:
+        return ""
+    return (" When the memory itself was improved, with no weight changed, every reader improved with it: closing "
+            "the gaps the engine bench found raised each reader's right answers by "
+            f"{100 * min(gains):.1f} to {100 * max(gains):.1f} points (section ⟦sec_bench⟧).")
+
+
+def cross_price(F: dict) -> str:
+    beat = sorted({v for v in ch5.link_crossover(F["link"]).values() if v is not None}) if F["link"] else []
+    return f"{beat[0]}" if beat else "a high share"
 
 
 def ALIGN_TIERS(F: dict) -> list[list[str]]:  # noqa: N802
@@ -353,9 +417,18 @@ def FUTURE(F: dict) -> list[tuple[str, str]]:  # noqa: N802
                f"{min(got):+.2f} to {max(got):+.2f} for the learned link, so it lacks information, not feedback.")
     changing = ""
     if F["abilities"].get("A4") and F["abilities"].get("A3") and F["abilities"].get("A1"):
-        changing = (f" With memory the local readers answered {local_range(F, 'A4')} of questions about time and "
+        k0, k1 = F["abilities_before"].get("A4", {}).get("kimi-k3"), F["abilities"]["A4"].get("kimi-k3")
+        changing = ((f" Dated notes, and a prompt that gives today's date and says the newest note wins, lifted the "
+                     f"cloud model on questions about time ({pc(k0)} → {pc(k1)}) and the small readers unevenly"
+                     f"{small_time(F)}:"
+                     if READ != "baseline" and k0 is not None and k1 is not None else "") +
+                    f" with memory they answered {local_range(F, 'A4')} of questions about time and "
                     f"{local_range(F, 'A3')} of facts that had changed, against {local_range(F, 'A1')} of plain "
                     "recall.")
+    sc = ch5.RES / "bench/records/scale.jsonl"
+    m = next((r for r in map(json.loads, sc.read_text().splitlines()) if r.get("suite") == "scale-1M"), None) \
+        if sc.exists() else None
+    b = F["bench"]
     return [
         ("**A user study of CAMR Personal.** Whether the assistant grows more useful as a person's memory grows is "
          "its central claim, and no user has tested it.", "4–8 weeks, ethics approval; share of answers from memory, "
@@ -367,10 +440,17 @@ def FUTURE(F: dict) -> list[tuple[str, str]]:  # noqa: N802
         ("**Better signals for the link.**" + gap + " Candidates: agreement between two answers or two readers, "
          "whether the answer occurs within a single note, and the engine's reason for abstaining.", "Reward and wrong "
          "stated answers against the oracle on the reader bench, every price for a cloud call"),
-        ("**Facts that change, and time.**" + changing + " The notes carry their dates, but a small reader must "
-         "compare them itself, and an old fact sits beside its replacement: putting the dates to work in recall and "
-         "preferring the newest fact is the first step, marking a replaced fact as superseded the second.", "Right "
-         "answers on LongMemEval's time and changed-fact questions, for every reader"),
+        ("**Facts that change, and time.**" + changing + " Marking a replaced fact as superseded, so that a small "
+         "reader sees one value instead of comparing dates, is the next step.", "Right answers on LongMemEval's time "
+         "and changed-fact questions, for every reader"),
+        ("**Knowing when memory has nothing.**" + (f" Abstention reached only {pc(b['phase2b']['A7']['pass_rate'])} "
+         "against a target of 50%:" if b else "") + " most unanswerable questions ask about something the user did "
+         "(*How many times did I bake egg tarts?*), which a check for a named thing cannot see.", "Abstention on "
+         "LongMemEval's unanswerable questions with recall and preference not lower"),
+        ("**An index for a million notes.**" + (f" At {m['notes']:,} notes exact search found the hidden facts for "
+         f"{pc(m['needle_recall'])} of questions and took {m['latency_median_ms'] / 1000:.1f} s, reading every "
+         "vector from disk." if m else "") + " An approximate index that reads a small part of the store is needed "
+         "before a lifetime of notes.", "Needle recall and p95 search time at 1M notes against exact search at 100k"),
         ("**A real support queue.** The desk used an invented company; a real queue (with consent and "
          "anonymisation) would test coverage, escalation load and wrong replies at scale.", "Wrong-reply rate and "
          "escalations per 1,000 tickets against the current process"),
@@ -415,8 +495,9 @@ def DECISIONS(F: dict) -> list[list[str]]:  # noqa: N802
         ["A fixed output format, and nothing else must be kept", "Fine-tuning (LoRA) can win on that format",
          "⟦sec_learning⟧: 88.3% vs 50.0%, but GSM8K 13.3% → 0%"],
     ] + SKILL_DECISION(F) + [
-        ["A local model, with a cloud model allowed for what it cannot answer", "A learned link per model: state, "
-         "decline or escalate, learned from users' feedback", "⟦sec_link⟧: " + LINK_EVIDENCE(F)],
+        ["A local model, with a cloud model allowed for what it cannot answer", "If sending a question out costs "
+         "little, the cloud model with memory; if it costs privacy or money, a learned link per model (state, decline "
+         "or escalate)", "⟦sec_link⟧: " + LINK_EVIDENCE(F)],
         ["Offline or private use on a 16 GB CPU laptop", "1.5B model for facts, 3B for reading across documents, "
          "with CAMR; not 6B or larger", "⟦sec_models⟧"],
         ["Events after the model's training data", "Teach the source as it arrives (an automation can do it) and "

@@ -1539,7 +1539,8 @@ def reader_rows(tag: str = "baseline") -> list[dict] | None:
                     "wrong": sum(1 for v in ps if not v[True]["correct"] and not v[True]["declined"]) / n,
                     "declined": sum(1 for v in ps if not v[True]["correct"] and v[True]["declined"]) / n,
                     "help": sum(1 for v in ps if not v[False]["correct"] and v[True]["correct"]),
-                    "harm": sum(1 for v in ps if v[False]["correct"] and not v[True]["correct"])})
+                    "harm": sum(1 for v in ps if v[False]["correct"] and not v[True]["correct"]),
+                    "tokens": statistics.fmean(v[True]["prompt_tokens"] or 0 for v in ps)})
     return out
 
 
@@ -1548,40 +1549,108 @@ READER_NAME = {"qwen2.5:0.5b": "qwen2.5 0.5B", "qwen2.5:1.5b": "qwen2.5 1.5B", "
 
 
 def res_readers(c: Chapter) -> None:
-    rows = reader_rows()
-    if not rows:
+    base, comp, now = reader_rows("baseline"), reader_rows("phase2"), reader_rows("phase2b")
+    if not base:
         return
+    if not (now and comp and len(now) == len(base) == len(comp)):
+        now, comp = base, None
     c.h3("The Same Memory, Read by Models of Every Size", key="sec_readers")
-    c.p("The engine decides what a model reads; the reader bench measures what each model then does with it. It "
-        "asks 287 questions of four readers, three local models of 0.5 to 3 billion parameters and the cloud model, "
-        "each twice with CAMR Personal's own prompt: alone, and with exactly the notes the app's memory admitted. The "
-        "questions are 260 from LongMemEval, a public benchmark of long conversations between a user and an "
-        "assistant whose question types match the abilities a personal memory needs (recalling what was said, joining "
-        "two sessions, a fact that changed, time, preferences, and questions that cannot be answered), and 27 "
-        "written for CAMR. A cloud judge marked each answer right or wrong with LongMemEval's own rule for each "
-        f"question type ({c.next_tab()}, {c.next_fig()}).")
-    c.table("The same memory, four readers, 287 questions (`results/readers/`)",
-            ["Reader", "Right alone", "Right with memory", "Wrong stated, with memory", "Declined, with memory",
-             "Helped / harmed"],
-            [[READER_NAME[r["reader"]], p1(r["alone"]), f"**{p1(r['memory'])}**", p1(r["wrong"]), p1(r["declined"]),
-              f"{r['help']} / {r['harm']}"] for r in rows], [3.6, 2.2, 2.6, 2.8, 2.6, 2.2], size=9)
+    c.p("The engine bench scores what reaches the model; the reader bench measures what each model then does with "
+        "it. It asks the same 287 questions (the 260 from LongMemEval of section ⟦sec_bench⟧ and 27 written for "
+        "CAMR) of four readers, three local models of 0.5 to 3 billion parameters and the cloud model, each twice "
+        "with CAMR Personal's own prompt: alone, and with exactly the notes the app's memory admitted. "
+        + ("It was run on each read path of the previous section: before Phase 2, compressed, and as CAMR Personal "
+           "reads now. " if comp else "") +
+        "A cloud judge marked each answer right or wrong with LongMemEval's own rule for each question type "
+        f"({c.next_tab()}, {c.next_fig()}).")
+    b = {r["reader"]: r for r in base}
+    x = {r["reader"]: r for r in comp} if comp else {}
+    if comp:
+        rows = [[READER_NAME[r["reader"]], p1(r["alone"]), p1(b[r["reader"]]["memory"]), p1(x[r["reader"]]["memory"]),
+                 f"**{p1(r['memory'])}**", p1(r["wrong"]), p1(r["declined"]), f"{r['help']} / {r['harm']}"]
+                for r in now]
+        c.table("The same memory, four readers, 287 questions, on three read paths (`results/readers/`)",
+                ["Reader", "Right alone", "With memory, before", "Compressed (reversed)", "With memory, now",
+                 "Wrong stated, now", "Declined, now", "Helped / harmed, now"], rows,
+                [3.0, 1.7, 1.9, 2.0, 1.9, 1.8, 1.7, 1.9], size=8.5)
+    else:
+        c.table("The same memory, four readers, 287 questions (`results/readers/`)",
+                ["Reader", "Right alone", "Right with memory", "Wrong stated, with memory", "Declined, with memory",
+                 "Helped / harmed"],
+                [[READER_NAME[r["reader"]], p1(r["alone"]), f"**{p1(r['memory'])}**", p1(r["wrong"]),
+                  p1(r["declined"]), f"{r['help']} / {r['harm']}"] for r in now], [3.6, 2.2, 2.6, 2.8, 2.6, 2.2],
+                size=9)
     if (REPORT / "readers.png").exists():
-        c.figure(REPORT / "readers.png", "Right answers alone and with memory, and wrong answers stated with memory, "
-                 "per reader", 15.5)
-    small, big = rows[0], rows[-1]
+        c.figure(REPORT / "readers.png", "Right answers alone and with memory, before Phase 2 and now (the compressed "
+                 "read path marked), and wrong answers stated with memory now, per reader", 15.5)
+    small, big = now[0], now[-1]
     c.p(f"**Where it was perfect.** Memory lifted every reader, most of all the questions only the user's own "
-        f"history can answer: the smallest model went from {p1(small['alone'])} to {p1(small['memory'])} and the "
-        f"cloud model from {p1(big['alone'])} to {p1(big['memory'])}, and memory helped far more questions than it "
-        f"harmed at every size ({small['help']} against {small['harm']} for the smallest, {big['help']} against "
-        f"{big['harm']} for the cloud model). **Where it was not.** A small reader states many wrong answers from the "
-        f"same notes ({p1(small['wrong'])} for the 0.5B model, {p1(big['wrong'])} for the cloud model), and the "
-        "engine's weak abstention on long conversations costs the small models their honesty: "
-        "on questions that cannot be answered, the 1.5B model said it did not know 82% of the time alone but 56% "
-        "with memory, because the notes it was given looked relevant. The next section is the answer to that.")
+        f"history can answer: on the read path CAMR Personal now uses, the smallest model went from "
+        f"{p1(small['alone'])} to {p1(small['memory'])} and the cloud model from {p1(big['alone'])} to "
+        f"{p1(big['memory'])}, and memory helped far more questions than it harmed at every size ({small['help']} "
+        f"against {small['harm']} for the smallest, {big['help']} against {big['harm']} for the cloud model).")
+    if not comp:
+        return
+    ab = {t: reader_abilities(t) for t in ("baseline", "phase2", "phase2b")}
+    kinds = [("A1", "recall a fact"), ("A2", "join two conversations"), ("A3", "a fact that changed"),
+             ("A4", "time"), ("A6", "an unstated preference"), ("A7", "say it does not know")]
+    readers = [r["reader"] for r in now]
+    c.table("Right with memory now, by kind of question (before Phase 2 in brackets)",
+            ["Question asks to …"] + [READER_NAME[r] for r in readers],
+            [[f"{name} ({k})"] + [f"{p1(ab['phase2b'][r].get(k))} ({p1(ab['baseline'][r].get(k))})" for r in readers]
+             for k, name in kinds], [4.6, 2.8, 2.8, 2.8, 2.9], size=9)
+    q05, q3, kimi = "qwen2.5:0.5b", "qwen2.5:3b", "kimi-k3"
+    gains = [r["memory"] - b[r["reader"]]["memory"] for r in now]
+    c.p(f"Closing the gaps raised every reader above where it started, by {100 * min(gains):.1f} to "
+        f"{100 * max(gains):.1f} points, and the gain grew with the reader: the cloud model's answers about time "
+        f"went from {p1(ab['baseline'][kimi]['A4'])} to {p1(ab['phase2b'][kimi]['A4'])} and its recall to "
+        f"{p1(ab['phase2b'][kimi]['A1'])}. The compressed read path showed the defect of section ⟦sec_bench⟧ in the "
+        f"answers: the 0.5B model's recall fell from {p1(ab['baseline'][q05]['A1'])} to "
+        f"{p1(ab['phase2'][q05]['A1'])} when the answer sentences were cut, and came back to "
+        f"{p1(ab['phase2b'][q05]['A1'])} with whole notes.")
+    c.p(f"**Where it was not.** The context grew from about {b[q05]['tokens']:.0f} to {small['tokens']:.0f} tokens, "
+        "and the small models paid for it on some kinds of question: the 0.5B model answered "
+        f"{p1(ab['phase2b'][q05]['A3'])} of the facts that had changed against {p1(ab['baseline'][q05]['A3'])} "
+        f"before, and the 3B model {p1(ab['phase2b'][q3]['A4'])} of the questions about time against "
+        f"{p1(ab['phase2'][q3]['A4'])} with the shorter compressed notes. Each kind has only 33 to 43 questions, "
+        "answered once, so a difference of a few points is a few questions. A small reader still states many "
+        f"wrong answers from the same notes ({p1(small['wrong'])} for the 0.5B model, {p1(big['wrong'])} for the "
+        "cloud model), and the engine's weak abstention still costs the small models their honesty: on questions "
+        f"that cannot be answered, the 1.5B model said it did not know "
+        f"{p1(reader_abilities('phase2b', memory=False)['qwen2.5:1.5b']['A7'])} of the time alone but "
+        f"{p1(ab['phase2b']['qwen2.5:1.5b']['A7'])} with memory. The next section is the answer to that.")
+
+
+def reader_abilities(tag: str, memory: bool = True) -> dict[str, dict[str, float]]:
+    """Right answers per reader and kind of question on the reader bench, with or without memory."""
+    p = RES / f"readers/answers_{tag}.jsonl"
+    n: dict[str, dict[str, list[int]]] = {}
+    if p.exists():
+        for r in map(json.loads, p.read_text().splitlines()):
+            if r["memory"] == memory and r["correct"] is not None:
+                k = n.setdefault(r["reader"], {}).setdefault(r["ability"], [0, 0])
+                k[0] += bool(r["correct"])
+                k[1] += 1
+    return {rd: {a: right / total for a, (right, total) in v.items()} for rd, v in n.items()}
+
+
+LINK_TAG = "phase2b" if (RES / "link/link_phase2b.json").exists() else "baseline"
+
+
+def link_crossover(d: dict) -> dict[str, float | None]:
+    """Per reader, the lowest price for a cloud call (of those tried) at which the learned link scores more than
+    sending every question to the cloud model. Reward = right - wrong x 1 - price x share sent to the cloud."""
+    out = {}
+    for name, r in d["readers"].items():
+        esc = r["fixed"]["always escalate"]
+        out[name] = next((s["cloud_cost"] for s in sorted(r.get("cloud_sweep", []), key=lambda s: s["cloud_cost"])
+                          if s["right"] - s["wrong"] - s["cloud_cost"] * s["escalated"]
+                          > esc["right"] - esc["wrong"] - s["cloud_cost"]), None)
+    return out
 
 
 def res_link(c: Chapter) -> None:
-    d = J("results/link/link_baseline.json")
+    d = J(f"results/link/link_{LINK_TAG}.json")
     if not d:
         return
     c.h3("The Link: Learning When to Trust Each Model", key="sec_link")
@@ -1591,39 +1660,54 @@ def res_link(c: Chapter) -> None:
         "wording occurs in the notes, whether the model itself declined, and the kind of question) and learns from "
         "the reward a user's feedback would give, with a wrong answer priced like a hallucination: right +1, wrong "
         "−1, declining 0 (+1 when the question cannot be answered), and a fixed price for each cloud call. One link "
-        "per model was learned from half of the reader bench's judged answers, one question at a time, and scored "
-        f"on the other half; ten random splits ({c.next_tab()}, {c.next_fig()}).")
+        "per model was learned from half of the reader bench's judged answers on the read path CAMR Personal now "
+        f"uses, one question at a time, and scored on the other half; ten random splits ({c.next_tab()}, "
+        f"{c.next_fig()}).")
     rows = []
     for name, r in d["readers"].items():
         keep, last = r["fixed"]["always keep"], r["curve"][-1]
         rows.append([READER_NAME.get(name, name), "every answer stated", p1(keep["right"]), p1(keep["wrong"]),
-                     p1(keep["declined"]), "0%"])
+                     p1(keep["declined"]), "0%", f"{keep['reward']:+.2f}"])
         rows.append(["", f"**learned link** (after {last['feedback']} answers)", p1(last["right"]),
-                     f"**{p1(last['wrong'])}**", p1(last["declined"]), p1(last["escalated"])])
+                     f"**{p1(last['wrong'])}**", p1(last["declined"]), p1(last["escalated"]), f"{last['reward']:+.2f}"])
     esc = next(iter(d["readers"].values()))["fixed"]["always escalate"]
     rows.append(["Kimi K3 (cloud)", "every question sent", p1(esc["right"]), p1(esc["wrong"]), p1(esc["declined"]),
-                 "100%"])
-    c.table(f"The learned link, cloud call priced at {d['rewards']['cloud']} (`results/link/link_baseline.json`)",
-            ["Reader", "Policy", "Right", "Wrong stated", "Declined", "Sent to cloud"], rows,
-            [3.2, 4.8, 1.8, 2.2, 1.9, 2.1], size=9)
+                 "100%", f"{esc['reward']:+.2f}"])
+    c.table(f"The learned link, cloud call priced at {d['rewards']['cloud']} (`results/link/link_{LINK_TAG}.json`)",
+            ["Reader", "Policy", "Right", "Wrong stated", "Declined", "Sent to cloud", "Reward"], rows,
+            [3.0, 4.4, 1.6, 2.0, 1.8, 1.9, 1.5], size=9)
     if (REPORT / "link_tradeoff.png").exists():
         c.figure(REPORT / "link_tradeoff.png", "The learned link at five prices for a cloud call: right answers and "
                  "wrong answers stated, against the share of questions sent to the cloud model", 15.5)
-    r3 = d["readers"].get("qwen2.5:3b")
-    mid = next((s for s in (r3 or {}).get("cloud_sweep", []) if s["cloud_cost"] == 0.5), None)
-    c.p("**Where it was perfect.** Every link learned within about twenty answers' feedback to stop most wrong "
-        "answers: at every price for a cloud call, wrong answers stated as fact stayed between 3% and 12%, against "
-        "30% to 50% when every local answer is stated. " + (
-            f"For the 3B model at a cloud price of 0.5, the link kept {p1(1 - mid['escalated'])} of questions on the "
-            f"device and answered {p1(mid['right'])} right with {p1(mid['wrong'])} wrong, against "
-            f"{p1(r3['fixed']['always keep']['right'])} right and {p1(r3['fixed']['always keep']['wrong'])} wrong when "
-            "it states everything. " if mid else "") +
-        "**Where it was not.** It removes wrong answers mostly by declining or by sending questions away, not by "
-        "making the small model right more often: on the device alone, a link that may not call the cloud trades "
-        "right answers for honesty. Sending every question to the cloud scores as well on this reward, at the cost "
-        "of privacy, money and seconds per answer; the link reaches the same score with about half the questions "
-        "kept local. The best possible choice per question (the oracle) scores twice as high, so better signals, "
-        "not more feedback, are what the link needs next.")
+    keep = [r["fixed"]["always keep"]["wrong"] for r in d["readers"].values()]
+    lw = [r["curve"][-1]["wrong"] for r in d["readers"].values()]
+    le = [r["curve"][-1]["escalated"] for r in d["readers"].values()]
+    lr = [r["curve"][-1]["reward"] for r in d["readers"].values()]
+    orc = [r["fixed"]["oracle"]["reward"] for r in d["readers"].values()]
+    sweep_wrong = [s["wrong"] for r in d["readers"].values() for s in r.get("cloud_sweep", [])]
+    cross = link_crossover(d)
+    first = J("results/link/link_baseline.json") if LINK_TAG != "baseline" else None
+    span = lambda xs: f"{100 * min(xs):.0f}–{100 * max(xs):.0f}%"  # noqa: E731
+    c.p(f"**Where it was perfect.** Every link learned, within about twenty answers' feedback, to stop most wrong "
+        f"answers: at a cloud price of {d['rewards']['cloud']}, wrong answers stated as fact fell from "
+        f"{span(keep)} of questions to {span(lw)}, with {span(le)} of questions sent to the cloud model, and at "
+        f"every price tried they stayed within {span(sweep_wrong)}.")
+    beat = sorted({v for v in cross.values() if v is not None})
+    c.p("**Where it was not.** It removes wrong answers mostly by declining or by sending questions away, not by "
+        "making the small model right more often. And with the memory CAMR Personal now uses, the cloud model "
+        f"reading it is good enough that sending every question to it scores higher at this price "
+        f"({esc['reward']:+.2f} against {min(lr):+.2f} to {max(lr):+.2f} for the learned links"
+        + (f"; on the first read path {next(iter(first['readers'].values()))['fixed']['always escalate']['reward']:+.2f} "
+           f"against {min(r['curve'][-1]['reward'] for r in first['readers'].values()):+.2f} to "
+           f"{max(r['curve'][-1]['reward'] for r in first['readers'].values()):+.2f}" if first else "") +
+        "). "
+        + (f"The learned link scores more than the cloud alone once a cloud call costs {beat[0]} of a right answer "
+           f"({', '.join(READER_NAME.get(n, n) for n, v in cross.items() if v == beat[0])}) or {beat[-1]} (every "
+           "reader), while keeping most questions on the device; " if beat else "")
+        + "the price stands for what a user gives up by sending a question out (privacy, money and seconds per "
+        f"answer), which this reward cannot measure. The best possible choice per question scores {min(orc):+.2f} "
+        f"to {max(orc):+.2f}, about twice the learned link, so better signals, not more feedback, are what it needs "
+        "next.")
 
 
 def res_bulk(c: Chapter) -> None:
@@ -2124,17 +2208,19 @@ def scorecard(c: Chapter) -> None:
                                                                    ("A7", "abstention"))),
                      "**Partly met: every ability higher, counting target met; changed facts, time, preference "
                      "and abstention short**"])
-    rr = reader_rows()
+    rr = reader_rows("phase2b") or reader_rows()
     if rr:
-        rows.append(["One memory helps readers of every size", "Reader bench, 287 questions, 4 readers",
+        rows.append(["One memory helps readers of every size", "Reader bench, 287 questions, 4 readers, CAMR "
+                     "Personal's read path",
                      " · ".join(f"{READER_NAME[r['reader']].split(' (')[0]} {p1(r['alone'])} → {p1(r['memory'])}"
                                 for r in rr), "**Met; small readers state many wrong answers**"])
-    lk = J("results/link/link_baseline.json")
+    lk = J(f"results/link/link_{LINK_TAG}.json")
     if lk:
         w = [(READER_NAME.get(n, n), r["fixed"]["always keep"]["wrong"], r["curve"][-1]["wrong"])
              for n, r in lk["readers"].items()]
         rows.append(["The link stops wrong answers stated as fact", "Learned from feedback, 10 splits",
-                     " · ".join(f"{n}: {p1(a)} → {p1(b)}" for n, a, b in w), "**Met, by declining or escalating**"])
+                     " · ".join(f"{n}: {p1(a)} → {p1(b)}" for n, a, b in w),
+                     "**Met, by declining or escalating; at a low cloud price the cloud alone scores higher**"])
     rows += [
         ["Large data within device limits", "123,301 paragraphs; governor", "Searchable in 335 s; stops at every "
          "limit; 0 duplicates", "**Met**"],
