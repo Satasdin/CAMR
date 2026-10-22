@@ -109,6 +109,18 @@ class MemoryConfig:
     # Memory used for reasoning tasks (section 3.3).
     reasoning_memory: str = "facts"  # facts | exemplars | none
     exemplar_max_tokens: int = 400
+    # Phase 2 (results/bench): each is off unless a configuration (CAMR Personal's) turns it on.
+    dated_context: bool = False  # each admitted note shows its date ("[YYYY-MM-DD] ..."), listed oldest first
+    time_filter: bool = False  # a question naming a period ("last week", "in March") drops dated notes outside it
+    entity_gate_skip_time: bool = False  # weekdays, months and "today"/"tomorrow" are not names for the entity gate
+    profile: bool = False  # lasting traits the user states become profile notes, always offered to the reader
+    profile_budget: int = 64  # tokens of profile notes a context may carry
+    profile_min_similarity: float = -1.0  # offer only profile notes at least this similar (-1: the best, always)
+    aggregate: bool = False  # "how many times / how often / in total / list all": many short one-line notes
+    aggregate_k: int = 100
+    aggregate_budget: int = 1024
+    compress: str = "none"  # none | sentences: an admitted note keeps only its sentences about the question
+    slot_gate: bool = False  # "my passport number": abstain unless a note mentions the thing asked about
 
     @property
     def note_type(self) -> str:

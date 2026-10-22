@@ -1,0 +1,12 @@
+scripts/reproduce.py --only tests,lookup-dev,verified-dev,verified-test,verified-heldout,governor,math (2026-10-22, branch phase2/gaps)
+
+[FAIL] run 1 tests           658.8s  2 failed, 225 passed, 1 skipped, 2 warnings in 657.79s (0:10:57)
+[PASS] run 1 lookup-dev       24.1s  200 lookups replayed offline, identical pages and hits
+[PASS] run 1 verified-dev    407.7s  answers_dev.json: 4 variants identical; answers_dev_bn.json: 1 variants identical; answers_dev_hy.json: 1 variants identical; answers_dev_sa.json: 2 variants identical; answers_dev_sahy.json: 1 variants identical; answers_dev_strict.json: 4 variants identical
+[PASS] run 1 verified-test    36.0s  answers_test.json: 1 variants identical; answers_test_sa.json: 2 variants identical; answers_test_strict.json: 2 variants identical
+[PASS] run 1 verified-heldout   71.3s  answers_heldout.json: 1 variants identical; answers_heldout_sa.json: 2 variants identical; answers_heldout_sa_llama3_2_3b.json: 1 variants identical; answers_heldout_sa_phi4-mini.json: 1 variants identical; answers_heldout_sa_qwen2_5_1_5b.json: 1 variants identical; answers_heldout_sa_qwen2_5_7b.json: 1 variants identical
+[PASS] run 1 governor          3.4s  device limits, stop and resume: 13 passed in 2.86s
+[PASS] run 1 math             39.4s  run_kimi-k3_calc.json: identical; run_qwen2.5_0.5b_calc.json: identical; run_qwen2.5_0.5b_reason.json: identical; ablate_kimi-k3_calc.json: identical; ablate_qwen2.5_0.5b_calc.json: identical
+
+Re-run of the tests check with nothing else running:
+[PASS] run 1 tests            10.0s  227 passed, 1 skipped in 9.43s

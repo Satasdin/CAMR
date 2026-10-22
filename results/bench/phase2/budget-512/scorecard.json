@@ -1,0 +1,835 @@
+{
+ "meta": {
+  "generated_at": "2026-10-21T23:43:19+00:00",
+  "commit": "82ccc5c-dirty",
+  "machine": "arm64 Darwin 27.0.0, 10 CPUs",
+  "read_path": {
+   "write_policy": "verbatim",
+   "chunk_tokens": 120,
+   "chunk_overlap": 16,
+   "retrieval_policy": "similarity_only",
+   "k": 20,
+   "keyword_k": 20,
+   "token_budget": 512,
+   "min_similarity": 0.5,
+   "similarity_margin": 0.15,
+   "entity_gate": true,
+   "expansion": "entity",
+   "packing": "greedy_stop",
+   "embedder": "BAAI/bge-small-en-v1.5",
+   "vector_backend": "sqlite-vec",
+   "dated_context": true,
+   "time_filter": true,
+   "entity_gate_skip_time": true,
+   "profile": true,
+   "profile_budget": 64,
+   "profile_min_similarity": -1.0,
+   "aggregate": true,
+   "aggregate_k": 100,
+   "aggregate_budget": 1024,
+   "compress": "none",
+   "slot_gate": false,
+   "chunk_tokens_used": 120
+  },
+  "passage_device": "mps",
+  "longmemeval": {
+   "repo": "xiaowu0162/longmemeval-cleaned",
+   "revision": "98d7416c24c778c2fee6e6f3006e7a073259d48f",
+   "file": "longmemeval_s_cleaned.json",
+   "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+   "source": "longmemeval_s_cleaned.json",
+   "questions_in_source": 500,
+   "seed": 13,
+   "per_type": 40,
+   "sampled": 260,
+   "by_type": {
+    "single-session-user": 40,
+    "abstention": 30,
+    "multi-session": 40,
+    "single-session-preference": 30,
+    "temporal-reasoning": 40,
+    "knowledge-update": 40,
+    "single-session-assistant": 40
+   },
+   "filler_sessions": 10627,
+   "filler_m_source": "longmemeval_m_cleaned.json",
+   "filler_m_sha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f",
+   "filler_m_sessions": 39779,
+   "filler_m_notes_estimate": 950056
+  },
+  "rules": {
+   "A9": "peak RSS <= 8192 MB, p95 retrieval <= 500 ms, needle recall no more than 10% below the 1k store"
+  }
+ },
+ "abilities": {
+  "A1": {
+   "name": "recall one taught fact among many",
+   "n": 155,
+   "passed": 139,
+   "pass_rate": 0.8968,
+   "ci95": [
+    0.8389,
+    0.9355
+   ],
+   "all_needed_recall": 0.8968,
+   "distractor_share": 0.8077,
+   "context_tokens": 388.8,
+   "retrieval_ms_median": 14.29,
+   "retrieval_ms_p95": 122.64,
+   "abstain_rate": 0.0258,
+   "misses": {
+    "budget full": 9,
+    "entity gate": 4,
+    "below margin": 2,
+    "not retrieved": 1
+   },
+   "suites": {
+    "lme-ssa": {
+     "n": 40,
+     "passed": 33,
+     "pass_rate": 0.825,
+     "ci95": [
+      0.6805,
+      0.9125
+     ],
+     "all_needed_recall": 0.825,
+     "distractor_share": 0.654,
+     "context_tokens": 470.7,
+     "retrieval_ms_median": 14.12,
+     "retrieval_ms_p95": 18.54,
+     "abstain_rate": 0.0,
+     "misses": {
+      "budget full": 5,
+      "below margin": 1,
+      "not retrieved": 1
+     }
+    },
+    "lme-ssu": {
+     "n": 40,
+     "passed": 36,
+     "pass_rate": 0.9,
+     "ci95": [
+      0.7695,
+      0.9604
+     ],
+     "all_needed_recall": 0.9,
+     "distractor_share": 0.8521,
+     "context_tokens": 495.0,
+     "retrieval_ms_median": 16.85,
+     "retrieval_ms_p95": 253.72,
+     "abstain_rate": 0.025,
+     "misses": {
+      "budget full": 2,
+      "below margin": 1,
+      "entity gate": 1
+     }
+    },
+    "needle-100k": {
+     "n": 25,
+     "passed": 22,
+     "pass_rate": 0.88,
+     "ci95": [
+      0.7004,
+      0.9583
+     ],
+     "all_needed_recall": 0.88,
+     "distractor_share": 0.8973,
+     "context_tokens": 355.8,
+     "retrieval_ms_median": 67.82,
+     "retrieval_ms_p95": 91.61,
+     "abstain_rate": 0.04,
+     "misses": {
+      "budget full": 2,
+      "entity gate": 1
+     }
+    },
+    "needle-10k": {
+     "n": 25,
+     "passed": 24,
+     "pass_rate": 0.96,
+     "ci95": [
+      0.8046,
+      0.9929
+     ],
+     "all_needed_recall": 0.96,
+     "distractor_share": 0.8709,
+     "context_tokens": 307.1,
+     "retrieval_ms_median": 12.89,
+     "retrieval_ms_p95": 24.29,
+     "abstain_rate": 0.04,
+     "misses": {
+      "entity gate": 1
+     }
+    },
+    "needle-1k": {
+     "n": 25,
+     "passed": 24,
+     "pass_rate": 0.96,
+     "ci95": [
+      0.8046,
+      0.9929
+     ],
+     "all_needed_recall": 0.96,
+     "distractor_share": 0.83,
+     "context_tokens": 202.3,
+     "retrieval_ms_median": 6.78,
+     "retrieval_ms_p95": 7.45,
+     "abstain_rate": 0.04,
+     "misses": {
+      "entity gate": 1
+     }
+    }
+   }
+  },
+  "A2": {
+   "name": "join two facts",
+   "n": 40,
+   "passed": 19,
+   "pass_rate": 0.475,
+   "ci95": [
+    0.3294,
+    0.625
+   ],
+   "all_needed_recall": 0.475,
+   "distractor_share": 0.7422,
+   "context_tokens": 535.3,
+   "retrieval_ms_median": 12.24,
+   "retrieval_ms_p95": 22.38,
+   "abstain_rate": 0.0,
+   "misses": {
+    "budget full": 19,
+    "below margin": 7,
+    "not retrieved": 7
+   },
+   "suites": {
+    "lme-ms": {
+     "n": 40,
+     "passed": 19,
+     "pass_rate": 0.475,
+     "ci95": [
+      0.3294,
+      0.625
+     ],
+     "all_needed_recall": 0.475,
+     "distractor_share": 0.7422,
+     "context_tokens": 535.3,
+     "retrieval_ms_median": 12.24,
+     "retrieval_ms_p95": 22.38,
+     "abstain_rate": 0.0,
+     "misses": {
+      "budget full": 19,
+      "below margin": 7,
+      "not retrieved": 7
+     }
+    }
+   }
+  },
+  "A3": {
+   "name": "knowledge update",
+   "n": 43,
+   "passed": 32,
+   "pass_rate": 0.7442,
+   "ci95": [
+    0.5976,
+    0.8507
+   ],
+   "all_needed_recall": 0.7442,
+   "distractor_share": 0.8638,
+   "context_tokens": 463.6,
+   "retrieval_ms_median": 13.58,
+   "retrieval_ms_p95": 23.3,
+   "abstain_rate": 0.0465,
+   "misses": {
+    "budget full": 5,
+    "below margin": 4,
+    "entity gate": 2
+   },
+   "suites": {
+    "camr-brief": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.5135,
+     "context_tokens": 37.0,
+     "retrieval_ms_median": 7.04,
+     "retrieval_ms_p95": 7.04,
+     "abstain_rate": 0.0
+    },
+    "camr-extra": {
+     "n": 2,
+     "passed": 2,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.3424,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.4675,
+     "context_tokens": 45.0,
+     "retrieval_ms_median": 6.38,
+     "retrieval_ms_p95": 6.61,
+     "abstain_rate": 0.0
+    },
+    "lme-ku": {
+     "n": 40,
+     "passed": 29,
+     "pass_rate": 0.725,
+     "ci95": [
+      0.5716,
+      0.8389
+     ],
+     "all_needed_recall": 0.725,
+     "distractor_share": 0.8924,
+     "context_tokens": 495.2,
+     "retrieval_ms_median": 13.89,
+     "retrieval_ms_p95": 23.3,
+     "abstain_rate": 0.05,
+     "misses": {
+      "budget full": 5,
+      "below margin": 4,
+      "entity gate": 2
+     }
+    }
+   }
+  },
+  "A4": {
+   "name": "temporal",
+   "n": 42,
+   "passed": 21,
+   "pass_rate": 0.5,
+   "ci95": [
+    0.3553,
+    0.6447
+   ],
+   "all_needed_recall": 0.5476,
+   "distractor_share": 0.7762,
+   "context_tokens": 511.7,
+   "retrieval_ms_median": 13.9,
+   "retrieval_ms_p95": 20.73,
+   "abstain_rate": 0.0,
+   "misses": {
+    "budget full": 20,
+    "not retrieved": 8,
+    "below margin": 2
+   },
+   "suites": {
+    "camr-brief": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.0,
+     "context_tokens": 22.0,
+     "retrieval_ms_median": 7.12,
+     "retrieval_ms_p95": 7.12,
+     "abstain_rate": 0.0
+    },
+    "camr-extra": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.9288,
+     "context_tokens": 351.0,
+     "retrieval_ms_median": 6.81,
+     "retrieval_ms_p95": 6.81,
+     "abstain_rate": 0.0
+    },
+    "lme-tr": {
+     "n": 40,
+     "passed": 19,
+     "pass_rate": 0.475,
+     "ci95": [
+      0.3294,
+      0.625
+     ],
+     "all_needed_recall": 0.525,
+     "distractor_share": 0.7918,
+     "context_tokens": 528.0,
+     "retrieval_ms_median": 14.08,
+     "retrieval_ms_p95": 20.73,
+     "abstain_rate": 0.0,
+     "misses": {
+      "budget full": 20,
+      "not retrieved": 8,
+      "below margin": 2
+     }
+    }
+   }
+  },
+  "A5": {
+   "name": "counting",
+   "n": 3,
+   "passed": 2,
+   "pass_rate": 0.6667,
+   "ci95": [
+    0.2077,
+    0.9385
+   ],
+   "all_needed_recall": 0.6667,
+   "distractor_share": 0.2697,
+   "context_tokens": 584.7,
+   "retrieval_ms_median": 7.33,
+   "retrieval_ms_p95": 7.56,
+   "abstain_rate": 0.0,
+   "misses": {
+    "budget full": 25
+   },
+   "suites": {
+    "camr-count-100": {
+     "n": 1,
+     "passed": 0,
+     "pass_rate": 0.0,
+     "ci95": [
+      0.0,
+      0.7935
+     ],
+     "all_needed_recall": 0.0,
+     "distractor_share": 0.0246,
+     "context_tokens": 1017.0,
+     "retrieval_ms_median": 7.56,
+     "retrieval_ms_p95": 7.56,
+     "abstain_rate": 0.0,
+     "misses": {
+      "budget full": 25
+     }
+    },
+    "camr-count-30": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.1051,
+     "context_tokens": 447.0,
+     "retrieval_ms_median": 7.33,
+     "retrieval_ms_p95": 7.33,
+     "abstain_rate": 0.0
+    },
+    "camr-count-7": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.6793,
+     "context_tokens": 290.0,
+     "retrieval_ms_median": 6.83,
+     "retrieval_ms_p95": 6.83,
+     "abstain_rate": 0.0
+    }
+   }
+  },
+  "A6": {
+   "name": "implicit preference",
+   "n": 33,
+   "passed": 28,
+   "pass_rate": 0.8485,
+   "ci95": [
+    0.6908,
+    0.9335
+   ],
+   "all_needed_recall": 0.8485,
+   "distractor_share": 0.8672,
+   "context_tokens": 471.2,
+   "retrieval_ms_median": 12.51,
+   "retrieval_ms_p95": 19.24,
+   "abstain_rate": 0.0606,
+   "misses": {
+    "budget full": 4,
+    "entity gate": 1
+   },
+   "suites": {
+    "camr-brief": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.8941,
+     "context_tokens": 170.0,
+     "retrieval_ms_median": 6.82,
+     "retrieval_ms_p95": 6.82,
+     "abstain_rate": 0.0
+    },
+    "camr-extra": {
+     "n": 2,
+     "passed": 2,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.3424,
+      1.0
+     ],
+     "all_needed_recall": 1.0,
+     "distractor_share": 0.4244,
+     "context_tokens": 155.0,
+     "retrieval_ms_median": 6.55,
+     "retrieval_ms_p95": 6.56,
+     "abstain_rate": 0.5
+    },
+    "lme-ssp": {
+     "n": 30,
+     "passed": 25,
+     "pass_rate": 0.8333,
+     "ci95": [
+      0.6644,
+      0.9266
+     ],
+     "all_needed_recall": 0.8333,
+     "distractor_share": 0.8958,
+     "context_tokens": 502.3,
+     "retrieval_ms_median": 12.78,
+     "retrieval_ms_p95": 19.24,
+     "abstain_rate": 0.0333,
+     "misses": {
+      "budget full": 4,
+      "entity gate": 1
+     }
+    }
+   }
+  },
+  "A7": {
+   "name": "abstention",
+   "n": 34,
+   "passed": 4,
+   "pass_rate": 0.1176,
+   "ci95": [
+    0.0467,
+    0.2662
+   ],
+   "all_needed_recall": null,
+   "distractor_share": 0.9706,
+   "context_tokens": 518.5,
+   "retrieval_ms_median": 11.83,
+   "retrieval_ms_p95": 15.63,
+   "abstain_rate": 0.1176,
+   "suites": {
+    "camr-brief": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 0.0,
+     "context_tokens": 0.0,
+     "retrieval_ms_median": 5.89,
+     "retrieval_ms_p95": 5.89,
+     "abstain_rate": 1.0
+    },
+    "camr-extra": {
+     "n": 3,
+     "passed": 0,
+     "pass_rate": 0.0,
+     "ci95": [
+      0.0,
+      0.5615
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 1.0,
+     "context_tokens": 396.3,
+     "retrieval_ms_median": 5.96,
+     "retrieval_ms_p95": 6.11,
+     "abstain_rate": 0.0
+    },
+    "lme-abs": {
+     "n": 30,
+     "passed": 3,
+     "pass_rate": 0.1,
+     "ci95": [
+      0.0346,
+      0.2562
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 1.0,
+     "context_tokens": 548.0,
+     "retrieval_ms_median": 12.21,
+     "retrieval_ms_p95": 15.63,
+     "abstain_rate": 0.1
+    }
+   }
+  },
+  "A8": {
+   "name": "forget and privacy",
+   "n": 16,
+   "passed": 16,
+   "pass_rate": 1.0,
+   "ci95": [
+    0.8064,
+    1.0
+   ],
+   "all_needed_recall": null,
+   "distractor_share": null,
+   "context_tokens": null,
+   "retrieval_ms_median": null,
+   "retrieval_ms_p95": null,
+   "abstain_rate": null,
+   "suites": {
+    "app-tests": {
+     "n": 9,
+     "passed": 9,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.7008,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": null,
+     "context_tokens": null,
+     "retrieval_ms_median": null,
+     "retrieval_ms_p95": null,
+     "abstain_rate": null
+    },
+    "forget": {
+     "n": 5,
+     "passed": 5,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.5655,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": null,
+     "context_tokens": null,
+     "retrieval_ms_median": null,
+     "retrieval_ms_p95": null,
+     "abstain_rate": null
+    },
+    "privacy": {
+     "n": 2,
+     "passed": 2,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.3424,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": null,
+     "context_tokens": null,
+     "retrieval_ms_median": null,
+     "retrieval_ms_p95": null,
+     "abstain_rate": null
+    }
+   }
+  },
+  "A9": {
+   "name": "scale",
+   "n": 3,
+   "passed": 3,
+   "pass_rate": 1.0,
+   "ci95": [
+    0.4385,
+    1.0
+   ],
+   "all_needed_recall": null,
+   "distractor_share": null,
+   "context_tokens": null,
+   "retrieval_ms_median": 12.28,
+   "retrieval_ms_p95": 59.83,
+   "abstain_rate": null,
+   "suites": {
+    "scale-100k": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": null,
+     "context_tokens": null,
+     "retrieval_ms_median": 59.83,
+     "retrieval_ms_p95": 59.83,
+     "abstain_rate": null
+    },
+    "scale-10k": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": null,
+     "context_tokens": null,
+     "retrieval_ms_median": 12.28,
+     "retrieval_ms_p95": 12.28,
+     "abstain_rate": null
+    },
+    "scale-1k": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": null,
+     "context_tokens": null,
+     "retrieval_ms_median": 6.61,
+     "retrieval_ms_p95": 6.61,
+     "abstain_rate": null
+    }
+   }
+  },
+  "A10": {
+   "name": "do no harm (engine proxy)",
+   "n": 82,
+   "passed": 50,
+   "pass_rate": 0.6098,
+   "ci95": [
+    0.5015,
+    0.7082
+   ],
+   "all_needed_recall": null,
+   "distractor_share": 0.8415,
+   "context_tokens": 252.1,
+   "retrieval_ms_median": 11.31,
+   "retrieval_ms_p95": 58.82,
+   "abstain_rate": 0.6098,
+   "suites": {
+    "A7 camr-brief": {
+     "n": 1,
+     "passed": 1,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.2065,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 0.0,
+     "context_tokens": 0.0,
+     "retrieval_ms_median": 5.89,
+     "retrieval_ms_p95": 5.89,
+     "abstain_rate": 1.0
+    },
+    "A7 camr-extra": {
+     "n": 3,
+     "passed": 0,
+     "pass_rate": 0.0,
+     "ci95": [
+      0.0,
+      0.5615
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 1.0,
+     "context_tokens": 396.3,
+     "retrieval_ms_median": 5.96,
+     "retrieval_ms_p95": 6.11,
+     "abstain_rate": 0.0
+    },
+    "A7 lme-abs": {
+     "n": 30,
+     "passed": 3,
+     "pass_rate": 0.1,
+     "ci95": [
+      0.0346,
+      0.2562
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 1.0,
+     "context_tokens": 548.0,
+     "retrieval_ms_median": 12.21,
+     "retrieval_ms_p95": 15.63,
+     "abstain_rate": 0.1
+    },
+    "absent-100k": {
+     "n": 12,
+     "passed": 10,
+     "pass_rate": 0.8333,
+     "ci95": [
+      0.552,
+      0.953
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 1.0,
+     "context_tokens": 136.7,
+     "retrieval_ms_median": 57.35,
+     "retrieval_ms_p95": 75.18,
+     "abstain_rate": 0.8333
+    },
+    "absent-10k": {
+     "n": 12,
+     "passed": 12,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.7575,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 1.0,
+     "context_tokens": 57.9,
+     "retrieval_ms_median": 11.7,
+     "retrieval_ms_p95": 13.02,
+     "abstain_rate": 1.0
+    },
+    "absent-1k": {
+     "n": 12,
+     "passed": 12,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.7575,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 1.0,
+     "context_tokens": 59.3,
+     "retrieval_ms_median": 6.78,
+     "retrieval_ms_p95": 7.31,
+     "abstain_rate": 1.0
+    },
+    "general-on-personal": {
+     "n": 12,
+     "passed": 12,
+     "pass_rate": 1.0,
+     "ci95": [
+      0.7575,
+      1.0
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 0.0,
+     "context_tokens": 0.0,
+     "retrieval_ms_median": 5.76,
+     "retrieval_ms_p95": 6.59,
+     "abstain_rate": 1.0
+    }
+   },
+   "gate": {
+    "answerable": 316,
+    "unanswerable": 82,
+    "opened_answerable": 308,
+    "opened_unanswerable": 32,
+    "precision": 0.9059,
+    "specificity": 0.6098,
+    "sensitivity": 0.9747
+   }
+  }
+ }
+}

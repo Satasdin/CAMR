@@ -28,23 +28,34 @@ class TokenBudgeter:
         self.budget = budget
         self.mode = mode
 
-    def pack(self, ranked: list[ScoredNote]) -> tuple[str, int]:
-        """Mark admitted notes in place; return (context, tokens used)."""
+    def pack(self, ranked: list[ScoredNote], render=None, order=None, budget: int | None = None) -> tuple[str, int]:
+        """Mark admitted notes in place; return (context, tokens used).
+
+        ``render(note) -> line`` writes a note differently (dates, compression), ``order(note) -> key`` lists the
+        admitted notes in another order than their rank (e.g. oldest first), and ``budget`` replaces the
+        budget for this call. Without them the context is exactly as before."""
+        budget = self.budget if budget is None else budget
         used = 0
-        lines: list[str] = []
+        picked: list[ScoredNote] = []
         stopped = False
         for cand in ranked:
-            line = render_note(cand.note.text)
+            line = render(cand) if render is not None else render_note(cand.note.text)
+            cand.line = line
             cand.tokens = self.tokenizer.count(line)
             cand.admitted = False
+            cand.position = None
             if stopped or not cand.eligible:
                 continue
-            if used + cand.tokens > self.budget:
+            if used + cand.tokens > budget:
                 if self.mode == "greedy_stop":
                     stopped = True
                 continue
             cand.admitted = True
             used += cand.tokens
-            lines.append(line)
-        assert used <= self.budget, "budget invariant violated"
-        return "".join(lines), used
+            picked.append(cand)
+        assert used <= budget, "budget invariant violated"
+        if order is not None:
+            picked.sort(key=order)
+        for i, cand in enumerate(picked):
+            cand.position = i
+        return "".join(c.line for c in picked), used

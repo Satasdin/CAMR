@@ -75,6 +75,7 @@ KINDS = {
     "learned": "an answer you approved",
     "web": "looked up online",
     "pack": "from a knowledge pack",
+    "profile": "what you told me about yourself",
 }
 BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
 
@@ -158,7 +159,9 @@ def is_about_user(question: str) -> bool:
 # prompt E made a 3B model lead with "I don't know that yet"). Scored on the same sets (scripts/prompt_eval.py).
 CHAT_PROMPT = """You are a private personal assistant running on the user's own computer.
 
-The notes below come from the user's personal memory and are about the user. "The user said …" means the user told you this earlier; "I" inside it is the user. Treat what the notes say about the user as true and answer from them directly.
+Today is {today}.
+
+The notes below come from the user's personal memory and are about the user. "The user said …" means the user told you this earlier; "I" inside it is the user. Treat what the notes say about the user as true and answer from them directly. Notes are dated and listed oldest first; when notes disagree, the newest is right.
 
 How to answer:
 1. If the notes contain the answer, give it from the notes.
@@ -340,7 +343,10 @@ class Assistant:
                        "similarity_margin": 0.15, "expansion": "entity", "entity_gate": True, "chunk_tokens": 120,
                        # hybrid: notes found by their words join the vector hits (measured on 196k notes: recall@10
                        # 84.3% against 75.4% for vectors alone, results/bulk/ingest.json)
-                       "keyword_k": 20},
+                       "keyword_k": 20,
+                       # Phase 2 (results/bench/phase2): dates and periods, profile notes, counting, the slot gate
+                       "dated_context": True, "time_filter": True, "entity_gate_skip_time": True, "profile": True,
+                       "aggregate": True, "slot_gate": True, "compress": "sentences"},
         })
         # One store file per embedder: vectors from different embedders cannot be mixed.
         db = "memory.sqlite" if embedder is not None or self.embedder.name.startswith("BAAI") else \
@@ -471,7 +477,7 @@ class Assistant:
                 raise RuntimeError(f"not stored: this device is at its limit ({st.reason}: {st.detail})")
             # The old version goes first: notes it shares with the new one would otherwise be rejected as duplicates
             # and then lost with it.
-            replaced = sum(self.store.delete_source(sid) for sid in old)
+            replaced = sum(self._delete_source(sid) for sid in old)
             notes = self.teach(text, title=Path(name).stem, kind="file", doc_id=doc_id)
             with c:
                 c.execute("INSERT OR REPLACE INTO app_file(doc_id, sha256, at) VALUES (?, ?, ?)", (doc_id, digest, _now()))
@@ -482,11 +488,26 @@ class Assistant:
         with self.store.conn:  # a forgotten file is learned afresh if it is taught again
             self.store.conn.execute("DELETE FROM app_file WHERE doc_id IN (SELECT doc_id FROM source WHERE"
                                     " source_id=? AND dataset='file')", (source_id,))
-        removed = self.store.delete_source(source_id)
+        removed = self._delete_source(source_id)
         if removed and not self._fts_secure:
             with self.store.conn:  # merge the keyword index so the deleted words leave it (and its pages are wiped)
                 self.store.conn.execute("INSERT INTO note_fts(note_fts) VALUES ('optimize')")
         return removed
+
+    def _delete_source(self, source_id: int) -> int:
+        """Delete a source and the profile notes taken from it ("profile:<dataset>:<doc_id>:<i>")."""
+        row = self.store.conn.execute("SELECT dataset, doc_id FROM source WHERE source_id=?", (source_id,)).fetchone()
+        derived = []
+        if row:
+            prefix = f"profile:{row[0]}:{row[1]}:"
+            derived = [r[0] for r in self.store.conn.execute(
+                "SELECT source_id FROM source WHERE dataset='profile' AND substr(doc_id, 1, ?) = ?",
+                (len(prefix), prefix))]
+        return self.store.delete_source(source_id) + sum(self.store.delete_source(d) for d in derived)
+
+    def today(self) -> dt.date:
+        """Today on the user's calendar (the engine's clock, in local time)."""
+        return self.engine.clock.now().astimezone().date()
 
     # ------------------------------------------------------------ conversations
     @_locked
@@ -648,7 +669,7 @@ class Assistant:
             self.last_activity = time.time()
             yield {"type": "done", "turn": turn.as_dict()}
             return
-        prompt = CHAT_PROMPT.format(notes=recall.context or "(no relevant notes)",
+        prompt = CHAT_PROMPT.format(today=self.today().isoformat(), notes=recall.context or "(no relevant notes)",
                                     history=self._history(conversation_id), question=question)
         t0, parts, last, first = time.perf_counter(), [], {}, None
         for piece, chunk in self._stream_generate(prompt):
@@ -680,7 +701,7 @@ class Assistant:
             # What the user *states* is the user's own knowledge: keep it, so it can be
             # recalled long after it has scrolled out of the context window. Questions are
             # not kept: they carry no knowledge and only crowd out real memories (D-14).
-            day = dt.date.today().isoformat()
+            day = self.today().isoformat()
             turn.saved_to_memory = self.teach(f"On {day} the user said: {question}", kind="chat",
                                               doc_id=f"chat-{turn.turn_id}") > 0
         yield {"type": "done", "turn": turn.as_dict()}
@@ -788,7 +809,7 @@ class Assistant:
                     "forgotten": 0}
         approved = self.store.conn.execute("SELECT source_id FROM source WHERE dataset='learned' AND doc_id=?",
                                            (f"learned-{turn_id}",)).fetchall()
-        return {"learned": 0, "forgotten": sum(self.store.delete_source(r[0]) for r in approved)}
+        return {"learned": 0, "forgotten": sum(self._delete_source(r[0]) for r in approved)}
 
     # ------------------------------------------------------------ learning: lookups, packs, sleep
     @_locked

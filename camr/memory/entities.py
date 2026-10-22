@@ -67,8 +67,23 @@ def _asks(i: int, toks: list[str], qmark: list[bool]) -> bool:
     return True
 
 
-def question_entities(question: str) -> list[str]:
-    """Normalised entity strings named in the question (possibly empty)."""
+# Words of time that are capitalised but are not names: with ``skip_time`` a run made only of them (and numbers) is
+# not an entity ("Can you suggest a dinner place for Friday?" names nothing memory must mention).
+_TIME_WORDS = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "today", "tomorrow",
+               "yesterday", "tonight", "january", "february", "march", "april", "may", "june", "july", "august",
+               "september", "october", "november", "december", "weekend", "christmas", "easter", "morning",
+               "evening", "afternoon", "noon", "midnight"}
+
+
+def _only_time(span: str) -> bool:
+    words = span.split()
+    return bool(words) and all(w in _TIME_WORDS or w.isdigit() or w in {"last", "next", "this", "of", "the"}
+                               for w in words)
+
+
+def question_entities(question: str, skip_time: bool = False) -> list[str]:
+    """Normalised entity strings named in the question (possibly empty). ``skip_time`` leaves out spans that are
+    only days, months and words like "today" (off by default: the research configurations never set it)."""
     out = [norm(m.group(1)) for m in _QUOTED.finditer(question)]
     found = list(_TOKEN.finditer(question))
     toks = [_POSSESSIVE.sub("", m.group(0)) for m in found]
@@ -111,9 +126,73 @@ def question_entities(question: str) -> list[str]:
             i = j + 1
         else:
             i += 1
-    return list(dict.fromkeys(s for s in out if s))
+    return list(dict.fromkeys(s for s in out if s and not (skip_time and _only_time(s))))
 
 
 def mentions_any(text: str, entities: list[str]) -> bool:
     t = f" {norm(text)} "
     return any(f" {e} " in t for e in entities)
+
+
+# ---------------------------------------------------------------------- personal slots (``slot_gate``)
+# Words that name an attribute of a thing rather than the thing ("my passport *number*", "the *name* of my hamster").
+_ATTRIBUTES = {"number", "numbers", "name", "names", "date", "day", "time", "address", "code", "type", "kind", "size",
+               "colour", "color", "price", "cost", "age", "model", "brand", "make", "breed", "speed", "score",
+               "amount", "total", "rate", "length", "height", "weight", "value", "level", "status", "title",
+               "version", "id", "details", "detail", "registration", "pin", "password", "location", "place"}
+_SLOT_STOP = {"a", "an", "the", "my", "our", "new", "old", "current", "first", "last", "next", "own", "favourite",
+              "favorite", "usual", "previous", "recent", "latest", "is", "was", "are", "were", "and", "or", "in", "on",
+              "at", "for", "to", "from", "with", "of", "when", "where", "what", "which", "how", "did", "do", "does"}
+# nouns that end in -ing (elsewhere an -ing word after "X's" is a verb: "my kitchen's becoming" = "kitchen is")
+_ING_NOUNS = {"wedding", "weddings", "meeting", "meetings", "building", "painting", "paintings", "evening",
+              "morning", "clothing", "ceiling", "booking", "setting", "training", "ring", "rings", "earring",
+              "earrings", "thing", "things", "string", "spring", "wing", "bedding", "pudding", "housewarming",
+              "christening", "graduation", "parking", "recording", "drawing", "drawings", "dumpling", "sibling",
+              "siblings", "offspring", "seedling", "seedlings", "duckling", "king", "swing", "ping"}
+_MY_PHRASE = re.compile(r"\bmy\s+((?:[a-z][\w'’-]*\s*){1,4})", re.I)
+
+
+def personal_slots(question: str) -> list[list[str]]:
+    """What a first-person question asks about, when it asks for a specific thing of the user's, as groups of
+    words: a note must mention a word of every group. "When is my brother's wedding?" -> [["brother"],
+    ["wedding"]] (whose, and what); "What is my passport number?" -> [["passport"]]; "What's the code for my bike
+    lock?" -> [["bike", "lock"]] (either). Empty when the question asks for no such thing: it names no attribute
+    ("number", "name", ...) and no "X's Y" ("My kitchen's becoming a mess" is "kitchen is")."""
+    q = question.strip().rstrip("?.! ")
+    out: list[list[str]] = []
+    for m in _MY_PHRASE.finditer(q):
+        words = [w.lower().strip("'’") for w in m.group(1).split()]
+        phrase: list[str] = []
+        for w in words:
+            if w in _SLOT_STOP and phrase:
+                break
+            if w not in _SLOT_STOP:
+                phrase.append(w)
+        def verb(w: str) -> bool:
+            return w.endswith("ing") and w not in _ING_NOUNS
+
+        poss = next((i for i, w in enumerate(phrase[:-1]) if w.endswith(("'s", "’s")) and not verb(phrase[i + 1])),
+                    None)
+        if poss is None and any(w.endswith(("'s", "’s")) for w in phrase[:-1]):
+            phrase = phrase[:next(i for i, w in enumerate(phrase) if w.endswith(("'s", "’s"))) + 1]
+        before = q[:m.start()].lower()
+        attr_before = re.search(r"\b(?:" + "|".join(_ATTRIBUTES) + r")\s+(?:of|for)\s+$", before) is not None or \
+            re.search(r"\bwhat\s+(?:" + "|".join(_ATTRIBUTES) + r")\s+(?:is|was|are|were)\s+$", before) is not None
+        nouns = [re.sub(r"['’]s$", "", w) for w in phrase]
+        nouns = [w for w in nouns if w and w not in _ATTRIBUTES and w not in _SLOT_STOP
+                 and not w.endswith(("ly", "ed")) and not verb(w)]
+        if not nouns:
+            continue
+        if poss is not None:  # "my brother's wedding": whose (brother) and what (the last word)
+            owner = re.sub(r"['’]s$", "", phrase[poss])
+            out += [[owner], [nouns[-1]]] if nouns[-1] != owner else [[owner]]
+        elif attr_before or any(w in _ATTRIBUTES for w in phrase):
+            out.append(nouns)
+    return out
+
+
+def mentions_slot(text: str, slot: str) -> bool:
+    """The text mentions the slot word, allowing a plural or another ending ("motorbike" ~ "motorbikes")."""
+    stem = slot[:-1] if slot.endswith("s") and len(slot) > 3 else slot
+    stem = stem[:6] if len(stem) > 6 else stem
+    return re.search(rf"\b{re.escape(stem)}", text.lower()) is not None
