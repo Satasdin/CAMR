@@ -249,3 +249,35 @@ def focus_chips(text: str) -> list[str]:
     if len(names) >= 2:
         chips.append("People")
     return chips + ["Key points"]
+
+
+def text_rows(reading: Reading) -> list[str]:
+    """The file's rows: recognised lines put back into rows where there are pages, else its text line by line."""
+    if reading.positions:
+        out = [" ".join(ln["text"] for ln in [r[0]]) if len(r) == 1 else "  ".join(ln["text"] for ln in r)
+               for p in reading.pages for r in rows(p.lines)]
+    else:
+        out = reading.text.splitlines()
+    return [r.strip() for r in out if r.strip()]
+
+
+MAX_ITEMS = 80
+
+
+def items(reading: Reading, focus: str) -> list[str]:
+    """Every row of a file that holds what the focus asks for, read from the file itself (a small model asked to list
+    a receipt's amounts gave only the total): every number for "Numbers & totals", every date for "Dates &
+    deadlines". A row's label and its value, recognised apart, are written "label: value". Empty for other foci."""
+    if focus == "Numbers & totals":
+        keep = [r for r in text_rows(reading) if re.search(r"\d", r) and re.search(r"[A-Za-z]", r)]
+    elif focus == "Dates & deadlines":
+        keep = [r for r in text_rows(reading) if _DATE.search(r)]
+    else:
+        return []
+    out = []
+    for r in keep:
+        r = re.sub(r"(?<!:)\s{2,}", ": ", r)  # "Fresh Milk 2L  240.00" -> "Fresh Milk 2L: 240.00"
+        r = re.sub(r":\s{2,}", ": ", r)
+        if r not in out:
+            out.append(r)
+    return out[:MAX_ITEMS]

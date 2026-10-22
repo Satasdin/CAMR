@@ -122,10 +122,14 @@ def test_an_answer_to_a_question_about_the_file_is_kept_with_it(assistant):
     assert any("birthday" in s.text for s in answer.sources)
 
 
-def test_focus_learns_short_notes_of_what_was_asked_for(assistant):
+def test_focus_lists_every_number_from_the_file_and_asks_the_model_for_key_points(assistant):
     out = assistant.learn_upload("receipt.jpg", b"\xff\xd8 a photo")
-    res = assistant.focus(out["file_id"], "Numbers & totals")
-    assert res["facts"] == ["The Naivas receipt total was KSh 2,340."] and res["notes"] == 1
+    asked = len(assistant._http.bodies)
+    res = assistant.focus(out["file_id"], "Numbers & totals")  # every item, not only the total
+    assert res["facts"] == ["12 Oct 2026", "Milk 2L 240.00", "Bread 65.00", "TOTAL KSh 2,340.00"] and res["notes"] == 1
+    assert len(assistant._http.bodies) == asked  # read from the file: no model call
+    res = assistant.focus(out["file_id"], "Key points")
+    assert res["facts"] == ["The Naivas receipt total was KSh 2,340."]
 
 
 def test_a_note_shows_the_lines_it_came_from_and_a_box_can_be_learned(assistant):

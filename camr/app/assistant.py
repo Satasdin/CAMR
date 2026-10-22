@@ -751,8 +751,8 @@ class Assistant:
         name = info.get("name") or reading.name
         ask = FOCUS.get(what, FOCUS["Key points"])
         text = ((info.get("seen", "") + "\n\n") if info.get("seen") else "") + reading.text[:6000]
-        facts = []
-        if self.model and text.strip():
+        facts = reader.items(reading, what)  # every number, every date: read from the file, none left out
+        if not facts and self.model and text.strip():  # people, key points, or a file with none of them
             try:
                 out = self._runner().generate(FOCUS_PROMPT.format(what=ask, name=name, text=text)).text
             except Exception:  # noqa: BLE001
