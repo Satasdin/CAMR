@@ -359,6 +359,8 @@ def introduction(c: Chapter, F: dict) -> None:
               "⟦sec_learn_impl⟧", "⟦sec_learning⟧"],
              ["Skill cards", "Compiles corrections into small adapters that memory attaches only when a question "
               "needs one", "⟦sec_skills⟧", "⟦sec_skills⟧"],
+             ["The link", "Learns per model, from feedback, when to state, decline or escalate an answer",
+              "⟦sec_link⟧", "⟦sec_readers⟧, ⟦sec_link⟧"],
              ["Large data and device limits", "Loads large document collections so they are searchable at once, "
               "and stops safely before the computer runs out of memory or disk", "⟦sec_bulk_impl⟧", "⟦sec_bulk⟧"],
              ["Learned routing", "Decides for each question how much memory to read, or whether to ask the cloud "
@@ -1363,6 +1365,115 @@ def res_skills(c: Chapter) -> None:
         "unrelated question. Only the best admitted note may name a card now.")
 
 
+def reader_rows(tag: str = "baseline") -> list[dict] | None:
+    """Per reader on the reader bench: right alone and with memory, wrong stated and declined with memory, and the
+    questions memory helped and harmed (results/readers/answers_<tag>.jsonl)."""
+    p = RES / f"readers/answers_{tag}.jsonl"
+    if not p.exists():
+        return None
+    recs = [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+    out = []
+    for name in ("qwen2.5:0.5b", "qwen2.5:1.5b", "qwen2.5:3b", "kimi-k3"):
+        pairs: dict[str, dict] = {}
+        for r in recs:
+            if r["reader"] == name and r["correct"] is not None:
+                pairs.setdefault(r["qid"], {})[r["memory"]] = r
+        ps = [v for v in pairs.values() if True in v and False in v]
+        if not ps:
+            continue
+        n = len(ps)
+        out.append({"reader": name, "n": n, "alone": sum(v[False]["correct"] for v in ps) / n,
+                    "memory": sum(v[True]["correct"] for v in ps) / n,
+                    "wrong": sum(1 for v in ps if not v[True]["correct"] and not v[True]["declined"]) / n,
+                    "declined": sum(1 for v in ps if not v[True]["correct"] and v[True]["declined"]) / n,
+                    "help": sum(1 for v in ps if not v[False]["correct"] and v[True]["correct"]),
+                    "harm": sum(1 for v in ps if v[False]["correct"] and not v[True]["correct"])})
+    return out
+
+
+READER_NAME = {"qwen2.5:0.5b": "qwen2.5 0.5B", "qwen2.5:1.5b": "qwen2.5 1.5B", "qwen2.5:3b": "qwen2.5 3B",
+               "kimi-k3": "Kimi K3 (cloud)"}
+
+
+def res_readers(c: Chapter) -> None:
+    rows = reader_rows()
+    if not rows:
+        return
+    c.h3("The Same Memory, Read by Models of Every Size", key="sec_readers")
+    c.p("The engine decides what a model reads; the reader bench measures what each model then does with it. It "
+        "asks 287 questions of four readers, three local models of 0.5 to 3 billion parameters and the cloud model, "
+        "each twice with CAMR Personal's own prompt: alone, and with exactly the notes the app's memory admitted. The "
+        "questions are 260 from LongMemEval, a public benchmark of long conversations between a user and an "
+        "assistant whose question types match the abilities a personal memory needs (recalling what was said, joining "
+        "two sessions, a fact that changed, time, preferences, and questions that cannot be answered), and 27 "
+        "written for CAMR. A cloud judge marked each answer right or wrong with LongMemEval's own rule for each "
+        f"question type ({c.next_tab()}, {c.next_fig()}).")
+    c.table("The same memory, four readers, 287 questions (`results/readers/`)",
+            ["Reader", "Right alone", "Right with memory", "Wrong stated, with memory", "Declined, with memory",
+             "Helped / harmed"],
+            [[READER_NAME[r["reader"]], p1(r["alone"]), f"**{p1(r['memory'])}**", p1(r["wrong"]), p1(r["declined"]),
+              f"{r['help']} / {r['harm']}"] for r in rows], [3.6, 2.2, 2.6, 2.8, 2.6, 2.2], size=9)
+    if (REPORT / "readers.png").exists():
+        c.figure(REPORT / "readers.png", "Right answers alone and with memory, and wrong answers stated with memory, "
+                 "per reader", 15.5)
+    small, big = rows[0], rows[-1]
+    c.p(f"**Where it was perfect.** Memory lifted every reader, most of all the questions only the user's own "
+        f"history can answer: the smallest model went from {p1(small['alone'])} to {p1(small['memory'])} and the "
+        f"cloud model from {p1(big['alone'])} to {p1(big['memory'])}, and memory helped far more questions than it "
+        f"harmed at every size ({small['help']} against {small['harm']} for the smallest, {big['help']} against "
+        f"{big['harm']} for the cloud model). **Where it was not.** A small reader states many wrong answers from the "
+        f"same notes ({p1(small['wrong'])} for the 0.5B model, {p1(big['wrong'])} for the cloud model), and the "
+        "engine's weak abstention on long conversations costs the small models their honesty: "
+        "on questions that cannot be answered, the 1.5B model said it did not know 82% of the time alone but 56% "
+        "with memory, because the notes it was given looked relevant. The next section is the answer to that.")
+
+
+def res_link(c: Chapter) -> None:
+    d = J("results/link/link_baseline.json")
+    if not d:
+        return
+    c.h3("The Link: Learning When to Trust Each Model", key="sec_link")
+    c.p("The link tier is a handful of numbers per model, learned from feedback, that decide what to do with a local "
+        "answer: state it, say the model does not know yet, or ask the cloud model with the same notes. It reads only "
+        "signals that cost nothing (how strongly memory matched, whether it abstained, how much of the answer's "
+        "wording occurs in the notes, whether the model itself declined, and the kind of question) and learns from "
+        "the reward a user's feedback would give, with a wrong answer priced like a hallucination: right +1, wrong "
+        "−1, declining 0 (+1 when the question cannot be answered), and a fixed price for each cloud call. One link "
+        "per model was learned from half of the reader bench's judged answers, one question at a time, and scored "
+        f"on the other half; ten random splits ({c.next_tab()}, {c.next_fig()}).")
+    rows = []
+    for name, r in d["readers"].items():
+        keep, last = r["fixed"]["always keep"], r["curve"][-1]
+        rows.append([READER_NAME.get(name, name), "every answer stated", p1(keep["right"]), p1(keep["wrong"]),
+                     p1(keep["declined"]), "0%"])
+        rows.append(["", f"**learned link** (after {last['feedback']} answers)", p1(last["right"]),
+                     f"**{p1(last['wrong'])}**", p1(last["declined"]), p1(last["escalated"])])
+    esc = next(iter(d["readers"].values()))["fixed"]["always escalate"]
+    rows.append(["Kimi K3 (cloud)", "every question sent", p1(esc["right"]), p1(esc["wrong"]), p1(esc["declined"]),
+                 "100%"])
+    c.table(f"The learned link, cloud call priced at {d['rewards']['cloud']} (`results/link/link_baseline.json`)",
+            ["Reader", "Policy", "Right", "Wrong stated", "Declined", "Sent to cloud"], rows,
+            [3.2, 4.8, 1.8, 2.2, 1.9, 2.1], size=9)
+    if (REPORT / "link_tradeoff.png").exists():
+        c.figure(REPORT / "link_tradeoff.png", "The learned link at five prices for a cloud call: right answers and "
+                 "wrong answers stated, against the share of questions sent to the cloud model", 15.5)
+    r3 = d["readers"].get("qwen2.5:3b")
+    mid = next((s for s in (r3 or {}).get("cloud_sweep", []) if s["cloud_cost"] == 0.5), None)
+    c.p("**Where it was perfect.** Every link learned within about twenty answers' feedback to stop most wrong "
+        "answers: at every price for a cloud call, wrong answers stated as fact stayed between 3% and 12%, against "
+        "30% to 50% when every local answer is stated. " + (
+            f"For the 3B model at a cloud price of 0.5, the link kept {p1(1 - mid['escalated'])} of questions on the "
+            f"device and answered {p1(mid['right'])} right with {p1(mid['wrong'])} wrong, against "
+            f"{p1(r3['fixed']['always keep']['right'])} right and {p1(r3['fixed']['always keep']['wrong'])} wrong when "
+            "it states everything. " if mid else "") +
+        "**Where it was not.** It removes wrong answers mostly by declining or by sending questions away, not by "
+        "making the small model right more often: on the device alone, a link that may not call the cloud trades "
+        "right answers for honesty. Sending every question to the cloud scores as well on this reward, at the cost "
+        "of privacy, money and seconds per answer; the link reaches the same score with about half the questions "
+        "kept local. The best possible choice per question (the oracle) scores twice as high, so better signals, "
+        "not more feedback, are what the link needs next.")
+
+
 def res_bulk(c: Chapter) -> None:
     c.h3("Large Data and the Device's Limits", key="sec_bulk")
     c.table("Large data (`results/bulk/ingest.json`, `scale.json`, `limits.json`)", ["Measure", "Result"],
@@ -1849,6 +1960,19 @@ def scorecard(c: Chapter) -> None:
         ["Weights help without harm when memory attaches them", "Skill cards, same corrections; 200 GSM8K controls",
          "Held-out 90.0% (merged adapter 85.0%, notes 55.0%); 7 unrelated answers changed against 36",
          "**Met; derived problems still need notes**"],
+    ]
+    rr = reader_rows()
+    if rr:
+        rows.append(["One memory helps readers of every size", "Reader bench, 287 questions, 4 readers",
+                     " · ".join(f"{READER_NAME[r['reader']].split(' (')[0]} {p1(r['alone'])} → {p1(r['memory'])}"
+                                for r in rr), "**Met; small readers state many wrong answers**"])
+    lk = J("results/link/link_baseline.json")
+    if lk:
+        w = [(READER_NAME.get(n, n), r["fixed"]["always keep"]["wrong"], r["curve"][-1]["wrong"])
+             for n, r in lk["readers"].items()]
+        rows.append(["The link stops wrong answers stated as fact", "Learned from feedback, 10 splits",
+                     " · ".join(f"{n}: {p1(a)} → {p1(b)}" for n, a, b in w), "**Met, by declining or escalating**"])
+    rows += [
         ["Large data within device limits", "123,301 paragraphs; governor", "Searchable in 335 s; stops at every "
          "limit; 0 duplicates", "**Met**"],
         ["Retrieval ≤ 10% of answer time (NFR-02)", "Device profile", "56% for 0.5B (contention); met only for "
@@ -2186,6 +2310,8 @@ def results(c: Chapter) -> None:
     old.worked_examples(c)
     res_learning(c)
     res_skills(c)
+    res_readers(c)
+    res_link(c)
     res_agentic(c)
     res_cost(c)
     res_bulk(c)

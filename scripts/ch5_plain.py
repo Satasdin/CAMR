@@ -425,6 +425,13 @@ def PLAIN(F: dict) -> dict[str, list[str]]:  # noqa: N802
                     "behind."],
         "sec_examples": ["Real answers, word for word, with and without memory, so the numbers above can be seen in "
                          "practice."],
+        "sec_readers": ["The same memory was given to four models, from a small one that runs on a phone-class "
+                        "computer to a large cloud model. All of them answered far more questions with it. The small "
+                        "ones also stated many wrong answers from the same notes, which is the problem the next "
+                        "section solves."],
+        "sec_link": ["Each model gets a few numbers that learn, from feedback, when its answers can be trusted: "
+                     "state the answer, say it does not know yet, or ask the cloud model. After about twenty "
+                     "answers' feedback, the small models stopped stating most of their wrong answers."],
         "sec_skills": ["Some things are better learned as weights than as notes: a way of solving a problem, taught by "
                        "correction. The trick is to keep those weights in memory too, as small add-ons (skill cards), "
                        "and attach one only when memory says the question needs it. The cards solved 90% of new "
