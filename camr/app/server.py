@@ -27,6 +27,7 @@ The server binds to 127.0.0.1 only. The API is used by camr/app/static/app.js:
   GET  /api/highlight/<note_id>       where in its file a note came from
   GET  /api/experts                   experts (closed partitions of memory)   DELETE /api/experts/<name>  dissolve one
   POST /api/experts/assign            {"file_id", "expert"}   POST /api/experts/rename  {"old", "new"}
+  POST /api/fix                       {"turn_id", "code", "block"}  the user's corrected code, kept for next time
 """
 
 from __future__ import annotations
@@ -312,6 +313,14 @@ def make_handler(app: App):
                     return self._json({"error": str(exc)}, 400)
             if path == "/api/sleep":
                 return self._json(a.sleep_now())
+            if path == "/api/fix":
+                try:
+                    return self._json(a.save_fix(int(data.get("turn_id", 0)), str(data.get("code", "")),
+                                                 int(data.get("block", 0))))
+                except KeyError as exc:
+                    return self._json({"error": str(exc)}, 404)
+                except (ValueError, TypeError) as exc:
+                    return self._json({"error": str(exc)}, 400)
             if path in ("/api/experts/assign", "/api/experts/rename"):
                 try:
                     if path.endswith("assign"):

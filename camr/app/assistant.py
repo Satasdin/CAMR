@@ -41,7 +41,7 @@ from typing import Iterator
 
 import requests
 
-from camr.app import reader, tiers
+from camr.app import codecheck, reader, tiers
 from camr.config import Config, LocalModelConfig
 from camr.device import Governor, Limits, index_threshold, probe
 from camr.memory import packs as packs_mod
@@ -83,6 +83,7 @@ KINDS = {
     "pack": "from a knowledge pack",
     "profile": "what you told me about yourself",
     "card": "a skill you corrected",
+    "fix": "a fix you made",
 }
 BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
 
@@ -169,7 +170,7 @@ PRIVATE_LIFE = {"appointment", "appointments", "meeting", "meetings", "booking",
                 "reservations", "password", "passwords", "passcode", "pin", "wifi", "salary", "payslip", "rent",
                 "prescription", "prescriptions", "diagnosis", "deadline", "deadlines", "birthday", "anniversary"}
 # Where a note came from: the user (private) or the world (a looked-up page or a pack).
-PRIVATE_KINDS = ("note", "file", "chat", "learned")
+PRIVATE_KINDS = ("note", "file", "chat", "learned", "fix")
 
 
 def is_about_user(question: str) -> bool:
@@ -414,6 +415,8 @@ class Turn:
     upload: dict | None = None
     # the experts opened for this question (None: all of memory was read)
     experts: list | None = None
+    # the syntax check of a code answer: {"language", "ok", "error", "line", "retried", "first_error"}
+    check: dict | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -563,7 +566,8 @@ class Assistant:
         cols = {r[1] for r in self.store.conn.execute("PRAGMA table_info(app_turn)")}
         for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT"), ("learned_json", "TEXT"),
                          ("ask_to_teach", "INTEGER"), ("verification_json", "TEXT"), ("link_json", "TEXT"),
-                         ("skill_json", "TEXT"), ("upload_json", "TEXT")):
+                         ("skill_json", "TEXT"), ("upload_json", "TEXT"), ("experts_json", "TEXT"),
+                         ("check_json", "TEXT")):
             if col not in cols:  # stores created by the first app version
                 self.store.conn.execute(f"ALTER TABLE app_turn ADD COLUMN {col} {typ}")
         self.engine = MemoryEngine.from_config(self.cfg, store=self.store, embedder=self.embedder,
@@ -1051,14 +1055,15 @@ class Assistant:
         rows = self.store.conn.execute(
             "SELECT turn_id, question, answer, notes_used, abstained, grounded, retrieval_ms, generation_ms,"
             " prompt_tokens, feedback, sources_json, learned_json, ask_to_teach, verification_json, link_json,"
-            " skill_json, upload_json FROM app_turn WHERE conversation_id=? ORDER BY turn_id",
+            " skill_json, upload_json, experts_json, check_json FROM app_turn WHERE conversation_id=? ORDER BY turn_id",
             (conversation_id,)).fetchall()
         return [Turn(turn_id=r[0], question=r[1], answer=r[2], abstained=bool(r[4]), grounded=r[5],
                      retrieval_ms=r[6] or 0.0, generation_ms=r[7] or 0.0, prompt_tokens=r[8], feedback=r[9],
                      conversation_id=conversation_id, learned=json.loads(r[11]) if r[11] else None,
                      ask_to_teach=bool(r[12]), verification=json.loads(r[13]) if r[13] else None,
                      link=json.loads(r[14]) if r[14] else None, skill=json.loads(r[15]) if r[15] else None,
-                     upload=json.loads(r[16]) if r[16] else None,
+                     upload=json.loads(r[16]) if r[16] else None, experts=json.loads(r[17]) if r[17] else None,
+                     check=json.loads(r[18]) if r[18] else None,
                      sources=[Source(**s) for s in json.loads(r[10] or "[]")]).as_dict() for r in rows]
 
     # ------------------------------------------------------------ asking
@@ -1072,6 +1077,36 @@ class Assistant:
                 "SELECT question, answer FROM app_turn WHERE conversation_id=? ORDER BY turn_id DESC LIMIT ?",
                 (conversation_id, self.history_turns)).fetchall()
         return "\n".join(f"User: {q}\nAssistant: {a}" for q, a in reversed(rows)) or "(none)"
+
+    def save_fix(self, turn_id: int, code: str, block: int = 0) -> dict:
+        """The user's corrected version of a code answer, kept as a correction for that request: the next similar
+        request reads it. Kept in the expert the request opened (else "code"), titled "Correction: <expert>" (the
+        name a code skill card of that expert would be attached by). A second fix of the same answer replaces the
+        first. Returns {"notes", "expert", "check"}."""
+        code = (code or "").strip("\n")
+        if not code.strip():
+            raise ValueError("an empty fix")
+        with self._lock:
+            row = self.store.conn.execute("SELECT question, answer, experts_json FROM app_turn WHERE turn_id=?",
+                                          (int(turn_id),)).fetchone()
+        if row is None:
+            raise KeyError(f"no answer {turn_id}")
+        question, answer, experts_json = row
+        found = codecheck.blocks(answer)
+        lang = found[block][0] if block < len(found) else (found[0][0] if found else "")
+        expert = (json.loads(experts_json)[0] if experts_json and json.loads(experts_json) else None) or "code"
+        doc_id = f"fix-{int(turn_id)}"
+        with self._lock:
+            for (sid,) in self.store.conn.execute("SELECT source_id FROM source WHERE doc_id=?", (doc_id,)).fetchall():
+                self._delete_source(sid)
+            notes = self.engine.ingest([Document(dataset="fix", doc_id=doc_id, title=f"Correction: {expert}", whole=True,
+                                                 text=f"Correction for the request \u201c{question}\u201d:\n```{lang}\n"
+                                                      f"{code}\n```")]).accepted
+            ids = [r[0] for r in self.store.conn.execute("SELECT source_id FROM source WHERE doc_id=?", (doc_id,))]
+            self.store.set_expert(ids, expert)
+            with self.store.conn:
+                self.store.conn.execute("UPDATE app_turn SET feedback=-1 WHERE turn_id=?", (int(turn_id),))
+        return {"notes": notes, "expert": expert, "check": codecheck.check(lang, code)}
 
     @_locked
     def _after_code(self, conversation_id: int | None) -> bool:
@@ -1218,6 +1253,21 @@ class Assistant:
                     first = round((time.perf_counter() - t0) * 1000, 1)
                 yield {"type": "token", "text": piece}
         answer = "".join(parts).strip()
+        check = None
+        if coding:  # its syntax, checked here (nothing is run); one retry with the error message
+            check = codecheck.check_answer(answer)
+            if check and not check["ok"]:
+                yield {"type": "fixing", "error": check["error"], "line": check["line"]}
+                retry = (prompt + answer + f"\n\n### User\nYour code has a syntax error: {check['error']}"
+                         + (f" (line {check['line']})" if check["line"] else "")
+                         + ". Write the corrected complete code.\n\n### Assistant\n")
+                fixed = "".join(piece for piece, _ in self._stream_generate(retry, long=True)).strip()
+                second = codecheck.check_answer(fixed)
+                if fixed and second and second["ok"]:
+                    check = {**second, "retried": True, "first_error": check["error"]}
+                    answer = fixed
+                else:
+                    check = {**check, "retried": True}
         skill = None
         if card:  # the calculator does the arithmetic, as the experiment measured
             answer, calc = tiers.card_answer(answer, question)
@@ -1255,7 +1305,7 @@ class Assistant:
                     generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
                     prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id, learned=learned,
                     ask_to_teach=(recall.abstained or (link or {}).get("action") == "decline") and personal,
-                    verification=verification, link=link, skill=skill, experts=opened)
+                    verification=verification, link=link, skill=skill, experts=opened, check=check)
         turn.turn_id = self._log(turn)
         self.last_activity = time.time()
         if self.remember_chat and not is_question(question) and not coding:
@@ -1488,13 +1538,15 @@ class Assistant:
             cur = self.store.conn.execute(
                 "INSERT INTO app_turn(at, model, question, answer, notes_used, abstained, grounded, retrieval_ms,"
                 " generation_ms, prompt_tokens, conversation_id, sources_json, learned_json, ask_to_teach,"
-                " verification_json, link_json, skill_json, upload_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " verification_json, link_json, skill_json, upload_json, experts_json, check_json)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (_now(), self.model or "-", turn.question, turn.answer, len(turn.sources), int(turn.abstained),
                  turn.grounded, turn.retrieval_ms, turn.generation_ms, turn.prompt_tokens, turn.conversation_id,
                  json.dumps([asdict(s) for s in turn.sources]), json.dumps(turn.learned) if turn.learned else None,
                  int(turn.ask_to_teach), json.dumps(turn.verification) if turn.verification else None,
                  json.dumps(turn.link) if turn.link else None, json.dumps(turn.skill) if turn.skill else None,
-                 json.dumps(turn.upload) if turn.upload else None))
+                 json.dumps(turn.upload) if turn.upload else None, json.dumps(turn.experts) if turn.experts else None,
+                 json.dumps(turn.check) if turn.check else None))
             if turn.conversation_id is not None:
                 self.store.conn.execute("UPDATE app_conversation SET updated_at=? WHERE conversation_id=?",
                                         (_now(), turn.conversation_id))

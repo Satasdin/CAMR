@@ -4,7 +4,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const app = $("#app"), thread = $("#thread"), input = $("#input");
 const S = { state: null, chats: [], current: null, streaming: null, rememberMode: false, lastSources: null, about: null, viewing: null, sel: null };
-const KIND = { note: "note", file: "file", chat: "said in chat", learned: "approved answer", web: "looked up online", pack: "knowledge pack" };
+const KIND = { note: "note", file: "file", chat: "said in chat", learned: "approved answer", web: "looked up online", pack: "knowledge pack", fix: "your fix", card: "skill correction" };
 // Answer action icons: 24-px line icons drawn in the text colour (paths adapted from Lucide, ISC licence).
 const svg = (d) => `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICON = {
@@ -255,8 +255,43 @@ function codeCopy(root) {
     pre.appendChild(b);
   });
 }
+// A code answer: its syntax check, and a Fix button on each block (the fix is kept for the next similar request).
+function codeBadge(c) {
+  if (!c) return "";
+  if (c.ok) return `<span class="verify ok" title="${esc(c.retried ? `The first answer had a syntax error (${c.first_error}); the model fixed it. Checked on this computer; the code was not run.` : "Checked on this computer; the code was not run.")}">✓ ${esc(c.language)} parses${c.retried ? " (fixed once)" : ""}</span>`;
+  return `<span class="verify no" title="${esc(c.error)}">! ${esc(c.language)} syntax error${c.line ? `, line ${c.line}` : ""}</span>`;
+}
+function fixButtons(root, t) {
+  $$("pre", root).forEach((pre, i) => {
+    if ($(".fix-code", pre)) return;
+    const b = document.createElement("button"); b.type = "button"; b.className = "copy-code fix-code"; b.textContent = "Fix";
+    b.title = "Correct this code; your fix is kept for the next similar request";
+    b.onclick = () => editCode(pre, i, t);
+    pre.appendChild(b);
+  });
+}
+function editCode(pre, i, t) {
+  const code = $("code", pre)?.textContent ?? "";
+  const box = document.createElement("div"); box.className = "fix-box";
+  box.innerHTML = `<textarea spellcheck="false" aria-label="Your corrected code" rows="${Math.min(30, code.split("\n").length + 1)}"></textarea>
+    <div class="fix-actions"><button class="primary sm" type="button">Save fix</button><button class="ghost sm" type="button">Cancel</button><span class="muted small">Kept for the next similar request</span></div>`;
+  $("textarea", box).value = code; pre.replaceWith(box); $("textarea", box).focus();
+  const [save, cancel] = $$("button", box);
+  cancel.onclick = () => box.replaceWith(pre);
+  save.onclick = async () => {
+    save.disabled = true;
+    try {
+      const r = await api("/api/fix", { method: "POST", body: { turn_id: t.turn_id, code: $("textarea", box).value, block: i } });
+      const fixed = document.createElement("pre"); const c = document.createElement("code"); c.textContent = $("textarea", box).value; fixed.appendChild(c);
+      const tag = document.createElement("div"); tag.className = "saved-note"; tag.textContent = `✦ Your fix, kept in ${r.expert}` + (r.check ? (r.check.ok ? ` · ✓ ${r.check.language} parses` : ` · ! ${r.check.error}`) : "");
+      box.replaceWith(fixed); fixed.after(tag); codeCopy(fixed.parentElement); fixButtons(fixed.parentElement, t);
+      toast(`✦ Kept your fix: the next similar request will read it (${r.expert})`); refresh();
+    } catch (e) { toast(e.message); save.disabled = false; }
+  };
+}
 function finish(el, t) {
   const a = $(".answer", el); a.classList.remove("cursor"); a.innerHTML = md(t.answer); codeCopy(a);
+  if (t.turn_id && (t.check || /```/.test(t.answer || ""))) fixButtons(a, t);
   el.querySelectorAll(".tier-status").forEach((x) => x.remove());  // the badge says what happened
   const g = t.grounded;
   const gcol = g == null ? "" : g >= 0.6 ? "var(--good)" : g >= 0.3 ? "#e3b341" : "var(--warn)";
@@ -266,7 +301,7 @@ function finish(el, t) {
     ${copyBtn}
     ${t.ask_to_teach ? "" : `<button class="act up ${t.feedback === 1 ? "on" : ""}" title="Good answer: save it to memory">${teachLabel(t.feedback === 1)}</button>`}
     <button class="act down ${t.feedback === -1 ? "on" : ""}" title="Not helpful" aria-label="Not helpful">${ICON.down}</button>` : "")
-    + verifyBadge(t.verification) + tierBadge(t)
+    + verifyBadge(t.verification) + tierBadge(t) + codeBadge(t.check)
     + (g != null && !t.verification ? `<span class="ground" title="Share of the answer's words found in the memories it read"><span class="meter"><i style="width:${Math.round(100 * g)}%;background:${gcol}"></i></span>grounded ${Math.round(100 * g)}%</span>` : "")
     + (t.generation_ms ? `<span class="timing">${Math.round(t.retrieval_ms)} ms memory · ${t.first_token_ms ? (t.first_token_ms / 1000).toFixed(1) + " s to first word · " : ""}${(t.generation_ms / 1000).toFixed(1)} s answer</span>` : "");
   if (stored) a.insertAdjacentHTML("beforeend", `<div class="saved-note">✦ Stored in memory</div>`);
@@ -310,6 +345,7 @@ async function send(text) {
         if (ev.type === "lookup") { conv = ev.conversation_id; showLookup(el); }
         else if (ev.type === "recall") { conv = ev.conversation_id; if (ev.small_talk) $(".recall", el)?.remove(); else renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms, ev.learned, ev.experts); }
         else if (ev.type === "skill") $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">◆ Using the “${esc(ev.skill)}” skill card</div>`);
+        else if (ev.type === "fixing") { $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">⟲ The code had a syntax error${ev.line ? ` (line ${ev.line})` : ""}; asking the model to fix it…</div>`); }
         else if (ev.type === "escalate") { $(".answer", el).classList.add("cursor"); $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">⇡ Not sure of this one: checking with ${esc(ev.by)}…</div>`); }
         else if (ev.type === "token") { answer += ev.text; $(".answer", el).innerHTML = streamMd(answer); $(".answer", el).classList.add("cursor"); thread.scrollTop = thread.scrollHeight; }
         else if (ev.type === "done") finish(el, ev.turn);
