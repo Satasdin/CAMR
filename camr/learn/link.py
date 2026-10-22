@@ -60,21 +60,27 @@ class Rewards:
         if action == "decline":
             return 1.0 if row["unanswerable"] else 0.0
         if action == "escalate":
-            return self._answer(row["cloud_correct"]) - self.cloud
-        return self._answer(row["local_correct"])
+            return self._answer(row["cloud_correct"], row.get("cloud_declined", False)) - self.cloud
+        return self._answer(row["local_correct"], row.get("declined", False))
 
-    def _answer(self, correct: bool | None) -> float:
-        return 0.0 if correct is None else (1.0 if correct else -self.wrong)
+    def _answer(self, correct: bool | None, declined: bool) -> float:
+        """A model that itself said it cannot answer stated nothing: that is a decline, not a wrong answer."""
+        if correct:
+            return 1.0
+        return 0.0 if correct is None or declined else -self.wrong
 
 
 def outcome(action: str, row: dict[str, Any]) -> str:
     """right / wrong / declined: what the user sees."""
     if action == "decline":
         return "right" if row["unanswerable"] else "declined"
-    correct = row["cloud_correct"] if action == "escalate" else row["local_correct"]
-    if correct is None:
+    cloud = action == "escalate"
+    correct = row["cloud_correct"] if cloud else row["local_correct"]
+    if correct:
+        return "right"
+    if correct is None or row.get("cloud_declined" if cloud else "declined", False):
         return "declined"
-    return "right" if correct else "wrong"
+    return "wrong"
 
 
 def evaluate(policy: Callable[[dict], str], rows: list[dict], rewards: Rewards) -> dict[str, float]:
