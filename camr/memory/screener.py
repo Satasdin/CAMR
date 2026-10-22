@@ -38,6 +38,11 @@ class Verdict:
     token_count: int
 
 
+# a note kept whole (a function of code, camr.memory.write_policy.WHOLE_MAX tokens and its title): its own length
+# limit, and no repetition test (code repeats its names by nature)
+WHOLE_SCREEN = 640
+
+
 class NoteScreener:
     def __init__(
         self,
@@ -78,13 +83,13 @@ class NoteScreener:
             return Verdict(True, "accepted", csum, n)
         if n < self.min_tokens:
             return Verdict(False, "too_short", csum, n)
-        if n > self.max_tokens:
+        if n > (self.max_tokens if not cand.whole else max(self.max_tokens, WHOLE_SCREEN)):
             return Verdict(False, "over_length", csum, n)
         alpha = sum(ch.isalnum() for ch in text) / max(1, len(text.replace(" ", "")))
         if alpha < self.min_alpha_ratio:
             return Verdict(False, "degenerate", csum, n)
         words = [str(t).casefold() for t in tokens if str(t).isalnum()]
-        if len(words) >= 10 and len(set(words)) / len(words) < self.min_unique_ratio:
+        if len(words) >= 10 and len(set(words)) / len(words) < self.min_unique_ratio and not cand.whole:
             return Verdict(False, "repetitive", csum, n)
         if self.model_generated and _REFUSAL_RE.search(text):
             return Verdict(False, "refusal_output", csum, n)

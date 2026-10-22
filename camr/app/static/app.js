@@ -244,8 +244,18 @@ function draftNote(t) {
   if (!l || !l.draft || l.action === "keep") return "";
   return `<details class="draft"><summary>${l.action === "escalate" ? "Your model's first answer" : "What it would have said"}</summary><div>${md(l.draft)}</div></details>`;
 }
+// Code blocks: each with its own copy button; while streaming, an unclosed block is shown as code already.
+function streamMd(text) { return md((text.match(/```/g) || []).length % 2 ? text + "\n```" : text); }
+function codeCopy(root) {
+  $$("pre", root).forEach((pre) => {
+    if ($(".copy-code", pre)) return;
+    const b = document.createElement("button"); b.type = "button"; b.className = "copy-code"; b.textContent = "Copy";
+    b.onclick = () => { navigator.clipboard?.writeText($("code", pre)?.textContent || pre.textContent); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500); };
+    pre.appendChild(b);
+  });
+}
 function finish(el, t) {
-  const a = $(".answer", el); a.classList.remove("cursor"); a.innerHTML = md(t.answer);
+  const a = $(".answer", el); a.classList.remove("cursor"); a.innerHTML = md(t.answer); codeCopy(a);
   el.querySelectorAll(".tier-status").forEach((x) => x.remove());  // the badge says what happened
   const g = t.grounded;
   const gcol = g == null ? "" : g >= 0.6 ? "var(--good)" : g >= 0.3 ? "#e3b341" : "var(--warn)";
@@ -300,7 +310,7 @@ async function send(text) {
         else if (ev.type === "recall") { conv = ev.conversation_id; if (ev.small_talk) $(".recall", el)?.remove(); else renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms, ev.learned); }
         else if (ev.type === "skill") $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">◆ Using the “${esc(ev.skill)}” skill card</div>`);
         else if (ev.type === "escalate") { $(".answer", el).classList.add("cursor"); $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">⇡ Not sure of this one: checking with ${esc(ev.by)}…</div>`); }
-        else if (ev.type === "token") { answer += ev.text; $(".answer", el).innerHTML = md(answer); $(".answer", el).classList.add("cursor"); thread.scrollTop = thread.scrollHeight; }
+        else if (ev.type === "token") { answer += ev.text; $(".answer", el).innerHTML = streamMd(answer); $(".answer", el).classList.add("cursor"); thread.scrollTop = thread.scrollHeight; }
         else if (ev.type === "done") finish(el, ev.turn);
         else if (ev.type === "error") throw new Error(ev.error);
       }
@@ -334,7 +344,7 @@ document.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.
 
 // ---------- teaching ----------
 // ---------- files: read, learn, interview, highlight ----------
-const ACCEPT = ".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.tif,.tiff,.bmp";
+const ACCEPT = ".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.tif,.tiff,.bmp,.py,.ipynb,.js,.mjs,.ts,.tsx,.jsx,.java,.kt,.go,.rs,.c,.h,.cpp,.hpp,.cs,.rb,.php,.swift,.scala,.sql,.sh,.r,.lua,.dart,.vue,.svelte,.html,.css,.scss,.json,.yaml,.yml,.toml,.ini,.cfg";
 async function teachFiles(files) {
   if (!files.length) return;
   if (S.current == null) {  // the interview happens in a chat

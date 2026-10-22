@@ -209,6 +209,62 @@ Answer concisely.
 ### Assistant
 """
 
+# ---------------------------------------------------------------------- coding
+# A coding request is a task, not knowledge about the user: it gets a coding prompt (memory holds the user's code,
+# APIs and conventions), a longer answer, no web lookup, no trust link (whose signals were learned on personal
+# facts: it escalated or held back every code answer), and it is not kept as chat memory.
+CODE_PROMPT = """You are a coding assistant running on the user's own computer.
+
+The notes below come from the user's memory: their code, the APIs and libraries they use, their conventions, and fixes they made before. Use them whenever they are relevant: call the user's own functions, endpoints and settings by the names the notes give, and write code the way their code is written. Do not invent functions, endpoints or settings that neither the notes nor the language's standard library have; if something you need is missing, say in one line what you assumed.
+
+How to answer:
+1. Give complete, working code in one fenced block with its language.
+2. Then at most three short lines on what it does or what changed.
+
+### Notes from memory
+{notes}
+
+### Recent conversation
+{history}
+
+### User
+{question}
+
+### Assistant
+"""
+
+CODE_ANSWER_TOKENS, CODE_CONTEXT = 2048, 8192  # a chat answer stops at 768 tokens: too short for a file of code
+
+_CODE_VERB = re.compile(r"^\s*(?:please\s+)?(?:(?:can|could|would)\s+you\s+)?(?:write|create|generate|implement|build|"
+                        r"code|make|add|refactor|fix|debug|optimi[sz]e|convert|translate|port|rewrite|explain|document|"
+                        r"test|complete|finish|modify|update|change|rename|improve|review|show me how)\b", re.I)
+_CODE_WORD = re.compile(r"\b(?:function|func|method|class|script|code|program|snippet|query|regex|endpoint|api|bug|"
+                        r"tests?|component|module|loop|python|javascript|typescript|java|golang|rust|kotlin|swift|sql|"
+                        r"bash|shell|html|css|react|vue|django|flask|fastapi|node|express|json|yaml|dockerfile|"
+                        r"algorithm|recursion|array|dataframe|pandas|numpy|compile|syntax|exception|variable|async|"
+                        r"requests|http|cli|library|package|import)\b", re.I)
+_CODE_TEXT = re.compile(r"```|^\s*(?:def |class |import |from [\w.]+ import |function |const |let |var |public |"
+                        r"private |#include|SELECT |CREATE TABLE)|Traceback \(most recent call last\)|\b\w+(?:Error|"
+                        r"Exception):", re.M)
+
+
+_CODE_LANG = re.compile(r"\b(?:python|javascript|typescript|golang|rust|kotlin|swift|sql|bash|html|css|react|vue|"
+                        r"django|flask|fastapi|node(?:js)?|pandas|numpy|regex|dockerfile|c\+\+|c#)\b", re.I)  # not "java": also coffee
+
+
+def is_code_request(text: str) -> bool:
+    """A request to write, change or explain code, or a question about code. A question that only mentions an API or
+    a key ("What is my API key?") is about the user's own life; one naming a language or library ("How do I reverse
+    a list in Python?") is about code."""
+    if _CODE_TEXT.search(text):
+        return True
+    if not _CODE_WORD.search(text) and not _CODE_LANG.search(text):
+        return False
+    if _CODE_VERB.match(text):
+        return True
+    return is_question(text) and (bool(_CODE_LANG.search(text)) or not is_about_user(text))
+
+
 # ---------------------------------------------------------------------- uploads (reader.py)
 VISION_HINT = re.compile(r"vl\b|vision|llava|moondream|minicpm-v|gemma3|bakllava|granite3\.2-vision", re.I)
 
@@ -252,6 +308,8 @@ File: {name}
 def default_questions(about: str) -> list[str]:
     """Questions to ask about a file when the model wrote none."""
     a = about.lower()
+    if re.search(r"\.(?:py|js|ts|tsx|jsx|java|kt|go|rs|c|cpp|cs|rb|php|swift|sql|sh|ipynb)\b", a):
+        return ["Which project is this from, and what does it do?"]
     if re.search(r"receipt|invoice|bill|total|ksh|kes", a):
         return ["What was this for?", "Should I keep track of totals like this one?"]
     if "screenshot" in a:
@@ -615,7 +673,10 @@ class Assistant:
         with self._lock:
             # the old version goes first: notes it shares with the new one would otherwise be rejected as duplicates
             replaced = sum(self._delete_source(sid) for sid in old)
-            notes = self.teach(reading.text, title=stem, kind="file", doc_id=doc_id) if reading.text.strip() else 0
+            if reading.kind == "code":
+                notes = self._teach_code(name, reading.text)
+            else:
+                notes = self.teach(reading.text, title=stem, kind="file", doc_id=doc_id) if reading.text.strip() else 0
             if seen:
                 notes += self.teach(f"{stem}: {seen}", title=f"{stem} (what it shows)", kind="file",
                                     doc_id=f"{doc_id}#seen")
@@ -645,6 +706,18 @@ class Assistant:
                         upload=out, saved_to_memory=notes > 0)
             out["turn_id"] = turn.turn_id = self._log(turn)
         return out
+
+    def _teach_code(self, name: str, text: str) -> int:
+        """A code file as one note per function or class (whole, so recall returns a function, not 120 tokens of one),
+        and a contents note naming what the file defines."""
+        units = reader.code_units(name, text)
+        lang = reader.LANG.get(Path(name).suffix.lower(), "code")
+        named = [sym for sym, _ in units if sym != "module"]
+        docs = [Document(dataset="file", doc_id=f"file-{name}", title=name, whole=True,
+                         text=f"{name} is a {lang} file" + (f" that defines {', '.join(named[:40])}." if named else "."))]
+        docs += [Document(dataset="file", doc_id=f"file-{name}#u{i:03d}", title=f"{name} {sym}", text=src, whole=True)
+                 for i, (sym, src) in enumerate(units) if src.strip()]
+        return self.engine.ingest(docs).accepted
 
     def _file_sources(self, doc_id: str) -> list[int]:
         """A file's sources: its text, and what was learned about it later ("<doc_id>#…")."""
@@ -707,7 +780,7 @@ class Assistant:
         """The interview after an upload: a one-line summary, what to focus on, and one or two questions whose
         answers help remember the file correctly (the local model writes them; set questions stand in)."""
         excerpt = ((seen + "\n\n") if seen else "") + reading.text[:3000]
-        chips = reader.focus_chips(reading.text + "\n" + seen)
+        chips = [] if reading.kind == "code" else reader.focus_chips(reading.text + "\n" + seen)
         summary, questions = "", []
         if self.model and excerpt.strip():
             try:
@@ -910,6 +983,15 @@ class Assistant:
         return "\n".join(f"User: {q}\nAssistant: {a}" for q, a in reversed(rows)) or "(none)"
 
     @_locked
+    def _after_code(self, conversation_id: int | None) -> bool:
+        """The chat's last answer was code: a follow-up ("now make it handle invalid dates") is about that code."""
+        if conversation_id is None:
+            return False
+        row = self.store.conn.execute("SELECT answer FROM app_turn WHERE conversation_id=? ORDER BY turn_id DESC LIMIT 1",
+                                      (conversation_id,)).fetchone()
+        return bool(row and "```" in (row[0] or ""))
+
+    @_locked
     def _sources(self, recall) -> list[Source]:
         admitted = recall.admitted
         ids = [c.note.source_id for c in admitted]
@@ -929,10 +1011,12 @@ class Assistant:
         return OllamaRunner(LocalModelConfig(name=self.model, host=self.host, max_tokens=768, num_ctx=4096),
                             session=self._http)
 
-    def _stream_generate(self, prompt: str, model: str | None = None) -> Iterator[tuple[str, dict]]:
+    def _stream_generate(self, prompt: str, model: str | None = None, long: bool = False) -> Iterator[tuple[str, dict]]:
         if not self.model:
             raise RuntimeError("choose a model first")
         body = self._runner().payload(prompt)
+        if long:  # code: a whole file's worth of answer, and the notes and history beside it
+            body.setdefault("options", {}).update(num_predict=CODE_ANSWER_TOKENS, num_ctx=CODE_CONTEXT)
         if model:  # a skill card: the base model with the card's adapter, registered with Ollama
             body["model"] = model
         body["stream"] = True
@@ -978,6 +1062,7 @@ class Assistant:
         if is_small_talk(question):
             yield from self._small_talk(question, conversation_id)
             return
+        coding = is_code_request(question) or (self._after_code(conversation_id) and not is_about_user(question))
         with self._lock:
             recall = self.engine.recall(question)
         learned = None
@@ -986,7 +1071,7 @@ class Assistant:
         # Eager learning: memory has nothing on this, or only notes that look similar but are about something else
         # (results/verified, subject-aware lookups: +3.5 points of verified answers on the development set)
         missing = recall.abstained or (_short_factual(question) and not knows_subject(self.engine, question, recall))
-        if missing and self.learn_online and not local_only and worth_looking_up(question):
+        if missing and self.learn_online and not local_only and not coding and worth_looking_up(question):
             yield {"type": "lookup", "conversation_id": conversation_id}
             found = self.lookup.lookup(question)
             added = 0
@@ -1002,7 +1087,7 @@ class Assistant:
         sources = self._sources(recall)
         yield {"type": "recall", "sources": [asdict(s) for s in sources], "abstained": recall.abstained,
                "retrieval_ms": round(recall.retrieval_ms, 1), "conversation_id": conversation_id, "learned": learned}
-        factual = _short_factual(question) and not personal
+        factual = _short_factual(question) and not personal and not coding
         units = []
         if factual and not recall.abstained:
             with self._lock:
@@ -1026,12 +1111,15 @@ class Assistant:
             return
         prompt = CHAT_PROMPT.format(today=self.today().isoformat(), notes=recall.context or "(no relevant notes)",
                                     history=self._history(conversation_id), question=question)
-        card = self._card_for(recall)
+        card = None if coding else self._card_for(recall)
+        if coding:  # the user's code and conventions as notes, and room for a whole answer
+            prompt = CODE_PROMPT.format(notes=recall.context or "(no relevant notes)",
+                                        history=self._history(conversation_id), question=question)
         if card:  # memory names a skill card: it answers the way it was trained (formula, then an expression)
             yield {"type": "skill", "skill": card["skill"], "model": card["model"]}
             prompt = CALC_BARE.format(question=question)
         t0, parts, last, first = time.perf_counter(), [], {}, None
-        for piece, chunk in self._stream_generate(prompt, model=card["model"] if card else None):
+        for piece, chunk in self._stream_generate(prompt, model=card["model"] if card else None, long=coding):
             parts.append(piece)
             last = chunk
             if piece:
@@ -1054,7 +1142,7 @@ class Assistant:
                 answer = (f"I couldn't confirm this from what I've read, so take it as a lead, not a fact: "
                           f"{claim(answer)} (unverified).")
         link = None
-        if self.trust_learning and not card and (verification or {}).get("status") != "verified":
+        if self.trust_learning and not card and not coding and (verification or {}).get("status") != "verified":
             row = {"question": question, "abstained": recall.abstained, "top_similarity": recall.top_similarity or 0.0,
                    "admitted": len(recall.admitted), "context_tokens": recall.context_tokens,
                    "grounded": grounded_share(answer, recall.context) or 0.0, "declined": model_declined(answer)}
@@ -1079,7 +1167,7 @@ class Assistant:
                     verification=verification, link=link, skill=skill)
         turn.turn_id = self._log(turn)
         self.last_activity = time.time()
-        if self.remember_chat and not is_question(question):
+        if self.remember_chat and not is_question(question) and not coding:
             # What the user *states* is the user's own knowledge: keep it, so it can be
             # recalled long after it has scrolled out of the context window. Questions are
             # not kept: they carry no knowledge and only crowd out real memories (D-14).

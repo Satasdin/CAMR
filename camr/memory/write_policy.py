@@ -30,6 +30,9 @@ class WritePolicy(ABC):
     def distil(self, doc: Document) -> list[CandidateNote]: ...
 
 
+WHOLE_MAX = 512  # tokens: a document marked ``whole`` up to this length is one note (a function read whole)
+
+
 class VerbatimWritePolicy(WritePolicy):
     name = "verbatim"
 
@@ -48,6 +51,8 @@ class VerbatimWritePolicy(WritePolicy):
         spans = self._spanner.spans(text)
         if len(spans) <= self.chunk_tokens:
             return [CandidateNote(prefix + text, self.note_type)]
+        if getattr(doc, "whole", False) and len(spans) <= WHOLE_MAX:
+            return [CandidateNote(prefix + text, self.note_type, whole=True)]
         out: list[CandidateNote] = []
         step = self.chunk_tokens - self.overlap
         for start in range(0, len(spans), step):

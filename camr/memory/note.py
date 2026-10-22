@@ -51,6 +51,7 @@ class Document:
     doc_id: str
     text: str
     title: str = ""
+    whole: bool = False  # keep as one note up to WHOLE_MAX tokens (a function of code), not cut into chunks
 
 
 @dataclass
@@ -67,6 +68,7 @@ class CandidateNote:
     text: str
     note_type: str
     error: str | None = None  # set when the write policy itself failed
+    whole: bool = False       # from a document kept whole (a function of code): screened for length up to WHOLE_MAX
 
 
 @dataclass

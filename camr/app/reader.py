@@ -28,7 +28,11 @@ from pathlib import Path
 SEE_SOURCE = Path(__file__).resolve().parent / "see.swift"
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp", ".gif", ".tif", ".tiff", ".bmp"}
 TEXT_TYPES = {".txt", ".md", ".markdown", ".csv", ".log"}
-SUPPORTED = IMAGE_TYPES | TEXT_TYPES | {".pdf", ".docx"}
+CODE_TYPES = {".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".java", ".kt", ".kts", ".go", ".rs", ".c",
+              ".h", ".cc", ".cpp", ".hpp", ".cs", ".rb", ".php", ".swift", ".scala", ".sql", ".sh", ".bash", ".zsh",
+              ".ps1", ".r", ".lua", ".dart", ".vue", ".svelte", ".html", ".css", ".scss", ".json", ".yaml", ".yml",
+              ".toml", ".ini", ".cfg", ".ipynb", ".gradle", ".dockerfile"}
+SUPPORTED = IMAGE_TYPES | TEXT_TYPES | CODE_TYPES | {".pdf", ".docx"}
 BROWSER_IMAGES = {".png", ".jpg", ".jpeg", ".webp", ".gif"}  # shown as they are when there is no preview
 MAX_PAGES = 40  # pages read with positions; a longer PDF's later pages are learned from their own text only
 
@@ -172,6 +176,9 @@ def read(name: str, data: bytes, folder: Path, exe: Path | None) -> Reading:
     fid = folder.name
     if ext in TEXT_TYPES:
         return Reading(fid, name, "text", data.decode("utf-8", errors="replace"))
+    if ext in CODE_TYPES:
+        text = data.decode("utf-8", errors="replace")
+        return Reading(fid, name, "code", notebook_code(text) if ext == ".ipynb" else text)
     if ext == ".docx":
         return Reading(fid, name, "docx", docx_text(data))
     if ext == ".pdf":
@@ -281,3 +288,76 @@ def items(reading: Reading, focus: str) -> list[str]:
         if r not in out:
             out.append(r)
     return out[:MAX_ITEMS]
+
+
+# ---------------------------------------------------------------------- code
+LANG = {".py": "Python", ".pyi": "Python", ".js": "JavaScript", ".mjs": "JavaScript", ".cjs": "JavaScript",
+        ".ts": "TypeScript", ".tsx": "TypeScript", ".jsx": "JavaScript", ".java": "Java", ".kt": "Kotlin",
+        ".go": "Go", ".rs": "Rust", ".c": "C", ".h": "C", ".cc": "C++", ".cpp": "C++", ".hpp": "C++", ".cs": "C#",
+        ".rb": "Ruby", ".php": "PHP", ".swift": "Swift", ".scala": "Scala", ".sql": "SQL", ".sh": "shell",
+        ".bash": "shell", ".zsh": "shell", ".ipynb": "Python"}
+UNIT_TOKENS = 400  # about a function's worth: a unit up to this is kept whole (camr.memory.write_policy.WHOLE_MAX)
+
+
+def notebook_code(raw: str) -> str:
+    """A Jupyter notebook's cells as one file: code as it is, Markdown as comments."""
+    try:
+        cells = json.loads(raw).get("cells", [])
+    except ValueError:
+        return raw
+    out = []
+    for c in cells:
+        src = "".join(c.get("source", [])) if isinstance(c.get("source"), list) else str(c.get("source", ""))
+        out.append(src if c.get("cell_type") == "code" else "\n".join("# " + ln for ln in src.splitlines()))
+    return "\n\n".join(o for o in out if o.strip())
+
+
+def _tokens(text: str) -> int:
+    return len(re.findall(r"\w+|[^\w\s]", text))
+
+
+def code_units(name: str, text: str) -> list[tuple[str, str]]:
+    """A code file cut where a reader would cut it, so recall returns a whole function rather than 120 tokens of
+    one: (symbol, source) per unit. Python: each top-level function and class (a large class, method by method,
+    each with its class line), and the module's imports and constants as one unit. Other languages: blocks between
+    blank lines, joined while they stay under UNIT_TOKENS."""
+    import ast
+
+    if name.lower().endswith((".py", ".pyi", ".ipynb")):
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            tree = None
+        if tree is not None:
+            lines = text.splitlines()
+            seg = lambda n: "\n".join(lines[(n.decorator_list[0].lineno if getattr(n, "decorator_list", None)  # noqa: E731
+                                            else n.lineno) - 1: n.end_lineno])
+            units, header = [], []
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    units.append((f"def {node.name}", seg(node)))
+                elif isinstance(node, ast.ClassDef):
+                    src = seg(node)
+                    if _tokens(src) <= UNIT_TOKENS:
+                        units.append((f"class {node.name}", src))
+                    else:
+                        head = lines[node.lineno - 1]
+                        for sub in node.body:
+                            if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                                units.append((f"{node.name}.{sub.name}", head + "\n    ...\n" + seg(sub)))
+                else:
+                    header.append(seg(node) if hasattr(node, "end_lineno") else "")
+            head = "\n".join(h for h in header if h.strip())
+            return ([("module", head)] if head.strip() else []) + units
+    blocks = [b for b in re.split(r"\n\s*\n", text) if b.strip()]
+    units, cur = [], ""
+    for b in blocks:
+        if cur and _tokens(cur) + _tokens(b) > UNIT_TOKENS:
+            units.append(cur)
+            cur = b
+        else:
+            cur = f"{cur}\n\n{b}" if cur else b
+    if cur:
+        units.append(cur)
+    first = lambda u: next((ln.strip() for ln in u.splitlines() if ln.strip()), "")[:60]  # noqa: E731
+    return [(first(u), u) for u in units]
