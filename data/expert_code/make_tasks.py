@@ -1,0 +1,75 @@
+"""Writes tasks.json: coding tasks that need the invented acme_pay library (held out: no solution is in memory),
+and unrelated control tasks. Each has a test run against the real library."""
+import json
+from pathlib import Path
+
+A = "Using our acme_pay library, write a Python function "
+acme = [
+ ("open_kes", A + "`open_kes(code)` that opens a ledger for the account code in Kenyan shillings and returns it.",
+  "l = open_kes('A1')\nassert l.account_code == 'A1' and l.currency == 'KES' and acme_pay.ledger_balance(l) == 0"),
+ ("open_usd", A + "`open_usd(code)` that opens a ledger for the account code in US dollars and returns it.",
+  "l = open_usd('B2')\nassert l.currency == 'USD' and l.account_code == 'B2'"),
+ ("record_fee", A + "`record_fee(ledger, cents)` that posts a fee of that many cents as a debit with memo 'fee' and returns the entry.",
+  "l = acme_pay.ledger_open('X')\ne = record_fee(l, 250)\nassert e.kind == 'debit' and e.memo == 'fee' and acme_pay.ledger_balance(l) == -250"),
+ ("record_payment", A + "`record_payment(ledger, cents, memo)` that posts a payment received as a credit and returns the new balance.",
+  "l = acme_pay.ledger_open('X')\nassert record_payment(l, 5000, 'paid') == 5000 and record_payment(l, 100, 'tip') == 5100"),
+ ("net_after", A + "`net_after(credits, debits)` that opens a ledger, posts every amount in the list credits (cents) as credits and every amount in debits as debits, and returns the balance.",
+  "assert net_after([10000, 500], [2500]) == 8000 and net_after([], [100]) == -100"),
+ ("balance_money", A + "`balance_text(ledger)` that returns the ledger's balance formatted as money in the ledger's currency.",
+  "l = acme_pay.ledger_open('X', currency='USD')\nacme_pay.ledger_post(l, 123456, 'in', kind='credit')\nassert balance_text(l) == 'USD 1,234.56'"),
+ ("price_with_vat", A + "`price_with_vat(cents)` that returns the price with 16% VAT added, in cents.",
+  "assert price_with_vat(10000) == 11600 and price_with_vat(999) == 1159"),
+ ("vat_text", A + "`vat_text(cents)` that adds 16% VAT and returns it formatted as KES money.",
+  "assert vat_text(10000) == 'KES 116.00'"),
+ ("share_bill", A + "`share_bill(cents, people)` that splits a bill evenly between that many people, in cents, the first people paying any leftover cent.",
+  "assert share_bill(1001, 3) == [334, 334, 333] and sum(share_bill(500, 4)) == 500"),
+ ("debits_total", A + "`debits_total(ledger)` that returns the total of the ledger's debit entries in cents.",
+  "l = acme_pay.ledger_open('X')\nfor c in (100, 250): acme_pay.ledger_post(l, c, 'x')\nacme_pay.ledger_post(l, 999, 'y', kind='credit')\nassert debits_total(l) == 350"),
+ ("credit_memos", A + "`credit_memos(ledger)` that returns the memos of the ledger's credit entries, in order.",
+  "l = acme_pay.ledger_open('X')\nacme_pay.ledger_post(l, 1, 'a', kind='credit'); acme_pay.ledger_post(l, 2, 'b'); acme_pay.ledger_post(l, 3, 'c', kind='credit')\nassert credit_memos(l) == ['a', 'c']"),
+ ("undo_last", A + "`undo_last(ledger)` that reverses the ledger's last entry and returns the reversing entry.",
+  "l = acme_pay.ledger_open('X')\nacme_pay.ledger_post(l, 700, 'oops')\ne = undo_last(l)\nassert e.kind == 'credit' and e.memo == 'reversal: oops' and acme_pay.ledger_balance(l) == 0"),
+ ("close_month", A + "`close_month(ledger)` that closes the ledger and returns its final balance formatted as money in its currency.",
+  "l = acme_pay.ledger_open('X')\nacme_pay.ledger_post(l, 5000, 'x', kind='credit')\nassert close_month(l) == 'KES 50.00' and l.closed"),
+ ("safe_post", A + "`safe_post(ledger, cents, memo)` that posts a debit and returns True, or returns False if the ledger is closed.",
+  "l = acme_pay.ledger_open('X')\nassert safe_post(l, 10, 'a') is True\nacme_pay.ledger_close(l)\nassert safe_post(l, 10, 'b') is False"),
+ ("shillings_to_cents_post", A + "`post_shillings(ledger, shillings, memo)` that posts an amount given in shillings (a float like 12.5) as a debit, converting it to cents correctly.",
+  "l = acme_pay.ledger_open('X')\npost_shillings(l, 12.5, 'x')\nassert acme_pay.ledger_balance(l) == -1250"),
+ ("payroll", A + "`pay_staff(ledger, salaries)` where salaries maps a name to cents: post each salary as a debit with the name as memo, and return the balance.",
+  "l = acme_pay.ledger_open('X')\nacme_pay.ledger_post(l, 100000, 'float', kind='credit')\nassert pay_staff(l, {'Amina': 30000, 'Otieno': 25000}) == 45000\nassert [e.memo for e in acme_pay.ledger_entries(l, 'debit')] == ['Amina', 'Otieno']"),
+ ("invoice_total", A + "`invoice_total(items)` that takes a list of (name, cents) pairs and returns the total with 16% VAT added, in cents.",
+  "assert invoice_total([('a', 5000), ('b', 5000)]) == 11600"),
+ ("invoice_text", A + "`invoice_text(items)` that takes a list of (name, cents) pairs and returns the VAT-inclusive (16%) total formatted as KES money.",
+  "assert invoice_text([('a', 100000), ('b', 23456)]) == 'KES 1,432.09'"),
+ ("refund_all", A + "`refund_all(ledger)` that reverses every debit entry of the ledger and returns the new balance.",
+  "l = acme_pay.ledger_open('X')\nfor c in (100, 200): acme_pay.ledger_post(l, c, 'x')\nassert refund_all(l) == 0 and len(acme_pay.ledger_entries(l, 'credit')) == 2"),
+ ("is_overdrawn", A + "`is_overdrawn(ledger)` that returns True when the ledger's balance is below zero.",
+  "l = acme_pay.ledger_open('X')\nassert is_overdrawn(l) is False\nacme_pay.ledger_post(l, 1, 'x')\nassert is_overdrawn(l) is True"),
+ ("split_and_post", A + "`split_rent(ledger, cents, tenants)` that splits a rent evenly between the tenants (a list of names, leftover cents to the first) and posts each share as a credit with the tenant's name as memo.",
+  "l = acme_pay.ledger_open('X')\nsplit_rent(l, 1001, ['a', 'b', 'c'])\nassert [e.amount_cents for e in acme_pay.ledger_entries(l)] == [334, 334, 333] and acme_pay.ledger_balance(l) == 1001"),
+ ("statement", A + "`statement(ledger)` that returns one line per entry, each 'memo: money' with the amount formatted as money in the ledger's currency, debits shown negative.",
+  "l = acme_pay.ledger_open('X')\nacme_pay.ledger_post(l, 1200, 'tea')\nacme_pay.ledger_post(l, 5000, 'pay', kind='credit')\nassert statement(l) == ['tea: KES -12.00', 'pay: KES 50.00']"),
+ ("vat_on_debits", A + "`vat_due(ledger)` that returns the 16% VAT on the total of the ledger's debits, in cents (only the tax, not the total).",
+  "l = acme_pay.ledger_open('X')\nacme_pay.ledger_post(l, 10000, 'x')\nassert vat_due(l) == 1600"),
+ ("two_ledgers", A + "`transfer(src, dst, cents, memo)` that moves money: a debit on the source ledger and a credit on the destination ledger, same memo.",
+  "a = acme_pay.ledger_open('A'); b = acme_pay.ledger_open('B')\ntransfer(a, b, 300, 'move')\nassert acme_pay.ledger_balance(a) == -300 and acme_pay.ledger_balance(b) == 300"),
+]
+C = "Write a Python function "
+control = [
+ ("is_palindrome", C + "`is_palindrome(s)` that ignores case and spaces.", "assert is_palindrome('Never odd or even') and not is_palindrome('abc')"),
+ ("fizzbuzz", C + "`fizzbuzz(n)` returning the list of strings for 1..n.", "assert fizzbuzz(5) == ['1', '2', 'Fizz', '4', 'Buzz'] and fizzbuzz(15)[-1] == 'FizzBuzz'"),
+ ("word_count", C + "`word_count(text)` returning a dict of lowercase word counts.", "assert word_count('a A b') == {'a': 2, 'b': 1}"),
+ ("flatten", C + "`flatten(xs)` that flattens a list of lists one level.", "assert flatten([[1, 2], [3], []]) == [1, 2, 3]"),
+ ("second_largest", C + "`second_largest(xs)` of distinct values, or None if there are fewer than two.", "assert second_largest([3, 1, 3, 2]) == 2 and second_largest([1]) is None"),
+ ("chunks", C + "`chunks(xs, n)` splitting a list into lists of n items (the last may be shorter).", "assert chunks([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]"),
+ ("vowels", C + "`count_vowels(s)` counting a, e, i, o, u in any case.", "assert count_vowels('Nairobi') == 4"),
+ ("celsius", C + "`to_fahrenheit(c)` converting Celsius to Fahrenheit.", "assert to_fahrenheit(100) == 212 and to_fahrenheit(0) == 32"),
+ ("dedupe", C + "`dedupe(xs)` removing duplicates while keeping the first order.", "assert dedupe([3, 1, 3, 2, 1]) == [3, 1, 2]"),
+ ("initials", C + "`initials(name)` returning the capital initials, e.g. 'Amina Wanjiru' -> 'AW'.", "assert initials('amina wanjiru otieno') == 'AWO'"),
+ ("primes", C + "`primes_below(n)` returning the primes below n.", "assert primes_below(20) == [2, 3, 5, 7, 11, 13, 17, 19]"),
+ ("roman", C + "`to_roman(n)` for 1 <= n <= 3999.", "assert to_roman(1994) == 'MCMXCIV' and to_roman(4) == 'IV'"),
+]
+out = [{"id": i, "suite": "acme", "prompt": p, "test": t} for i, p, t in acme] + \
+      [{"id": i, "suite": "control", "prompt": p, "test": t} for i, p, t in control]
+Path(__file__).with_name("tasks.json").write_text(json.dumps(out, indent=1))
+print(len(acme), "acme tasks,", len(control), "control tasks")

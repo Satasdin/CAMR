@@ -14,6 +14,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Iterable
 
+import numpy as np
+
 from camr.config import Config
 from camr.memory.budgeter import TokenBudgeter
 from camr.memory.clock import Clock, WallClock
@@ -344,10 +346,13 @@ class MemoryEngine:
         return self.ingest([Document(dataset=dataset, doc_id=doc_id, text=f"{question.strip()} {answer.strip()}")])
 
     # ---------------------------------------------------------- read path
-    def recall(self, question: str, *, touch: bool = True, note_type: str | None = None) -> RecallResult:
+    def recall(self, question: str, *, touch: bool = True, note_type: str | None = None,
+               experts: list[str] | None = None) -> RecallResult:
         """Embed -> kNN -> rank -> gate -> expand -> pack.  ``retrieval_ms`` spans all of it.
 
-        ``note_type`` selects another population (e.g. ``exemplar`` for reasoning).
+        ``note_type`` selects another population (e.g. ``exemplar`` for reasoning). ``experts`` opens only those
+        experts and shared memory (camr.memory.store experts; ``route`` chooses them): nothing else is searched, and
+        nothing else is admitted, bridging included. ``None`` (every research configuration) reads all of memory.
         """
         nt = note_type or self.note_type
         t0 = time.perf_counter()
@@ -358,13 +363,14 @@ class MemoryEngine:
         window = period(question, self.clock.now().astimezone().date()) if self.time_filter else None
         agg = self.aggregate and is_aggregate(question)
         k = self.aggregate_k if agg else self.k * 3 if window else self.k  # room for what the filter drops
-        hits = self.store.knn(qvec, k, nt)
+        closed = experts is not None and self.store.has_experts()
+        hits = self.store.knn_in(qvec, k, nt, experts) if closed else self.store.knn(qvec, k, nt)
         kk = self.keyword_k or (self.k if self.store.has_pending(nt) else 0)
         if agg:
             kk = max(kk, self.aggregate_k)
         kw_rank: dict[int, float] = {}
         if kk:
-            hits, kw_rank = self._with_keyword_hits(question, qvec, hits, kk, nt)
+            hits, kw_rank = self._with_keyword_hits(question, qvec, hits, kk, nt, experts if closed else None)
         notes = self.store.get_notes(i for i, _ in hits)
         t2 = time.perf_counter()
         candidates = [ScoredNote(note=notes[i], similarity=s) for i, s in hits if i in notes]
@@ -394,6 +400,9 @@ class MemoryEngine:
         t3 = time.perf_counter()
         if self.expansion == "entity" and not abstained and not agg:
             ranked = self._expand(ranked, qvec, nt)
+            if closed:  # a bridge does not open a closed expert
+                keep = self.store.in_experts((c.note.note_id for c in ranked), experts)
+                ranked = [c for c in ranked if c.note.note_id in keep]
         t4 = time.perf_counter()
         if self.per_title:
             self._limit_per_title(ranked)
@@ -430,6 +439,28 @@ class MemoryEngine:
             top_similarity=top_sim,
         )
 
+    def route(self, question: str, *, top: int = 2, margin: float = 0.05, floor: float = 0.0,
+              note_type: str | None = None) -> list[tuple[str, float]]:
+        """Which experts to open for a question: the ``top`` whose centres are nearest the question, within
+        ``margin`` of the nearest and above ``floor``. Shared memory is always open, so a question near no expert
+        reads shared memory only. Like a mixture of experts' gate, but nothing is trained: an expert's centre is the
+        mean of its notes."""
+        if not self.store.has_experts():
+            return []
+        nt = note_type or self.note_type
+        qvec = self.embedder.encode_one(question, is_query=True)
+        q = qvec / max(float(np.linalg.norm(qvec)), 1e-12)
+        scores = []
+        for name in self.store.experts():
+            c = self.store.centroid(name, nt)
+            if c is not None:
+                scores.append((name, float(q @ c)))
+        scores.sort(key=lambda t: (-t[1], t[0]))
+        if not scores:
+            return []
+        best = scores[0][1]
+        return [(n, s) for n, s in scores[:top] if s >= floor and s >= best - margin]
+
     def _limit_per_title(self, ranked: list[ScoredNote]) -> None:
         """Keep the best ``per_title`` notes of each source title eligible: notes that repeat one source (the same
         rule corrected six times) add little and crowd out the rest; a small model echoes every copy it reads."""
@@ -448,12 +479,13 @@ class MemoryEngine:
                 c.eligible = False
 
     def _with_keyword_hits(self, question: str, qvec, hits: list[tuple[int, float]], kk: int,
-                           nt: str) -> tuple[list[tuple[int, float]], dict[int, float]]:
+                           nt: str, experts: list[str] | None = None) -> tuple[list[tuple[int, float]], dict[int, float]]:
         """Add the notes the question's words find (BM25) to the vector hits, with their true cosine similarity.
         A keyword hit still waiting for its vector is embedded now (and stored, unless the store is read-only):
         the notes a question reaches are the first to get vectors."""
         have = {i for i, _ in hits}
-        found = self.store.keyword(question, kk, nt)
+        found = self.store.keyword_in(question, kk, nt, experts) if experts is not None else \
+            self.store.keyword(question, kk, nt)
         best = max((sc for _, sc in found), default=0.0)
         kw_rank = {i: (sc / best if best > 0 else 0.0) for i, sc in found}  # word-match strength, 0..1
         extra = [i for i, _ in found if i not in have]

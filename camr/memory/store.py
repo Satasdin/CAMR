@@ -143,6 +143,7 @@ class SQLiteVectorStore(MemoryStore):
                 self._sync_vec_index()
             self.conn.commit()
         self._matrix_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self._expert_cache: dict[tuple, object] = {}  # per expert: its vectors, note ids, centre (experts below)
         self._title_cache: dict[str, tuple[dict[str, list[int]], int]] = {}
         self._fresh_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         self.ivf = None  # learned index built during sleep (camr.memory.ivf); None = exact search
@@ -228,6 +229,7 @@ class SQLiteVectorStore(MemoryStore):
             self._matrix_cache.clear()
             self._title_cache.clear()
             self._fresh_cache.clear()
+            self._expert_cache.clear()
 
     def close(self) -> None:
         self.conn.close()
@@ -535,6 +537,107 @@ class SQLiteVectorStore(MemoryStore):
             longest = max((len(k.split()) for k in index), default=0)
             self._title_cache[note_type] = (index, longest)
         return self._title_cache[note_type]
+
+    # ------------------------------------------------------------ experts: closed partitions of memory
+    # A source may belong to an expert (a domain: one project's code, a course, a business); a source with none is
+    # shared memory, always open. Recall can open only some experts (camr.memory.engine.MemoryEngine.recall): their
+    # notes are searched, by vector and by keyword, and the rest of memory stays closed. The column is added the
+    # first time a source is given an expert, so a store that never uses experts is left exactly as it was.
+    def has_experts(self) -> bool:
+        if "has" not in self._expert_cache:
+            self._expert_cache["has"] = "expert" in {r[1] for r in self.conn.execute("PRAGMA table_info(source)")}
+        return bool(self._expert_cache["has"])
+
+    def set_expert(self, source_ids: Iterable[int], expert: str | None) -> None:
+        ids = list(source_ids)
+        with self.transaction() as c:
+            if "expert" not in {r[1] for r in c.execute("PRAGMA table_info(source)")}:
+                c.execute("ALTER TABLE source ADD COLUMN expert TEXT")
+                c.execute("CREATE INDEX IF NOT EXISTS source_expert ON source(expert)")
+            c.executemany("UPDATE source SET expert=? WHERE source_id=?", ((expert, i) for i in ids))
+
+    def experts(self) -> dict[str, int]:
+        """Expert -> notes it holds."""
+        if not self.has_experts():
+            return {}
+        return {r[0]: r[1] for r in self.conn.execute(
+            "SELECT s.expert, COUNT(n.note_id) FROM source s JOIN note n USING(source_id) WHERE s.expert IS NOT NULL"
+            " GROUP BY s.expert ORDER BY s.expert")}
+
+    def _expert_matrix(self, expert: str | None, note_type: str) -> tuple[np.ndarray, np.ndarray]:
+        """The vectors of one expert's notes (``None``: shared memory): the index searched when it is open."""
+        key = ("m", expert, note_type)
+        if key not in self._expert_cache:
+            where = "s.expert IS NULL" if expert is None else "s.expert = ?"
+            rows = self.conn.execute(
+                "SELECT e.note_id, e.embedding FROM note_embedding e JOIN note n USING(note_id) JOIN source s"
+                f" USING(source_id) WHERE n.note_type = ? AND {where} ORDER BY e.note_id",
+                (note_type,) if expert is None else (note_type, expert)).fetchall()
+            ids = np.array([r[0] for r in rows], dtype=np.int64)
+            mat = (np.vstack([np.frombuffer(r[1], dtype=np.float32) for r in rows]) if rows
+                   else np.zeros((0, self.dim), dtype=np.float32))
+            self._expert_cache[key] = (ids, mat)
+        return self._expert_cache[key]  # type: ignore[return-value]
+
+    def centroid(self, expert: str, note_type: str) -> np.ndarray | None:
+        """The centre of an expert's notes (mean of unit vectors): what the router compares a question with."""
+        key = ("c", expert, note_type)
+        if key not in self._expert_cache:
+            _, mat = self._expert_matrix(expert, note_type)
+            if len(mat) == 0:
+                self._expert_cache[key] = None
+            else:
+                unit = mat / np.maximum(np.linalg.norm(mat, axis=1, keepdims=True), 1e-12)
+                c = unit.mean(axis=0)
+                self._expert_cache[key] = c / max(float(np.linalg.norm(c)), 1e-12)
+        return self._expert_cache[key]  # type: ignore[return-value]
+
+    def knn_in(self, query: np.ndarray, k: int, note_type: str, experts: Iterable[str]) -> list[tuple[int, float]]:
+        """Top-k (note_id, cosine) over the open experts and shared memory only: the other experts are not read."""
+        q = as_float32(query)
+        parts = [self._expert_matrix(None, note_type)] + [self._expert_matrix(e, note_type) for e in experts]
+        ids = np.concatenate([p[0] for p in parts]) if parts else np.zeros(0, dtype=np.int64)
+        if len(ids) == 0:
+            return []
+        mat = np.vstack([p[1] for p in parts if len(p[1])])
+        qn = float(np.linalg.norm(q)) or 1.0
+        norms = np.linalg.norm(mat, axis=1)
+        norms[norms == 0] = 1.0
+        sims = (mat @ q) / (norms * qn)
+        top = np.argsort(-sims, kind="stable")[: int(k)]
+        scored = [(int(ids[j]), float(sims[j])) for j in top]
+        scored.sort(key=lambda t: (-round(t[1], 7), t[0]))
+        return scored
+
+    def keyword_in(self, text: str, k: int, note_type: str, experts: Iterable[str]) -> list[tuple[int, float]]:
+        """``keyword`` over the open experts and shared memory only."""
+        words = [w for w in re.findall(r"\w+", text.lower()) if len(w) > 1 and w not in _STOP][:24]
+        ex = list(experts)
+        if not words:
+            return []
+        query = " OR ".join(f'"{w}"' for w in dict.fromkeys(words))
+        marks = ",".join("?" * len(ex))
+        open_ = f"(s.expert IS NULL OR s.expert IN ({marks}))" if ex else "s.expert IS NULL"
+        try:
+            rows = self.conn.execute(
+                "SELECT f.rowid, bm25(note_fts) AS sc FROM note_fts f JOIN note n ON n.note_id = f.rowid JOIN source s"
+                f" USING(source_id) WHERE note_fts MATCH ? AND n.note_type = ? AND {open_} ORDER BY sc LIMIT ?",
+                (query, note_type, *ex, int(k))).fetchall()
+        except sqlite3.OperationalError:
+            return []
+        return [(int(r[0]), -float(r[1])) for r in rows]
+
+    def in_experts(self, note_ids: Iterable[int], experts: Iterable[str]) -> set[int]:
+        """The notes, of those given, that belong to the open experts or to shared memory."""
+        ids = list(note_ids)
+        if not ids:
+            return set()
+        ex = list(experts)
+        marks, emarks = ",".join("?" * len(ids)), ",".join("?" * len(ex))
+        open_ = f"(s.expert IS NULL OR s.expert IN ({emarks}))" if ex else "s.expert IS NULL"
+        return {r[0] for r in self.conn.execute(
+            f"SELECT n.note_id FROM note n JOIN source s USING(source_id) WHERE n.note_id IN ({marks}) AND {open_}",
+            (*ids, *ex))}
 
     def note_titles(self, note_ids: Iterable[int]) -> dict[int, str | None]:
         ids = list(note_ids)
