@@ -180,9 +180,25 @@ class NoNetwork:
     post = get
 
 
-def make_assistant(home: Path, emb, **kw):
-    """CAMR Personal itself, on a fresh or existing home folder: its engine is the read path under test."""
+def set_flags(asst) -> None:
+    """Apply CAMR_BENCH_FLAGS (JSON: engine attributes, plus token_budget and chunk_tokens) on top of the app's own
+    configuration, to measure one change at a time."""
+    for k, v in json.loads(os.environ.get("CAMR_BENCH_FLAGS") or "{}").items():
+        if k == "token_budget":
+            asst.engine.budgeter.budget = int(v)
+        elif k == "chunk_tokens":
+            asst.engine.write_policy.chunk_tokens = int(v)
+        elif hasattr(asst.engine, k):
+            setattr(asst.engine, k, v)
+        else:
+            raise SystemExit(f"CAMR_BENCH_FLAGS: the engine has no {k!r}")
+
+
+def make_assistant(home: Path, emb, today: str | None = None, **kw):
+    """CAMR Personal itself, on a fresh or existing home folder: its engine is the read path under test. ``today``
+    (YYYY-MM-DD) fixes the engine's clock, so "last week" and the prompt's date mean the question's day."""
     from camr.app.assistant import Assistant
+    from camr.memory.clock import LogicalClock
     from camr.memory.fetch import WebLookup
 
     home.mkdir(parents=True, exist_ok=True)
@@ -193,7 +209,12 @@ def make_assistant(home: Path, emb, **kw):
         kw["session"] = NoNetwork()
     if "web_lookup" not in kw:
         kw["web_lookup"] = WebLookup(NoNetwork(), offline=True)
-    return Assistant(home, embedder=emb, **kw)
+    asst = Assistant(home, embedder=emb, **kw)
+    if today:
+        asst.engine.clock = LogicalClock(dt.datetime.fromisoformat(today).replace(hour=12, tzinfo=dt.timezone.utc),
+                                         step_hours=0.0)
+    set_flags(asst)
+    return asst
 
 
 def read_path(a) -> dict:
@@ -202,7 +223,11 @@ def read_path(a) -> dict:
             "retrieval_policy": m.retrieval_policy, "k": m.k, "keyword_k": m.keyword_k,
             "token_budget": a.engine.budgeter.budget, "min_similarity": a.engine.min_similarity,
             "similarity_margin": m.similarity_margin, "entity_gate": m.entity_gate, "expansion": m.expansion,
-            "packing": m.packing, "embedder": a.embedder.name, "vector_backend": a.store.stats()["vector_backend"]}
+            "packing": m.packing, "embedder": a.embedder.name, "vector_backend": a.store.stats()["vector_backend"],
+            **{k: getattr(a.engine, k) for k in ("dated_context", "time_filter", "entity_gate_skip_time", "profile",
+                                                 "profile_budget", "profile_min_similarity", "aggregate",
+                                                 "aggregate_k", "aggregate_budget", "compress", "slot_gate")},
+            "chunk_tokens_used": a.engine.write_policy.chunk_tokens}
 
 
 def note_keys(engine, docs) -> dict[str, frozenset[str]]:
@@ -211,6 +236,8 @@ def note_keys(engine, docs) -> dict[str, frozenset[str]]:
 
     out: dict[str, set[str]] = {}
     for key, doc in docs:
+        if key:
+            out.setdefault(f"doc:{doc.dataset}:{doc.doc_id}", set()).add(key)  # for profile notes taken from it
         for cand in engine.write_policy.distil(doc):
             if key:
                 out.setdefault(checksum(cand.text.strip(), cand.note_type), set()).add(key)
@@ -224,14 +251,33 @@ def ask(a, spec, keys: dict[str, frozenset[str]], preview: bool = False, capture
     r = a.engine.recall(spec.question)
     if capture is not None:
         capture.append(r)
-    cands = [Cand(keys=keys.get(c.note.checksum, frozenset()), tokens=c.tokens, text=c.note.text,
-                  similarity=c.similarity, rank=c.rank, eligible=c.eligible, admitted=c.admitted,
-                  via_bridge=c.via is not None) for c in r.candidates]
+    origin: dict[int, str] = {}  # profile note -> "doc:<dataset>:<doc_id>" of what it was taken from
+    prof = sorted({c.note.source_id for c in r.candidates if getattr(c, "lane", "") == "profile"})
+    if prof:
+        for sid, doc_id in a.store.conn.execute(
+                f"SELECT source_id, doc_id FROM source WHERE source_id IN ({','.join('?' * len(prof))})", prof):
+            ds, rest = doc_id.split(":", 2)[1:]
+            origin[sid] = f"doc:{ds}:{rest.rsplit(':', 1)[0]}"
+    cands = [Cand(keys=(keys.get(origin[c.note.source_id], frozenset()) if getattr(c, "lane", "") == "profile"
+                        else keys.get(c.note.checksum, frozenset())),
+                  tokens=c.tokens, text=getattr(c, "line", "") or c.note.text, similarity=c.similarity, rank=c.rank,
+                  eligible=c.eligible, admitted=c.admitted, via_bridge=c.via is not None,
+                  position=getattr(c, "position", None), lane=getattr(c, "lane", "")) for c in r.candidates]
+    gate = None  # which gate withheld memory, when it was not the similarity gate
+    if r.abstained and r.top_similarity is not None and r.top_similarity >= a.engine.min_similarity:
+        from camr.memory.entities import personal_slots, question_entities
+
+        ents = question_entities(spec.question, skip_time=getattr(a.engine, "entity_gate_skip_time", False)) \
+            if a.engine.entity_gate else []
+        slots = personal_slots(spec.question) if getattr(a.engine, "slot_gate", False) else []
+        gate = "slot gate" if slots and not ents else "entity or slot gate" if slots else "entity gate"
     rec = score(spec, cands, abstained=r.abstained, retrieval_ms=r.retrieval_ms, top_similarity=r.top_similarity,
-                min_similarity=a.engine.min_similarity)
+                min_similarity=a.engine.min_similarity, ordered=getattr(a.engine, "dated_context", False), gate=gate)
+    rec["profile_notes"] = len(prof)
     if preview:
-        rec["context"] = [{"keys": sorted(c.keys), "sim": round(c.similarity, 3), "text": c.text[:160]}
-                          for c in cands if c.admitted]
+        shown = sorted((c for c in cands if c.admitted), key=lambda c: (c.position is None, c.position or 0))
+        rec["context"] = [{"keys": sorted(c.keys), "sim": round(c.similarity, 3), "text": c.text.strip()[:160]}
+                          for c in shown]
     return rec
 
 
@@ -422,8 +468,12 @@ def cmd_embed(a) -> None:
     probe = make_assistant(TMP / "embed-probe", emb)
     eng = probe.engine
 
+    only = set(filter(None, os.environ.get("CAMR_BENCH_QIDS", "").split(",")))
+
     def texts():
         for item in read_jsonl(SUBSET):
+            if only and item["question_id"] not in only:
+                continue
             for _, doc in lme_docs(item):
                 yield from (c.text.strip() for c in eng.write_policy.distil(doc))
         for doc in filler_docs(eng, max(a.scales) - 25):
@@ -462,11 +512,14 @@ def context_row(spec, recall, qtype: str, question_date: str, answer) -> dict:
 def run_lme(emb, limit: int | None = None, contexts: Path | None = None) -> None:
     """Score the sampled LongMemEval questions into records/lme.jsonl; with ``contexts``, write each question's
     context there instead (and leave the records alone)."""
-    from camr.eval.abilities import lme_spec
+    from camr.eval.abilities import lme_date, lme_spec
 
     path = contexts or RECORDS / "lme.jsonl"
     done = set() if contexts else {r["qid"] for r in read_jsonl(path)}
     rows = list(read_jsonl(SUBSET))[:limit]
+    only = set(filter(None, os.environ.get("CAMR_BENCH_QIDS", "").split(",")))  # a quick check on a few questions
+    if only:
+        rows = [x for x in rows if x["question_id"] in only]
     t0, n = time.time(), 0
     for item in rows:
         if item["question_id"] in done:
@@ -474,7 +527,7 @@ def run_lme(emb, limit: int | None = None, contexts: Path | None = None) -> None
         spec = lme_spec(item)
         home = TMP / f"lme-{item['question_id']}"
         shutil.rmtree(home, ignore_errors=True)
-        asst = make_assistant(home, emb)
+        asst = make_assistant(home, emb, today=lme_date(item["question_date"]))
         docs = list(lme_docs(item))
         summary = asst.engine.ingest([d for _, d in docs])
         got: list = []
@@ -513,7 +566,7 @@ def teach_item(asst, item: dict):
 def base_store(emb, name: str, fx: dict):
     home = TMP / name
     shutil.rmtree(home, ignore_errors=True)
-    asst = make_assistant(home, emb)
+    asst = make_assistant(home, emb, today=TODAY)
     docs = [teach_item(asst, {**b, "kind": "note"}) for b in fx["base_notes"]]
     return asst, docs
 
@@ -741,7 +794,7 @@ def cmd_scale(a) -> None:
         if marker.exists():
             result = json.loads(marker.read_text())
         else:
-            asst = make_assistant(home, emb)
+            asst = make_assistant(home, emb, today=TODAY)
             want = n - len(needles)
             have = filler_capacity(asst.engine, want)
             if have < want:  # never label a smaller store with the size asked for
@@ -763,7 +816,7 @@ def cmd_scale(a) -> None:
             asst.close()
             marker.write_text(json.dumps(result))
     else:
-        asst = make_assistant(home, emb)
+        asst = make_assistant(home, emb, today=TODAY)
         keys = note_keys(asst.engine, ndocs)
         for q in ("What is on my calendar?", "Where did I put the keys?", "What did I eat yesterday?"):
             asst.engine.recall(q)  # warm-up: first calls load caches
@@ -996,6 +1049,7 @@ def main(argv=None) -> None:
     p.add_argument("cmd", choices=["fetch", "prepare", "prepare-m", "embed", "run", "report", "all", "scale",
                                    "contexts"])
     p.add_argument("--label", default="baseline", help="contexts: written to results/bench/contexts_<label>.jsonl")
+    p.add_argument("--flags", default=None, help='JSON over the app\'s engine settings, e.g. \'{"profile": false}\'')
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--per-type", type=int, default=PER_TYPE)
     p.add_argument("--scales", type=lambda s: tuple(int(x) for x in s.split(",")), default=SCALES)
@@ -1009,6 +1063,8 @@ def main(argv=None) -> None:
     p.add_argument("--phase", choices=["build", "query"], default="build")
     p.add_argument("--out", default="")
     a = p.parse_args(argv)
+    if a.flags is not None:
+        os.environ["CAMR_BENCH_FLAGS"] = a.flags  # child processes (scale) inherit it
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):  # before torch is imported
         os.environ.setdefault(var, str(THREADS))

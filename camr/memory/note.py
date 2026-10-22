@@ -98,6 +98,9 @@ class ScoredNote:
     tokens: int = 0
     eligible: bool = True  # False when the relevance margin excludes it
     via: int | None = None  # seed note id when added by entity-bridge expansion
+    line: str = ""  # how it is written into the context (set when packed)
+    position: int | None = None  # its place in the context, 0 first (None when not admitted)
+    lane: str = ""  # "profile" for a profile note offered beside the ranked notes
 
 
 @dataclass

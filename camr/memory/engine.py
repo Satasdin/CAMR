@@ -6,6 +6,7 @@ path serves both control and treatment (Figure 4.3).
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import re
 import time
@@ -17,12 +18,14 @@ from camr.config import Config
 from camr.memory.budgeter import TokenBudgeter
 from camr.memory.clock import Clock, WallClock
 from camr.memory.embedder import Embedder
-from camr.memory.entities import mentions_any, question_entities
+from camr.memory.entities import mentions_any, mentions_slot, personal_slots, question_entities
 from camr.memory.importance import HeuristicImportance, ImportanceScorer, ModelImportance
-from camr.memory.note import Document, RecallResult, ScoredNote, to_iso
+from camr.memory.note import CandidateNote, Document, RecallResult, ScoredNote, from_iso, to_iso
+from camr.memory.profile import profile_statements
 from camr.memory.retrieval import RetrievalPolicy, build_policy
 from camr.memory.screener import NoteScreener
 from camr.memory.store import SQLiteVectorStore
+from camr.memory.timeframe import period, split_said
 from camr.memory.write_policy import StructuredNoteWritePolicy, VerbatimWritePolicy, WritePolicy
 from camr.models.runner import ModelRunner
 from camr.models.tokenizer import Tokenizer
@@ -30,6 +33,19 @@ from camr.models.tokenizer import Tokenizer
 log = logging.getLogger(__name__)
 
 KEYWORD_BONUS = 0.10  # hybrid order: the best word match gains this much over its cosine similarity
+PROFILE = "profile"  # note type (and source dataset) of profile notes
+PROFILE_FROM = ("note", "chat")  # sources whose statements may become profile notes: what the user said
+_AGGREGATE = re.compile(r"\b(?:how many times|how often|in total|list all|every time|all the times)\b", re.I)
+_SENT = re.compile(r"(?<=[.!?])\s+")
+_QWORD = re.compile(r"[a-z0-9]+")
+_QSTOP = {"the", "and", "for", "with", "what", "when", "where", "which", "who", "how", "did", "does", "was", "were",
+          "are", "is", "have", "has", "had", "you", "your", "my", "me", "can", "could", "would", "should", "about",
+          "that", "this", "there", "their", "from", "into", "any", "some", "many", "much", "tell", "remind"}
+
+
+def is_aggregate(question: str) -> bool:
+    """A question that needs every matching event ("How many times did I ...?", "List all ...")."""
+    return bool(_AGGREGATE.search(question))
 
 
 @dataclass
@@ -84,6 +100,17 @@ class MemoryEngine:
         expansion_per_seed: int = 2,
         keyword_k: int = 0,
         per_title: int = 0,
+        dated_context: bool = False,
+        time_filter: bool = False,
+        entity_gate_skip_time: bool = False,
+        profile: bool = False,
+        profile_budget: int = 64,
+        profile_min_similarity: float = -1.0,
+        aggregate: bool = False,
+        aggregate_k: int = 100,
+        aggregate_budget: int = 1024,
+        compress: str = "none",
+        slot_gate: bool = False,
     ):
         self.store = store
         self.embedder = embedder
@@ -106,6 +133,21 @@ class MemoryEngine:
         # at most this many notes whose sources share a title (e.g. corrections of one rule) enter a context; 0 = any
         self.per_title = per_title
         self.query_adapter = None  # learned during sleep (camr.memory.adapter); None = the embedder's own vector
+        # Phase 2 behaviours (MemoryConfig): all off by default
+        self.dated_context = dated_context
+        self.time_filter = time_filter
+        self.entity_gate_skip_time = entity_gate_skip_time
+        self.profile = profile
+        self.profile_budget = profile_budget
+        self.profile_min_similarity = profile_min_similarity
+        self.aggregate = aggregate
+        self.aggregate_k = aggregate_k
+        self.aggregate_budget = aggregate_budget
+        if compress not in ("none", "sentences"):
+            raise ValueError(f"unknown compress mode {compress!r}")
+        self.compress = compress
+        self.slot_gate = slot_gate
+        self._profile_seen: set[str] | None = None
 
     @property
     def note_type(self) -> str:
@@ -157,6 +199,17 @@ class MemoryEngine:
             expansion_per_seed=m.expansion_per_seed,
             keyword_k=m.keyword_k,
             per_title=m.per_title,
+            dated_context=m.dated_context,
+            time_filter=m.time_filter,
+            entity_gate_skip_time=m.entity_gate_skip_time,
+            profile=m.profile,
+            profile_budget=m.profile_budget,
+            profile_min_similarity=m.profile_min_similarity,
+            aggregate=m.aggregate,
+            aggregate_k=m.aggregate_k,
+            aggregate_budget=m.aggregate_budget,
+            compress=m.compress,
+            slot_gate=m.slot_gate,
         )
 
     # --------------------------------------------------------- write path
@@ -170,6 +223,7 @@ class MemoryEngine:
         embeds the ones a question reaches)."""
         summary = IngestSummary(self.note_type)
         t_start = time.perf_counter()
+        self._profile_seen = None
         seen = self.store.checksums(self.note_type) if seen is None else seen
         batch: list[Document] = []
         for doc in documents:
@@ -253,6 +307,35 @@ class MemoryEngine:
                 if rejected:
                     verdict_str += ";" + ",".join(sorted({v.reason for _, v in rejected}))
                 self.store.set_source_verdict(source_id, verdict_str)
+        if self.profile:
+            self._ingest_profile([doc for doc, _, _ in plans])
+
+    def _ingest_profile(self, docs: list[Document]) -> int:
+        """Keep the lasting traits the user states in these documents as profile notes (their own population).
+        A profile note's source is ``profile:<dataset>:<doc_id>:<i>``, so forgetting a document can find it."""
+        items = [(Document(PROFILE, f"{PROFILE}:{d.dataset}:{d.doc_id}:{i}", stmt), stmt)
+                 for d in docs if d.dataset in PROFILE_FROM for i, stmt in enumerate(profile_statements(d.text))]
+        if not items:
+            return 0
+        if self._profile_seen is None:
+            self._profile_seen = self.store.checksums(PROFILE)
+        accepted = []
+        for doc, stmt in items:
+            v = self.screener.screen(CandidateNote(stmt, PROFILE), self._profile_seen)
+            if v.accepted:
+                self._profile_seen.add(v.checksum)
+                accepted.append((doc, stmt, v))
+        if not accepted:
+            return 0
+        vecs = self.embedder.encode([stmt for _, stmt, _ in accepted])
+        now = to_iso(self.clock.now())
+        with self.store.transaction():
+            for (doc, stmt, v), vec in zip(accepted, vecs):
+                sid, _ = self.store.get_or_create_source(PROFILE, doc.doc_id, PROFILE, now)
+                self.store.insert_note(source_id=sid, note_type=PROFILE, text=stmt, token_count=v.token_count,
+                                       importance=0.5, checksum=v.checksum, created_at=now, embedding=vec)
+                self.store.set_source_verdict(sid, "accepted=1;rejected=0")
+        return len(accepted)
 
     def write_back(self, question: str, answer: str, dataset: str = "interaction", doc_id: str | None = None) -> IngestSummary:
         """Record a completed interaction as memory.  Disabled during evaluation runs,
@@ -272,8 +355,13 @@ class MemoryEngine:
         if self.query_adapter is not None:
             qvec = self.query_adapter.apply(qvec)
         t1 = time.perf_counter()
-        hits = self.store.knn(qvec, self.k, nt)
+        window = period(question, self.clock.now().astimezone().date()) if self.time_filter else None
+        agg = self.aggregate and is_aggregate(question)
+        k = self.aggregate_k if agg else self.k * 3 if window else self.k  # room for what the filter drops
+        hits = self.store.knn(qvec, k, nt)
         kk = self.keyword_k or (self.k if self.store.has_pending(nt) else 0)
+        if agg:
+            kk = max(kk, self.aggregate_k)
         kw_rank: dict[int, float] = {}
         if kk:
             hits, kw_rank = self._with_keyword_hits(question, qvec, hits, kk, nt)
@@ -289,17 +377,37 @@ class MemoryEngine:
                                        c.note.note_id))
             for r, c in enumerate(ranked):
                 c.rank = r + 1
+        if window is not None:  # a period asked about: dated notes from outside it are not candidates
+            said = self._said_dates(ranked)
+            ranked = [c for c in ranked if said.get(c.note.note_id) is None
+                      or window[0] <= said[c.note.note_id] <= window[1]]
         top_sim = max((c.similarity for c in ranked), default=None)
         abstained = self._gate(ranked, top_sim)
+        if agg and not abstained:  # every event the question's words find counts, not only those near the best
+            for c in ranked:
+                if kw_rank.get(c.note.note_id, 0.0) > 0 and c.similarity >= self.min_similarity:
+                    c.eligible = True
         if self.entity_gate and not abstained:
-            abstained = self._entity_gate(question, ranked)
+            abstained = self._entity_gate(question, ranked, skip_time=self.entity_gate_skip_time)
+        if self.slot_gate and not abstained:
+            abstained = self._slot_gate(question, ranked)
         t3 = time.perf_counter()
-        if self.expansion == "entity" and not abstained:
+        if self.expansion == "entity" and not abstained and not agg:
             ranked = self._expand(ranked, qvec, nt)
         t4 = time.perf_counter()
         if self.per_title:
             self._limit_per_title(ranked)
-        context, used = self.budgeter.pack(ranked)
+        budget = self.aggregate_budget if agg else self.budgeter.budget
+        if self.dated_context or agg or self.compress != "none":
+            shown = self._shown_dates(ranked) if self.dated_context or agg else {}
+            order = ((lambda c: (shown.get(c.note.note_id) or dt.date.min, c.note.note_id))
+                     if self.dated_context or agg else None)
+            context, used = self.budgeter.pack(
+                ranked, render=lambda c: self._render(c, question, shown, agg), order=order, budget=budget)
+        else:
+            context, used = self.budgeter.pack(ranked)
+        if self.profile:
+            context, used, ranked = self._with_profile(qvec, context, used, ranked)
         t5 = time.perf_counter()
         if touch:
             self.store.touch((c.note.note_id for c in ranked if c.admitted), self.clock.now())
@@ -308,7 +416,7 @@ class MemoryEngine:
             context=context,
             candidates=ranked,
             context_tokens=used,
-            budget=self.budgeter.budget,
+            budget=budget,
             retrieval_ms=(t5 - t0) * 1000,
             timings={
                 "embed_ms": (t1 - t0) * 1000,
@@ -389,17 +497,114 @@ class MemoryEngine:
         return False
 
     @staticmethod
-    def _entity_gate(question: str, ranked: list[ScoredNote]) -> bool:
+    def _entity_gate(question: str, ranked: list[ScoredNote], skip_time: bool = False) -> bool:
         """Entity-anchored gate: when the question names an entity (e.g. "The Loudwater Mystery") and no
         eligible note mentions it, the notes are about something else, however similar they look, so
         memory is withheld. Similarity alone cannot tell "a different film by a similar director" from
         "this film"; a name can. Questions that name no entity are unaffected."""
-        entities = question_entities(question)
+        entities = question_entities(question, skip_time=skip_time)
         if not entities or any(mentions_any(c.note.text, entities) for c in ranked if c.eligible):
             return False
         for c in ranked:
             c.eligible = False
         return True
+
+    @staticmethod
+    def _slot_gate(question: str, ranked: list[ScoredNote]) -> bool:
+        """Personal-slot gate: a first-person question asking for a specific thing ("my passport number", "my
+        brother's wedding") withholds memory unless an eligible note mentions that thing. Similar notes about
+        other things of the user's (the car, the dentist) are not an answer to it."""
+        groups = personal_slots(question)
+        if not groups or any(all(any(mentions_slot(c.note.text, w) for w in g) for g in groups)
+                             for c in ranked if c.eligible):
+            return False
+        for c in ranked:
+            c.eligible = False
+        return True
+
+    def _said_dates(self, ranked: list[ScoredNote]) -> dict[int, dt.date]:
+        """The day each note was said, when it says so ("On 2026-10-13 the user said: ...") or the first chunk of
+        its source does (a long turn's later chunks)."""
+        out: dict[int, dt.date] = {}
+        need: dict[int, list[int]] = {}
+        for c in ranked:
+            d = split_said(c.note.text)[0]
+            if d is not None:
+                out[c.note.note_id] = d
+            else:
+                need.setdefault(c.note.source_id, []).append(c.note.note_id)
+        if need:
+            marks = ",".join("?" * len(need))
+            rows = self.store.conn.execute(
+                f"SELECT source_id, text FROM note WHERE note_id IN (SELECT MIN(note_id) FROM note WHERE source_id IN"
+                f" ({marks}) GROUP BY source_id)", list(need))
+            for sid, text in rows:
+                d = split_said(text)[0]
+                if d is not None:
+                    for nid in need[sid]:
+                        out[nid] = d
+        return out
+
+    def _shown_dates(self, ranked: list[ScoredNote]) -> dict[int, dt.date]:
+        """The date a note shows in a dated context: the day it was said, else the day it was stored."""
+        out = self._said_dates(ranked)
+        for c in ranked:
+            if c.note.note_id not in out:
+                try:
+                    out[c.note.note_id] = from_iso(c.note.created_at).astimezone().date()
+                except ValueError:
+                    pass
+        return out
+
+    def _render(self, c: ScoredNote, question: str, shown: dict[int, dt.date], agg: bool) -> str:
+        """A note as the context shows it: dated ("[2026-10-13] The user said: ..."), compressed to its
+        sentences about the question, or, for an aggregate question, one short line per event."""
+        said, role, body = split_said(c.note.text)
+        if self.compress == "sentences" and not agg:
+            body = _relevant_sentences(body, question)
+        if agg:
+            body = _first_clause(body)
+        d = shown.get(c.note.note_id)
+        if (self.dated_context or agg) and d is not None:
+            who = "" if agg or role is None else f"The {role} said: "
+            return f"- [{d.isoformat()}] {who}{body.strip()}\n"
+        lead = f"On {said.isoformat()} the {role} said: " if said is not None and role else ""
+        return f"- {lead}{body.strip()}\n"
+
+    def _with_profile(self, qvec, context: str, used: int, ranked: list[ScoredNote]):
+        """Offer the profile notes most like the question, within ``profile_budget`` tokens, ahead of the context,
+        whatever the gates decided (a preference matters to questions that never mention it)."""
+        import numpy as np
+
+        ids, mat = self.store.all_vectors(PROFILE)
+        if not len(ids):
+            return context, used, ranked
+        q = np.asarray(qvec, dtype=np.float32)
+        norms = np.linalg.norm(mat, axis=1)
+        norms[norms == 0] = 1.0
+        sims = (mat @ q) / (norms * (float(np.linalg.norm(q)) or 1.0))
+        order = [int(j) for j in np.argsort(-sims, kind="stable") if sims[j] >= self.profile_min_similarity][:8]
+        notes = self.store.get_notes(int(ids[j]) for j in order)
+        extra, spent = [], 0
+        for j in order:
+            note = notes.get(int(ids[j]))
+            if note is None:
+                continue
+            line = f"- [about the user] {note.text.strip()}\n"
+            n = self.budgeter.tokenizer.count(line)
+            if spent + n > self.profile_budget:
+                continue
+            extra.append(ScoredNote(note=note, similarity=float(sims[j]), admitted=True, tokens=n, line=line,
+                                    lane=PROFILE))
+            spent += n
+        if not extra:
+            return context, used, ranked
+        for i, c in enumerate(extra):
+            c.position = i
+        for c in ranked:
+            if c.position is not None:
+                c.position += len(extra)
+        return "".join(c.line for c in extra) + context, used + spent, extra + ranked
 
     def _expand(self, ranked: list[ScoredNote], qvec, note_type: str) -> list[ScoredNote]:
         """Entity-bridge expansion: one step of spreading activation over titles.
@@ -469,3 +674,31 @@ def _mentions(text: str, index: dict[str, list[int]], longest: int) -> list[str]
         else:
             i += 1
     return found
+
+
+def _qstems(question: str) -> set[str]:
+    return {w[:5] for w in _QWORD.findall(question.lower()) if len(w) > 2 and w not in _QSTOP}
+
+
+def _relevant_sentences(body: str, question: str, keep: int = 2) -> str:
+    """The note's sentences that share the most words with the question (at most ``keep``, in their order); the
+    first sentence when none does."""
+    sents = [x for x in _SENT.split(body.strip()) if x.strip()]
+    if len(sents) <= keep:
+        return body
+    stems = _qstems(question)
+    scored = [(len(stems & {w[:5] for w in _QWORD.findall(x.lower())}), -i) for i, x in enumerate(sents)]
+    best = sorted(range(len(sents)), key=lambda i: scored[i], reverse=True)[:keep]
+    if all(scored[i][0] == 0 for i in best):
+        return sents[0]
+    return " ".join(sents[i] for i in sorted(best) if scored[i][0] > 0)
+
+
+def _first_clause(body: str, max_words: int = 12) -> str:
+    """One short line for an event: its first clause (to a comma or the sentence's end), at most ``max_words``."""
+    text = body.strip()
+    clause = re.split(r"[,;:.!?]\s", text + " ", maxsplit=1)[0]
+    if len(clause.split()) < 3:
+        clause = re.split(r"[.!?]\s", text + " ", maxsplit=1)[0]
+    words = clause.split()
+    return " ".join(words[:max_words]).rstrip(",;:") + ("…" if len(words) > max_words else "")

@@ -15,7 +15,9 @@ told in several turns of one session needs only one of them). The rule says what
                period asked about did: CAMR Personal's prompt does not tell the model today's date, so the model
                cannot drop those itself (A4);
 * ``abstain``  memory abstained (A7);
-* ``no_harm``  nothing was admitted: a question memory has nothing for gets an empty context (A10).
+* ``no_harm``  nothing was admitted: a question memory has nothing for gets an empty context (A10). Profile notes,
+               which the read path offers to every question within a small budget by design, are not counted
+               here; they count in the distractor share and are reported as ``profile_tokens``.
 """
 
 from __future__ import annotations
@@ -63,6 +65,8 @@ class Cand:
     eligible: bool = True
     admitted: bool = False
     via_bridge: bool = False
+    position: int | None = None  # place in the context (0 first); None: in rank order
+    lane: str = ""  # "profile": a profile note the read path offers to every question (outside the gates)
 
 
 @dataclass
@@ -113,8 +117,13 @@ def update_cue(text: str) -> bool:
     return bool(_UPDATE.search(text))
 
 
-def tell_apart(newest: Sequence[Cand], stale: Sequence[Cand]) -> bool:
-    """Can a reader of the context tell the newest value from a superseded one next to it?"""
+def tell_apart(newest: Sequence[Cand], stale: Sequence[Cand], ordered: bool = False) -> bool:
+    """Can a reader of the context tell the newest value from a superseded one next to it? Yes when both show
+    dates and the newest is later, when the newest says it is an update, or (``ordered``: the context is listed
+    oldest first and the reader is told the newest is right) when the newest comes after the old one."""
+    if ordered and all(c.position is not None for c in [*newest, *stale]):
+        if max(c.position for c in newest) > max(c.position for c in stale):
+            return True
     new_d = [d for c in newest for d in iso_dates(c.text)]
     old_d = [d for c in stale for d in iso_dates(c.text)]
     if new_d and old_d and max(new_d) > max(old_d):
@@ -124,7 +133,7 @@ def tell_apart(newest: Sequence[Cand], stale: Sequence[Cand]) -> bool:
 
 # ---------------------------------------------------------------------- one question
 def miss_reason(group: frozenset[str], cands: Sequence[Cand], *, abstained: bool, top_similarity: float | None,
-                min_similarity: float) -> str:
+                min_similarity: float, gate: str | None = None) -> str:
     """Why a needed fact did not reach the context: where its best note was lost on the read path."""
     mine = [c for c in cands if c.keys & group]
     if not mine:
@@ -132,16 +141,20 @@ def miss_reason(group: frozenset[str], cands: Sequence[Cand], *, abstained: bool
     best = min(mine, key=lambda c: c.rank or 10**9)
     if abstained:
         gated = top_similarity is None or top_similarity < min_similarity
-        return "similarity gate" if gated else "entity gate"
+        return "similarity gate" if gated else (gate or "entity gate")
     if not best.eligible:
         return "below margin"
     return "budget full"
 
 
 def score(spec: Spec, cands: Sequence[Cand], *, abstained: bool, retrieval_ms: float,
-          top_similarity: float | None = None, min_similarity: float = 0.0) -> dict:
-    """Score one question from the ranked candidates (those with ``admitted`` set form the context)."""
+          top_similarity: float | None = None, min_similarity: float = 0.0, ordered: bool = False,
+          gate: str | None = None) -> dict:
+    """Score one question from the ranked candidates (those with ``admitted`` set form the context, in
+    ``position`` order when given). ``ordered``: the context lists notes oldest first."""
     adm = [c for c in cands if c.admitted]
+    if adm and all(c.position is not None for c in adm):
+        adm.sort(key=lambda c: c.position)
     relevant = frozenset().union(*spec.needed) if spec.needed else frozenset()
     reached = [any(c.keys & g for c in adm) for g in spec.needed]
     tokens = sum(c.tokens for c in adm)
@@ -155,16 +168,16 @@ def score(spec: Spec, cands: Sequence[Cand], *, abstained: bool, retrieval_ms: f
     elif spec.rule == "newest":
         newest = [c for c in adm if c.keys & spec.needed[0]] if spec.needed else []
         stale = [c for c in adm if c.keys & spec.stale]
-        passed = bool(newest) and (not stale or tell_apart(newest, stale))
+        passed = bool(newest) and (not stale or tell_apart(newest, stale, ordered))
     elif spec.rule == "temporal":
         dated = [any((c.keys & g) and has_date(c.text) for c in adm) for g in spec.needed]
         passed = bool(dated) and all(dated) and not oow_in
     elif spec.rule == "abstain":
         passed = abstained
-    else:  # no_harm
-        passed = tokens == 0
+    else:  # no_harm: nothing from ranked memory (the profile lane is reported apart)
+        passed = sum(c.tokens for c in adm if c.lane != "profile") == 0
     misses = [miss_reason(g, cands, abstained=abstained, top_similarity=top_similarity,
-                          min_similarity=min_similarity) for g, r in zip(spec.needed, reached) if not r]
+                          min_similarity=min_similarity, gate=gate) for g, r in zip(spec.needed, reached) if not r]
     return {
         "qid": spec.qid, "ability": spec.ability, "suite": spec.suite, "rule": spec.rule,
         "question": spec.question, "passed": bool(passed),
@@ -172,6 +185,7 @@ def score(spec: Spec, cands: Sequence[Cand], *, abstained: bool, retrieval_ms: f
         "all_needed": (all(reached) if spec.needed else None),
         "distractor_share": round(distract / tokens, 4) if tokens else 0.0,
         "context_tokens": tokens, "admitted": len(adm),
+        "profile_tokens": sum(c.tokens for c in adm if c.lane == "profile"),
         "retrieval_ms": round(float(retrieval_ms), 2), "abstained": bool(abstained),
         "top_similarity": None if top_similarity is None else round(float(top_similarity), 4),
         "stale_in_context": stale_in, "stale_first": stale_first, "out_of_window_in_context": oow_in,
