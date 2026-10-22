@@ -49,6 +49,7 @@ def load_rows(tag: str, records_dir: Path) -> dict[str, list[dict]]:
             "grounded": grounded_share(a["answer"], c.get("context") or "") or 0.0,
             "declined": bool(a["declined"]),
             "local_correct": a["correct"], "cloud_correct": cloud[qid]["correct"],
+            "cloud_declined": bool(cloud[qid]["declined"]),
             "unanswerable": str(qid).endswith("_abs") or c.get("ability") == "A7"})
     return out
 
@@ -89,7 +90,14 @@ def run(a) -> None:
                   "reward_sd": round(sd("reward", i), 4)} for i in range(steps)]
         fixed_mean = {name: {k: round(statistics.mean(f[name][k] for f in fixed), 4) for k in fixed[0][name]}
                       for name in fixed[0]}
-        out["readers"][reader] = {"n": len(rows), "curve": curve, "fixed": fixed_mean}
+        # the same learning at other prices for a cloud call: how far each link trades cloud use for fewer wrong answers
+        sweep = []
+        for price in a.cloud_sweep:
+            rw = Rewards(wrong=a.wrong, cloud=price)
+            ends = [learning_curve(*split(rows, s), rw, block=10_000, seed=s)[-1] for s in range(a.splits)]
+            sweep.append({"cloud_cost": price, **{k: round(statistics.mean(e[k] for e in ends), 4)
+                                                  for k in ("right", "wrong", "declined", "escalated")}})
+        out["readers"][reader] = {"n": len(rows), "curve": curve, "fixed": fixed_mean, "cloud_sweep": sweep}
         print(reader, "n", len(rows), "learned:", curve[-1], flush=True)
     (OUT / f"link_{a.tag}.json").write_text(json.dumps(out, indent=1))
     report(a)
@@ -111,6 +119,12 @@ def report(a) -> None:
         for name, v in rows:
             lines.append(f"| {reader} (n={r['n']}) | {name} | {pct(v['right'])} | {pct(v['wrong'])} | "
                          f"{pct(v['declined'])} | {pct(v['escalated'])} | {v['reward']:+.2f} |")
+    lines += ["", "## The trade-off: the learned link at other prices for one cloud call", "",
+              "| Reader | cloud cost | right | wrong (stated as fact) | declined | sent to Kimi K3 |", "|---|---|---|---|---|---|"]
+    for reader, r in d["readers"].items():
+        for s in r.get("cloud_sweep", []):
+            lines.append(f"| {reader} | {s['cloud_cost']} | {pct(s['right'])} | {pct(s['wrong'])} | {pct(s['declined'])} | "
+                         f"{pct(s['escalated'])} |")
     lines += ["", "## Learning curves (held-out reward as feedback accumulates)", ""]
     for reader, r in d["readers"].items():
         pts = " · ".join(f"{p['feedback']}: {p['reward']:+.2f}" for p in r["curve"])
@@ -129,5 +143,6 @@ if __name__ == "__main__":
     ap.add_argument("--cloud", type=float, default=0.3, help="cost of one cloud call")
     ap.add_argument("--splits", type=int, default=10)
     ap.add_argument("--block", type=int, default=20)
+    ap.add_argument("--cloud-sweep", type=lambda s: [float(x) for x in s.split(",")], default=[0.1, 0.3, 0.5, 0.8, 1.2])
     a = ap.parse_args()
     {"run": run, "report": report}[a.part](a)

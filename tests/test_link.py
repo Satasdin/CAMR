@@ -35,6 +35,10 @@ def test_rewards_price_a_wrong_answer_like_a_hallucination():
     assert rw("keep", right) == 1.0 and rw("keep", wrong) == -1.0 and rw("decline", wrong) == 0.0
     assert rw("escalate", wrong) == 0.7 and rw("decline", dict(wrong, unanswerable=True)) == 1.0
     assert outcome("keep", wrong) == "wrong" and outcome("decline", right) == "declined"
+    # a model that itself said it cannot answer stated nothing: a decline, not a hallucination
+    said_no = dict(wrong, cloud_correct=False, declined=True, cloud_declined=True)
+    assert rw("keep", said_no) == 0.0 and outcome("keep", said_no) == "declined"
+    assert outcome("escalate", said_no) == "declined" and abs(rw("escalate", said_no) + 0.3) < 1e-9
 
 
 def test_the_link_learns_from_feedback_to_beat_every_fixed_choice():
