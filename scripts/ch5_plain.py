@@ -83,7 +83,7 @@ GLOSSARY = [
     ("Baseline", "The system something is compared against."),
     ("Requirement (FR, NFR)", "From Chapter 3: functional requirements (what the system must do) and non-functional "
      "requirements (how well: speed, memory, privacy)."),
-    ("Defect (D-01 ... D-40)", "A bug found during testing or experiments, numbered, fixed and retested."),
+    ("Defect (D-01 ... D-42)", "A bug found during testing or experiments, numbered, fixed and retested."),
     ("Reproducible", "Anyone can rerun the evaluation from the saved files and get the same numbers."),
 ]
 
@@ -142,7 +142,7 @@ INLINE = [
     (r"\bpipelines?\b", "a fixed sequence of steps"),
     (r"\bwrite path\b", "how documents are stored as notes"),
     (r"\bread path\b", "how notes are found and given to the model"),
-    (r"\bgat(?:e|es|ed|ing)\b", "a check that drops notes about the wrong subject"),
+    (r"(?<!slot )\bgat(?:e|es|ed|ing)\b", "a check that drops notes about the wrong subject"),
     (r"\bbridg\w+", "following a name found in one note to another note about that name"),
     (r"(?<!fixed )(?<!random )\bseed\b(?! \d)(?!s\b)", "the first note found, from which bridging continues"),
     (r"\bingest\w*", "loading documents into memory"),
@@ -385,7 +385,7 @@ def PLAIN(F: dict) -> dict[str, list[str]]:  # noqa: N802
                         "re-orders the results, and whether they check the results before answering."],
         "sec_testing": [f"Testing checked two things: that each part does what the requirements ask "
                         f"({F['n_tests']} automated tests, all passing), and that every problem found during the "
-                        "experiments was fixed and checked again. Every bug has a number (D-01 to D-40), a cause, a "
+                        "experiments was fixed and checked again. Every bug has a number (D-01 to D-42), a cause, a "
                         "fix and a retest."],
         "sec_vc": ["All work is kept in Git, which records every change with its date and a description, so the "
                    "order of the work and the origin of every result can be traced."],
@@ -425,6 +425,14 @@ def PLAIN(F: dict) -> dict[str, list[str]]:  # noqa: N802
                     "behind."],
         "sec_examples": ["Real answers, word for word, with and without memory, so the numbers above can be seen in "
                          "practice."],
+        "sec_bench": ["Before any model was asked, the memory itself was tested on ten things a personal memory "
+                      "must do, from recalling one fact among thousands to forgetting on request. The first test "
+                      "found gaps; closing them raised how often the answer reached the model on every one"
+                      + (f", for example from {pct(F['bench']['baseline']['A4']['pass_rate'])} to "
+                         f"{pct(F['bench']['phase2b']['A4']['pass_rate'])} on questions about time"
+                         if F.get("bench") else "")
+                      + ". One change looked best and was reversed when a model reading its output showed it had cut "
+                        "the answers out. Knowing when it has nothing to say is still its weakest point."],
         "sec_readers": ["The same memory was given to four models, from a small one that runs on a phone-class "
                         "computer to a large cloud model. All of them answered far more questions with it. The small "
                         "ones also stated many wrong answers from the same notes, which is the problem the next "

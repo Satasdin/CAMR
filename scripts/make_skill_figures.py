@@ -118,8 +118,51 @@ def link_tradeoff(tag: str = "baseline") -> Path:
     fig.tight_layout()
     return save(fig, OUT, "link_tradeoff.png")
 
+BENCH_TARGETS = {"A3": 0.85, "A4": 0.70, "A6": 0.85, "A7": 0.50}  # the Phase 2 targets (results/bench/phase2/README.md)
+
+
+def engine_bench() -> Path:
+    """Answer reached the model, per ability: before Phase 2, with compression (reversed, D-41) and CAMR Personal
+    now, scored with the answer-survives rule (the cards scripts/phase2_compare.py prints; the 1M store, built on the
+    baseline only, left out)."""
+    spec = importlib.util.spec_from_file_location("phase2_compare", ROOT / "scripts/phase2_compare.py")
+    pc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pc)
+    from camr.eval.abilities import scorecard
+    cards = {}
+    for name, files, _ in pc.HEADLINE:
+        rs = [json.loads(x) for f in files if f.exists() for x in f.read_text().splitlines() if x.strip()]
+        cards[name] = scorecard(r for r in rs if not str(r.get("suite", "")).endswith("-1M"))
+    before, comp, now = cards["baseline"], cards["phase2-compressed"], cards["phase2b"]
+    abil = sorted(before, key=lambda a: int(a[1:]), reverse=True)
+    fig, ax = plt.subplots(figsize=(9.6, 5.2), facecolor=SURF)
+    for k, a in enumerate(abil):
+        b, n = 100 * before[a]["pass_rate"], 100 * now[a]["pass_rate"]
+        ax.plot([b, n], [k, k], color=GREY, linewidth=1.2, zorder=1)
+        lo, hi = (100 * v for v in now[a]["ci95"])
+        ax.plot([lo, hi], [k - 0.18, k - 0.18], color=BLUE, linewidth=0.8, alpha=0.6)
+        if a in BENCH_TARGETS:
+            ax.plot([100 * BENCH_TARGETS[a]] * 2, [k - 0.32, k + 0.32], color="black", linewidth=1.6)
+    ys = list(range(len(abil)))
+    ax.scatter([100 * before[a]["pass_rate"] for a in abil], ys, s=42, color=GREY, zorder=3, label="before Phase 2")
+    ax.scatter([100 * comp[a]["pass_rate"] for a in abil], ys, s=46, marker="x", color=ORANGE, zorder=3,
+               label="with compression (reversed)")
+    ax.scatter([100 * now[a]["pass_rate"] for a in abil], ys, s=52, color=BLUE, zorder=4,
+               label="CAMR Personal now (95% interval below)")
+    ax.plot([], [], color="black", linewidth=1.6, label="target")
+    ax.set_yticks(ys, [f"{a} {before[a]['name']} (n={before[a]['n']})" for a in abil])
+    ax.set_xlim(0, 101)
+    style(ax, xlabel="questions whose answer reached the model, %", grid="x")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.4, -0.1), ncol=2, fontsize=8, frameon=False)
+    ax.set_title("Engine bench: what reached the model, before and after Phase 2", loc="left")
+    fig.tight_layout()
+    return save(fig, OUT, "engine_bench.png")
+
+
 if __name__ == "__main__":
     skill_cards()
+    if (ROOT / "results/bench/phase2/phase2b").exists():
+        engine_bench()
     if (ROOT / "results/readers/answers_baseline.jsonl").exists():
         readers()
     if (ROOT / "results/link/link_baseline.json").exists():

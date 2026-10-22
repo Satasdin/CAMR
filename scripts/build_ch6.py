@@ -166,7 +166,7 @@ def build(template: Path, out: Path) -> Path:
               "Selective, name-anchored techniques transfer; composite scoring does not; the gap is knowledge and "
               "reading, not reasoning", "Met"],
              ["ii. Design a lightweight memory engine", "⟦sec_impl⟧, ⟦sec_verify_impl⟧, ⟦sec_tests⟧, ⟦sec_defects⟧",
-              f"Implemented, tested ({F['tests'] or 'over 200'} tests) and changed on evidence; 40 numbered defects, "
+              f"Implemented, tested ({F['tests'] or 'over 200'} tests) and changed on evidence; 42 numbered defects, "
               "and six more from a code review of the application and the skill-card router, found and handled",
               "Met"],
              ["iii. Develop it on a consumer laptop without a GPU", "⟦sec_env⟧, ⟦sec_bulk⟧, ⟦sec_appres⟧",

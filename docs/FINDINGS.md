@@ -18,7 +18,7 @@ Last updated: 2026-10-22.
 | Do automations need the engine? | n8n desk: Kimi K3 + CAMR 75.0% resolved, 0 wrong replies, every unknowable ticket escalated and the person's answer taught back. Agent: Kimi K3 0% -> 100% of tasks with memory. Live news: Kimi K3 alone 22% correct and 12% wrong; with CAMR 94%; Llama 3B 2% -> 88%. | F29 |
 | Can weights that memory attaches beat weights merged into the model? | Skill cards (one small LoRA per formula family, attached only when memory names it): 90.0% on unseen problems against 85.0% for one merged adapter and 55.0% for notes; on 200 unrelated GSM8K problems the cards changed 7 answers, the merged adapter 36 (16.0% → 15.5% against 16.0% → 10.0%). | F32 |
 | What did the cloud model cost? | $42.37 for 9,183 calls in the whole study ($9.01 of it the reader bench). Per 1,000 answers CAMR was the cheapest way to use Kimi K3 in every scenario but the agent (news: $1.98 against $3.31 RAG and $89.20 stuffing). | F31 |
-| What went wrong? | D-31 to D-40, each fixed and re-run; the last two: n8n loops asked each news question 30 times (D-39; results unaffected) and an entity fix lost one desk ticket (D-40; desk answers identical after the fix). 204 tests pass; `reproduce.py --twice`: 16/16 identical. | Defects table |
+| What went wrong? | D-31 to D-42, each fixed and re-run; D-41: the engine bench scored compressed notes as reaching the model after the answer sentence had been cut, so compression was chosen and then reversed; the last two: n8n loops asked each news question 30 times (D-39; results unaffected) and an entity fix lost one desk ticket (D-40; desk answers identical after the fix). 204 tests pass; `reproduce.py --twice`: 16/16 identical. | Defects table |
 
 ---
 
@@ -1014,6 +1014,51 @@ Sources: `results/agentic/agent_llama3_2_3b__*.json`, `results/agentic/fresh_llm
 2. **The runtime is part of the result.** The same model file served by Ollama 0.13.5 often ended a task with no action at all (13 of 20 without memory), so made-up actions fell from 95% to 35% and successes with memory fell to 5-10%. Small-model agent results are reported with the serving runtime's version.
 3. Chapter 5 reports the repeated (0.35.0) runs.
 
+## F34. The engine bench: ten abilities a personal memory needs, before and after closing the gaps
+
+Source: `results/bench/` (`scripts/engine_bench.py`; scoring rules in `camr/eval/abilities.py`, tests in
+`tests/test_abilities.py`), baseline `results/bench/scorecard.md`, Phase 2 `results/bench/phase2/README.md` (the
+before/after table) and `rescore/README.md` (budgets); figure `report/engine_bench.png`. No model in the loop: each
+question is scored from what CAMR Personal's read path puts in the context. 260 LongMemEval questions (each with a
+fresh store of the user's whole chat history), hand-written CAMR scenarios, needle stores of 1k / 10k / 100k notes,
+and the app's forget and privacy checks. Scored with the answer-survives rule (D-41): a needed fact counts only if
+its answer (the gold string when the turn says it, else the turn's sentence most like the gold, else a note of the
+turn shown whole) is in the rendered context.
+
+| Ability | n | Before | Compressed (reversed) | Now | Target |
+|---|---|---|---|---|---|
+| A1 recall one taught fact among many | 155 | 84% | 81% | 86% | |
+| A2 join two facts | 40 | 28% | 12% | 35% | |
+| A3 knowledge update | 43 | 65% | 51% | 70% | ≥ 85% (not met) |
+| A4 temporal | 42 | 40% | 24% | 48% | ≥ 70% (not met) |
+| A5 counting | 3 | 1 of 3 | 2 of 3 | 2 of 3 | 30-event log (met; 100 events do not fit 1,024 tokens) |
+| A6 implicit preference | 33 | 67% | 82% | 76% | ≥ 85% (not met) |
+| A7 abstention | 34 | 15% | 26% | 26% | ≥ 50% (not met) |
+| A8 forget and privacy | 16 | 14 of 16 | 16 of 16 | 16 of 16 | |
+| A9 scale (1k-100k) | 3 | 2 of 3 | 3 of 3 | 3 of 3 | |
+| A10 do no harm (engine proxy) | 82 | 62% | 67% | 67% | |
+
+- **What changed** (each a `MemoryConfig` switch, off by default, on only in CAMR Personal, so every research
+  configuration replays identically; `reproduce.py` 7/7 checks pass): dated notes listed oldest first with today's
+  date in the prompt and "the newest is right"; a time filter for questions about a past period; profile notes
+  (lasting traits, offered to every question within 64 tokens; tightened by D-42); counting questions read up to 100
+  short dated lines; a slot gate that abstains when a first-person question asks for a thing no note mentions;
+  whole notes at 512 tokens (was 384).
+- **Compression was chosen and reversed (D-41).** Keeping each note's two sentences that share the most words with
+  the question looked best under the first scoring rule (76% of the answerable LongMemEval questions passed at 384
+  tokens against 67% for whole notes) and was shipped. The reader bench showed Kimi K3 losing recall questions whose
+  answer had been cut. Re-scored so the answer must survive: compression 48%, whole notes 59% (384 tokens), 63%
+  (512), 73% (768), baseline 60%; compression cut the answer of 105 needed facts. On the 69 questions whose gold
+  answer is in the turn verbatim: 77% compressed against 80% whole at 384. CAMR Personal now uses whole notes at 512.
+- **Where it fell short:** four of five targets. Abstention most, because most LongMemEval unanswerable questions ask
+  about an activity ("How many times did I bake egg tarts?") rather than a thing of the user's. Mean context grew
+  from 316 to 472 tokens; distractor share 73% → 81%. The first profile notes put 570 lines into all 260
+  LongMemEval contexts, mostly passing remarks and requests; after D-42, 219 lines in 155 (the extractor keeps 19
+  of the 524 unique lines the first version produced). The time filter and the slot gate each cost questions as
+  first written and were rewritten before being kept.
+- **Retrieval time now:** 100k needle recall 88%, p50 / p95 58 / 89 ms.
+- **A million notes** (baseline read path, `results/bench/records/scale.jsonl`): 1,000,004 notes, 4.7 GB store, built in 18 min with peak RSS 0.59 GB (0.52 GB at 1k). Needle recall 76% (96% at 1k and 10k, 80% at 100k); retrieval p50 / p95 8.1 / 13.8 s, because exact search reads every vector and the store did not fit the page cache under this machine's memory pressure (an upper bound). A9 fails at 1M on recall and latency: a store this size needs an approximate index.
+
 ## Defects found in this round
 
 | ID | Defect | Found by | Fix | Retest |
@@ -1028,6 +1073,8 @@ Sources: `results/agentic/agent_llama3_2_3b__*.json`, `results/agentic/fresh_llm
 | D-38 | *I don't know* with a curly apostrophe not recognised as a decline | News results | Apostrophes normalised | Only Kimi K3 alone on the news affected; re-run |
 | D-39 | A loop's *done* output fed every looped item to the next node: news questions asked 30 times, 1,500 score requests reset the gateway connection | n8n screenshots (1,500 runs of *Answer question*) | Nodes after a loop run once (*Execute Once*) | Scores and costs unchanged (answers per question, repeats were cache hits); news re-run clean |
 | D-40 | The D-37 opener rule (only in sentences ending with *?*) read *Price of the Helio* as a name in the desk request *... kit please* | Re-running the desk on the final code (T020 escalated) | Requests (*please*) and unpunctuated fragments also open with a common word; test uses the ticket as written | Every CAMR desk answer identical to the reported run; PopQA and formula extraction unchanged |
+| D-41 | The engine bench counted a needed note as reached when it was admitted, even after sentence compression had cut the sentence holding the answer; compression was chosen for CAMR Personal on that count (76% of answerable questions passed, 48% once the answer must survive) | The reader bench: Kimi K3 lost six recall questions on the compressed contexts, four because the answer had been cut | The pass rule checks the answer in the rendered context (gold string, else the turn's sentence most like the gold, else the whole note); CAMR Personal back to whole notes at 512 tokens | Every Phase 2 step re-scored (`results/bench/phase2/rescore/`); compressed-path reader results kept as the record |
+| D-42 | Profile notes, offered to every question, took passing remarks and requests as lasting traits: 570 profile lines in all 260 LongMemEval contexts | Reading the Phase 2 contexts | Statements only, no questions or requests, a lasting-trait verb list; the bad lines are test negatives | 219 lines in 155 of 260 questions; about 107 profile notes at 100k notes instead of about 1,100 |
 
 The first version of the D-33 fix also applied to *What is the religion of refuge?* (a PopQA question with a lower-case subject) and let Kimi K3's wrong *Islam* through as verified; the replay check caught it and the rule was narrowed to questions that ask no known relation.
 

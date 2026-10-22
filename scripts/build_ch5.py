@@ -226,6 +226,7 @@ def plain_facts() -> dict:
         "news_camr": fresh.get("camr_kimi-k3", {}).get("correct"),
         "news_alone": fresh.get("llm_kimi-k3", {}).get("correct"),
         "cost": (costs() or {}).get("total", {"usd": 0, "calls": 0}),
+        "bench": bench_cards() or {},
         "n_tests": n_tests if n_tests is not None else "all",
     }
 
@@ -352,7 +353,7 @@ def introduction(c: Chapter, F: dict) -> None:
             ["Component", "What it does", "Implemented in", "Evaluated in"],
             [["Memory engine", "Files documents as short notes; for each question, finds the notes that matter, "
               "keeps only those about the right subject, and fits them within a size limit", "⟦sec_impl⟧",
-              "⟦sec_retrieval⟧, ⟦sec_gap⟧"],
+              "⟦sec_retrieval⟧, ⟦sec_gap⟧, ⟦sec_bench⟧"],
              ["Verified answering", "States an answer only when a stored sentence supports it", "⟦sec_verify_impl⟧",
               "⟦sec_verified⟧, ⟦sec_ragresult⟧"],
              ["Learning without training", "Looks up what memory lacks; learns formulas from corrections",
@@ -1014,6 +1015,17 @@ def testing(c: Chapter) -> None:
          "(*please*) and fragments without a full stop also open with a common word; the test uses the ticket as "
          "written", "Found by re-running the desk on the final code; every CAMR desk answer identical to the reported "
          "run; PopQA and formula extraction unchanged"],
+        ["D-41", "The engine bench counted a needed note as reaching the model when the note was admitted, even after "
+         "compression had cut the sentence that held the answer; compression was chosen for CAMR Personal on that "
+         "count (76% of answerable questions passed, against 48% once the answer had to survive)", "The pass rule "
+         "now checks the answer in the text the model reads; CAMR Personal went back to whole notes at 512 tokens",
+         "Found by the reader bench: Kimi K3 lost six recall questions, four because the answer had been cut; every "
+         "step re-scored"],
+        ["D-42", "Profile notes, offered to every question, took passing remarks and requests (*I love the bookshelf "
+         "backdrop idea*, *can you remind me what day …*) as lasting traits: 570 profile lines reached all 260 "
+         "LongMemEval questions", "Statements only, no questions or requests, and a list of lasting-trait verbs; "
+         "tests with the bad lines as negatives", "Found by reading the contexts; 219 lines in 155 of 260 questions "
+         "after, and about 107 profile notes in the 100,000-note store instead of about 1,100"],
     ]
     c.table("Defects found and retests", ["ID", "Defect", "Correction", "Retest"], defects,
             [1.7, 7.4, 4.3, 2.5], size=8.5)
@@ -1363,6 +1375,146 @@ def res_skills(c: Chapter) -> None:
     c.p("Building the router found one defect before any result was taken: it first chose the best-ranked *skill* "
         "note among those admitted, and a test with an unrelated note ranked first showed a card attached to an "
         "unrelated question. Only the best admitted note may name a card now.")
+
+
+BENCH_TARGETS = {"A3": "≥ 85%", "A4": "≥ 70%", "A5": "30-event log", "A6": "≥ 85%", "A7": "≥ 50%"}
+BENCH_RUNS = ("baseline", "phase2-compressed", "phase2b")
+
+
+def bench_cards() -> dict[str, dict] | None:
+    """Per ability on the engine bench, scored with the answer-survives rule (D-41), for the read path before Phase 2,
+    Phase 2 as first shipped (compressed, reversed) and CAMR Personal now: the same records and scorer as
+    scripts/phase2_compare.py. The 1M-note store was built on the baseline only, so it is left out to compare like
+    with like (it is reported on its own)."""
+    p = ROOT / "scripts/phase2_compare.py"
+    if not p.exists() or not (RES / "bench/phase2/phase2b").exists():
+        return None
+    spec = importlib.util.spec_from_file_location("phase2_compare", p)
+    pc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pc)
+    from camr.eval.abilities import scorecard as card
+    out = {}
+    for name, files, _ in pc.HEADLINE:
+        rs = [json.loads(x) for f in files if f.exists() for x in f.read_text().splitlines() if x.strip()]
+        out[name] = card(r for r in rs if not str(r.get("suite", "")).endswith("-1M"))
+    return out if set(out) == set(BENCH_RUNS) else None
+
+
+def profile_lines(tag: str) -> tuple[int, int, int]:
+    """(LongMemEval questions whose context carries profile notes, profile lines, LongMemEval questions) on a read
+    path, from the contexts the reader bench reads."""
+    p = RES / f"bench/contexts_{tag}.jsonl"
+    if not p.exists():
+        return 0, 0, 0
+    rows = [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+    per = [sum(ln.startswith("- [about the user]") for ln in (r.get("context") or "").splitlines())
+           for r in rows if str(r.get("suite", "")).startswith("lme")]
+    return sum(1 for k in per if k), sum(per), len(per)
+
+
+def res_bench(c: Chapter) -> None:
+    cards = bench_cards()
+    rescore = J("results/bench/phase2/rescore/rescore.json")
+    if not cards or not rescore:
+        return
+    b, x, f = (cards[n] for n in BENCH_RUNS)
+    c.h3("The Engine Bench: Ten Abilities a Personal Memory Needs", key="sec_bench")
+    c.p("The sections so far measured the engine on benchmark questions about the world. A personal memory must do "
+        "more: recall what the user said among many things, join two conversations, know which of two values is the "
+        "newer, place events in time, count them, infer a preference never stated as a question, say it does not "
+        "know, forget on request, stay fast as it grows, and keep out of questions it has nothing for. The engine "
+        "bench scores these ten abilities on CAMR Personal's own read path with no model in the loop: for each "
+        "question, did the answer to every needed fact reach the text the model would read. Its questions are 260 "
+        "from LongMemEval, a public benchmark of long conversations between a user and an assistant (each question "
+        "with a fresh store holding the user's whole chat history); hand-written CAMR scenarios (an office that "
+        "moved floors, a running log of 7, 30 and 100 runs, a vegetarian who never says so in a question); and "
+        "stores of 1,000, 10,000 and 100,000 notes hiding 25 facts.")
+    c.p("The first run set the baseline, and each gap it found was then closed by one change, re-running the whole "
+        "bench after each. Every change is a switch that is off by default and on only in CAMR Personal, so every "
+        "research configuration in this chapter replays identically (section ⟦sec_repro⟧). One change, "
+        "compression, was kept on a flawed score and then reversed, so the table has three columns: before, Phase 2 "
+        f"as first shipped, and CAMR Personal now ({c.next_tab()}, {c.next_fig()}).")
+    rows = []
+    for a in sorted(b, key=lambda k: int(k[1:])):
+        lo, hi = f[a]["ci95"]
+        rows.append([f"{a} {b[a]['name']}", str(b[a]["n"]), p1(b[a]["pass_rate"]), p1(x[a]["pass_rate"]),
+                     f"**{p1(f[a]['pass_rate'])}** ({100 * lo:.0f}–{100 * hi:.0f}%)", BENCH_TARGETS.get(a, "–")])
+    c.table("The engine bench, scored on the answer reaching the model (`results/bench/phase2/`)",
+            ["Ability", "n", "Before", "Compressed (reversed)", "Now (95% interval)", "Target"], rows,
+            [5.2, 1.0, 1.8, 2.6, 3.1, 2.2], size=8.5)
+    if (REPORT / "engine_bench.png").exists():
+        c.figure(REPORT / "engine_bench.png", "Questions whose answers reached the model, per ability: before, with "
+                 "compression (reversed), and CAMR Personal now, with 95% intervals and the targets set before the "
+                 "changes", 15.5)
+    c.table("What was changed, each a switch on only in CAMR Personal", ["Change", "What it does", "Serves"],
+            [["Dated notes", "Each note shows its date, notes are listed oldest first, and the prompt gives today's "
+              "date and says the newest note wins when notes disagree", "A3, A4"],
+             ["Time filter", "A question about a past period (*last week*, *in March*) drops notes said before the "
+              "period began", "A4"],
+             ["Profile notes", "Lasting traits the user states (*milk upsets my stomach*) are kept apart and offered "
+              "to every question within 64 tokens, whatever the gates decide", "A6"],
+             ["Counting", "*How many times* questions read up to 100 notes, one short dated line per event", "A5"],
+             ["Slot gate", "A question asking for a specific thing of the user's (*my passport number*) abstains "
+              "unless a note mentions that thing", "A7"],
+             ["Budget", "Whole notes, 512 tokens (was 384)", "A1–A4, A6"],
+             ["Compression (reversed)", "Each admitted note kept only its two sentences sharing the most words with "
+              "the question", "–"]],
+            [3.4, 10.0, 2.5], size=9)
+    r = rescore
+    c.p("**How the bench misled, and how it was caught.** The bench first counted a needed fact as reached when any "
+        "note of its conversation turn was admitted. Compression keeps a note's sentences that share words with the "
+        "question, and the sentence that holds the answer often shares none (*I upgraded to 500 Mbps* against *What "
+        "speed is my new internet plan?*), so under the first rule compression looked like the best change of all: "
+        f"{p1(r['compress-384']['old_rule_pass'])} of the answerable questions passed at 384 tokens, against "
+        f"{p1(r['step3-aggregate']['old_rule_pass'])} for whole notes, and it was shipped. The reader bench (next "
+        "section) caught it: with the compressed notes the cloud model lost six recall questions it had answered "
+        "before, four of them because the answer was no longer in the text. Scored again so that the answer itself must "
+        f"reach the model, compression passed {p1(r['compress-384']['pass'])} against "
+        f"{p1(r['step3-aggregate']['pass'])} for whole notes and {p1(r['baseline']['pass'])} before any change; it "
+        f"had cut the answer from {r['compress-384']['answer_cut']} needed facts. It was reversed (D-41). Whole notes "
+        f"at 384 tokens are the most efficient ({r['step3-aggregate']['pass_per_100_tokens']:.3f} passes per 100 "
+        f"tokens); 512 tokens pass {p1(r['budget-512']['pass'])} for about "
+        f"{r['budget-512']['context_tokens'] - r['step3-aggregate']['context_tokens']:.0f} more tokens and 768 pass "
+        f"{p1(r['budget-768']['pass'])} at {r['budget-768']['context_tokens']:.0f}. CAMR Personal now uses 512, "
+        "which earlier results found suits small readers on questions that join facts (section ⟦sec_gap⟧). A "
+        "measure of what reaches the model is only as good as its check that the answer is in it.")
+    targets = {"A3": 0.85, "A4": 0.70, "A6": 0.85}
+    gaps = [round(100 * (t - f[a]["pass_rate"])) for a, t in targets.items()]
+
+    def mean_tokens(run: str) -> float:
+        rs = [json.loads(x) for x in (RES / f"bench/phase2/{run}/records/lme.jsonl").read_text().splitlines() if x]
+        return statistics.fmean(q["context_tokens"] for q in rs)
+
+    with_x, lines_x, n_x = profile_lines("phase2")
+    with_f, lines_f, n_f = profile_lines("phase2b")
+    c.p(f"**Where it was perfect.** Joining two conversations went from {p1(b['A2']['pass_rate'])} to "
+        f"{p1(f['A2']['pass_rate'])}, changed facts from {p1(b['A3']['pass_rate'])} to {p1(f['A3']['pass_rate'])}, "
+        f"time from {p1(b['A4']['pass_rate'])} to {p1(f['A4']['pass_rate'])} and preferences from "
+        f"{p1(b['A6']['pass_rate'])} to {p1(f['A6']['pass_rate'])}; the 30-run log is now counted, forgetting and "
+        "privacy passed every check, every size of store passed, and no ability is lower than before. Each change "
+        "was kept only after the whole bench was re-run with it: the time filter first cost two abilities (*a show "
+        "for tonight* is a plan, not a period) and the slot gate first cost three questions, and both were "
+        "rewritten. **Where it was not.** Four of the five targets were missed: changed facts, time and preference "
+        f"by {min(gaps)} to {max(gaps)} points, and abstention badly ({p1(f['A7']['pass_rate'])} against 50%), because most of "
+        "LongMemEval's unanswerable questions ask about an activity (*How many times did I bake egg tarts?*) rather "
+        "than a thing of the user's, which the slot gate cannot see. The context grew from "
+        f"{mean_tokens('rescore/baseline'):.0f} to {mean_tokens('phase2b'):.0f} tokens on average. The first profile notes took passing remarks "
+        f"and requests for lasting traits (*I love the bookshelf backdrop idea*): {lines_x} lines reached {with_x} of "
+        f"the {n_x} LongMemEval questions. The tightened extractor (D-42) leaves {lines_f} lines in {with_f}.")
+    sc = RES / "bench/records/scale.jsonl"
+    scale = {r["notes_target"]: r for r in map(json.loads, sc.read_text().splitlines())
+             if r.get("ability") == "A9"} if sc.exists() else {}
+    if 1_000_000 in scale and 1000 in scale:
+        m, k = scale[1_000_000], scale[1000]
+        c.p(f"**A million notes.** The bench's largest store, {m['notes']:,} notes ({m['store_mb'] / 1000:.1f} GB) on "
+            f"the baseline read path, was built in {m['build_s'] / 60:.0f} minutes with at most "
+            f"{m['build_peak_rss_mb'] / 1000:.2f} GB of memory, so memory use does not grow with the store. Search "
+            f"did not hold: hidden facts reached the context for {p1(m['needle_recall'])} of the questions against "
+            f"{p1(k['needle_recall'])} at a thousand notes, and a search took {m['latency_median_ms'] / 1000:.1f} s "
+            f"(median; {m['latency_p95_ms'] / 1000:.1f} s at the 95th percentile). Exact search reads every vector, "
+            "and on this machine the store did not fit the memory left for caching files, so each search read from "
+            "disk; the time is an upper bound, but a store this size needs an index that does not read every "
+            "vector.")
 
 
 def reader_rows(tag: str = "baseline") -> list[dict] | None:
@@ -1961,6 +2113,17 @@ def scorecard(c: Chapter) -> None:
          "Held-out 90.0% (merged adapter 85.0%, notes 55.0%); 7 unrelated answers changed against 36",
          "**Met; derived problems still need notes**"],
     ]
+    bench = bench_cards()
+    if bench:
+        b0, b1 = bench["baseline"], bench["phase2b"]
+        rows.append(["A personal memory puts the needed facts in front of the model", "Engine bench, 10 abilities, "
+                     "before → after closing the gaps", " · ".join(f"{name} {p1(b0[a]['pass_rate'])} → "
+                                                                  f"{p1(b1[a]['pass_rate'])}" for a, name in
+                                                                  (("A2", "joining"), ("A3", "changed facts"),
+                                                                   ("A4", "time"), ("A6", "preference"),
+                                                                   ("A7", "abstention"))),
+                     "**Partly met: every ability higher, counting target met; changed facts, time, preference "
+                     "and abstention short**"])
     rr = reader_rows()
     if rr:
         rows.append(["One memory helps readers of every size", "Reader bench, 287 questions, 4 readers",
@@ -2310,6 +2473,7 @@ def results(c: Chapter) -> None:
     old.worked_examples(c)
     res_learning(c)
     res_skills(c)
+    res_bench(c)
     res_readers(c)
     res_link(c)
     res_agentic(c)
