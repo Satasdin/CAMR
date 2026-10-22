@@ -1,5 +1,15 @@
 # Phase 2: closing the gaps the engine bench found
 
+> **Correction (2026-10-22, re-scored).** The tables below used a first scoring rule that counted a needed fact as
+> reached when any note of its turn was admitted. With `compress = sentences` that is wrong: compression keeps a
+> note's sentences that share words with the question, and the sentence holding the answer often shares none ("I
+> upgraded to 500 Mbps" vs "What speed is my new internet plan?"). The reader bench found it (Kimi K3 recall
+> fell). Re-scored so that the answer must survive in the rendered context (`rescore/README.md`), compression
+> *loses*: answerable pass 48% at 384 tokens against 59% for whole notes, and 77% against 80% on the questions
+> whose gold answer is in the turn verbatim. The step-4 gains (A2 52%, A3 81%, A4 67%) are not real. Whole notes
+> win: 384 tokens is the most efficient (0.151 passes per 100 tokens), 512 adds 4 points (63%), 768 adds 14 (73%).
+> CAMR Personal still has `compress = sentences` on; whether to turn it off is the user's call.
+
 Each step turns on one more change (a MemoryConfig flag, off by default; CAMR Personal turns them on) and re-runs the whole engine bench: 260 LongMemEval questions, the CAMR probes, the needle stores at 1k/10k/100k, the forget and privacy checks. Pass rates per ability (n in the baseline column).
 
 | | Ability | baseline | step0-before | step1-dates | step2-profile | step3-aggregate | step4-compress | step5-slot-v1 | step5-final |
@@ -69,7 +79,8 @@ Decisions made on the bench:
   The lane costs about 60 tokens on every question; A10 ("nothing admitted for a question memory has nothing
   for") judges the ranked notes only and reports the profile tokens apart (`profile_tokens`), and the distractor
   share counts them.
-* **The budget.** Compression at 384 tokens: best pass rate per context token of the variants at or under 512
+* **The budget** (superseded by the re-scoring, see the correction at the top). Compression at 384 tokens: best
+  pass rate per context token of the variants at or under 512
   (curve above), and no ability lower than without it. 60-token chunks were measured on a stratified 80-question
   slice (they need new vectors): 74% against 80% for compression on the same slice.
 * **The slot gate, second version.** The first version demanded every word of the slot and read "kitchen's

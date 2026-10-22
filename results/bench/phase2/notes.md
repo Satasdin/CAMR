@@ -25,7 +25,8 @@ Decisions made on the bench:
   The lane costs about 60 tokens on every question; A10 ("nothing admitted for a question memory has nothing
   for") judges the ranked notes only and reports the profile tokens apart (`profile_tokens`), and the distractor
   share counts them.
-* **The budget.** Compression at 384 tokens: best pass rate per context token of the variants at or under 512
+* **The budget** (superseded by the re-scoring, see the correction at the top). Compression at 384 tokens: best
+  pass rate per context token of the variants at or under 512
   (curve above), and no ability lower than without it. 60-token chunks were measured on a stratified 80-question
   slice (they need new vectors): 74% against 80% for compression on the same slice.
 * **The slot gate, second version.** The first version demanded every word of the slot and read "kitchen's
