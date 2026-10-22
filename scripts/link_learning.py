@@ -7,6 +7,8 @@ decline, or escalate to Kimi K3; its greedy policy is scored on held-out questio
 Ten random half/half splits, stratified by ability; no model is called (the answers are already judged).
 
     python scripts/link_learning.py run --tag baseline        # results/link/link_<tag>.json and .md
+    python scripts/link_learning.py export --tag phase2b --records results/bench/phase2/phase2b/records
+                                                              # camr/app/links/<reader>.json: where the app starts
 """
 
 from __future__ import annotations
@@ -103,6 +105,31 @@ def run(a) -> None:
     report(a)
 
 
+PARAMS_B = {"qwen2.5:0.5b": 0.5, "qwen2.5:1.5b": 1.5, "qwen2.5:3b": 3.0}
+PRIORS = ROOT / "camr/app/links"
+
+
+def export(a) -> None:
+    """The links CAMR Personal starts from: each local reader's link learned from all of its judged answers on one
+    read path (one pass, the learning curve's order), written to camr/app/links/<reader>.json. The app keeps
+    learning from its user's thumbs; this is only where it starts."""
+    from camr.learn.link import Link, Rewards
+
+    rewards = Rewards(wrong=a.wrong, cloud=a.cloud)
+    for reader, rows in sorted(load_rows(a.tag, Path(a.records)).items()):
+        link = Link()
+        order = list(rows)
+        random.Random(0).shuffle(order)
+        for row in order:
+            act = link.explore(row)
+            link.update(row, act, rewards(act, row))
+        out = PRIORS / f"{reader.replace(':', '-')}.json"
+        link.save(out, reader=reader, params_b=PARAMS_B.get(reader), read_path=a.tag, answers=len(rows),
+                  rewards=rewards.__dict__, escalated_to=CLOUD,
+                  note="learned on the reader bench (scripts/link_learning.py export); the app keeps learning")
+        print("wrote", out.relative_to(ROOT), len(rows), "answers")
+
+
 def report(a) -> None:
     d = json.loads((OUT / f"link_{a.tag}.json").read_text())
     pct = lambda x: f"{100 * x:.0f}%"  # noqa: E731
@@ -135,7 +162,7 @@ def report(a) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["run", "report"])
+    ap.add_argument("part", choices=["run", "report", "export"])
     ap.add_argument("--tag", default="baseline")
     ap.add_argument("--records", default=str(Path.home() / "Desktop/camr-bench-wt/results/bench/records"),
                     help="the engine bench's per-question records (top similarity, notes admitted)")
@@ -145,4 +172,4 @@ if __name__ == "__main__":
     ap.add_argument("--block", type=int, default=20)
     ap.add_argument("--cloud-sweep", type=lambda s: [float(x) for x in s.split(",")], default=[0.1, 0.3, 0.5, 0.8, 1.2])
     a = ap.parse_args()
-    {"run": run, "report": report}[a.part](a)
+    {"run": run, "report": report, "export": export}[a.part](a)

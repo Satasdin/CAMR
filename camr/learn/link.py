@@ -18,14 +18,30 @@ learned by LinUCB from the feedback on the action it took (scripts/link_learning
 
 from __future__ import annotations
 
+import json
 import random
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
 
 ACTIONS = ["keep", "decline", "escalate"]
+
+_DECLINE = re.compile(r"\b(?:i (?:do not|don't) know|not (?:mentioned|provided|stated|specified|available|sure)|"
+                      r"(?:do not|don't|doesn't|does not) (?:have|mention|say|contain)|no (?:information|record|mention|"
+                      r"notes?)\b|can(?:no|')t (?:assist|help|answer|find|tell|determine)|unable to|i'm not sure|"
+                      r"(?:could|can) you (?:please )?(?:tell|share|provide|let me know))", re.I)
+
+
+def model_declined(text: str) -> bool:
+    """The model said it cannot answer: one of the link's signals, the same in the reader bench and the app (wider
+    than camr.eval.escalation.abstention_like, which the research replays use and so stays as it is)."""
+    from camr.eval.escalation import abstention_like
+
+    text = (text or "").replace("\u2019", "'")
+    return bool(text.strip()) and (abstention_like(text) or bool(_DECLINE.search(text)))
 
 _PERSONAL = re.compile(r"\b(?:my|mine|me|myself|i|i'm|i've|i'd|our|we|us)\b", re.I)
 _TIME = re.compile(r"\b(?:when|ago|last|first|before|after|since|days?|weeks?|months?|years?|yesterday|today|"
@@ -105,10 +121,41 @@ class Link:
     def _theta(self, a: str) -> np.ndarray:
         return np.linalg.solve(self.A[a], self.b[a])
 
-    def act(self, row: dict) -> str:
-        """The greedy choice (what the app would do now)."""
+    def act(self, row: dict, allowed: tuple[str, ...] | list[str] = tuple(ACTIONS)) -> str:
+        """The greedy choice among the allowed actions (what the app does: no cloud model, no escalation)."""
         x = features(row)
-        return max(ACTIONS, key=lambda a: (float(self._theta(a) @ x), -ACTIONS.index(a)))
+        return max([a for a in ACTIONS if a in allowed],
+                   key=lambda a: (float(self._theta(a) @ x), -ACTIONS.index(a)))
+
+    def values(self, row: dict) -> dict[str, float]:
+        """The expected reward of each action for this answer, as learned so far."""
+        x = features(row)
+        return {a: round(float(self._theta(a) @ x), 4) for a in ACTIONS}
+
+    def to_dict(self) -> dict:
+        return {"alpha": self.alpha, "dim": self.dim, "A": {a: self.A[a].tolist() for a in ACTIONS},
+                "b": {a: self.b[a].tolist() for a in ACTIONS}}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Link":
+        link = cls(alpha=d.get("alpha", 0.5), dim=d["dim"])
+        if link.dim != len(features({"question": "x", "abstained": False, "grounded": 0.0, "declined": False})):
+            raise ValueError("link was learned on other signals")
+        for a in ACTIONS:
+            link.A[a] = np.array(d["A"][a], dtype=float)
+            link.b[a] = np.array(d["b"][a], dtype=float)
+        return link
+
+    def save(self, path: Path, **meta) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({**meta, "link": self.to_dict()}))
+        tmp.replace(path)
+
+    @classmethod
+    def load(cls, path: Path) -> tuple["Link", dict]:
+        d = json.loads(Path(path).read_text())
+        return cls.from_dict(d["link"]), {k: v for k, v in d.items() if k != "link"}
 
     def explore(self, row: dict) -> str:
         x = features(row)

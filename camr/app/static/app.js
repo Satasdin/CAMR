@@ -160,7 +160,10 @@ async function openChat(id) {
   const turns = await api(`/api/conversations/${id}`);
   $("#chat-title").textContent = S.chats.find((c) => c.id === id)?.title || "";
   thread.innerHTML = "";
-  for (const t of turns) { addUser(t.question); const el = addAssistant(); renderRecall(el, t.sources, t.abstained, t.retrieval_ms, t.learned); finish(el, t); }
+  for (const t of turns) { addUser(t.question); const el = addAssistant();
+    if (!(t.sources || []).length && !t.abstained && !t.retrieval_ms) $(".recall", el)?.remove();  // small talk, "remember that"
+    else renderRecall(el, t.sources, t.abstained, t.retrieval_ms, t.learned);
+    finish(el, t); }
   thread.scrollTop = thread.scrollHeight; loadChats(); closeMobile();
 }
 $("#new-chat").onclick = newChat;
@@ -226,8 +229,22 @@ function verifyBadge(v) {
   if (v.status === "unverified") return `<span class="verify no" title="${esc(v.reason || "")}">! Not confirmed by memory</span>`;
   return `<span class="verify un" title="${esc(v.reason || "")}">○ Not checked</span>`;
 }
+// The tiers beside the notes: a skill card memory attached, or what the trust link did with the model's answer.
+function tierBadge(t) {
+  const k = t.skill, l = t.link;
+  if (k) return `<span class="verify tier" title="${esc(`Memory named this skill, so its card answered (${k.model})${k.expression ? `; the calculator worked out ${k.expression}` : ""}`)}">◆ Skill card · ${esc(k.skill)}</span>`;
+  if (!l || l.action === "keep") return "";
+  if (l.action === "escalate") return `<span class="verify tier" title="Your model's answer looked unreliable, so a larger model on this computer read the same notes">⇡ Checked with ${esc(l.by || "a larger model")}</span>`;
+  return `<span class="verify un tier" title="The trust link judged this answer likely wrong, so it was held back">◌ Held back a guess</span>`;
+}
+function draftNote(t) {
+  const l = t.link;
+  if (!l || !l.draft || l.action === "keep") return "";
+  return `<details class="draft"><summary>${l.action === "escalate" ? "Your model's first answer" : "What it would have said"}</summary><div>${md(l.draft)}</div></details>`;
+}
 function finish(el, t) {
   const a = $(".answer", el); a.classList.remove("cursor"); a.innerHTML = md(t.answer);
+  el.querySelectorAll(".tier-status").forEach((x) => x.remove());  // the badge says what happened
   const g = t.grounded;
   const gcol = g == null ? "" : g >= 0.6 ? "var(--good)" : g >= 0.3 ? "#e3b341" : "var(--warn)";
   const stored = t.saved_to_memory && !(t.sources || []).length && !t.abstained;  // a "remember that" turn
@@ -236,10 +253,11 @@ function finish(el, t) {
     ${copyBtn}
     ${t.ask_to_teach ? "" : `<button class="act up ${t.feedback === 1 ? "on" : ""}" title="Good answer: save it to memory">${teachLabel(t.feedback === 1)}</button>`}
     <button class="act down ${t.feedback === -1 ? "on" : ""}" title="Not helpful" aria-label="Not helpful">${ICON.down}</button>` : "")
-    + verifyBadge(t.verification)
+    + verifyBadge(t.verification) + tierBadge(t)
     + (g != null && !t.verification ? `<span class="ground" title="Share of the answer's words found in the memories it read"><span class="meter"><i style="width:${Math.round(100 * g)}%;background:${gcol}"></i></span>grounded ${Math.round(100 * g)}%</span>` : "")
     + (t.generation_ms ? `<span class="timing">${Math.round(t.retrieval_ms)} ms memory · ${t.first_token_ms ? (t.first_token_ms / 1000).toFixed(1) + " s to first word · " : ""}${(t.generation_ms / 1000).toFixed(1)} s answer</span>` : "");
   if (stored) a.insertAdjacentHTML("beforeend", `<div class="saved-note">✦ Stored in memory</div>`);
+  a.insertAdjacentHTML("beforeend", draftNote(t));
   if (t.ask_to_teach) {
     $(".actions", el).insertAdjacentHTML("afterbegin", `<button class="act teach" title="Tell CAMR, and it will remember">✦ Teach me</button>`);
     $(".teach", el).onclick = () => { if (!S.rememberMode) $("#remember-toggle").click(); input.placeholder = "Tell me, e.g. “my passport number is …”"; input.focus(); };
@@ -276,7 +294,9 @@ async function send(text) {
         if (!line.startsWith("data: ")) continue;
         const ev = JSON.parse(line.slice(6));
         if (ev.type === "lookup") { conv = ev.conversation_id; showLookup(el); }
-        else if (ev.type === "recall") { conv = ev.conversation_id; renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms, ev.learned); }
+        else if (ev.type === "recall") { conv = ev.conversation_id; if (ev.small_talk) $(".recall", el)?.remove(); else renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms, ev.learned); }
+        else if (ev.type === "skill") $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">◆ Using the “${esc(ev.skill)}” skill card</div>`);
+        else if (ev.type === "escalate") { $(".answer", el).classList.add("cursor"); $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">⇡ Not sure of this one: checking with ${esc(ev.by)}…</div>`); }
         else if (ev.type === "token") { answer += ev.text; $(".answer", el).innerHTML = md(answer); $(".answer", el).classList.add("cursor"); thread.scrollTop = thread.scrollHeight; }
         else if (ev.type === "done") finish(el, ev.turn);
         else if (ev.type === "error") throw new Error(ev.error);
@@ -417,6 +437,13 @@ async function loadLearning() {
         removed <b>${rep.tidy?.duplicates_removed ?? 0}</b> duplicates${cur?.learned?.length ? `, looked up <b>${cur.learned.length}</b> names it kept seeing (${cur.learned.map((x) => esc(x.title)).slice(0, 3).join(", ")})` : ""}${ix?.built ? `, indexed <b>${ix.notes.toLocaleString()}</b> notes in ${ix.clusters} clusters (${ix.index_ms} ms vs ${ix.exact_ms} ms per lookup)` : ""}${ad?.trained ? `, ${ad.kept ? `learned to find things better (recall@5 ${Math.round(100 * ad.recall_before["recall@5"])}% → ${Math.round(100 * ad.recall_after["recall@5"])}%)` : "tried to learn retrieval, kept the old way (no gain)"}` : ""}.`
         : "It hasn't slept yet. Sleep tidies memory, looks up names it keeps seeing, builds an index once memory passes 100,000 notes, and learns from answers you liked."}</p>
       <button class="ghost" id="sleep-btn" ${sl ? "disabled" : ""}>${sl ? "Sleeping…" : "◐ Sleep now"}</button></div>
+    ${L.trust?.model ? `<div class="stat"><div class="k">Trust link · ${esc(L.trust.model)}</div>
+      <p class="small">${L.trust.on ? `After each answer it decides: state it, hold back a likely-wrong guess${L.trust.escalate_to ? `, or ask <b>${esc(L.trust.escalate_to)}</b>` : ""}. Started from <b>${esc(L.trust.start || "untrained")}</b>; learned from <b>${L.trust.feedback}</b> of your thumbs.` : "Off: every answer is stated. Turn it on in Settings."}</p>
+      ${L.trust.on ? `<p class="muted small">So far: ${L.trust.decisions.keep} stated · ${L.trust.decisions.decline} held back · ${L.trust.decisions.escalate} checked with a larger model${L.trust.escalate_to ? "" : " (choose a second-opinion model in Settings to allow this)"}</p>` : ""}</div>` : ""}
+    <div class="stat"><div class="k">Skill cards</div>
+      <p class="muted small">Small add-ons for one model, trained on corrections of one skill. Memory attaches a card only when its corrections are what a question needs; the model's own weights never change, and a calculator does the arithmetic.</p>
+      ${(L.cards || []).map((p) => `<div class="pack-row"><div><b>${esc(p.title)}</b> <span class="muted small">${p.skills.length} skills · for ${esc(p.base)}</span><div class="muted small">${esc(p.skills.join(", "))}${p.usable ? "" : ` · used only when ${esc(p.base)} answers`}</div></div>
+        ${p.installed ? `<button class="ghost sm" data-uncard="${esc(p.name)}">Remove</button>` : `<button class="primary sm" data-card="${esc(p.name)}">Install</button>`}</div>`).join("") || `<p class="muted small">No card packs on this computer.</p>`}</div>
     <div class="stat"><div class="k">Knowledge packs</div>
       <p class="muted small">Ready-made memory: notes with their vectors already computed, so a pack plugs in without running a model.</p>
       ${L.packs.map((p) => `<div class="pack-row"><div><b>${esc(p.title)}</b> <span class="muted small">${p.notes} notes · ${esc(p.licence)}</span><div class="muted small">${esc(p.description)}</div></div>
@@ -433,6 +460,10 @@ async function loadLearning() {
   $("#sleep-btn").onclick = async () => { await api("/api/sleep", { method: "POST", body: {} }); toast("Sleeping: CAMR is consolidating its memory"); loadLearning(); };
   $$("#panel-learning [data-pack]").forEach((b) => b.onclick = async () => { b.disabled = true; const r = await api("/api/packs/install", { method: "POST", body: { name: b.dataset.pack } });
     toast(`✦ Installed ${r.title}: ${r.notes_added} memories in ${r.seconds} s${r.vectors_reused ? " (no model needed)" : ""}`); loadLearning(); refresh(); });
+  $$("#panel-learning [data-card]").forEach((b) => b.onclick = async () => { b.disabled = true; b.textContent = "Installing…";
+    try { const r = await api("/api/cards/install", { method: "POST", body: { name: b.dataset.card } }); toast(`◆ Installed ${r.cards} skill cards for ${r.base}`); }
+    catch (e) { toast(e.message); } loadLearning(); refresh(); });
+  $$("#panel-learning [data-uncard]").forEach((b) => b.onclick = async () => { const r = await api(`/api/cards/${b.dataset.uncard}`, { method: "DELETE" }); toast(`Removed ${r.cards} skill cards`); loadLearning(); refresh(); });
   $$("#panel-learning [data-unpack]").forEach((b) => b.onclick = async () => { const r = await api(`/api/packs/${b.dataset.unpack}`, { method: "DELETE" }); toast(`Removed ${r.removed} memories`); loadLearning(); refresh(); });
   $("#harvest-btn").onclick = async () => { const topic = $("#harvest-topic").value.trim(); if (!topic) return;
     try { await api("/api/packs/harvest", { method: "POST", body: { topic, pages: 15 } }); toast(`Harvesting “${topic}”…`); } catch (e) { toast(e.message); } loadLearning(); };
@@ -444,6 +475,7 @@ async function loadLearning() {
 $("#open-settings").onclick = () => {
   const s = S.state.settings; $("#set-budget").value = s.token_budget; $("#set-turns").value = s.history_turns; $("#set-chat").checked = s.remember_chat;
   $("#set-online").checked = s.learn_online; $("#set-sleep").checked = s.sleep_when_idle; $("#set-verified").checked = !!s.verified_only;
+  $("#set-trust").checked = s.trust_learning !== false;
   $("#set-check").innerHTML = `<option value="">None</option>` + S.state.models.filter((m) => !m.embedding && m.name !== s.model)
     .map((m) => `<option value="${esc(m.name)}" ${m.name === s.check_model ? "selected" : ""}>${esc(m.name)} (${esc(m.parameters)})</option>`).join("");
   $("#budget-val").textContent = s.token_budget + " tokens"; $("#turns-val").textContent = s.history_turns;
@@ -455,7 +487,8 @@ $("#set-turns").oninput = (e) => $("#turns-val").textContent = e.target.value;
 $("#export-text").onchange = (e) => $("#export-link").href = "/api/export?text=" + (e.target.checked ? 1 : 0);
 $("#settings-save").onclick = async () => {
   await api("/api/settings", { method: "POST", body: { token_budget: +$("#set-budget").value, history_turns: +$("#set-turns").value, remember_chat: $("#set-chat").checked,
-    learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked, verified_only: $("#set-verified").checked, check_model: $("#set-check").value } });
+    learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked, verified_only: $("#set-verified").checked, check_model: $("#set-check").value,
+    trust_learning: $("#set-trust").checked } });
   toast("Settings saved"); refresh();
 };
 

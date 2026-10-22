@@ -39,6 +39,7 @@ from typing import Iterator
 
 import requests
 
+from camr.app import tiers
 from camr.config import Config, LocalModelConfig
 from camr.device import Governor, Limits, index_threshold, probe
 from camr.memory import packs as packs_mod
@@ -55,6 +56,9 @@ from camr.memory.answer import READ as READ_PROMPT
 from camr.memory.answer import cross_verify
 from camr.memory.verify import (CROSS, check, claim, compress, fact_answer, meaning_units, relation_of,
                                 units_from_notes)
+from camr.learn.link import Link, model_declined
+from camr.learn.calc import CALC_BARE
+from camr.memory.skills import skill_of
 from camr.models.runner import OllamaRunner
 from camr.models.tokenizer import RegexTokenizer
 
@@ -76,6 +80,7 @@ KINDS = {
     "web": "looked up online",
     "pack": "from a knowledge pack",
     "profile": "what you told me about yourself",
+    "card": "a skill you corrected",
 }
 BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
 
@@ -115,6 +120,14 @@ CREATE TABLE IF NOT EXISTS app_turn (
     feedback       INTEGER,         -- +1 helpful, -1 not helpful, NULL none
     conversation_id INTEGER,
     sources_json   TEXT
+);
+CREATE TABLE IF NOT EXISTS app_card (
+    pack    TEXT NOT NULL,      -- the card pack it came from
+    skill   TEXT NOT NULL,      -- the skill its corrections name ("Correction: <skill>")
+    model   TEXT NOT NULL,      -- the Ollama model: the base model with the card's adapter
+    base    TEXT NOT NULL,      -- the model the card was trained for: it is attached only when that model answers
+    at      TIMESTAMP NOT NULL,
+    PRIMARY KEY (pack, skill)
 );
 CREATE TABLE IF NOT EXISTS app_file (
     doc_id  TEXT PRIMARY KEY,   -- file-<name>: the source a taught file's notes belong to
@@ -191,11 +204,43 @@ def is_question(text: str) -> bool:
     return text.endswith("?") or bool(_QUESTION.match(text))
 
 
+# Small talk: greetings, thanks, "how are you", acknowledgements, goodbyes, and questions to the assistant about itself.
+# Nothing to recall, look up or remember: the model answers from the conversation so far. Treated as a gap in
+# memory, "hi" was looked up (9 s), stored the Wikipedia pages "Hi (cuneiform)" and "Hi (song)" as nine memories, and
+# was itself kept as chat memory.
+_SMALL_TALK = re.compile(r"""(?:
+    (?:hi+|hello+|hey+|hiya|howdy|yo|sup|greetings|hallo|hola|salut|jambo|mambo|sasa|niaje|habari(?:\ yako|\ zako|\ gani)?)
+  | good\ (?:morning|afternoon|evening|night|day) | morning | evening
+  | how(?:'s|s|\ is|\ are|\ r)?\ (?:you|u|ya|it\ going|things|life|your\ day|everything)(?:\ doing|\ today|\ going)*
+  | what'?s\ up | wassup | what'?s\ new
+  | thanks? | thank\ you | thx | ty | cheers | asante(?:\ sana)? | much\ appreciated
+  | ok(?:ay)? | k | cool | nice | great | awesome | perfect | got\ it | alright | all\ right | sure | fine
+  | yes | no | yeah | yep | yup | nope | nah | lol | haha+ | hmm+ | wow
+  | bye | goodbye | good\ ?bye | see\ (?:you|ya)(?:\ later|\ soon)? | later | good\ ?night | take\ care | kwaheri
+  | who\ are\ you | what(?:'s|\ is)\ your\ name | what\ can\ you\ do | are\ you\ there | nice\ to\ meet\ you
+)(?:\ (?:so\ much|a\ lot|very\ much|again|there|camr|friend|buddy|mate|everyone|all|too))*""", re.I | re.X)
+
+
+def is_small_talk(text: str) -> bool:
+    """A message that carries no knowledge and asks for none: every part of it is small talk ("Hi, how are you?")."""
+    parts = re.split(r"[,.!?;:\u2026]+", text.lower().replace("\u2019", "'"))
+    parts = [re.sub(r"[^\w' ]+", "", p).strip() for p in parts]  # emoji and stray marks
+    parts = [re.sub(r"\s+", " ", p) for p in parts if p]
+    return bool(parts) and all(_SMALL_TALK.fullmatch(p) for p in parts)
+
+
 _REMEMBER = re.compile(r"^\s*(?:/remember|remember(?: that)?|note:)\s*[:,-]?\s*(.+)$", re.I | re.S)
 _WORD = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\-.,:]*")
 _STOP = set("""a an the and or but if of to in on at for from by with about as is are was were be been being it its
 this that these those i you he she we they me my your our their what which who whom whose when where why how do does
 did not no yes can could would should will just so than then there here also only very more most""".split())
+
+
+def worth_looking_up(question: str) -> bool:
+    """Only a question is looked up ("tell me about …" counts), and only one with a content word to search for. A
+    remark ("the weather is nice today") or a bare word is not sent anywhere."""
+    words = [w.lower().strip(".,:'") for w in _WORD.findall(question)]
+    return is_question(question) and any(len(w) >= 3 and w not in _STOP for w in words)
 
 
 @dataclass
@@ -229,6 +274,10 @@ class Turn:
     # whether a short factual answer is supported by what memory holds: {"status": "verified" | "unverified" |
     # "unchecked", "by", "evidence", "source", "reason"}; None when not a short factual question
     verification: dict | None = None
+    # what the link did with the local answer: {"action": "keep" | "decline" | "escalate", "by", "draft", "values"}
+    link: dict | None = None
+    # the skill card that answered: {"skill", "model", "expression", "value"}
+    skill: dict | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -326,6 +375,10 @@ class Assistant:
         # A larger installed model asked for a second opinion when a short factual answer is not confirmed
         # ("" = none). Its answer is used only if memory, or the answer's own article, confirms it.
         self.check_model = saved.get("check_model", "") or ""
+        # The link (tiers.py): after a local answer, state it, decline, or ask the second-opinion model; learned per
+        # model from the user's thumbs, starting from the reader bench. Off: every answer is stated.
+        self.trust_learning = bool(saved.get("trust_learning", True))
+        self._links: dict[str, tuple[Link, dict]] = {}
         self._http = session or requests.Session()
         self._lock = threading.RLock()
         self.jobs: dict[str, dict] = {}  # background work shown in the Learning panel (harvest, sleep)
@@ -369,7 +422,8 @@ class Assistant:
         self.store.conn.executescript(APP_SCHEMA)
         cols = {r[1] for r in self.store.conn.execute("PRAGMA table_info(app_turn)")}
         for col, typ in (("conversation_id", "INTEGER"), ("sources_json", "TEXT"), ("learned_json", "TEXT"),
-                         ("ask_to_teach", "INTEGER"), ("verification_json", "TEXT")):
+                         ("ask_to_teach", "INTEGER"), ("verification_json", "TEXT"), ("link_json", "TEXT"),
+                         ("skill_json", "TEXT")):
             if col not in cols:  # stores created by the first app version
                 self.store.conn.execute(f"ALTER TABLE app_turn ADD COLUMN {col} {typ}")
         self.engine = MemoryEngine.from_config(self.cfg, store=self.store, embedder=self.embedder,
@@ -400,7 +454,7 @@ class Assistant:
                 "remember_chat": self.remember_chat, "embed_model": self.embed_model,
                 "learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle,
                 "verified_only": self.verified_only, "check_model": self.check_model,
-                "min_similarity": self.engine.min_similarity}
+                "trust_learning": self.trust_learning, "min_similarity": self.engine.min_similarity}
 
     def warm(self, keep_alive: str = "30m") -> bool:
         """Load the chat model into memory ahead of the first question.
@@ -421,7 +475,7 @@ class Assistant:
 
     def save_settings(self, **changes) -> None:
         allowed = {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "sleep_when_idle",
-                   "verified_only", "check_model"}
+                   "verified_only", "check_model", "trust_learning"}
         for k, v in changes.items():
             if k in allowed:
                 setattr(self, k, v)
@@ -544,13 +598,13 @@ class Assistant:
     def transcript(self, conversation_id: int) -> list[dict]:
         rows = self.store.conn.execute(
             "SELECT turn_id, question, answer, notes_used, abstained, grounded, retrieval_ms, generation_ms,"
-            " prompt_tokens, feedback, sources_json, learned_json, ask_to_teach, verification_json FROM app_turn"
-            " WHERE conversation_id=?"
-            " ORDER BY turn_id", (conversation_id,)).fetchall()
+            " prompt_tokens, feedback, sources_json, learned_json, ask_to_teach, verification_json, link_json,"
+            " skill_json FROM app_turn WHERE conversation_id=? ORDER BY turn_id", (conversation_id,)).fetchall()
         return [Turn(turn_id=r[0], question=r[1], answer=r[2], abstained=bool(r[4]), grounded=r[5],
                      retrieval_ms=r[6] or 0.0, generation_ms=r[7] or 0.0, prompt_tokens=r[8], feedback=r[9],
                      conversation_id=conversation_id, learned=json.loads(r[11]) if r[11] else None,
                      ask_to_teach=bool(r[12]), verification=json.loads(r[13]) if r[13] else None,
+                     link=json.loads(r[14]) if r[14] else None, skill=json.loads(r[15]) if r[15] else None,
                      sources=[Source(**s) for s in json.loads(r[10] or "[]")]).as_dict() for r in rows]
 
     # ------------------------------------------------------------ asking
@@ -585,10 +639,12 @@ class Assistant:
         return OllamaRunner(LocalModelConfig(name=self.model, host=self.host, max_tokens=768, num_ctx=4096),
                             session=self._http)
 
-    def _stream_generate(self, prompt: str) -> Iterator[tuple[str, dict]]:
+    def _stream_generate(self, prompt: str, model: str | None = None) -> Iterator[tuple[str, dict]]:
         if not self.model:
             raise RuntimeError("choose a model first")
         body = self._runner().payload(prompt)
+        if model:  # a skill card: the base model with the card's adapter, registered with Ollama
+            body["model"] = model
         body["stream"] = True
         with self._http.post(f"{self.host}/api/generate", json=body, stream=True, timeout=600) as resp:
             resp.raise_for_status()
@@ -626,6 +682,9 @@ class Assistant:
             yield {"type": "done", "turn": turn.as_dict()}
             return
 
+        if is_small_talk(question):
+            yield from self._small_talk(question, conversation_id)
+            return
         with self._lock:
             recall = self.engine.recall(question)
         learned = None
@@ -634,7 +693,7 @@ class Assistant:
         # Eager learning: memory has nothing on this, or only notes that look similar but are about something else
         # (results/verified, subject-aware lookups: +3.5 points of verified answers on the development set)
         missing = recall.abstained or (_short_factual(question) and not knows_subject(self.engine, question, recall))
-        if missing and self.learn_online and not local_only:
+        if missing and self.learn_online and not local_only and worth_looking_up(question):
             yield {"type": "lookup", "conversation_id": conversation_id}
             found = self.lookup.lookup(question)
             added = 0
@@ -674,8 +733,12 @@ class Assistant:
             return
         prompt = CHAT_PROMPT.format(today=self.today().isoformat(), notes=recall.context or "(no relevant notes)",
                                     history=self._history(conversation_id), question=question)
+        card = self._card_for(recall)
+        if card:  # memory names a skill card: it answers the way it was trained (formula, then an expression)
+            yield {"type": "skill", "skill": card["skill"], "model": card["model"]}
+            prompt = CALC_BARE.format(question=question)
         t0, parts, last, first = time.perf_counter(), [], {}, None
-        for piece, chunk in self._stream_generate(prompt):
+        for piece, chunk in self._stream_generate(prompt, model=card["model"] if card else None):
             parts.append(piece)
             last = chunk
             if piece:
@@ -683,8 +746,12 @@ class Assistant:
                     first = round((time.perf_counter() - t0) * 1000, 1)
                 yield {"type": "token", "text": piece}
         answer = "".join(parts).strip()
+        skill = None
+        if card:  # the calculator does the arithmetic, as the experiment measured
+            answer, calc = tiers.card_answer(answer, question)
+            skill = {"skill": card["skill"], "model": card["model"], **calc}
         verification = None
-        if factual:
+        if factual and not card:
             verification = _verification(question, answer, units)
             if verification["status"] != "verified" and claim(answer) and verification.get("reason") != "no answer given":
                 better = self._second_opinion(question, answer, units, online=not local_only)
@@ -693,11 +760,30 @@ class Assistant:
             if self.verified_only and verification["status"] != "verified" and claim(answer):
                 answer = (f"I couldn't confirm this from what I've read, so take it as a lead, not a fact: "
                           f"{claim(answer)} (unverified).")
+        link = None
+        if self.trust_learning and not card and (verification or {}).get("status") != "verified":
+            row = {"question": question, "abstained": recall.abstained, "top_similarity": recall.top_similarity or 0.0,
+                   "admitted": len(recall.admitted), "context_tokens": recall.context_tokens,
+                   "grounded": grounded_share(answer, recall.context) or 0.0, "declined": model_declined(answer)}
+            # a short factual answer has had its second opinion already, used only if memory confirmed it: the
+            # link may hold it back but not escalate it again around that check
+            link = self._trust(row, escalate=not factual)
+            if link["action"] == "decline":
+                link["draft"], answer = answer, tiers.DECLINE_PERSONAL if personal else tiers.DECLINE_GENERAL
+            elif link["action"] == "escalate":
+                yield {"type": "escalate", "by": self.check_model}
+                other = self._ask_second(prompt)
+                if other:
+                    link.update(draft=answer, by=self.check_model)
+                    answer = other
+                else:  # the second model did not answer: the local answer stands
+                    link.update(action="keep", failed=f"{self.check_model} did not answer")
         turn = Turn(turn_id=None, question=question, answer=answer, sources=sources, abstained=recall.abstained,
                     grounded=grounded_share(answer, recall.context), retrieval_ms=round(recall.retrieval_ms, 1),
                     generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
                     prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id, learned=learned,
-                    ask_to_teach=recall.abstained and personal, verification=verification)
+                    ask_to_teach=(recall.abstained or (link or {}).get("action") == "decline") and personal,
+                    verification=verification, link=link, skill=skill)
         turn.turn_id = self._log(turn)
         self.last_activity = time.time()
         if self.remember_chat and not is_question(question):
@@ -707,6 +793,27 @@ class Assistant:
             day = self.today().isoformat()
             turn.saved_to_memory = self.teach(f"On {day} the user said: {question}", kind="chat",
                                               doc_id=f"chat-{turn.turn_id}") > 0
+        yield {"type": "done", "turn": turn.as_dict()}
+
+    def _small_talk(self, question: str, conversation_id: int) -> Iterator[dict]:
+        """Answered from the conversation so far: memory is not read, nothing is looked up, nothing is kept."""
+        yield {"type": "recall", "sources": [], "abstained": False, "retrieval_ms": 0.0, "small_talk": True,
+               "conversation_id": conversation_id, "learned": None}
+        prompt = CHAT_PROMPT.format(today=self.today().isoformat(), notes="(none needed: this is small talk)",
+                                    history=self._history(conversation_id), question=question)
+        t0, parts, last, first = time.perf_counter(), [], {}, None
+        for piece, chunk in self._stream_generate(prompt):
+            parts.append(piece)
+            last = chunk
+            if piece:
+                if first is None:
+                    first = round((time.perf_counter() - t0) * 1000, 1)
+                yield {"type": "token", "text": piece}
+        turn = Turn(turn_id=None, question=question, answer="".join(parts).strip(), conversation_id=conversation_id,
+                    generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
+                    prompt_tokens=last.get("prompt_eval_count"))
+        turn.turn_id = self._log(turn)
+        self.last_activity = time.time()
         yield {"type": "done", "turn": turn.as_dict()}
 
     def _second_opinion(self, question: str, answer: str, units, online: bool = True) -> tuple[str, dict] | None:
@@ -745,6 +852,146 @@ class Assistant:
                     return claim(c), out
         return None
 
+    # ------------------------------------------------------------ the link and skill cards (tiers.py)
+    def _can_escalate(self) -> bool:
+        return bool(self.check_model) and self.check_model != self.model
+
+    def _link_for(self, model: str) -> tuple[Link, dict]:
+        """This model's link: the one it has learned on this machine, else the bench link for the nearest size
+        (a fresh copy, learned on from here), else an untrained link (states every answer)."""
+        if model in self._links:
+            return self._links[model]
+        own = self.home / "links" / f"{re.sub(r'[^A-Za-z0-9.]+', '-', model)}.json"
+        link, meta = None, {}
+        if own.exists():
+            try:
+                link, meta = Link.load(own)
+            except (OSError, ValueError, KeyError):
+                link = None
+        if link is None:
+            size = None
+            try:
+                size = next((tiers.params_b(m["parameters"]) for m in installed_models(self.host, session=self._http)
+                             if m["name"] == model), None)
+            except Exception:  # noqa: BLE001  (no size known: match by name)
+                pass
+            prior = tiers.prior_for(model, size)
+            if prior is not None:
+                link, pm = Link.load(prior["path"])
+                meta = {"start": f"reader bench, {pm.get('reader')}", "feedback": 0}
+            else:
+                link, meta = Link(), {"start": "untrained", "feedback": 0}
+        self._links[model] = (link, meta)
+        return link, meta
+
+    def _trust(self, row: dict, escalate: bool = True) -> dict:
+        """What the link does with this answer: keep, decline, or escalate (only with a second-opinion model)."""
+        link, meta = self._link_for(self.model)
+        allowed = ["keep", "decline"] + (["escalate"] if escalate and self._can_escalate() else [])
+        return {"action": link.act(row, allowed), "values": link.values(row), "row": row, "model": self.model,
+                "start": meta.get("start")}
+
+    def _ask_second(self, prompt: str) -> str:
+        """The same prompt (same notes) to the second-opinion model. On this machine: nothing is sent online."""
+        runner = OllamaRunner(LocalModelConfig(name=self.check_model, host=self.host, max_tokens=768, num_ctx=4096),
+                              session=self._http)
+        try:
+            return runner.generate(prompt).text.strip()
+        except Exception:  # noqa: BLE001  (a missing or failing second model is no answer, not an error)
+            return ""
+
+    def _learn_trust(self, link_info: dict, helpful: bool, answer: str) -> None:
+        """A thumb on an answer the link decided: one update of that model's link, saved on this machine."""
+        model, action, row = link_info.get("model"), link_info.get("action"), link_info.get("row")
+        if not model or action not in ("keep", "decline", "escalate") or not row:
+            return
+        link, meta = self._link_for(model)
+        link.update(row, action, tiers.link_reward(action, helpful, model_declined(answer)))
+        meta["feedback"] = int(meta.get("feedback", 0)) + 1
+        link.save(self.home / "links" / f"{re.sub(r'[^A-Za-z0-9.]+', '-', model)}.json", **meta)
+
+    @_locked
+    def _card_for(self, recall) -> dict | None:
+        """The skill card memory names for this question: the best admitted note (profile notes aside) is a
+        correction of a skill whose card was trained for the model answering (camr/memory/skills.py)."""
+        if recall.abstained:
+            return None
+        ranked = [c for c in recall.admitted if getattr(c, "lane", None) != "profile"]
+        if not ranked:
+            return None
+        cards = {r[0]: r[1] for r in self.store.conn.execute("SELECT skill, model FROM app_card WHERE base=?",
+                                                             (self.model,))}
+        if not cards:
+            return None
+        title = self.store.note_titles([ranked[0].note.note_id]).get(ranked[0].note.note_id)
+        skill = skill_of(title, tiers.CARD_PREFIX)
+        return {"skill": skill, "model": cards[skill]} if skill in cards else None
+
+    def card_packs(self) -> list[dict]:
+        """Card packs on disk, with whether each is installed and for which model."""
+        with self._lock:
+            have = {r[0] for r in self.store.conn.execute("SELECT DISTINCT pack FROM app_card")}
+        return [{"name": m["name"], "title": m["title"], "base": m["base"], "description": m.get("description", ""),
+                 "skills": [c["skill"] for c in m["cards"]], "installed": m["name"] in have,
+                 "usable": m["base"] == self.model} for m in tiers.card_packs(self.home)]
+
+    def install_card_pack(self, name: str) -> dict:
+        """Register each card with Ollama (the base model plus its adapter) and teach the corrections that name it."""
+        man = next((m for m in tiers.card_packs(self.home) if m["name"] == name), None)
+        if man is None:
+            raise FileNotFoundError(f"no card pack named {name!r}")
+        made = []
+        for card in man["cards"]:
+            path = man["folder"] / card["adapter"]
+            digest = "sha256:" + tiers.sha256_file(path)
+            if self._http.head(f"{self.host}/api/blobs/{digest}", timeout=30).status_code != 200:
+                with open(path, "rb") as fh:
+                    self._http.post(f"{self.host}/api/blobs/{digest}", data=fh, timeout=600).raise_for_status()
+            resp = self._http.post(f"{self.host}/api/create", json={
+                "model": card["model"], "from": man["base"], "adapters": {card["adapter"]: digest}, "stream": False},
+                timeout=600)
+            resp.raise_for_status()
+            made.append(card["model"])
+        notes = 0
+        for i, n in enumerate(man["notes"]):
+            notes += self.teach(n["text"], title=n["title"], kind="card", doc_id=f"card-{name}-{i}")
+        with self._lock, self.store.conn:
+            for card in man["cards"]:
+                self.store.conn.execute("INSERT OR REPLACE INTO app_card(pack, skill, model, base, at) VALUES"
+                                        " (?,?,?,?,?)", (name, card["skill"], card["model"], man["base"], _now()))
+        return {"cards": len(made), "notes": notes, "base": man["base"]}
+
+    def remove_card_pack(self, name: str) -> dict:
+        """Remove a pack's cards from Ollama and its corrections from memory."""
+        with self._lock:
+            models = [r[0] for r in self.store.conn.execute("SELECT model FROM app_card WHERE pack=?", (name,))]
+            sids = [r[0] for r in self.store.conn.execute(
+                "SELECT source_id FROM source WHERE dataset='card' AND substr(doc_id, 1, ?) = ?",
+                (len(f"card-{name}-"), f"card-{name}-"))]
+        for m in models:
+            try:
+                self._http.delete(f"{self.host}/api/delete", json={"model": m}, timeout=60)
+            except Exception:  # noqa: BLE001  (already gone from Ollama: nothing to remove)
+                pass
+        with self._lock:
+            removed = sum(self._delete_source(sid) for sid in sids)
+            with self.store.conn:
+                self.store.conn.execute("DELETE FROM app_card WHERE pack=?", (name,))
+        return {"cards": len(models), "notes": removed}
+
+    def trust(self) -> dict:
+        """The link for the current model, for the Learning panel: where it started, feedback learned, decisions."""
+        if not self.model:
+            return {}
+        _, meta = self._link_for(self.model)
+        with self._lock:
+            rows = self.store.conn.execute("SELECT link_json FROM app_turn WHERE model=? AND link_json IS NOT NULL",
+                                           (self.model,)).fetchall()
+        acts = [json.loads(r[0]).get("action") for r in rows]
+        return {"model": self.model, "on": self.trust_learning, "start": meta.get("start"),
+                "feedback": int(meta.get("feedback", 0)), "escalate_to": self.check_model if self._can_escalate() else "",
+                "decisions": {a: acts.count(a) for a in ("keep", "decline", "escalate")}}
+
     @_locked
     def _private_names(self, question: str) -> list[str]:
         """Names in the question that only the user's own notes, files, chats or approved answers mention, and no
@@ -769,11 +1016,12 @@ class Assistant:
             cur = self.store.conn.execute(
                 "INSERT INTO app_turn(at, model, question, answer, notes_used, abstained, grounded, retrieval_ms,"
                 " generation_ms, prompt_tokens, conversation_id, sources_json, learned_json, ask_to_teach,"
-                " verification_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " verification_json, link_json, skill_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (_now(), self.model or "-", turn.question, turn.answer, len(turn.sources), int(turn.abstained),
                  turn.grounded, turn.retrieval_ms, turn.generation_ms, turn.prompt_tokens, turn.conversation_id,
                  json.dumps([asdict(s) for s in turn.sources]), json.dumps(turn.learned) if turn.learned else None,
-                 int(turn.ask_to_teach), json.dumps(turn.verification) if turn.verification else None))
+                 int(turn.ask_to_teach), json.dumps(turn.verification) if turn.verification else None,
+                 json.dumps(turn.link) if turn.link else None, json.dumps(turn.skill) if turn.skill else None))
             if turn.conversation_id is not None:
                 self.store.conn.execute("UPDATE app_conversation SET updated_at=? WHERE conversation_id=?",
                                         (_now(), turn.conversation_id))
@@ -801,13 +1049,18 @@ class Assistant:
         """Thumbs up stores the approved answer as memory: the model gets better without changing weights. Thumbs
         down takes back an approval given before (a wrong answer approved by mistake used to stay in memory).
         Returns {"learned": notes added, "forgotten": notes removed}."""
-        row = self.store.conn.execute("SELECT question, answer FROM app_turn WHERE turn_id=?", (turn_id,)).fetchone()
+        row = self.store.conn.execute("SELECT question, answer, link_json, feedback FROM app_turn WHERE turn_id=?",
+                                      (turn_id,)).fetchone()
         if row is None:
             raise KeyError(f"no answer {turn_id}")
         with self.store.conn:
             self.store.conn.execute("UPDATE app_turn SET feedback=? WHERE turn_id=?", (1 if helpful else -1, turn_id))
+        q, a, link_json, before = row
+        if link_json and before != (1 if helpful else -1):  # one lesson per thumb (a repeated click teaches nothing)
+            self._learn_trust(json.loads(link_json), helpful, a)
         if helpful:
-            q, a = row
+            if model_declined(a) or is_small_talk(q):  # right, but nothing to remember: "I don't know", or "hi"
+                return {"learned": 0, "forgotten": 0}
             return {"learned": self.teach(f"Q: {q}\nA: {a}", kind="learned", doc_id=f"learned-{turn_id}"),
                     "forgotten": 0}
         approved = self.store.conn.execute("SELECT source_id FROM source WHERE dataset='learned' AND doc_id=?",
@@ -973,6 +1226,8 @@ class Assistant:
                         "store_mb": round(self.store.path.stat().st_size / 1e6, 2) if self.store.path.exists() else 0.0},
             "settings": {"learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle},
             "device": self.device(),
+            "cards": self.card_packs(),
+            "trust": self.trust(),
         }
 
     def device(self) -> dict:

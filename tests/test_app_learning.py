@@ -313,3 +313,30 @@ def test_a_note_about_something_else_does_not_stop_the_assistant_looking_up(tmp_
     t = a.ask("What is the capital of Spain?")
     assert t.learned and t.learned["pages"] and t.verification["status"] == "verified"
     a.close()
+
+
+SMALL_TALK = ["hi", "Hello!", "how are you?", "Hi, how are you doing today?", "thanks so much", "ok",
+              "good morning CAMR", "habari yako", "bye 👋", "who are you?"]
+
+
+@pytest.mark.parametrize("message", SMALL_TALK)
+def test_small_talk_is_not_recalled_looked_up_or_kept(assistant, web, message):
+    """'hi' used to be looked up (the Wikipedia pages 'Hi (cuneiform)' and 'Hi (song)' became memories) and kept."""
+    before = assistant.store.count()
+    events = list(assistant.events(message))
+    turn = events[-1]["turn"]
+    assert web.calls == [] and turn["learned"] is None and turn["sources"] == []
+    assert not turn["saved_to_memory"] and turn["link"] is None and assistant.store.count() == before
+    assert events[0]["type"] == "recall" and events[0]["small_talk"]
+    assert "### Recent conversation" in assistant._http.prompts[-1]  # the conversation is its context
+    assert assistant.feedback(turn["turn_id"], helpful=True)["learned"] == 0  # approving "hi" teaches nothing
+
+
+def test_a_question_after_a_greeting_is_still_looked_up(assistant, web):
+    turn = assistant.ask("Hi, who directed The Loudwater Mystery?")
+    assert web.calls and "Walter West" in turn.answer
+
+
+def test_a_remark_is_not_looked_up(assistant, web):
+    assistant.ask("the weather is nice today")
+    assert web.calls == []

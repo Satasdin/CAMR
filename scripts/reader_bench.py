@@ -83,18 +83,11 @@ def verdict(text: str) -> bool | None:
     return None if m is None else m.group(1) == "yes"
 
 
-_DECLINE = re.compile(r"\b(?:i (?:do not|don't) know|not (?:mentioned|provided|stated|specified|available|sure)|"
-                      r"(?:do not|don't|doesn't|does not) (?:have|mention|say|contain)|no (?:information|record|mention|"
-                      r"notes?)\b|can(?:no|')t (?:assist|help|answer|find|tell|determine)|unable to|i'm not sure|"
-                      r"(?:could|can) you (?:please )?(?:tell|share|provide|let me know))", re.I)
-
-
 def declined(text: str) -> bool:
-    """The model said it cannot answer (wider than camr.eval.escalation.abstention_like, which the research replays
-    use and so stays as it is: this bench needs "not mentioned in the notes" and "can't assist" counted too)."""
-    from camr.eval.escalation import abstention_like
+    """The model said it cannot answer (camr.learn.link.model_declined: the same signal the app's link reads)."""
+    from camr.learn.link import model_declined
 
-    return bool(text.strip()) and (abstention_like(text) or bool(_DECLINE.search(text)))
+    return model_declined(text)
 
 
 def contains_gold(row: dict, response: str) -> bool:

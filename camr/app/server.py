@@ -14,12 +14,13 @@ The server binds to 127.0.0.1 only. The API is used by camr/app/static/app.js:
   POST /api/teach                     {"text", "title"}  or  {"filename", "data_base64"}
   GET  /api/memory?q=&kind=           memory items        DELETE /api/memory/<source_id>
   POST /api/settings                  {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "verified_only",
-                                       "sleep_when_idle"}
+                                       "sleep_when_idle", "check_model", "trust_learning"}
   GET  /api/export?text=0|1           metrics-only feedback file (text only when asked)
   GET  /api/learning                  learning feed, lookups, packs, background jobs, last sleep, external weights
   POST /api/packs/install             {"name"}            DELETE /api/packs/<name>   remove a pack
   POST /api/packs/harvest             {"topic", "pages"}  build a pack from the web and install it (background)
   POST /api/sleep                     consolidate memory now (background; report in /api/learning)
+  POST /api/cards/install             {"name"}            DELETE /api/cards/<name>   install / remove a skill-card pack
 """
 
 from __future__ import annotations
@@ -255,11 +256,18 @@ def make_handler(app: App):
                     return self._json({"error": str(exc)}, 400)
             if path == "/api/sleep":
                 return self._json(a.sleep_now())
+            if path == "/api/cards/install":
+                try:
+                    return self._json(a.install_card_pack(str(data.get("name", ""))))
+                except FileNotFoundError as exc:
+                    return self._json({"error": str(exc)}, 404)
+                except Exception as exc:  # Ollama refused the card (not running, or an unknown base model)
+                    return self._json({"error": f"could not install the cards: {exc}"}, 502)
             if path == "/api/settings":
                 changed = "model" in data and data["model"] != a.model
                 a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat",
                                                         "learn_online", "sleep_when_idle", "verified_only",
-                                                        "check_model")
+                                                        "check_model", "trust_learning")
                                    if k in data})
                 if changed:  # load the newly chosen model now, not on the next question
                     threading.Thread(target=a.warm, daemon=True).start()
@@ -310,6 +318,9 @@ def make_handler(app: App):
             m = re.fullmatch(r"/api/packs/([a-z0-9-]+)", path)
             if m:
                 return self._json({"removed": a.remove_pack(m.group(1))})
+            m = re.fullmatch(r"/api/cards/([a-z0-9-]+)", path)
+            if m:
+                return self._json(a.remove_card_pack(m.group(1)))
             self._json({"error": "not found"}, 404)
 
     return Handler
