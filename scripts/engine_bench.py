@@ -964,6 +964,11 @@ def cmd_report(a) -> None:
             L.append(f"| {r.get('notes')} | {r.get('store_mb')} | {r.get('build_s', '–')} | "
                      f"{r.get('build_peak_rss_mb', '–')} | {r.get('query_peak_rss_mb')} | {r.get('latency_median_ms')} / "
                      f"{r.get('latency_p95_ms')} | {_f(r.get('needle_recall'), True)} | {'yes' if r['passed'] else 'no'} |")
+        if max(r.get("notes", 0) for r in a9) >= 1_000_000:
+            L += ["", "The 1M store continues the S filler with LongMemEval M sessions (`prepare-m`). Its retrieval is "
+                  "disk-bound on this machine: sqlite-vec reads every vector, and the 4.7 GB store did not fit the "
+                  "page cache under the memory pressure of the time, so its latency is an upper bound; peak RSS "
+                  "stays near 0.6 GB."]
         if max(r.get("notes", 0) for r in a9) < 1_000_000:
             L += ["", "1M notes was not run: the store would need about 4.7 GB of disk (470 MB per 100k notes) and "
                   "about an hour of embedding, and the machine was shared with a training job; the 10k → 100k trend "
