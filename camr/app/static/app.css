@@ -138,9 +138,14 @@ button { cursor: pointer; }
 
 /* answer actions */
 .actions { display: flex; align-items: center; gap: 4px; margin-top: 8px; color: var(--faint); font-size: 12.5px; flex-wrap: wrap; }
-.act { border: 0; background: none; color: var(--muted); padding: 4px 8px; border-radius: 8px; font-size: 13px; }
+.act { border: 0; background: none; color: var(--muted); padding: 4px 8px; border-radius: 8px; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 6px; line-height: 1; }
+.act svg { flex: none; }
 .act:hover { background: var(--surface); color: var(--text); }
+.act:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .act.on { color: var(--good); }
+.act.on svg { fill: currentColor; fill-opacity: .18; }
+.act.down.on { color: var(--warn-text); }
 .act.teach { color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 50%, var(--border)); }
 .ground { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
 .verify { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 8px; border-radius: 999px;
