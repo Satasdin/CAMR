@@ -90,6 +90,37 @@ def test_profile_statements_are_lasting_traits_the_user_states():
         assert profile_statements(t) == [], t
 
 
+# lines the first extractor kept from LongMemEval chats (results/bench/contexts_phase2.jsonl): questions, requests,
+# plans and passing reactions, none of them a lasting trait
+NOT_TRAITS = [
+    "I'm trying to plan my daily commute better.",
+    "I'm trying to increase my Twitter engagement, and I was wondering if you could suggest some relevant hashtags.",
+    "I love the idea of supporting local farmers markets!",
+    "I love the bookshelf backdrop idea",
+    "That's a great list",
+    "Can you remind me what day I have a regular coffee break with Sarah?",
+    "I'm planning a trip to Seattle next week and I'm trying to pack lightly.",
+    "I'm trying to get organized with my new role as a senior account manager.",
+    "Oh, I love snapper!",
+    "I've been using a lavender scented shampoo that I picked up on a whim at Trader Joe's.",
+    "Do you think I should also include a personal story about why I'm passionate about the charity?",
+    "I recently posted a photo of my favorite book on Twitter and had a good conversation about it.",
+    "Edge was one of my favorite wrestlers back then.",
+    "Could you recommend a good book? I prefer novels.",
+]
+
+
+def test_profile_keeps_lasting_traits_and_drops_questions_requests_plans_and_reactions():
+    for line in NOT_TRAITS:
+        stmts = profile_statements(line)
+        assert all("?" not in s and "recommend" not in s for s in stmts), line
+        assert stmts in ([], ["I prefer novels."]), line  # only the trait after a request survives, alone
+    for line in ("I am vegetarian and I don't eat fish either.", "Milk upsets my stomach, I think I'm lactose intolerant.",
+                 "I get very anxious on planes and avoid flying whenever I can.", "My favourite tea is Kericho Gold.",
+                 "I'm allergic to penicillin.", "I prefer Airbnb.", "I never drink coffee after 4 pm."):
+        assert profile_statements(line) == [line], line
+
+
 def test_profile_notes_are_offered_to_every_question_even_when_memory_abstains(tmp_path):
     eng = engine(tmp_path, profile=True, entity_gate=True, profile_budget=64)
     eng.ingest([Document("note", "veg", "I am vegetarian and I don't eat fish either."),
@@ -172,7 +203,7 @@ def test_the_app_turns_phase2_on_and_forget_removes_profile_notes_too(assistant)
 
     m = assistant.cfg.memory
     assert m.dated_context and m.time_filter and m.profile and m.aggregate and m.slot_gate and m.entity_gate_skip_time
-    assert m.compress == "sentences"
+    assert m.compress == "none" and m.token_budget == 512 and assistant.engine.budgeter.budget == 512
     assert "Today is {today}" in CHAT_PROMPT and "the newest is right" in CHAT_PROMPT
     assistant.teach("I am vegetarian and I don't eat fish either.", doc_id="note-veg")
     assert assistant.store.count("profile") == 1

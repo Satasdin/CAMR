@@ -200,7 +200,7 @@ def test_bench_maps_admitted_notes_back_to_their_facts(tmp_path, monkeypatch):
     eb = importlib.util.module_from_spec(spec_)
     spec_.loader.exec_module(eb)
     asst = eb.make_assistant(tmp_path / "home", HashingEmbedder(384), min_similarity=0.2)
-    assert eb.read_path(asst)["token_budget"] == 384 and eb.read_path(asst)["chunk_tokens"] == 120
+    assert eb.read_path(asst)["token_budget"] == 512 and eb.read_path(asst)["chunk_tokens"] == 120
     docs = [eb.teach_item(asst, {"key": "floor", "kind": "note", "text": "My office is on the 5th floor of Delta House."}),
             eb.teach_item(asst, {"key": "bike", "kind": "chat", "date": "2026-10-13", "text": "I fixed my bike."})]
     rec = eb.ask(asst, Spec("q", "A1", "t", "Which floor of Delta House is my office on?", needed=[{"floor"}]),
