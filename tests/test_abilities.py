@@ -208,3 +208,32 @@ def test_bench_maps_admitted_notes_back_to_their_facts(tmp_path, monkeypatch):
     assert rec["passed"] and rec["context"][0]["keys"] == ["floor"]
     assert asst.store.conn.execute("SELECT text FROM note WHERE text LIKE 'On 2026-10-13 the user said:%'").fetchone()
     asst.close()
+
+
+# ---------------------------------------------------------------------- the answer must survive in the context
+def test_answer_evidence_is_the_gold_string_or_the_sentence_most_like_it():
+    from camr.eval.abilities import Evidence, answer_evidence
+
+    turn = ["I upgraded my internet last week. It is 500 Mbps now and much faster. Thanks for the tips!"]
+    assert answer_evidence(turn, "500 Mbps") == Evidence("string", "500 mbps")
+    rubric = "The user would prefer suggestions about Adobe Premiere Pro tutorials and editing plugins."
+    ev = answer_evidence(["I edit videos daily. I have been using Adobe Premiere Pro for a year."], rubric)
+    assert ev.kind == "sentence" and "premiere" in ev.text
+    assert answer_evidence(turn, 2) == Evidence("none")  # a bare count: nothing to look for
+
+
+def test_a_needed_note_counts_only_if_its_answer_survives():
+    from camr.eval.abilities import Evidence
+
+    spec = Spec("q", "A1", "s", "What speed is my new internet plan?", needed=[{"t"}],
+                evidence=[Evidence("string", "500 mbps")])
+    kept = run(spec, [c(["t"], text="- [2023-05-22] The user said: It is 500 Mbps now.")])
+    assert kept["passed"] and kept["answered"] == 1
+    cut = run(spec, [Cand(frozenset(["t"]), 10, "- I upgraded my internet last week.", 0.7, 1, True, True,
+                          compressed=True)])
+    assert not cut["passed"] and cut["reached"] == 1 and cut["answered"] == 0 and cut["misses"] == ["answer cut"]
+    other = run(spec, [c(["t"], text="- Thanks for the tips!")])
+    assert not other["passed"] and other["misses"] == ["answer in another chunk"]
+    vague = Spec("q", "A2", "s", "How many?", needed=[{"t"}], evidence=[Evidence("none")])
+    assert run(vague, [c(["t"], text="- whole note")])["passed"]
+    assert not run(vague, [Cand(frozenset(["t"]), 10, "- part", 0.7, 1, True, True, compressed=True)])["passed"]

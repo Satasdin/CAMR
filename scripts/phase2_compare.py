@@ -47,7 +47,9 @@ def main() -> None:
     cards = {n: scorecard(records(d)) for n, d, _ in have}
     out = {"steps": {n: {ab: {k: v for k, v in s.items() if k != "suites"} for ab, s in c.items()}
                      for n, c in cards.items()}}
+    corr = P2 / "correction.md"  # a later re-scoring that supersedes part of these tables
     L = ["# Phase 2: closing the gaps the engine bench found", "",
+         *([corr.read_text().rstrip(), ""] if corr.exists() else []),
          "Each step turns on one more change (a MemoryConfig flag, off by default; CAMR Personal turns them on) and "
          "re-runs the whole engine bench: 260 LongMemEval questions, the CAMR probes, the needle stores at 1k/10k/"
          "100k, the forget and privacy checks. Pass rates per ability (n in the baseline column).", "",

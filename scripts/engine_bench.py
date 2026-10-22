@@ -258,11 +258,23 @@ def ask(a, spec, keys: dict[str, frozenset[str]], preview: bool = False, capture
                 f"SELECT source_id, doc_id FROM source WHERE source_id IN ({','.join('?' * len(prof))})", prof):
             ds, rest = doc_id.split(":", 2)[1:]
             origin[sid] = f"doc:{ds}:{rest.rsplit(':', 1)[0]}"
+    def cut(c) -> bool:  # does the context show only part of this note?
+        if getattr(c, "lane", "") == "profile":
+            return True  # one sentence taken from what the user said
+        from camr.memory.timeframe import split_said
+
+        body = split_said(c.note.text)[2].strip()
+        line = (getattr(c, "line", "") or "").strip()
+        return bool(line) and norm_words(body) not in norm_words(line)
+
+    from camr.eval.abilities import norm_words
+
     cands = [Cand(keys=(keys.get(origin[c.note.source_id], frozenset()) if getattr(c, "lane", "") == "profile"
                         else keys.get(c.note.checksum, frozenset())),
                   tokens=c.tokens, text=getattr(c, "line", "") or c.note.text, similarity=c.similarity, rank=c.rank,
                   eligible=c.eligible, admitted=c.admitted, via_bridge=c.via is not None,
-                  position=getattr(c, "position", None), lane=getattr(c, "lane", "")) for c in r.candidates]
+                  position=getattr(c, "position", None), lane=getattr(c, "lane", ""),
+                  compressed=c.admitted and cut(c)) for c in r.candidates]
     gate = None  # which gate withheld memory, when it was not the similarity gate
     if r.abstained and r.top_similarity is not None and r.top_similarity >= a.engine.min_similarity:
         from camr.memory.entities import personal_slots, question_entities
@@ -534,6 +546,7 @@ def run_lme(emb, limit: int | None = None, contexts: Path | None = None) -> None
         rec = ask(asst, spec, note_keys(asst.engine, docs), capture=got)
         rec["notes_in_store"] = asst.store.count()
         rec["ingest_s"] = round(summary.elapsed_s, 2)
+        rec["context_text"] = got[0].context  # what the reader sees: lets the scoring be checked without a re-run
         asst.close()
         shutil.rmtree(home, ignore_errors=True)
         if contexts:
