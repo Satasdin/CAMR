@@ -6,4 +6,5 @@
 > *loses*: answerable pass 48% at 384 tokens against 59% for whole notes, and 77% against 80% on the questions
 > whose gold answer is in the turn verbatim. The step-4 gains (A2 52%, A3 81%, A4 67%) are not real. Whole notes
 > win: 384 tokens is the most efficient (0.151 passes per 100 tokens), 512 adds 4 points (63%), 768 adds 14 (73%).
-> CAMR Personal still has `compress = sentences` on; whether to turn it off is the user's call.
+> Compression was chosen under a rule that did not check whether the answer survived, and was reversed: CAMR
+> Personal now uses whole notes at 512 tokens, with tightened profile notes (`phase2b` in the table below).
