@@ -1078,6 +1078,21 @@ class Assistant:
                 (conversation_id, self.history_turns)).fetchall()
         return "\n".join(f"User: {q}\nAssistant: {a}" for q, a in reversed(rows)) or "(none)"
 
+    _SAID = re.compile(r"^On \d{4}-\d{2}-\d{2} the user said: (.*)$", re.S)
+
+    @_locked
+    def _tidy_requests(self) -> int:
+        """Chat memories that were never knowledge: small talk ("hi") and coding requests that earlier versions kept
+        as something the user said, where they crowded real memories out of recall. Only chat memories whose whole
+        text is such a message are removed; everything the user stated stays."""
+        gone = 0
+        for sid, text in self.store.conn.execute(
+                "SELECT s.source_id, n.text FROM source s JOIN note n USING(source_id) WHERE s.dataset='chat'").fetchall():
+            m = self._SAID.match(text or "")
+            if m and (is_small_talk(m.group(1)) or is_code_request(m.group(1))):
+                gone += self._delete_source(sid)
+        return gone
+
     def save_fix(self, turn_id: int, code: str, block: int = 0) -> dict:
         """The user's corrected version of a code answer, kept as a correction for that request: the next similar
         request reads it. Kept in the expert the request opened (else "code"), titled "Correction: <expert>" (the
@@ -1696,6 +1711,7 @@ class Assistant:
                                                                     self.governor.limits))
                     if vec is not None:
                         rep["vectors"] = vec
+                    rep["requests_removed"] = self._tidy_requests()
                     with self.store.conn:
                         self.store.conn.execute("INSERT INTO app_sleep(at, report_json) VALUES (?, ?)",
                                                 (_now(), json.dumps(rep, default=float)))

@@ -75,3 +75,13 @@ def test_a_fix_is_kept_and_read_by_the_next_similar_request(assistant):
     assert "x is not None" in assistant._http.bodies[-1]["prompt"]  # the fix is in front of the model
     with pytest.raises(KeyError):
         assistant.save_fix(999, "x = 1")
+
+
+def test_sleep_removes_requests_kept_as_chat_memory_by_earlier_versions(assistant):
+    for i, text in enumerate(["hi", "Using our acme_pay library, write a Python function price_with_vat(cents)",
+                              "my sister Amina lives in Mombasa"]):
+        assistant.teach(f"On 2026-10-22 the user said: {text}", kind="chat", doc_id=f"chat-old-{i}")
+    assert assistant._tidy_requests() == 2
+    left = [r[0] for r in assistant.store.conn.execute(
+        "SELECT n.text FROM note n JOIN source s USING(source_id) WHERE s.dataset='chat'")]
+    assert left == ["On 2026-10-22 the user said: my sister Amina lives in Mombasa"]
