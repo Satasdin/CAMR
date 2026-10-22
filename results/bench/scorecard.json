@@ -1,7 +1,7 @@
 {
  "meta": {
-  "generated_at": "2026-10-21T20:34:06+00:00",
-  "commit": "0c1b1d1",
+  "generated_at": "2026-10-22T01:49:45+00:00",
+  "commit": "008e72d-dirty",
   "machine": "arm64 Darwin 27.0.0, 10 CPUs",
   "read_path": {
    "write_policy": "verbatim",
@@ -39,7 +39,11 @@
     "knowledge-update": 40,
     "single-session-assistant": 40
    },
-   "filler_sessions": 10627
+   "filler_sessions": 10627,
+   "filler_m_source": "longmemeval_m_cleaned.json",
+   "filler_m_sha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f",
+   "filler_m_sessions": 39779,
+   "filler_m_notes_estimate": 950056
   },
   "rules": {
    "A9": "peak RSS <= 8192 MB, p95 retrieval <= 500 ms, needle recall no more than 10% below the 1k store"
@@ -48,24 +52,24 @@
  "abilities": {
   "A1": {
    "name": "recall one taught fact among many",
-   "n": 155,
-   "passed": 137,
-   "pass_rate": 0.8839,
+   "n": 180,
+   "passed": 156,
+   "pass_rate": 0.8667,
    "ci95": [
-    0.8239,
-    0.9253
+    0.8093,
+    0.9087
    ],
-   "all_needed_recall": 0.8839,
-   "distractor_share": 0.6038,
-   "context_tokens": 247.8,
-   "retrieval_ms_median": 20.82,
-   "retrieval_ms_p95": 123.01,
-   "abstain_rate": 0.0258,
+   "all_needed_recall": 0.8667,
+   "distractor_share": 0.622,
+   "context_tokens": 247.9,
+   "retrieval_ms_median": 23.02,
+   "retrieval_ms_p95": 9523.03,
+   "abstain_rate": 0.0278,
    "misses": {
-    "budget full": 11,
-    "entity gate": 4,
-    "below margin": 2,
-    "not retrieved": 1
+    "budget full": 14,
+    "entity gate": 5,
+    "below margin": 3,
+    "not retrieved": 2
    },
    "suites": {
     "lme-ssa": {
@@ -142,6 +146,27 @@
      "retrieval_ms_p95": 36.0,
      "abstain_rate": 0.04,
      "misses": {
+      "entity gate": 1
+     }
+    },
+    "needle-1M": {
+     "n": 25,
+     "passed": 19,
+     "pass_rate": 0.76,
+     "ci95": [
+      0.5657,
+      0.885
+     ],
+     "all_needed_recall": 0.76,
+     "distractor_share": 0.7352,
+     "context_tokens": 248.8,
+     "retrieval_ms_median": 8123.78,
+     "retrieval_ms_p95": 13844.71,
+     "abstain_rate": 0.04,
+     "misses": {
+      "budget full": 3,
+      "below margin": 1,
+      "not retrieved": 1,
       "entity gate": 1
      }
     },
@@ -636,18 +661,18 @@
   },
   "A9": {
    "name": "scale",
-   "n": 3,
+   "n": 4,
    "passed": 2,
-   "pass_rate": 0.6667,
+   "pass_rate": 0.5,
    "ci95": [
-    0.2077,
-    0.9385
+    0.15,
+    0.85
    ],
    "all_needed_recall": null,
    "distractor_share": null,
    "context_tokens": null,
    "retrieval_ms_median": 23.05,
-   "retrieval_ms_p95": 98.65,
+   "retrieval_ms_p95": 8123.78,
    "abstain_rate": null,
    "suites": {
     "scale-100k": {
@@ -680,6 +705,21 @@
      "retrieval_ms_p95": 23.05,
      "abstain_rate": null
     },
+    "scale-1M": {
+     "n": 1,
+     "passed": 0,
+     "pass_rate": 0.0,
+     "ci95": [
+      0.0,
+      0.7935
+     ],
+     "all_needed_recall": null,
+     "distractor_share": null,
+     "context_tokens": null,
+     "retrieval_ms_median": 8123.78,
+     "retrieval_ms_p95": 8123.78,
+     "abstain_rate": null
+    },
     "scale-1k": {
      "n": 1,
      "passed": 1,
@@ -699,19 +739,19 @@
   },
   "A10": {
    "name": "do no harm (engine proxy)",
-   "n": 82,
-   "passed": 51,
-   "pass_rate": 0.622,
+   "n": 94,
+   "passed": 60,
+   "pass_rate": 0.6383,
    "ci95": [
-    0.5138,
-    0.7192
+    0.5375,
+    0.7282
    ],
    "all_needed_recall": null,
-   "distractor_share": 0.378,
-   "context_tokens": 126.4,
-   "retrieval_ms_median": 18.04,
-   "retrieval_ms_p95": 99.76,
-   "abstain_rate": 0.622,
+   "distractor_share": 0.3617,
+   "context_tokens": 121.3,
+   "retrieval_ms_median": 19.32,
+   "retrieval_ms_p95": 8558.75,
+   "abstain_rate": 0.6383,
    "suites": {
     "A7 camr-brief": {
      "n": 1,
@@ -788,6 +828,21 @@
      "retrieval_ms_p95": 27.5,
      "abstain_rate": 1.0
     },
+    "absent-1M": {
+     "n": 12,
+     "passed": 9,
+     "pass_rate": 0.75,
+     "ci95": [
+      0.4677,
+      0.9111
+     ],
+     "all_needed_recall": null,
+     "distractor_share": 0.25,
+     "context_tokens": 86.2,
+     "retrieval_ms_median": 8006.31,
+     "retrieval_ms_p95": 13053.6,
+     "abstain_rate": 0.75
+    },
     "absent-1k": {
      "n": 12,
      "passed": 12,
@@ -820,13 +875,13 @@
     }
    },
    "gate": {
-    "answerable": 316,
-    "unanswerable": 82,
-    "opened_answerable": 305,
-    "opened_unanswerable": 31,
-    "precision": 0.9077,
-    "specificity": 0.622,
-    "sensitivity": 0.9652
+    "answerable": 341,
+    "unanswerable": 94,
+    "opened_answerable": 329,
+    "opened_unanswerable": 34,
+    "precision": 0.9063,
+    "specificity": 0.6383,
+    "sensitivity": 0.9648
    }
   }
  }

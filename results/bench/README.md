@@ -37,7 +37,7 @@ on the CPU every time, so retrieval ms is what the app would see.
 | A6 | implicit preference | LongMemEval single-session-preference; CAMR vegetarian probe (+2 extra) | the preference reached the context |
 | A7 | abstention | LongMemEval abstention questions (ids ending `_abs`); "What is my blood type?" (+3 extra) | memory abstained |
 | A8 | forget and privacy | PIN-hint probe on the real app (BGE); the app's forget and privacy tests (`tests/test_app*.py`) | each check holds |
-| A9 | scale | the needle stores at 1k, 10k, 100k notes, each built and queried in its own process | peak RSS ≤ 8 GB, p95 retrieval ≤ 500 ms, needle recall no more than 10 points below the 1k store |
+| A9 | scale | the needle stores at 1k, 10k, 100k and 1M notes, each built and queried in its own process | peak RSS ≤ 8 GB, p95 retrieval ≤ 500 ms, needle recall no more than 10 points below the 1k store |
 | A10 | do no harm (engine proxy) | general questions on a personal store; personal questions about people no note mentions, on the needle stores; A7's questions | nothing admitted; plus gate precision over all answerable and unanswerable questions |
 
 Needed facts in LongMemEval are the turns flagged `has_answer` in each evidence session
@@ -133,7 +133,7 @@ Full tables in `scorecard.md`.
 | A6 | implicit preference | 70% | LongMemEval 73%, but the vegetarian probe fails: the entity gate takes "Friday" for a name and abstains ("Mombasa" too) |
 | A7 | abstention | 15% | abstention questions score 0.55 to 0.80 top similarity, the same range as answerable ones (median 0.74), so the 0.50 gate opens; "What is my blood type?" does abstain |
 | A8 | forget and privacy | 14 of 16 | forget leaves the lowercase word in the keyword index (`note_fts_data`): "kisumu" is still in the file after forgetting; personal questions made 0 web requests |
-| A9 | scale | 2 of 3 | 100k fails only on recall (80% against 96% at 1k); p95 165 ms and 0.57 GB peak RSS are well within limits |
+| A9 | scale | 2 of 4 | 100k fails only on recall (80% against 96% at 1k; p95 165 ms, 0.57 GB peak RSS). 1M (run on 2026-10-22): recall 76%, p50 / p95 8.1 / 13.8 s, peak RSS 0.59 GB, 4.7 GB store: retrieval scans every vector and was disk-bound here |
 | A10 | do no harm | 62% | general and absent-entity questions get an empty context (46 of 48); the misses are A7's questions; gate precision 91%, specificity 62% |
 
 The gaps expected before the run were A3, A4, A5 beyond about 16 notes, and A6. They are all there. Two

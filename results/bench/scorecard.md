@@ -1,12 +1,12 @@
 # CAMR engine bench: scorecard
 
-Generated 2026-10-21T20:34:06+00:00 from commit `0c1b1d1` by `scripts/engine_bench.py` (records in `results/bench/records/`). Model-free: each question is scored from what CAMR Personal's read path admitted into the context. Machine: arm64 Darwin 27.0.0, 10 CPUs.
+Generated 2026-10-22T01:49:45+00:00 from commit `008e72d-dirty` by `scripts/engine_bench.py` (records in `results/bench/records/`). Model-free: each question is scored from what CAMR Personal's read path admitted into the context. Machine: arm64 Darwin 27.0.0, 10 CPUs.
 
 ## Per ability
 
 | | Ability | n | Pass (95% CI) | All-needed recall | Distractor share | Context tokens | Retrieval ms p50 / p95 | Abstained |
 |---|---|---|---|---|---|---|---|---|
-| A1 | recall one taught fact among many | 155 | 88% (82–93) | 88% | 60% | 248 | 20.8 / 123.0 | 3% |
+| A1 | recall one taught fact among many | 180 | 87% (81–91) | 87% | 62% | 248 | 23.0 / 9523.0 | 3% |
 | A2 | join two facts | 40 | 28% (16–43) | 28% | 69% | 334 | 21.2 / 60.0 | 0% |
 | A3 | knowledge update | 43 | 65% (50–78) | 72% | 77% | 291 | 15.5 / 28.2 | 5% |
 | A4 | temporal | 42 | 40% (27–56) | 45% | 71% | 319 | 19.8 / 34.6 | 2% |
@@ -14,8 +14,8 @@ Generated 2026-10-21T20:34:06+00:00 from commit `0c1b1d1` by `scripts/engine_ben
 | A6 | implicit preference | 33 | 70% (53–83) | 70% | 76% | 294 | 20.0 / 38.4 | 12% |
 | A7 | abstention | 34 | 15% (6–30) | – | 85% | 286 | 17.5 / 41.1 | 15% |
 | A8 | forget and privacy | 16 | 88% (64–96) | – | – | – | – / – | – |
-| A9 | scale | 3 | 67% (21–94) | – | – | – | 23.1 / 98.7 | – |
-| A10 | do no harm (engine proxy) | 82 | 62% (51–72) | – | 38% | 126 | 18.0 / 99.8 | 62% |
+| A9 | scale | 4 | 50% (15–85) | – | – | – | 23.1 / 8123.8 | – |
+| A10 | do no harm (engine proxy) | 94 | 64% (54–73) | – | 36% | 121 | 19.3 / 8558.8 | 64% |
 
 Pass rules (camr/eval/abilities.py): A1, A2, A5, A6 every needed fact reached the context; A3 the newest value did, and a superseded value next to it can be told apart (dates, or the newest says it is an update); A4 every needed fact did in a note that shows its date, and nothing from outside the period asked about (the app's prompt does not give the model today's date); A7 memory abstained; A8 each forget or privacy check held; A9 peak RSS <= 8192 MB, p95 retrieval <= 500 ms, needle recall no more than 10% below the 1k store; A10 nothing was admitted for a question memory has nothing for (A7's questions included).
 
@@ -27,6 +27,7 @@ Pass rules (camr/eval/abilities.py): A1, A2, A5, A6 every needed fact reached th
 | A1 | lme-ssu | 40 | 90% | 90% | 77% | 319 | 19.4 / 46.9 | 2% | budget full 2, below margin 1, entity gate 1 |
 | A1 | needle-100k | 25 | 80% | 80% | 65% | 226 | 108.9 / 184.5 | 4% | budget full 4, entity gate 1 |
 | A1 | needle-10k | 25 | 96% | 96% | 57% | 199 | 23.6 / 36.0 | 4% | entity gate 1 |
+| A1 | needle-1M | 25 | 76% | 76% | 74% | 249 | 8123.8 / 13844.7 | 4% | budget full 3, below margin 1, not retrieved 1, entity gate 1 |
 | A1 | needle-1k | 25 | 96% | 96% | 42% | 109 | 9.2 / 10.6 | 4% | entity gate 1 |
 | A2 | lme-ms | 40 | 28% | 28% | 69% | 334 | 21.2 / 60.0 | 0% | budget full 31, not retrieved 9, below margin 6 |
 | A3 | camr-brief | 1 | 100% | 100% | 52% | 23 | 14.2 / 14.2 | 0% | – |
@@ -49,12 +50,14 @@ Pass rules (camr/eval/abilities.py): A1, A2, A5, A6 every needed fact reached th
 | A8 | privacy | 2 | 100% | – | – | – | – / – | – | – |
 | A9 | scale-100k | 1 | 0% | – | – | – | 98.7 / 98.7 | – | – |
 | A9 | scale-10k | 1 | 100% | – | – | – | 23.1 / 23.1 | – | – |
+| A9 | scale-1M | 1 | 0% | – | – | – | 8123.8 / 8123.8 | – | – |
 | A9 | scale-1k | 1 | 100% | – | – | – | 9.4 / 9.4 | – | – |
 | A10 | A7 camr-brief | 1 | 100% | – | 0% | 0 | 10.1 / 10.1 | 100% | – |
 | A10 | A7 camr-extra | 3 | 0% | – | 100% | 305 | 9.2 / 9.5 | 0% | – |
 | A10 | A7 lme-abs | 30 | 13% | – | 87% | 294 | 18.1 / 41.1 | 13% | – |
 | A10 | absent-100k | 12 | 83% | – | 17% | 53 | 96.0 / 137.4 | 83% | – |
 | A10 | absent-10k | 12 | 100% | – | 0% | 0 | 21.3 / 27.5 | 100% | – |
+| A10 | absent-1M | 12 | 75% | – | 25% | 86 | 8006.3 / 13053.6 | 75% | – |
 | A10 | absent-1k | 12 | 100% | – | 0% | 0 | 9.7 / 12.3 | 100% | – |
 | A10 | general-on-personal | 12 | 100% | – | 0% | 0 | 12.5 / 22.6 | 100% | – |
 
@@ -110,12 +113,13 @@ Needle questions (A1) and absent-entity questions (A10) on stores of LongMemEval
 | 1002 | 4.9 | 3.4 | 522.7 | 546.8 | 9.37 / 10.56 | 96% | yes |
 | 10000 | 47.5 | 9.2 | 539.5 | 507.5 | 23.05 / 36.0 | 96% | yes |
 | 100001 | 470.1 | 131.8 | 567.9 | 525.8 | 98.65 / 165.21 | 80% | no |
+| 1000004 | 4713.6 | 1099.7 | 588.6 | 567.5 | 8123.78 / 13777.99 | 76% | no |
 
-1M notes was not run: the store would need about 4.7 GB of disk (470 MB per 100k notes) and about an hour of embedding, and the machine was shared with a training job; the 10k → 100k trend above is what to extrapolate from (`engine_bench.py run --only scale --scales 1000000`).
+The 1M store continues the S filler with LongMemEval M sessions (`prepare-m`). Its retrieval is disk-bound on this machine: sqlite-vec reads every vector, and the 4.7 GB store did not fit the page cache under the memory pressure of the time, so its latency is an upper bound; peak RSS stays near 0.6 GB.
 
 ## A10 gate
 
-Over 316 answerable and 82 unanswerable questions: the gate let memory through for 305 answerable and 31 unanswerable ones. Precision 91%, specificity 62%, sensitivity 97%.
+Over 341 answerable and 94 unanswerable questions: the gate let memory through for 329 answerable and 34 unanswerable ones. Precision 91%, specificity 64%, sensitivity 96%.
 
 ## Setup
 
