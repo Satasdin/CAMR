@@ -208,7 +208,8 @@ function learnedTrace(l) {
   return l.pages?.length ? `<span class="trace"><s>memory had nothing</s> → looked up <b>${pages}</b> → learned <b>${l.notes_added}</b> → </span>`
     : `<span class="trace"><s>memory had nothing</s> → looked online, found nothing → </span>`;
 }
-function renderRecall(el, sources, abstained, ms, learned) {
+const openedLine = (ex) => ex && ex.length ? `<span class="opened" title="Only these experts were opened (and your shared memory); the rest of memory stayed closed">· opened ${ex.map((e) => `<b>${esc(e)}</b>`).join(", ")}</span>` : "";
+function renderRecall(el, sources, abstained, ms, learned, experts) {
   const r = $(".recall", el); r.classList.remove("thinking", "looking");
   if (!sources || !sources.length) {
     r.classList.add("none");
@@ -218,7 +219,7 @@ function renderRecall(el, sources, abstained, ms, learned) {
   }
   r.classList.toggle("learned", !!learned?.notes_added);
   r.innerHTML = `<summary><span>${learned?.notes_added ? "◎" : "✦"}</span> ${learnedTrace(learned)}Recalled <b>${sources.length} ${sources.length === 1 ? "memory" : "memories"}</b>
-    <span class="muted">· ${Math.round(ms || 0)} ms</span><span class="chev">▾</span></summary><div class="mem-cards">${sources.map(memCard).join("")}</div>`;
+    <span class="muted">· ${Math.round(ms || 0)} ms</span>${openedLine(experts)}<span class="chev">▾</span></summary><div class="mem-cards">${sources.map(memCard).join("")}</div>`;
   S.lastSources = sources; renderRecallPanel();
 }
 function verifyBadge(v) {
@@ -307,7 +308,7 @@ async function send(text) {
         if (!line.startsWith("data: ")) continue;
         const ev = JSON.parse(line.slice(6));
         if (ev.type === "lookup") { conv = ev.conversation_id; showLookup(el); }
-        else if (ev.type === "recall") { conv = ev.conversation_id; if (ev.small_talk) $(".recall", el)?.remove(); else renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms, ev.learned); }
+        else if (ev.type === "recall") { conv = ev.conversation_id; if (ev.small_talk) $(".recall", el)?.remove(); else renderRecall(el, ev.sources, ev.abstained, ev.retrieval_ms, ev.learned, ev.experts); }
         else if (ev.type === "skill") $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">◆ Using the “${esc(ev.skill)}” skill card</div>`);
         else if (ev.type === "escalate") { $(".answer", el).classList.add("cursor"); $(".answer", el).insertAdjacentHTML("beforebegin", `<div class="tier-status">⇡ Not sure of this one: checking with ${esc(ev.by)}…</div>`); }
         else if (ev.type === "token") { answer += ev.text; $(".answer", el).innerHTML = streamMd(answer); $(".answer", el).classList.add("cursor"); thread.scrollTop = thread.scrollHeight; }
@@ -376,12 +377,31 @@ function uploadCard(el, u) {
     ${u.summary ? md(u.summary) : ""}
     ${u.problem ? `<p class="small warn-text">${esc(u.problem)}</p>` : ""}
     ${kept ? `<div class="saved-note">✦ ${kept}</div>` : ""}
+    <label class="expert-pick">Expert <select aria-label="Which expert this file belongs to"><option value="">Shared memory (always open)</option></select>
+      <input class="new-expert hidden" placeholder="e.g. code:acme" aria-label="New expert name" maxlength="40"></label>
     ${(u.chips || []).length ? `<div class="focus"><span class="muted small">What should I focus on?</span>${u.chips.map((c) => `<button class="chip" data-focus="${esc(c)}">${esc(c)}</button>`).join("")}</div>` : ""}
     ${(u.questions || []).length ? `<div class="asks">${u.questions.map((q) => `<button class="ask" data-q="${esc(q)}">↳ ${esc(q)}</button>`).join("")}</div>` : ""}
   </div>`;
   $$(".thumb", a).forEach((b) => b.onclick = () => openFile(u.file_id, +b.dataset.page));
+  expertPicker($(".expert-pick", a), u);
   $$(".chip", a).forEach((b) => b.onclick = () => focusOn(u, b.dataset.focus, b));
   $$(".ask", a).forEach((b) => b.onclick = () => setAbout(u, b.dataset.q));
+}
+async function expertPicker(label, u) {
+  const sel = $("select", label), inp = $(".new-expert", label);
+  let ex = []; try { ex = await api("/api/experts"); } catch { /* experts are optional */ }
+  const names = [...new Set([...ex.map((e) => e.name), ...(u.expert ? [u.expert] : [])])];
+  sel.innerHTML = `<option value="">Shared memory (always open)</option>` + names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("")
+    + `<option value="__new">＋ New expert…</option>`;
+  sel.value = u.expert || "";
+  const save = async (name) => {
+    try { const r = await api("/api/experts/assign", { method: "POST", body: { file_id: u.file_id, expert: name } });
+      u.expert = r.expert; toast(r.expert ? `◆ ${u.name} now opens only with questions about ${r.expert}` : `${u.name} is back in shared memory`); }
+    catch (e) { toast(e.message); sel.value = u.expert || ""; }
+  };
+  sel.onchange = () => { if (sel.value === "__new") { inp.classList.remove("hidden"); inp.focus(); } else { inp.classList.add("hidden"); save(sel.value); } };
+  inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); if (inp.value.trim()) { save(inp.value.trim()); inp.classList.add("hidden"); expertPicker(label, u); } }
+    if (e.key === "Escape") { inp.classList.add("hidden"); sel.value = u.expert || ""; } };
 }
 async function focusOn(u, what, btn) {
   btn.disabled = true;
@@ -542,6 +562,11 @@ async function loadLearning() {
     ${L.trust?.model ? `<div class="stat"><div class="k">Trust link · ${esc(L.trust.model)}</div>
       <p class="small">${L.trust.on ? `After each answer it decides: state it, hold back a likely-wrong guess${L.trust.escalate_to ? `, or ask <b>${esc(L.trust.escalate_to)}</b>` : ""}. Started from <b>${esc(L.trust.start || "untrained")}</b>; learned from <b>${L.trust.feedback}</b> of your thumbs.` : "Off: every answer is stated. Turn it on in Settings."}</p>
       ${L.trust.on ? `<p class="muted small">So far: ${L.trust.decisions.keep} stated · ${L.trust.decisions.decline} held back · ${L.trust.decisions.escalate} checked with a larger model${L.trust.escalate_to ? "" : " (choose a second-opinion model in Settings to allow this)"}</p>` : ""}</div>` : ""}
+    <div class="stat"><div class="k">Experts</div>
+      <p class="muted small">Closed parts of memory, one per subject. A question opens only the experts it is about, plus your shared memory, so one project's code or one course's notes never crowd another's. If they find nothing, the rest of memory gets one look.</p>
+      ${(L.experts || []).map((e) => `<div class="pack-row"><div><b>${esc(e.name)}</b> <span class="muted small">${e.notes} memories${e.files ? ` · ${e.files} file${e.files === 1 ? "" : "s"}` : ""}</span><div class="muted small">${esc(e.titles.join(", "))}</div></div>
+        <div class="row-actions"><button class="ghost sm" data-rename-expert="${esc(e.name)}">Rename</button><button class="ghost sm" data-close-expert="${esc(e.name)}" title="Its memories return to shared memory; nothing is forgotten">Dissolve</button></div></div>`).join("")
+        || `<p class="muted small">No experts yet. Code files start one (code); put any file in an expert from its card in the chat.</p>`}</div>
     <div class="stat"><div class="k">Skill cards</div>
       <p class="muted small">Small add-ons for one model, trained on corrections of one skill. Memory attaches a card only when its corrections are what a question needs; the model's own weights never change, and a calculator does the arithmetic.</p>
       ${(L.cards || []).map((p) => `<div class="pack-row"><div><b>${esc(p.title)}</b> <span class="muted small">${p.skills.length} skills · for ${esc(p.base)}</span><div class="muted small">${esc(p.skills.join(", "))}${p.usable ? "" : ` · used only when ${esc(p.base)} answers`}</div></div>
@@ -562,6 +587,14 @@ async function loadLearning() {
   $("#sleep-btn").onclick = async () => { await api("/api/sleep", { method: "POST", body: {} }); toast("Sleeping: CAMR is consolidating its memory"); loadLearning(); };
   $$("#panel-learning [data-pack]").forEach((b) => b.onclick = async () => { b.disabled = true; const r = await api("/api/packs/install", { method: "POST", body: { name: b.dataset.pack } });
     toast(`✦ Installed ${r.title}: ${r.notes_added} memories in ${r.seconds} s${r.vectors_reused ? " (no model needed)" : ""}`); loadLearning(); refresh(); });
+  $$("#panel-learning [data-rename-expert]").forEach((b) => b.onclick = async () => {
+    const old = b.dataset.renameExpert, name = prompt(`Rename the expert “${old}” (an existing name merges them):`, old);
+    if (!name || name === old) return;
+    try { const r = await api("/api/experts/rename", { method: "POST", body: { old, new: name } }); toast(`◆ ${old} is now ${r.expert}`); } catch (e) { toast(e.message); }
+    loadLearning(); });
+  $$("#panel-learning [data-close-expert]").forEach((b) => b.onclick = async () => {
+    if (!confirm(`Dissolve “${b.dataset.closeExpert}”? Its memories return to shared memory; nothing is forgotten.`)) return;
+    const r = await api(`/api/experts/${encodeURIComponent(b.dataset.closeExpert)}`, { method: "DELETE" }); toast(`Dissolved: ${r.sources} sources back in shared memory`); loadLearning(); });
   $$("#panel-learning [data-card]").forEach((b) => b.onclick = async () => { b.disabled = true; b.textContent = "Installing…";
     try { const r = await api("/api/cards/install", { method: "POST", body: { name: b.dataset.card } }); toast(`◆ Installed ${r.cards} skill cards for ${r.base}`); }
     catch (e) { toast(e.message); } loadLearning(); refresh(); });
@@ -577,7 +610,7 @@ async function loadLearning() {
 $("#open-settings").onclick = () => {
   const s = S.state.settings; $("#set-budget").value = s.token_budget; $("#set-turns").value = s.history_turns; $("#set-chat").checked = s.remember_chat;
   $("#set-online").checked = s.learn_online; $("#set-sleep").checked = s.sleep_when_idle; $("#set-verified").checked = !!s.verified_only;
-  $("#set-trust").checked = s.trust_learning !== false;
+  $("#set-trust").checked = s.trust_learning !== false; $("#set-experts").checked = s.route_experts !== false;
   $("#set-vision").innerHTML = `<option value="">None</option>` + S.state.models.filter((m) => !m.embedding)
     .map((m) => `<option value="${esc(m.name)}" ${m.name === s.vision_model ? "selected" : ""}>${esc(m.name)} (${esc(m.parameters)})</option>`).join("");
   $("#set-check").innerHTML = `<option value="">None</option>` + S.state.models.filter((m) => !m.embedding && m.name !== s.model)
@@ -592,7 +625,7 @@ $("#export-text").onchange = (e) => $("#export-link").href = "/api/export?text="
 $("#settings-save").onclick = async () => {
   await api("/api/settings", { method: "POST", body: { token_budget: +$("#set-budget").value, history_turns: +$("#set-turns").value, remember_chat: $("#set-chat").checked,
     learn_online: $("#set-online").checked, sleep_when_idle: $("#set-sleep").checked, verified_only: $("#set-verified").checked, check_model: $("#set-check").value,
-    trust_learning: $("#set-trust").checked, vision_model: $("#set-vision").value } });
+    trust_learning: $("#set-trust").checked, vision_model: $("#set-vision").value, route_experts: $("#set-experts").checked } });
   toast("Settings saved"); refresh();
 };
 

@@ -25,6 +25,8 @@ The server binds to 127.0.0.1 only. The API is used by camr/app/static/app.js:
   POST /api/files/<id>/focus          {"focus", "conversation_id"}  learn what to focus on in a file
   POST /api/files/<id>/select         {"page", "box", "teach"}      the lines inside a box (and learn them)
   GET  /api/highlight/<note_id>       where in its file a note came from
+  GET  /api/experts                   experts (closed partitions of memory)   DELETE /api/experts/<name>  dissolve one
+  POST /api/experts/assign            {"file_id", "expert"}   POST /api/experts/rename  {"old", "new"}
 """
 
 from __future__ import annotations
@@ -230,6 +232,9 @@ def make_handler(app: App):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if path == "/api/experts":
+                a = self._assistant()
+                return a and self._json(a.experts())
             m = re.fullmatch(r"/api/highlight/(\d+)", path)
             if m:
                 a = self._assistant()
@@ -307,6 +312,13 @@ def make_handler(app: App):
                     return self._json({"error": str(exc)}, 400)
             if path == "/api/sleep":
                 return self._json(a.sleep_now())
+            if path in ("/api/experts/assign", "/api/experts/rename"):
+                try:
+                    if path.endswith("assign"):
+                        return self._json(a.set_file_expert(str(data.get("file_id", "")), data.get("expert")))
+                    return self._json(a.rename_expert(str(data.get("old", "")), str(data.get("new", ""))))
+                except (KeyError, ValueError) as exc:
+                    return self._json({"error": str(exc)}, 400)
             m = re.fullmatch(r"/api/files/([0-9a-f]{16})/(focus|select)", path)
             if m:
                 try:
@@ -328,7 +340,8 @@ def make_handler(app: App):
                 changed = "model" in data and data["model"] != a.model
                 a.save_settings(**{k: data[k] for k in ("model", "token_budget", "history_turns", "remember_chat",
                                                         "learn_online", "sleep_when_idle", "verified_only",
-                                                        "check_model", "trust_learning", "vision_model")
+                                                        "check_model", "trust_learning", "vision_model",
+                                                        "route_experts")
                                    if k in data})
                 if changed:  # load the newly chosen model now, not on the next question
                     threading.Thread(target=a.warm, daemon=True).start()
@@ -382,6 +395,9 @@ def make_handler(app: App):
             m = re.fullmatch(r"/api/cards/([a-z0-9-]+)", path)
             if m:
                 return self._json(a.remove_card_pack(m.group(1)))
+            m = re.fullmatch(r"/api/experts/([a-z0-9:_.-]{1,40})", path)
+            if m:
+                return self._json(a.close_expert(m.group(1)))
             self._json({"error": "not found"}, 404)
 
     return Handler

@@ -112,6 +112,8 @@ def test_a_code_file_is_learned_a_whole_function_per_note(assistant):
     ("How do I reverse a list in Python?", True),
     ("Traceback (most recent call last):\n  File \"x.py\", line 1", True),
     ("can you write a SQL query for the top customers", True),
+    ("Using our acme_pay library, write a Python function price_with_vat(cents)", True),
+    ("I need to implement a retry loop around our http client", True),
     ("What is my API key?", False),
     ("write a birthday message for my mum", False),
     ("Where did I put my Java coffee mug?", False),

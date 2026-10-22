@@ -238,6 +238,7 @@ CODE_ANSWER_TOKENS, CODE_CONTEXT = 2048, 8192  # a chat answer stops at 768 toke
 _CODE_VERB = re.compile(r"^\s*(?:please\s+)?(?:(?:can|could|would)\s+you\s+)?(?:write|create|generate|implement|build|"
                         r"code|make|add|refactor|fix|debug|optimi[sz]e|convert|translate|port|rewrite|explain|document|"
                         r"test|complete|finish|modify|update|change|rename|improve|review|show me how)\b", re.I)
+_CODE_VERB_ANY = re.compile(r"\b(?:write|create|generate|implement|refactor|debug|optimi[sz]e|rewrite|port)\b", re.I)
 _CODE_WORD = re.compile(r"\b(?:function|func|method|class|script|code|program|snippet|query|regex|endpoint|api|bug|"
                         r"tests?|component|module|loop|python|javascript|typescript|java|golang|rust|kotlin|swift|sql|"
                         r"bash|shell|html|css|react|vue|django|flask|fastapi|node|express|json|yaml|dockerfile|"
@@ -260,7 +261,7 @@ def is_code_request(text: str) -> bool:
         return True
     if not _CODE_WORD.search(text) and not _CODE_LANG.search(text):
         return False
-    if _CODE_VERB.match(text):
+    if _CODE_VERB.match(text) or _CODE_VERB_ANY.search(text):  # "Using our library, write a function …" too
         return True
     return is_question(text) and (bool(_CODE_LANG.search(text)) or not is_about_user(text))
 
@@ -361,6 +362,12 @@ this that these those i you he she we they me my your our their what which who w
 did not no yes can could would should will just so than then there here also only very more most""".split())
 
 
+def expert_name(text: str | None) -> str | None:
+    """An expert's name as stored: lower case, letters, digits and - _ : . (e.g. "code:acme"); None when empty."""
+    name = re.sub(r"[^a-z0-9:_.-]+", "-", (text or "").strip().lower()).strip("-")[:40]
+    return name or None
+
+
 def worth_looking_up(question: str) -> bool:
     """Only a question is looked up ("tell me about …" counts), and only one with a content word to search for. A
     remark ("the weather is nice today") or a bare word is not sent anywhere."""
@@ -405,6 +412,8 @@ class Turn:
     skill: dict | None = None
     # a file the user gave: {"file_id", "name", "kind", "pages", "summary", "chips", "questions", …}
     upload: dict | None = None
+    # the experts opened for this question (None: all of memory was read)
+    experts: list | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -505,6 +514,8 @@ class Assistant:
         # The link (tiers.py): after a local answer, state it, decline, or ask the second-opinion model; learned per
         # model from the user's thumbs, starting from the reader bench. Off: every answer is stated.
         self.trust_learning = bool(saved.get("trust_learning", True))
+        # Experts (camr.memory.store): each question opens only the experts it is about, plus shared memory.
+        self.route_experts = bool(saved.get("route_experts", True))
         # The model that looks at images ("" = none; None = the first installed one that can see).
         self.vision: str | None = saved.get("vision_model")
         self._links: dict[str, tuple[Link, dict]] = {}
@@ -583,7 +594,8 @@ class Assistant:
                 "remember_chat": self.remember_chat, "embed_model": self.embed_model,
                 "learn_online": self.learn_online, "sleep_when_idle": self.sleep_when_idle,
                 "verified_only": self.verified_only, "check_model": self.check_model,
-                "trust_learning": self.trust_learning, "vision_model": self.vision_model(),
+                "trust_learning": self.trust_learning, "route_experts": self.route_experts,
+                "vision_model": self.vision_model(),
                 "min_similarity": self.engine.min_similarity}
 
     def warm(self, keep_alive: str = "30m") -> bool:
@@ -605,7 +617,7 @@ class Assistant:
 
     def save_settings(self, **changes) -> None:
         allowed = {"model", "token_budget", "history_turns", "remember_chat", "learn_online", "sleep_when_idle",
-                   "verified_only", "check_model", "trust_learning", "vision_model"}
+                   "verified_only", "check_model", "trust_learning", "vision_model", "route_experts"}
         for k, v in changes.items():
             if k == "vision_model":
                 self.vision = v or ""
@@ -664,6 +676,7 @@ class Assistant:
                 return {**(self._upload(fid) or {"file_id": fid, "name": name}), "notes": 0, "replaced": 0,
                         "unchanged": True}
             before = [r[0] for r in c.execute("SELECT file_id FROM app_upload WHERE doc_id=?", (doc_id,))]
+            kept_expert = self._file_expert(doc_id)  # a new version stays in the expert the user put the old one in
         folder = self.home / "files" / fid
         reading = reader.read(name, data, folder, reader.see_binary(self.home))  # unlocked: recognition takes seconds
         seen = self.describe_image(folder, reading) if reading.kind == "image" else ""
@@ -680,6 +693,10 @@ class Assistant:
             if seen:
                 notes += self.teach(f"{stem}: {seen}", title=f"{stem} (what it shows)", kind="file",
                                     doc_id=f"{doc_id}#seen")
+            # code opens with code questions and stays closed to everything else
+            expert = kept_expert or ("code" if reading.kind == "code" else None)
+            if expert:
+                self.store.set_expert(self._file_sources(doc_id), expert)
             with c:
                 c.execute("INSERT OR REPLACE INTO app_file(doc_id, sha256, at) VALUES (?, ?, ?)", (doc_id, digest, _now()))
                 c.execute("DELETE FROM app_upload WHERE doc_id=?", (doc_id,))
@@ -719,6 +736,77 @@ class Assistant:
                  for i, (sym, src) in enumerate(units) if src.strip()]
         return self.engine.ingest(docs).accepted
 
+    # ------------------------------------------------------------ experts (camr.memory.store, MemoryEngine.route)
+    def _routed_recall(self, question: str):
+        """Recall through the experts: open the one or two a question is about (and shared memory); if that finds
+        nothing, look once more in all of memory, so routing never costs an answer. Returns (recall, opened), where
+        opened is None when all of memory was read."""
+        opened = None
+        with self._lock:
+            if self.route_experts and self.store.experts():
+                opened = [name for name, _ in self.engine.route(question, top=2, margin=0.05)]
+                recall = self.engine.recall(question, experts=opened)
+                if recall.abstained:  # the experts opened had nothing: the rest of memory gets one look
+                    recall, opened = self.engine.recall(question), None
+            else:
+                recall = self.engine.recall(question)
+        return recall, opened
+
+    def _with_file(self, doc_id: str) -> None:
+        """What was just learned about a file joins the file's expert."""
+        with self._lock:
+            expert = self._file_expert(doc_id)
+            if expert:
+                self.store.set_expert(self._file_sources(doc_id), expert)
+
+    def _file_expert(self, doc_id: str) -> str | None:
+        if not self.store.has_experts():
+            return None
+        row = self.store.conn.execute("SELECT expert FROM source WHERE doc_id=?", (doc_id,)).fetchone()
+        return row[0] if row else None
+
+    @_locked
+    def experts(self) -> list[dict]:
+        """Every expert: its notes, files and a few titles, for the Learning panel."""
+        out = []
+        for name, notes in self.store.experts().items():
+            titles = [r[0] for r in self.store.conn.execute(
+                "SELECT DISTINCT title FROM source WHERE expert=? AND title IS NOT NULL AND title != ''"
+                " ORDER BY source_id DESC LIMIT 4", (name,))]
+            files = self.store.conn.execute("SELECT COUNT(*) FROM app_upload u JOIN source s ON s.doc_id = u.doc_id"
+                                            " WHERE s.expert=?", (name,)).fetchone()[0]
+            out.append({"name": name, "notes": notes, "files": files, "titles": titles})
+        return out
+
+    def set_file_expert(self, fid: str, expert: str | None) -> dict:
+        """Put a file (and what was learned about it) in an expert; "" or None returns it to shared memory."""
+        expert = expert_name(expert)
+        info = self._upload(fid)
+        if info is None:
+            raise KeyError(f"no file {fid}")
+        with self._lock:
+            sources = self._file_sources(f"file-{info['name']}")
+            self.store.set_expert(sources, expert)
+        return {"file_id": fid, "expert": expert, "sources": len(sources)}
+
+    def rename_expert(self, old: str, new: str) -> dict:
+        """Rename an expert, or merge it into another one of that name."""
+        new_name = expert_name(new)
+        if not new_name:
+            raise ValueError("an expert needs a name")
+        with self._lock:
+            ids = [r[0] for r in self.store.conn.execute("SELECT source_id FROM source WHERE expert=?", (old,))]
+            self.store.set_expert(ids, new_name)
+        return {"expert": new_name, "sources": len(ids)}
+
+    def close_expert(self, name: str) -> dict:
+        """Dissolve an expert: its notes return to shared memory (nothing is forgotten)."""
+        with self._lock:
+            ids = [r[0] for r in self.store.conn.execute("SELECT source_id FROM source WHERE expert=?", (name,))] \
+                if self.store.has_experts() else []
+            self.store.set_expert(ids, None)
+        return {"sources": len(ids)}
+
     def _file_sources(self, doc_id: str) -> list[int]:
         """A file's sources: its text, and what was learned about it later ("<doc_id>#…")."""
         return [r[0] for r in self.store.conn.execute(
@@ -740,7 +828,7 @@ class Assistant:
             pages = []
         return {"file_id": fid, "name": r[0], "kind": r[1], "page_count": r[2], "summary": r[3],
                 "chips": json.loads(r[4] or "[]"), "questions": json.loads(r[5] or "[]"), "seen": r[6] or "",
-                "problem": r[7] or "", "pages": pages}
+                "problem": r[7] or "", "pages": pages, "expert": self._file_expert(f"file-{r[0]}")}
 
     def vision_model(self) -> str:
         """The installed model that can look at images ("" if none): the one chosen in Settings, else the first
@@ -839,6 +927,7 @@ class Assistant:
             about = f"From {name}" + (f" ({info['summary'].rstrip('.')})" if info.get("summary") else "") + ":\n"
             notes = self.teach(about + "\n".join(facts), title=f"{Path(name).stem} ({what.lower()})", kind="file",
                                doc_id=f"file-{name}#focus-{re.sub(r'[^a-z]+', '-', what.lower()).strip('-')}")
+            self._with_file(f"file-{name}")
         answer = ("\n".join(f"- {f}" for f in facts) if facts else f"I couldn't find {what.lower()} in {name}.")
         out = {"facts": facts, "notes": notes, "focus": what}
         if conversation_id is not None:
@@ -856,6 +945,7 @@ class Assistant:
         what = f" ({info['summary'].rstrip('.')})" if info.get("summary") else ""  # so the note stands on its own
         notes = self.teach(f"About the file {name}{what}: " + (f"asked “{q}”, the user said: " if q else "") + reply,
                            title=f"{Path(name).stem} (what you told me)", kind="file", doc_id=f"file-{name}#told-{k}")
+        self._with_file(f"file-{name}")
         answer = f"Got it. I'll remember that with {name}." if notes else "I already had that."
         yield {"type": "recall", "sources": [], "abstained": False, "retrieval_ms": 0.0, "small_talk": True,
                "conversation_id": conversation_id, "learned": None}
@@ -876,6 +966,7 @@ class Assistant:
                 k = len(self._file_sources(f"file-{reading.name}"))
             notes = self.teach(text, title=f"{Path(reading.name).stem} (part you chose)", kind="file",
                                doc_id=f"file-{reading.name}#part-{k}")
+            self._with_file(f"file-{reading.name}")
         return {"text": text, "lines": lines, "notes": notes}
 
     @_locked
@@ -1063,8 +1154,7 @@ class Assistant:
             yield from self._small_talk(question, conversation_id)
             return
         coding = is_code_request(question) or (self._after_code(conversation_id) and not is_about_user(question))
-        with self._lock:
-            recall = self.engine.recall(question)
+        recall, opened = self._routed_recall(question)
         learned = None
         personal = is_about_user(question)
         local_only = personal or bool(self._private_names(question))  # nothing about it is sent online
@@ -1079,14 +1169,15 @@ class Assistant:
                 with self._lock:
                     added = learn_pages(self.engine, found.pages)
                     learn_meanings(self.engine, found.meanings)
-                    recall = self.engine.recall(question)
+                recall, opened = self._routed_recall(question)
             learned = {"queries": found.queries, "notes_added": added, "ms": round(found.ms, 1),
                        "pages": [{"title": p.title, "url": p.url, "source": p.source} for p in found.pages],
                        "errors": found.errors}
             self._log_lookup(question, found, added)
         sources = self._sources(recall)
         yield {"type": "recall", "sources": [asdict(s) for s in sources], "abstained": recall.abstained,
-               "retrieval_ms": round(recall.retrieval_ms, 1), "conversation_id": conversation_id, "learned": learned}
+               "retrieval_ms": round(recall.retrieval_ms, 1), "conversation_id": conversation_id, "learned": learned,
+               "experts": opened}
         factual = _short_factual(question) and not personal and not coding
         units = []
         if factual and not recall.abstained:
@@ -1164,7 +1255,7 @@ class Assistant:
                     generation_ms=round((time.perf_counter() - t0) * 1000, 1), first_token_ms=first,
                     prompt_tokens=last.get("prompt_eval_count"), conversation_id=conversation_id, learned=learned,
                     ask_to_teach=(recall.abstained or (link or {}).get("action") == "decline") and personal,
-                    verification=verification, link=link, skill=skill)
+                    verification=verification, link=link, skill=skill, experts=opened)
         turn.turn_id = self._log(turn)
         self.last_activity = time.time()
         if self.remember_chat and not is_question(question) and not coding:
@@ -1610,6 +1701,7 @@ class Assistant:
             "device": self.device(),
             "cards": self.card_packs(),
             "trust": self.trust(),
+            "experts": self.experts(),
         }
 
     def device(self) -> dict:
