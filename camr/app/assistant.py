@@ -305,7 +305,7 @@ class Assistant:
     """A frozen local model plus a personal memory that grows with use."""
 
     def __init__(self, home: str | Path = DEFAULT_HOME, *, model: str | None = None, host: str = DEFAULT_HOST,
-                 token_budget: int = 384, history_turns: int = 6, remember_chat: bool = True,
+                 token_budget: int = 512, history_turns: int = 6, remember_chat: bool = True,
                  min_similarity: float | None = None, embedder: Embedder | None = None,
                  session: requests.Session | None = None, web_lookup: WebLookup | None = None):
         self.home = Path(home).expanduser()
@@ -346,7 +346,10 @@ class Assistant:
                        "keyword_k": 20,
                        # Phase 2 (results/bench/phase2): dates and periods, profile notes, counting, the slot gate
                        "dated_context": True, "time_filter": True, "entity_gate_skip_time": True, "profile": True,
-                       "aggregate": True, "slot_gate": True, "compress": "sentences"},
+                       # whole notes at 512 tokens: sentence compression (the "compress" flag) was chosen first,
+                       # under a scoring rule that did not check the answer survived, and reversed once it did
+                       # (results/bench/phase2/rescore)
+                       "aggregate": True, "slot_gate": True},
         })
         # One store file per embedder: vectors from different embedders cannot be mixed.
         db = "memory.sqlite" if embedder is not None or self.embedder.name.startswith("BAAI") else \

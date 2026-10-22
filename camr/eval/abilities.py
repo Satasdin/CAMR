@@ -67,6 +67,17 @@ class Cand:
     via_bridge: bool = False
     position: int | None = None  # place in the context (0 first); None: in rank order
     lane: str = ""  # "profile": a profile note the read path offers to every question (outside the gates)
+    compressed: bool = False  # the context shows only part of the note (sentences dropped, or one line of it)
+
+
+@dataclass(frozen=True)
+class Evidence:
+    """What must survive in the context for a needed fact to count as answered: the gold answer itself when the
+    turn says it ("string"), else the turn's sentence most like the gold answer ("sentence"); "none" when neither
+    can be told, and then a note of the turn must be shown whole."""
+
+    kind: str = "none"
+    text: str = ""
 
 
 @dataclass
@@ -80,6 +91,7 @@ class Spec:
     out_of_window: frozenset[str] = frozenset()  # A4: same topic, outside the period asked about
     rule: str = "all"
     meta: dict = field(default_factory=dict)
+    evidence: list = field(default_factory=list)  # one Evidence per needed group (empty: reaching the note is enough)
 
     def __post_init__(self):
         if self.rule not in RULES:
@@ -131,11 +143,59 @@ def tell_apart(newest: Sequence[Cand], stale: Sequence[Cand], ordered: bool = Fa
     return any(update_cue(c.text) for c in newest)
 
 
+# ---------------------------------------------------------------------- does the answer survive?
+_STOPW = {"the", "and", "for", "with", "that", "this", "was", "were", "are", "you", "your", "have", "has", "had",
+          "from", "they", "their", "but", "not", "all", "any", "can", "she", "her", "his", "him", "its", "our",
+          "would", "should", "could", "about", "into", "than", "then", "also", "user", "prefer", "preferred",
+          "responses", "suggestions", "suggest", "would", "like", "might"}
+
+
+def norm_words(text: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def _content(words: Iterable[str]) -> set[str]:
+    return {w for w in words if len(w) > 2 and w not in _STOPW}
+
+
+def answer_evidence(turn_texts: Sequence[str], answer: str) -> Evidence:
+    """The part of a needed turn that carries the answer (see ``Evidence``)."""
+    full = " ".join(turn_texts)
+    nf, na = f" {norm_words(full)} ", norm_words(str(answer))
+    if len(na) >= 3 and len(na) <= 40 and f" {na} " in nf:
+        return Evidence("string", na)
+    aw = _content(na.split())
+    if aw:
+        sents = [x for x in re.split(r"(?<=[.!?])\s+|\n+", full) if x.strip()]
+        best = max(sents, key=lambda x: len(aw & set(norm_words(x).split())), default="")
+        hit = len(aw & set(norm_words(best).split()))
+        if hit >= 2 or (hit == 1 and len(aw) == 1):
+            return Evidence("sentence", norm_words(best))
+    return Evidence("none")
+
+
+def evidence_kept(ev: Evidence, shown: Sequence[Cand]) -> bool:
+    """Does what the context shows of a needed turn still hold its answer?"""
+    if not shown:
+        return False
+    if ev.kind == "string":
+        return f" {ev.text} " in f" {norm_words(' '.join(c.text for c in shown))} "
+    if ev.kind == "sentence":
+        words = _content(ev.text.split()) or set(ev.text.split())
+        have = set(norm_words(" ".join(c.text for c in shown)).split())
+        return len(words & have) >= 0.8 * len(words)
+    return any(not c.compressed for c in shown)
+
+
 # ---------------------------------------------------------------------- one question
 def miss_reason(group: frozenset[str], cands: Sequence[Cand], *, abstained: bool, top_similarity: float | None,
                 min_similarity: float, gate: str | None = None) -> str:
-    """Why a needed fact did not reach the context: where its best note was lost on the read path."""
+    """Why a needed fact did not reach the context: where its best note was lost on the read path, or, when a note
+    of it is there, how its answer was lost (cut by compression, or in another chunk of the turn)."""
     mine = [c for c in cands if c.keys & group]
+    shown = [c for c in mine if c.admitted]
+    if shown:
+        return "answer cut" if any(c.compressed for c in shown) else "answer in another chunk"
     if not mine:
         return "not retrieved"  # outside the top-k vector hits and the keyword hits
     best = min(mine, key=lambda c: c.rank or 10**9)
@@ -157,6 +217,11 @@ def score(spec: Spec, cands: Sequence[Cand], *, abstained: bool, retrieval_ms: f
         adm.sort(key=lambda c: c.position)
     relevant = frozenset().union(*spec.needed) if spec.needed else frozenset()
     reached = [any(c.keys & g for c in adm) for g in spec.needed]
+    if spec.evidence:  # a needed fact counts only if its answer survives in what the context shows
+        answered = [r and evidence_kept(ev, [c for c in adm if c.keys & g])
+                    for g, r, ev in zip(spec.needed, reached, spec.evidence)]
+    else:
+        answered = list(reached)
     tokens = sum(c.tokens for c in adm)
     distract = sum(c.tokens for c in adm if not (c.keys & relevant))
     stale_in = any(c.keys & spec.stale for c in adm)
@@ -164,25 +229,26 @@ def score(spec: Spec, cands: Sequence[Cand], *, abstained: bool, retrieval_ms: f
     stale_first = stale_in and (first_new is None or any(c.keys & spec.stale for c in adm[:first_new]))
     oow_in = any(c.keys & spec.out_of_window for c in adm)
     if spec.rule == "all":
-        passed = bool(reached) and all(reached)
+        passed = bool(answered) and all(answered)
     elif spec.rule == "newest":
         newest = [c for c in adm if c.keys & spec.needed[0]] if spec.needed else []
         stale = [c for c in adm if c.keys & spec.stale]
-        passed = bool(newest) and (not stale or tell_apart(newest, stale, ordered))
+        passed = bool(answered) and answered[0] and (not stale or tell_apart(newest, stale, ordered))
     elif spec.rule == "temporal":
-        dated = [any((c.keys & g) and has_date(c.text) for c in adm) for g in spec.needed]
+        dated = [a and any((c.keys & g) and has_date(c.text) for c in adm) for g, a in zip(spec.needed, answered)]
         passed = bool(dated) and all(dated) and not oow_in
     elif spec.rule == "abstain":
         passed = abstained
     else:  # no_harm: nothing from ranked memory (the profile lane is reported apart)
         passed = sum(c.tokens for c in adm if c.lane != "profile") == 0
     misses = [miss_reason(g, cands, abstained=abstained, top_similarity=top_similarity,
-                          min_similarity=min_similarity, gate=gate) for g, r in zip(spec.needed, reached) if not r]
+                          min_similarity=min_similarity, gate=gate) for g, a in zip(spec.needed, answered) if not a]
     return {
         "qid": spec.qid, "ability": spec.ability, "suite": spec.suite, "rule": spec.rule,
         "question": spec.question, "passed": bool(passed),
-        "needed": len(spec.needed), "reached": sum(reached),
-        "all_needed": (all(reached) if spec.needed else None),
+        "needed": len(spec.needed), "reached": sum(reached), "answered": sum(answered),
+        "all_needed": (all(answered) if spec.needed else None),
+        "evidence": [e.kind for e in spec.evidence],
         "distractor_share": round(distract / tokens, 4) if tokens else 0.0,
         "context_tokens": tokens, "admitted": len(adm),
         "profile_tokens": sum(c.tokens for c in adm if c.lane == "profile"),
@@ -214,6 +280,7 @@ def lme_spec(item: dict) -> Spec:
     sessions = dict(zip(item["haystack_session_ids"], item["haystack_sessions"]))
     dates = dict(zip(item["haystack_session_ids"], item["haystack_dates"]))
     groups: dict[str, frozenset[str]] = {}
+    evidence: dict[str, Evidence] = {}
     unflagged = 0
     for sid in item["answer_session_ids"]:
         turns = sessions.get(sid)
@@ -224,6 +291,7 @@ def lme_spec(item: dict) -> Spec:
             unflagged += 1
             flagged = list(range(len(turns)))
         groups[sid] = frozenset(turn_key(sid, i) for i in flagged)
+        evidence[sid] = answer_evidence([turns[i].get("content") or "" for i in flagged], item.get("answer", ""))
     meta = {"type": qtype, "answer": str(item.get("answer", ""))[:200], "evidence_sessions": len(groups),
             "unflagged_sessions": unflagged}
     if qid.endswith("_abs"):
@@ -233,9 +301,10 @@ def lme_spec(item: dict) -> Spec:
         newest = max(groups, key=lambda s: (dates.get(s, ""), s))
         stale = frozenset().union(*(g for s, g in groups.items() if s != newest))
         return Spec(qid, ability, suite, item["question"], needed=[groups[newest]], stale=stale, rule="newest",
-                    meta=meta)
+                    meta=meta, evidence=[evidence[newest]])
     rule = "temporal" if qtype == "temporal-reasoning" else "all"
-    return Spec(qid, ability, suite, item["question"], needed=list(groups.values()), rule=rule, meta=meta)
+    return Spec(qid, ability, suite, item["question"], needed=list(groups.values()), rule=rule, meta=meta,
+                evidence=[evidence[s] for s in groups])
 
 
 def stratified_sample(items: Sequence[dict], key: Callable[[dict], str], per_group: int | None,

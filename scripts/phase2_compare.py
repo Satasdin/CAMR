@@ -42,15 +42,59 @@ def pct(x) -> str:
     return "–" if x is None else f"{100 * x:.0f}%"
 
 
+# The headline, scored with the answer-survives rule (LongMemEval records re-run with it, results/bench/phase2/rescore;
+# the CAMR probes, needles and checks have no LongMemEval evidence, so their records stand as they were scored).
+HEADLINE = [("baseline", [BASE / "camr.jsonl", BASE / "a8.jsonl", BASE / "scale.jsonl",
+                          P2 / "rescore" / "baseline" / "records" / "lme.jsonl"], "the read path before Phase 2"),
+            ("phase2-compressed", [P2 / "step5-final" / "records" / f for f in ("camr.jsonl", "a8.jsonl", "scale.jsonl")]
+             + [P2 / "rescore" / "final" / "records" / "lme.jsonl"],
+             "Phase 2 as first shipped: compression at 384 tokens (reversed)"),
+            ("phase2b", [P2 / "phase2b" / "records" / f for f in ("camr.jsonl", "a8.jsonl", "lme.jsonl", "scale.jsonl")],
+             "CAMR Personal now: whole notes at 512 tokens, tightened profile notes")]
+
+
+def headline() -> list[str]:
+    cols = [(n, [json.loads(x) for f in fs if f.exists() for x in f.read_text().splitlines() if x.strip()], why)
+            for n, fs, why in HEADLINE]
+    cols = [c for c in cols if c[1]]
+    if not cols:
+        return []
+    cards = {n: scorecard(rs) for n, rs, _ in cols}
+    L = ["## Before and after (answer must survive)", "",
+         "| | Ability | " + " | ".join(n for n, _, _ in cols) + " |", "|---|---|" + "---|" * len(cols)]
+    for ab in ABILITIES:
+        L.append(f"| {ab} | {ABILITIES[ab]} | " + " | ".join(
+            pct(cards[n][ab]["pass_rate"]) + (f" ({cards[n][ab]['n']})" if i == 0 else "") for i, (n, _, _) in
+            enumerate(cols)) + " |")
+    L += ["", "| Run | Mean context tokens | Distractor share | Profile lines (questions reached) |", "|---|---|---|---|"]
+    for n, rs, why in cols:
+        q = [r for r in rs if r.get("rule") and r["suite"].startswith("lme")]
+        prof = [r for r in q if r.get("context_text") is not None]
+        lines = sum(r["context_text"].count("[about the user]") for r in prof)
+        reached = sum(1 for r in prof if "[about the user]" in r["context_text"])
+        L.append(f"| {n}: {why} | {statistics.fmean(r['context_tokens'] for r in q):.0f} | "
+                 f"{pct(statistics.fmean(r['distractor_share'] for r in q))} | "
+                 + (f"{lines} ({reached} of {len(prof)} LongMemEval questions)" if prof else "–") + " |")
+    return L + [""]
+
+
 def main() -> None:
     have = [(n, d, why) for n, d, why in STEPS if d.exists() and any(d.glob("*.jsonl"))]
     cards = {n: scorecard(records(d)) for n, d, _ in have}
     out = {"steps": {n: {ab: {k: v for k, v in s.items() if k != "suites"} for ab, s in c.items()}
                      for n, c in cards.items()}}
+    corr = P2 / "correction.md"  # a later re-scoring that supersedes part of these tables
     L = ["# Phase 2: closing the gaps the engine bench found", "",
-         "Each step turns on one more change (a MemoryConfig flag, off by default; CAMR Personal turns them on) and "
-         "re-runs the whole engine bench: 260 LongMemEval questions, the CAMR probes, the needle stores at 1k/10k/"
-         "100k, the forget and privacy checks. Pass rates per ability (n in the baseline column).", "",
+         *([corr.read_text().rstrip(), ""] if corr.exists() else []),
+         *headline(),
+         "## Step by step, first scoring rule (history)", "",
+         "Kept as the record of how each change was measured. This rule counted a needed fact once a note of its "
+         "turn reached the context; it overstates compression (step 4 and step 5) badly and whole-note rows a "
+         "little (an answer can sit in another 120-token chunk of the turn). The headline above and "
+         "rescore/README.md use the answer-survives rule.", "",
+         "Each step turns on one more change (a MemoryConfig flag, off by default) and re-runs the whole engine "
+         "bench: 260 LongMemEval questions, the CAMR probes, the needle stores at 1k/10k/100k, the forget and "
+         "privacy checks. Pass rates per ability (n in the baseline column).", "",
          "| | Ability | " + " | ".join(n for n, _, _ in have) + " |",
          "|---|---|" + "---|" * len(have)]
     for ab in ABILITIES:
