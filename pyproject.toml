@@ -1,0 +1,27 @@
+[project]
+name = "engram"
+version = "0.0.1"
+description = "Memory that lives on the SSD and grows: a small local model that keeps getting better, never heavier."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Ibrahim Sudheysi Ali" }]
+dependencies = [
+  "numpy>=1.26",
+  "mlx>=0.29; sys_platform == 'darwin'",
+  "mlx-lm>=0.28; sys_platform == 'darwin'",
+]
+
+[project.optional-dependencies]
+# the old CAMR contender; camr itself is installed from ~/Desktop/camr-repo (uv pip install --no-deps -e)
+baseline = ["pyyaml>=6.0", "requests>=2.31", "sqlite-vec>=0.1.6"]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["engram*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
