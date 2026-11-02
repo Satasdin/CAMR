@@ -6,6 +6,7 @@ For each contender the newest record of a life is used. Colour means contender, 
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 from engram.ruler.harness import RECORDS
@@ -29,6 +30,13 @@ def newest(persona: str, seed: int, records: Path = RECORDS) -> dict[str, dict]:
     return {k: v[1] for k, v in out.items()}
 
 
+def _nice(top: float, lines: int = 4) -> float:
+    """The smallest axis top at or above ``top`` whose ``lines`` gridlines fall on round numbers (6, 12, 18, 24)."""
+    step = top / lines
+    scale = 10 ** math.floor(math.log10(step)) if step > 0 else 1
+    return lines * scale * next(m for m in (1, 2, 2.5, 3, 4, 5, 6, 8, 10) if m * scale >= step)
+
+
 def _panel(x0, y0, w, h, title, series, ymax, unit, ceiling=None):
     weeks = 12
     X = lambda wk: x0 + (wk - 1) / (weeks - 1) * w
@@ -37,7 +45,7 @@ def _panel(x0, y0, w, h, title, series, ymax, unit, ceiling=None):
     for i in range(5):
         v = ymax * i / 4
         s.append(f'<line x1="{x0}" x2="{x0 + w}" y1="{Y(v):.1f}" y2="{Y(v):.1f}" stroke="{RULE}"/>')
-        label = f"{v:.0f}" if ymax >= 10 else f"{v:.1f}"
+        label = f"{v:.0f}" if float(ymax / 4).is_integer() else f"{v:.1f}"
         s.append(f'<text x="{x0 - 8}" y="{Y(v) + 4:.1f}" fill="{MUTED}" font-size="11" text-anchor="end">{label}{unit}</text>')
     for wk in range(1, weeks + 1):
         s.append(f'<text x="{X(wk):.1f}" y="{y0 + h + 18}" fill="{MUTED}" font-size="11" text-anchor="middle">{wk}</text>')
@@ -76,10 +84,10 @@ def draw(persona: str, seed: int, records: Path = RECORDS, out: Path | None = No
     s += _panel(L, 140, w, 260, "Facts it answers right (of 100 questions)", knows, 100, "", ceiling)
     waits = [(n, [(wk["week"], wk["summary"]["wait_median_s"] or 0) for wk in runs[n]["weeks"]]) for n in order]
     top = max([v for _, pts in waits for _, v in pts] + [1.0])
-    s += _panel(L, 470, w, 140, "Wait for the first word (median, seconds)", waits, round(top * 1.15 + 0.5), "")
+    s += _panel(L, 470, w, 140, "Wait for the first word (median, seconds)", waits, _nice(top), "")
     ram = [(n, [(wk["week"], wk["peak_ram_gb"] or 0) for wk in runs[n]["weeks"]]) for n in order]
-    s += _panel(L, 680, w, 120, "Peak memory while answering (GB)", ram, max(4.0, round(max(
-        [v for _, pts in ram for _, v in pts] + [0]) * 1.2 + 0.5)), "")
+    s += _panel(L, 680, w, 120, "Peak memory while answering (GB)", ram, max(4.0, _nice(max(
+        [v for _, pts in ram for _, v in pts] + [0]))), "")
     s.append(f'<text x="{L + w / 2}" y="{H - 14}" fill="{MUTED}" font-size="12" text-anchor="middle">week</text></svg>')
     out = out or records / "charts" / f"growth-{persona}-s{seed}.svg"
     out.parent.mkdir(parents=True, exist_ok=True)

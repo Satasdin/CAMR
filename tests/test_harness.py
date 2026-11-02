@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 
 from engram.models import Reply
-from engram.ruler.chart import draw
+from engram.ruler.chart import _nice, draw
 from engram.ruler.contenders import Contender
 from engram.ruler.harness import run
 from engram.ruler.life import build
@@ -55,3 +55,8 @@ def test_the_chart_draws_both_contenders_from_their_records(tmp_path):
     run(life, Forgetful(), weeks=2, records=records, progress=lambda m: None)
     svg = draw("developer", 0, records).read_text()
     assert svg.startswith("<svg") and "perfect reader" in svg and "1.7B alone" in svg and "told so far" in svg
+
+
+def test_axis_tops_are_round_so_gridlines_land_on_round_numbers():
+    assert [_nice(t) for t in (22.1, 17.3, 3.35, 1.0)] == [24, 20, 4, 1]
+    assert _nice(0.2) == 0.2
