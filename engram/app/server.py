@@ -196,5 +196,5 @@ def serve(app: App, port: int) -> None:
             self._json({"error": "not found"}, 404)
 
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"engram is listening on http://127.0.0.1:{port}  (memory: {app.memory.rooms.path})", flush=True)
+    print(f"CAMR is listening on http://127.0.0.1:{port}  (memory: {app.memory.rooms.path})", flush=True)
     httpd.serve_forever()
