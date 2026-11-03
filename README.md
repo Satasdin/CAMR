@@ -1,4 +1,4 @@
-# engram
+# CAMR
 
 **Better, never heavier.** A small language model on a Mac whose memory lives on the SSD and grows. It keeps getting
 better at your life without getting slower or bigger.
@@ -28,13 +28,26 @@ model then reads only those few words and the question.
 Why one room and not several: notes written apart don't read well side by side for a 1.7B model. DECISIONS.md E-15
 and E-16 have the measurements.
 
-## Use it: the app
+## Install and run (Apple-silicon Mac)
 
 ```sh
-python -m engram.app          # then open http://127.0.0.1:8765  (memory in ~/.engram/default)
+sh scripts/install.sh
 ```
 
-One local page, three tabs:
+The script:
+- sets up Python;
+- installs CAMR;
+- downloads its two models (about 1.3 GB, first run only);
+- runs a health check that should end in `PASS`;
+- opens the app at http://127.0.0.1:8765.
+
+After that, `.venv/bin/python -m engram.app --open` starts it again. The [user guide](docs/USER_GUIDE.md) covers each tab, a five-minute demonstration, and troubleshooting.
+
+## Use it: the app
+
+One local page, four tabs:
+- **Simulation:** a 12-week scripted life arrives day by day in its own memory, quizzed every week. Charts show facts known climbing while the wait and the memory in use stay flat; it takes about 90 seconds.
+
 - **Chat:** tell it things and it remembers them; ask with a question mark and it answers from memory.
 - **Errands:** an agent with ten tools. Engram fills each tool's details from memory ("Set a reminder for my
   neighbour's birthday" becomes `set_reminder(date = "10 October")`).
