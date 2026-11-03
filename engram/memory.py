@@ -59,11 +59,13 @@ class Memory:
             raise ValueError("a full room must fit the allowance")
         self.rooms = Rooms(path, self.notebook.shape.token_bytes, room_tokens, join)
 
-    def prompt(self, today: dt.date, question: str) -> tuple[list[int], list[int]]:
-        """The header (same every time, kept in RAM as notes) and the part after the room, as token ids."""
-        system = f"{INTRO}\n\nNotes:\n{_SLOT}End of notes.\nToday is {today_text(today)}."
+    def prompt(self, today: dt.date, question: str, then: str = "", tools: list | None = None
+               ) -> tuple[list[int], list[int]]:
+        """The header (same every time, kept in RAM as notes) and the part after the room, as token ids. ``then``
+        (instructions for this kind of request) and ``tools`` come after the notes, so the header never changes."""
+        system = f"{INTRO}\n\nNotes:\n{_SLOT}End of notes.\nToday is {today_text(today)}." + (f"\n\n{then}" if then else "")
         text = self.reader.tok.apply_chat_template([{"role": "system", "content": system},
-                                                    {"role": "user", "content": question}],
+                                                    {"role": "user", "content": question}], tools=tools,
                                                    add_generation_prompt=True, enable_thinking=False, tokenize=False)
         head, rest = text.split(_SLOT)
         return self.reader.tok.encode(head), self.reader.tok.encode(rest)
@@ -114,10 +116,11 @@ class Memory:
         rec.seconds["desk"] = time.perf_counter() - t
         return rec
 
-    def answer(self, question: str, today: dt.date):
+    def answer(self, question: str, today: dt.date, *, then: str = "", tools: list | None = None,
+               max_tokens: int | None = None, kind: str = "answer", **extra):
         """Answer from the desk, and log what was picked up and how hard each written word looked at it."""
         t = time.perf_counter()
-        head, rest = self.prompt(today, question)
+        head, rest = self.prompt(today, question, then, tools)
         rec = self.recall(question)
         ids = self.words(rec.closest) + rest
         spans = [] if rec.room is None else [(m, self.rooms.moments[m].start, self.rooms.moments[m].tokens)
@@ -130,18 +133,19 @@ class Memory:
         before = time.perf_counter() - t
         if self.log:
             with Looks(self.reader, self.notebook.p, spans, self.notebook.p + rec.tokens + len(ids), rec.desk) as looks:
-                reply = self.reader.generate(ids, cache=rec.desk)
+                reply = self.reader.generate(ids, cache=rec.desk, max_tokens=max_tokens)
         else:
-            reply = self.reader.generate(ids, cache=rec.desk)
+            reply = self.reader.generate(ids, cache=rec.desk, max_tokens=max_tokens)
         reply.ttft_s += before
         reply.prompt_tokens += len(head) + rec.tokens
         if self.log:
             per_word = looks.per_word(len(reply.pieces))
             share, use = used(per_word, looks.nodes)
-            self.log.write("answer", question=question, room=rec.room, closest=rec.closest, nodes=looks.nodes,
+            self.log.write(kind, question=question, room=rec.room, closest=rec.closest, nodes=looks.nodes,
                            share=share, used=use, words=reply.pieces,
                            looks=[[round(float(x), 4) for x in row] for row in per_word],
-                           wait_s=round(reply.ttft_s, 4), seconds={k: round(v, 4) for k, v in rec.seconds.items()})
+                           wait_s=round(reply.ttft_s, 4), seconds={k: round(v, 4) for k, v in rec.seconds.items()},
+                           **extra)
         return reply
 
     def words(self, moments: list[int]) -> list[int]:

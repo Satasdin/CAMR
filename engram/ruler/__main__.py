@@ -3,6 +3,7 @@
   python -m engram.ruler run --persona student --seed 1 --contender camr
   python -m engram.ruler chart --persona student --seed 1
   python -m engram.ruler speed --persona student             # first word by memory on the desk: notes vs words
+  python -m engram.ruler errands --persona farmer --seed 1 --contender engram   # the agent use case
   python -m engram.ruler life --persona farmer --seed 0      # look at a life and its quiz
 """
 
@@ -35,6 +36,11 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--persona", choices=sorted(PERSONAS), required=True)
     c.add_argument("--seed", type=int, default=1)
     c.add_argument("--records", type=Path)
+    e = sub.add_parser("errands", help="every quiz question as a task with tools, on the life's last day")
+    e.add_argument("--persona", choices=sorted(PERSONAS), required=True)
+    e.add_argument("--seed", type=int, default=1)
+    e.add_argument("--contender", choices=["bare", "camr", "engram"], required=True)
+    e.add_argument("--records", type=Path)
     s = sub.add_parser("speed", help="time to first word by memory on the desk: engram's notes against words")
     s.add_argument("--persona", choices=sorted(PERSONAS), default="student")
     s.add_argument("--records", type=Path)
@@ -73,6 +79,12 @@ def main(argv: list[str] | None = None) -> int:
         out = records / "speed" / f"{dt.date.today().isoformat()}-{a.persona}.json"
         measure(Reader(READER), Embedder(), records.parent / "work" / f"speed-{a.persona}", a.persona, out)
         print(out)
+        return 0
+    if a.cmd == "errands":
+        from engram.ruler.errands import run as errands
+
+        print(errands(build(a.persona, a.seed), a.contender, Reader(READER), Embedder(),
+                      records.parent / "work" / f"{a.persona}-s{a.seed}-errands-{a.contender}", records))
         return 0
     life = build(a.persona, a.seed)
     reader = Reader(READER_BIG if a.contender == "camr-4b" else READER)

@@ -215,3 +215,53 @@ from not knowing:
 | false memory | 0.34 |
 | missed | 0.19 |
 | "I don't know" | 0.20 |
+
+## Use cases: chat, errands and the brain view in one app (3 November 2026)
+
+**E-22 Two days left, so the build order stops at step 2.** Ibrahim's call. The time goes to showing engram in use
+instead:
+- chat-style work;
+- agentic work;
+- the brain view, for assessing what went wrong or simply watching it work.
+
+The translation layer, sleep and the full proof run (steps 3 to 6) become future work.
+
+**E-23 The agent use case is errands made from the quiz.** Each quiz question becomes an everyday task whose tool
+needs that exact fact: "Where does my vet live?" becomes "Book me a ride to my vet's home", which calls
+`book_ride(destination)`. Ten pretend tools, including `ask_user`. A task is graded exactly like the quiz, on the
+argument that should hold the fact: asking counts as declining, a wrong tool as a wrong answer.
+
+The task instructions come after the notes. The chat template puts the tool list there too, so chat and errands
+share one header and one set of saved notes.
+
+On the development lives, a stricter wording ("every argument must be a value written in the notes") did no better:
+41/85 and 41/85 on the farmer, 41/85 and 40/85 on the student. So the plain wording stays. Either way the 1.7B
+model never called `ask_user`. It filled a never-told argument with a guess, or with words copied from the task
+("mum's home").
+
+**E-24 The app.** `python -m engram.app` serves one local page with three tabs: Chat, Errands and Brain.
+- **Chat:** a message ending in "?" is answered from memory; anything else is remembered as a dated moment.
+- **Errands:** one task, one tool call, filled from memory.
+- **Brain:** any answer or errand replayed word by word on the specimen view from the design rounds, with the
+  traces strip underneath. For an errand, the strip shows only the argument values: the part that came from memory.
+  A loaded life can be quizzed, so the Brain tab can sort what went wrong from what went right.
+
+The server listens on 127.0.0.1 only. Memory lives in `~/.engram/default` and reopens where it left off. The map
+layout is a plain-numpy t-SNE, which takes 1.3 s for 332 moments and is recomputed only when moments are added.
+
+**E-25 The errands, measured.** The three proof lives (seed 1), the last day, all 100 errands each, on the MacBook
+Pro M5 Pro. The 1.7B reader is the same for all three; only the memory differs. Added together:
+
+| Memory behind the agent | Right (of 255 told) | Old value | Made up (of 45 never told) | Asked | First word |
+|---|---|---|---|---|---|
+| none (the 1.7B alone) | 1 | 0 | 44 | 0 | 0.15 s |
+| the old CAMR | 40 | 6 | 45 | 0 | 0.16 s |
+| engram | **122** | 16 | 42 | 0 | 0.19 s |
+
+Engram does three times as many errands right as the old CAMR. Yet on the quiz the two are level (164 and 166 of
+255, E-20). The old CAMR's gates and entity bridging were tuned for questions, and an errand worded as a request
+("Book me a ride to my vet's home") falls past them. Engram opens the room holding the closest moment, however the
+request is worded.
+
+None of them ever asked. A 1.7B agent fills a never-told argument with a guess. That is the weakness to fix next
+(settling unsure facts at recall, from the plan) and the clearest thing the Brain tab can show.

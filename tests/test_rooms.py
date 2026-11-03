@@ -61,3 +61,13 @@ def test_the_index_is_saved_beside_the_rooms(tmp_path):
     index = json.loads((tmp_path / "index.json").read_text())
     assert index["moments"][0]["text"] == "Amina moved to Nakuru." and rooms.disk_bytes() == 3 * TB
     assert np.load(tmp_path / "vectors.npy").shape == (1, 2)
+
+
+def test_a_saved_memory_opens_where_it_left_off(tmp_path):
+    rooms = Rooms(tmp_path, TB, room_tokens=100, join=0.8)
+    put(rooms, "Amina moved to Nakuru.", 0, unit(1, 0), notes(3, 1))
+    put(rooms, "Paid the electricity bill.", 1, unit(0, 1), notes(2, 2))
+    rooms.save()
+    again = Rooms(tmp_path, TB, room_tokens=100, join=0.8)
+    assert [m.text for m in again.moments] == ["Amina moved to Nakuru.", "Paid the electricity bill."]
+    assert again.vectors.shape == (2, 2) and bytes(again.fetch([0])[0]) == notes(3, 1)

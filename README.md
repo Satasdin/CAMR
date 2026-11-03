@@ -12,11 +12,8 @@ https://claude.ai/artifact/9ZeFGovgtQHjGfKw7CJ8AN. Technical calls are logged in
 |---|---|---|
 | 0 | The ruler: scripted lives, weekly quiz, test records, baselines | done |
 | 1 | Rooms and notes | done (2 of 3 marks passed, E-20) |
-| 2 | Event log and first brain view | next |
-| 3 | Translation layer and shorthand | |
-| 4 | Sleep | |
-| 5 | The full brain view | |
-| 6 | The proof run | |
+| 2 | Event log and first brain view | done: the log, and the brain view inside the app |
+| 3–6 | Translation layer, sleep, full brain view, proof run | future work (E-22) |
 
 ## How engram remembers (step 1)
 
@@ -30,6 +27,39 @@ model then reads only those few words and the question.
 
 Why one room and not several: notes written apart don't read well side by side for a 1.7B model. DECISIONS.md E-15
 and E-16 have the measurements.
+
+## Use it: the app
+
+```sh
+python -m engram.app          # then open http://127.0.0.1:8765  (memory in ~/.engram/default)
+```
+
+One local page, three tabs:
+- **Chat:** tell it things and it remembers them; ask with a question mark and it answers from memory.
+- **Errands:** an agent with ten tools. Engram fills each tool's details from memory ("Set a reminder for my
+  neighbour's birthday" becomes `set_reminder(date = "10 October")`).
+- **Brain:** any answer or errand replayed word by word. Memory is drawn as a glowing specimen: each moment a red
+  cell, each room a lobe. The moments each written word leaned on flare green; the ones only picked up get a white
+  ring. A traces strip underneath has one row per moment. "Went wrong" and "Went right" sort a quizzed life's
+  answers, for assessing what went wrong or just watching it work.
+
+To see it on a whole life, load one in the Chat tab (about 330 moments) and press "Ask its 100 questions" or
+"Give it 100 errands".
+
+## The agent use case: errands (3 November 2026)
+
+Every quiz question becomes an errand whose tool needs that fact. "Where does my vet live?" becomes "Book me a ride
+to my vet's home", which calls `book_ride(destination)`. These are the three proof lives, last day, the same 1.7B
+reader and tools for each contender:
+
+| Memory behind the agent | Right (of 255) | Made up (of 45 never told) | First word |
+|---|---|---|---|
+| none (1.7B alone) | 1 | 44 | 0.15 s |
+| old CAMR | 40 | 45 | 0.16 s |
+| **engram** | **122** | 42 | 0.19 s |
+
+Engram does three times as many errands right as the old CAMR, which only matches it at answering questions.
+None of them ever asks when it doesn't know (DECISIONS.md E-25).
 
 ## Results on the MacBook Pro M5 Pro (3 November 2026)
 
@@ -80,6 +110,8 @@ python -m engram.ruler life --persona farmer --seed 0     # read a life and its 
 python -m engram.ruler run --persona student --seed 1 --contender engram
 python -m engram.ruler chart --persona student --seed 1   # records/charts/growth-student-s1.svg
 python -m engram.ruler speed --persona student            # first word by memory on the desk
+python -m engram.ruler errands --persona farmer --seed 1 --contender engram   # the agent use case
+scripts/errands.sh                                         # errands for every contender and life
 scripts/step1.sh                                           # every contender through the three proof lives
 pytest
 ```

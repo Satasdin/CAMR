@@ -36,9 +36,10 @@ class Reader:
         self.repo, self.max_tokens = repo, max_tokens
         self.model, self.tok = load(repo)
 
-    def chat_ids(self, system: str, user: str) -> list[int]:
+    def chat_ids(self, system: str, user: str, tools: list | None = None) -> list[int]:
         msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-        text = self.tok.apply_chat_template(msgs, add_generation_prompt=True, enable_thinking=False, tokenize=False)
+        text = self.tok.apply_chat_template(msgs, tools=tools, add_generation_prompt=True, enable_thinking=False,
+                                            tokenize=False)
         return self.tok.encode(text)
 
     def split_ids(self, system: str, user: str) -> tuple[list[int], list[int]]:
@@ -51,12 +52,12 @@ class Reader:
             raise ValueError("the system part does not tokenize on its own")
         return head, ids[len(head):]
 
-    def generate(self, ids: list[int], cache=None) -> Reply:
+    def generate(self, ids: list[int], cache=None, max_tokens: int | None = None) -> Reply:
         from mlx_lm import stream_generate
 
         t0 = time.perf_counter()
         first, pieces, r = None, [], None
-        for r in stream_generate(self.model, self.tok, ids, max_tokens=self.max_tokens, prompt_cache=cache):
+        for r in stream_generate(self.model, self.tok, ids, max_tokens=max_tokens or self.max_tokens, prompt_cache=cache):
             first = first or time.perf_counter() - t0
             pieces.append(r.text)
         return Reply("".join(pieces).strip(), first or 0.0, r.generation_tps if r else 0.0, len(ids),

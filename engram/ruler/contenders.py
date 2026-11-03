@@ -175,10 +175,14 @@ class CamrText(Contender):
         super().begin_quiz(today)
         self.clock.t = dt.datetime.combine(today, dt.time(21), tzinfo=dt.timezone.utc)
 
+    def notes_for(self, question: str) -> str:
+        """The notes the old CAMR packs for a question, or "(none)" when it finds nothing."""
+        rec = self.engine.recall(question, touch=False)
+        return rec.context.strip() if not rec.abstained and rec.context.strip() else "(none)"
+
     def answer(self, question: str) -> Reply:
         t = time.perf_counter()
-        rec = self.engine.recall(question, touch=False)
-        notes = rec.context.strip() if not rec.abstained and rec.context.strip() else "(none)"
+        notes = self.notes_for(question)
         recall_s = time.perf_counter() - t
         reply = self.reader.generate(self.reader.chat_ids(SYSTEM.format(today=today_text(self.today), notes=notes),
                                                           question))

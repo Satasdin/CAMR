@@ -58,6 +58,14 @@ class Rooms:
         self.rooms: list[Room] = []
         self.vectors = np.zeros((0, 0), dtype=np.float32)
         self._pool = ThreadPoolExecutor(THREADS)
+        index = self.path / "index.json"
+        if index.exists():  # an existing memory: pick up where it was saved
+            saved = json.loads(index.read_text())
+            if saved["token_bytes"] != token_bytes:
+                raise ValueError("these rooms were written for a different model")
+            self.moments = [Moment(**m) for m in saved["moments"]]
+            self.rooms = [Room(**r) for r in saved["rooms"]]
+            self.vectors = np.load(self.path / "vectors.npy")
 
     def file(self, rid: int) -> Path:
         return self.path / f"room-{rid:06d}.notes"

@@ -1,0 +1,1461 @@
+{
+ "kind": "errands",
+ "persona": "student",
+ "seed": 1,
+ "contender": "camr",
+ "day": 83,
+ "observe_s": 3.5,
+ "environment": {
+  "machine": "Mac17,9",
+  "chip": "Apple M5 Pro",
+  "memory_gb": 24,
+  "power": "AC Power",
+  "load_1m": 1.97,
+  "python": "3.12.12",
+  "engram_commit": "88b4629",
+  "engram_dirty": true,
+  "engram_source_sha": "3e33dad6d14d0bb4",
+  "mlx": "0.32.4",
+  "mlx_lm": "0.32.2",
+  "numpy": "2.5.4"
+ },
+ "summary": {
+  "tasks": 100,
+  "told": 85,
+  "knows": 9,
+  "untold": 15,
+  "honest": 0,
+  "false_memories": 15,
+  "stale": 1,
+  "missed": 0,
+  "wrong": 75,
+  "asked": 0,
+  "no_tool": 0,
+  "wait_median_s": 0.1584
+ },
+ "tasks": [
+  {
+   "qid": "q001",
+   "kind": "abstain",
+   "task": "Find a gift for my grandfather that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": null,
+   "tool": "find_gift",
+   "args": {
+    "work": "what they do for work"
+   },
+   "said": "Find gift: work = what they do for work",
+   "verdict": "false_memory",
+   "ttft_s": 0.2948
+  },
+  {
+   "qid": "q002",
+   "kind": "single",
+   "task": "Book me a ride to my mum's home.",
+   "expected_tool": "book_ride",
+   "expected": "Isiolo",
+   "tool": "book_ride",
+   "args": {
+    "destination": "mum's home"
+   },
+   "said": "Book ride: destination = mum's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1581
+  },
+  {
+   "qid": "q003",
+   "kind": "single",
+   "task": "Order my mum's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "nyama choma",
+   "tool": "order_food",
+   "args": {
+    "dish": "my mum's favourite food"
+   },
+   "said": "Order food: dish = my mum's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1567
+  },
+  {
+   "qid": "q004",
+   "kind": "single",
+   "task": "Book a groomer for my mum's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Moto",
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "my mum's dog"
+   },
+   "said": "Book dog groomer: dog_name = my mum's dog",
+   "verdict": "wrong",
+   "ttft_s": 0.1572
+  },
+  {
+   "qid": "q005",
+   "kind": "abstain",
+   "task": "Find a gift for my neighbour that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": null,
+   "tool": "find_gift",
+   "args": {
+    "work": "databases"
+   },
+   "said": "Find gift: work = databases",
+   "verdict": "false_memory",
+   "ttft_s": 0.2651
+  },
+  {
+   "qid": "q006",
+   "kind": "single",
+   "task": "Set a reminder for my lecturer's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "13 March",
+   "tool": "set_reminder",
+   "args": {
+    "person": "my lecturer",
+    "date": "today"
+   },
+   "said": "Set reminder: person = my lecturer, date = today",
+   "verdict": "wrong",
+   "ttft_s": 0.1583
+  },
+  {
+   "qid": "q007",
+   "kind": "single",
+   "task": "Buy my brother a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "AFC Leopards",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "the team they support"
+   },
+   "said": "Buy team scarf: team = the team they support",
+   "verdict": "wrong",
+   "ttft_s": 0.1571
+  },
+  {
+   "qid": "q008",
+   "kind": "abstain",
+   "task": "Book my lecturer's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": null,
+   "tool": "book_car_service",
+   "args": {
+    "car": "my lecturer's car"
+   },
+   "said": "Book car service: car = my lecturer's car",
+   "verdict": "false_memory",
+   "ttft_s": 0.1572
+  },
+  {
+   "qid": "q009",
+   "kind": "single",
+   "task": "Order a case for my lecturer's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Infinix",
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "Apple"
+   },
+   "said": "Order phone case: phone = Apple",
+   "verdict": "wrong",
+   "ttft_s": 0.1568
+  },
+  {
+   "qid": "q010",
+   "kind": "update",
+   "task": "Book me a ride to my brother's home.",
+   "expected_tool": "book_ride",
+   "expected": "Meru",
+   "tool": "book_ride",
+   "args": {
+    "destination": "my brother's home"
+   },
+   "said": "Book ride: destination = my brother's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1576
+  },
+  {
+   "qid": "q011",
+   "kind": "time",
+   "task": "Write a diary entry for the day I presented at the research seminar.",
+   "expected_tool": "write_diary",
+   "expected": "23 January",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-01-23",
+    "event": "presented at the research seminar"
+   },
+   "said": "Write diary: date = 2026-01-23, event = presented at the research seminar",
+   "verdict": "right",
+   "ttft_s": 0.2296
+  },
+  {
+   "qid": "q012",
+   "kind": "single",
+   "task": "Order a case for my brother's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Oppo",
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "iPhone"
+   },
+   "said": "Order phone case: phone = iPhone",
+   "verdict": "wrong",
+   "ttft_s": 0.1581
+  },
+  {
+   "qid": "q013",
+   "kind": "single",
+   "task": "Book me a ride to my sister's home.",
+   "expected_tool": "book_ride",
+   "expected": "Kilifi",
+   "tool": "book_ride",
+   "args": {
+    "destination": "sister's home"
+   },
+   "said": "Book ride: destination = sister's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1566
+  },
+  {
+   "qid": "q014",
+   "kind": "single",
+   "task": "Order my landlord's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "samaki wa kupaka",
+   "tool": "order_food",
+   "args": {
+    "dish": "landlord's favourite food"
+   },
+   "said": "Order food: dish = landlord's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1567
+  },
+  {
+   "qid": "q015",
+   "kind": "time",
+   "task": "Write a diary entry for the day I lost my student ID.",
+   "expected_tool": "write_diary",
+   "expected": "30 January",
+   "tool": "write_diary",
+   "args": {
+    "date": "29 March 2026",
+    "event": "lost my student ID"
+   },
+   "said": "Write diary: date = 29 March 2026, event = lost my student ID",
+   "verdict": "wrong",
+   "ttft_s": 0.1673
+  },
+  {
+   "qid": "q016",
+   "kind": "abstain",
+   "task": "Book a groomer for my brother's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": null,
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "your brother's dog"
+   },
+   "said": "Book dog groomer: dog_name = your brother's dog",
+   "verdict": "false_memory",
+   "ttft_s": 0.1576
+  },
+  {
+   "qid": "q017",
+   "kind": "single",
+   "task": "Set a reminder for my neighbour's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "12 January",
+   "tool": "set_reminder",
+   "args": {
+    "person": "neighbour",
+    "date": "29 March"
+   },
+   "said": "Set reminder: person = neighbour, date = 29 March",
+   "verdict": "wrong",
+   "ttft_s": 0.157
+  },
+  {
+   "qid": "q018",
+   "kind": "multi",
+   "task": "Find a gift for my roommate's daughter that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "pharmacist",
+   "tool": "find_gift",
+   "args": {
+    "work": "what they do for work"
+   },
+   "said": "Find gift: work = what they do for work",
+   "verdict": "wrong",
+   "ttft_s": 0.1568
+  },
+  {
+   "qid": "q019",
+   "kind": "single",
+   "task": "Book my roommate's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Nissan Note",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my roommate's car"
+   },
+   "said": "Book car service: car = my roommate's car",
+   "verdict": "wrong",
+   "ttft_s": 0.1576
+  },
+  {
+   "qid": "q020",
+   "kind": "single",
+   "task": "Order a case for my landlord's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Samsung",
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "landlord's phone"
+   },
+   "said": "Order phone case: phone = landlord's phone",
+   "verdict": "wrong",
+   "ttft_s": 0.1572
+  },
+  {
+   "qid": "q021",
+   "kind": "update",
+   "task": "Find a gift for my landlord that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "plumber",
+   "tool": "find_gift",
+   "args": {
+    "work": "electrician"
+   },
+   "said": "Find gift: work = electrician",
+   "verdict": "stale",
+   "ttft_s": 0.2554
+  },
+  {
+   "qid": "q022",
+   "kind": "single",
+   "task": "Order my cousin's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "mukimo",
+   "tool": "order_food",
+   "args": {
+    "dish": "my cousin's favourite food"
+   },
+   "said": "Order food: dish = my cousin's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1583
+  },
+  {
+   "qid": "q023",
+   "kind": "update",
+   "task": "Book me a ride to my cousin's home.",
+   "expected_tool": "book_ride",
+   "expected": "Garissa",
+   "tool": "book_ride",
+   "args": {
+    "destination": "cousin's home"
+   },
+   "said": "Book ride: destination = cousin's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1573
+  },
+  {
+   "qid": "q024",
+   "kind": "single",
+   "task": "Set a reminder for my roommate's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "10 March",
+   "tool": "set_reminder",
+   "args": {
+    "person": "roommate",
+    "date": "29 March"
+   },
+   "said": "Set reminder: person = roommate, date = 29 March",
+   "verdict": "wrong",
+   "ttft_s": 0.1568
+  },
+  {
+   "qid": "q025",
+   "kind": "update",
+   "task": "Book my cousin's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Toyota Vitz",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my cousin's car"
+   },
+   "said": "Book car service: car = my cousin's car",
+   "verdict": "wrong",
+   "ttft_s": 0.1568
+  },
+  {
+   "qid": "q026",
+   "kind": "time",
+   "task": "Write a diary entry for the day I had my wisdom tooth removed.",
+   "expected_tool": "write_diary",
+   "expected": "28 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-03-29",
+    "event": "yesterday i had my wisdom tooth removed"
+   },
+   "said": "Write diary: date = 2026-03-29, event = yesterday i had my wisdom tooth removed",
+   "verdict": "wrong",
+   "ttft_s": 0.1658
+  },
+  {
+   "qid": "q027",
+   "kind": "single",
+   "task": "Book a groomer for my landlord's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Moto",
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "landlord's dog"
+   },
+   "said": "Book dog groomer: dog_name = landlord's dog",
+   "verdict": "wrong",
+   "ttft_s": 0.157
+  },
+  {
+   "qid": "q028",
+   "kind": "single",
+   "task": "Order my best friend's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "mukimo",
+   "tool": "order_food",
+   "args": {
+    "dish": "my best friend's favourite food"
+   },
+   "said": "Order food: dish = my best friend's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1573
+  },
+  {
+   "qid": "q029",
+   "kind": "single",
+   "task": "Set a reminder for my sister's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "18 October",
+   "tool": "set_reminder",
+   "args": {
+    "person": "my sister",
+    "date": "29 March"
+   },
+   "said": "Set reminder: person = my sister, date = 29 March",
+   "verdict": "wrong",
+   "ttft_s": 0.158
+  },
+  {
+   "qid": "q030",
+   "kind": "single",
+   "task": "Set a reminder for my landlord's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "20 March",
+   "tool": "set_reminder",
+   "args": {
+    "person": "landlord",
+    "date": "29 March"
+   },
+   "said": "Set reminder: person = landlord, date = 29 March",
+   "verdict": "wrong",
+   "ttft_s": 0.1573
+  },
+  {
+   "qid": "q031",
+   "kind": "update",
+   "task": "Order a case for my best friend's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Samsung",
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "iPhone"
+   },
+   "said": "Order phone case: phone = iPhone",
+   "verdict": "wrong",
+   "ttft_s": 0.1574
+  },
+  {
+   "qid": "q032",
+   "kind": "update",
+   "task": "Book me a ride to my classmate's home.",
+   "expected_tool": "book_ride",
+   "expected": "Eldoret",
+   "tool": "book_ride",
+   "args": {
+    "destination": "classmate's home"
+   },
+   "said": "Book ride: destination = classmate's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1578
+  },
+  {
+   "qid": "q033",
+   "kind": "single",
+   "task": "Order my sister's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "matoke",
+   "tool": "order_food",
+   "args": {
+    "dish": "my sister's favourite food"
+   },
+   "said": "Order food: dish = my sister's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1579
+  },
+  {
+   "qid": "q034",
+   "kind": "multi",
+   "task": "Book me a ride to my brother's husband's home.",
+   "expected_tool": "book_ride",
+   "expected": "Garissa",
+   "tool": "book_ride",
+   "args": {
+    "destination": "my brother's husband's home"
+   },
+   "said": "Book ride: destination = my brother's husband's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1571
+  },
+  {
+   "qid": "q035",
+   "kind": "abstain",
+   "task": "Order a case for my neighbour's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": null,
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "iPhone"
+   },
+   "said": "Order phone case: phone = iPhone",
+   "verdict": "false_memory",
+   "ttft_s": 0.1578
+  },
+  {
+   "qid": "q036",
+   "kind": "single",
+   "task": "Book my classmate's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Nissan Note",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my classmate's car"
+   },
+   "said": "Book car service: car = my classmate's car",
+   "verdict": "wrong",
+   "ttft_s": 0.1581
+  },
+  {
+   "qid": "q037",
+   "kind": "time",
+   "task": "Write a diary entry for the day I had my first internship interview.",
+   "expected_tool": "write_diary",
+   "expected": "9 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-03-09",
+    "event": "Finally had my first internship interview today."
+   },
+   "said": "Write diary: date = 2026-03-09, event = Finally had my first internship interview today.",
+   "verdict": "right",
+   "ttft_s": 0.1665
+  },
+  {
+   "qid": "q038",
+   "kind": "single",
+   "task": "Order a case for my classmate's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Samsung",
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "iPhone"
+   },
+   "said": "Order phone case: phone = iPhone",
+   "verdict": "wrong",
+   "ttft_s": 0.158
+  },
+  {
+   "qid": "q039",
+   "kind": "single",
+   "task": "Book a groomer for my cousin's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Moto",
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "your_cousin's_dog"
+   },
+   "said": "Book dog groomer: dog_name = your_cousin's_dog",
+   "verdict": "wrong",
+   "ttft_s": 0.1578
+  },
+  {
+   "qid": "q040",
+   "kind": "single",
+   "task": "Book a groomer for my roommate's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Duma",
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "your_roommate's_dog"
+   },
+   "said": "Book dog groomer: dog_name = your_roommate's_dog",
+   "verdict": "wrong",
+   "ttft_s": 0.1578
+  },
+  {
+   "qid": "q041",
+   "kind": "update",
+   "task": "Book my brother's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Isuzu D-Max",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my brother's car"
+   },
+   "said": "Book car service: car = my brother's car",
+   "verdict": "wrong",
+   "ttft_s": 0.1573
+  },
+  {
+   "qid": "q042",
+   "kind": "update",
+   "task": "Book me a ride to my neighbour's home.",
+   "expected_tool": "book_ride",
+   "expected": "Naivasha",
+   "tool": "book_ride",
+   "args": {
+    "destination": "neighbour's home"
+   },
+   "said": "Book ride: destination = neighbour's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1577
+  },
+  {
+   "qid": "q043",
+   "kind": "update",
+   "task": "Book my neighbour's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Isuzu D-Max",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my neighbour's car"
+   },
+   "said": "Book car service: car = my neighbour's car",
+   "verdict": "wrong",
+   "ttft_s": 0.158
+  },
+  {
+   "qid": "q044",
+   "kind": "multi",
+   "task": "Find a gift for my mum's roommate that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "bank teller",
+   "tool": "find_gift",
+   "args": {
+    "work": "what they do for work"
+   },
+   "said": "Find gift: work = what they do for work",
+   "verdict": "wrong",
+   "ttft_s": 0.1581
+  },
+  {
+   "qid": "q045",
+   "kind": "multi",
+   "task": "Book me a ride to my cousin's fianc\u00e9's home.",
+   "expected_tool": "book_ride",
+   "expected": "Narok",
+   "tool": "book_ride",
+   "args": {
+    "destination": "my cousin's fianc\u00e9's home"
+   },
+   "said": "Book ride: destination = my cousin's fianc\u00e9's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1575
+  },
+  {
+   "qid": "q046",
+   "kind": "time",
+   "task": "Write a diary entry for the day I joined the drama club.",
+   "expected_tool": "write_diary",
+   "expected": "20 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "29 March 2026",
+    "event": "joined the drama club"
+   },
+   "said": "Write diary: date = 29 March 2026, event = joined the drama club",
+   "verdict": "wrong",
+   "ttft_s": 0.1659
+  },
+  {
+   "qid": "q047",
+   "kind": "update",
+   "task": "Order a case for my mum's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Xiaomi",
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "iPhone"
+   },
+   "said": "Order phone case: phone = iPhone",
+   "verdict": "wrong",
+   "ttft_s": 0.1577
+  },
+  {
+   "qid": "q048",
+   "kind": "multi",
+   "task": "Book me a ride to my lecturer's husband's home.",
+   "expected_tool": "book_ride",
+   "expected": "Kitale",
+   "tool": "book_ride",
+   "args": {
+    "destination": "my lecturer's husband's home"
+   },
+   "said": "Book ride: destination = my lecturer's husband's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1574
+  },
+  {
+   "qid": "q049",
+   "kind": "update",
+   "task": "Find a gift for my sister that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "police officer",
+   "tool": "find_gift",
+   "args": {
+    "work": "databases"
+   },
+   "said": "Find gift: work = databases",
+   "verdict": "wrong",
+   "ttft_s": 0.2602
+  },
+  {
+   "qid": "q050",
+   "kind": "time",
+   "task": "Write a diary entry for the day I got my HELB loan.",
+   "expected_tool": "write_diary",
+   "expected": "21 January",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-01-21",
+    "event": "got my HELB loan"
+   },
+   "said": "Write diary: date = 2026-01-21, event = got my HELB loan",
+   "verdict": "right",
+   "ttft_s": 0.1665
+  },
+  {
+   "qid": "q051",
+   "kind": "single",
+   "task": "Order my brother's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "chapati",
+   "tool": "order_food",
+   "args": {
+    "dish": "my brother's favourite food"
+   },
+   "said": "Order food: dish = my brother's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1576
+  },
+  {
+   "qid": "q052",
+   "kind": "multi",
+   "task": "Book my landlord's fianc\u00e9's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Isuzu D-Max",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my landlord's fianc\u00e9's car"
+   },
+   "said": "Book car service: car = my landlord's fianc\u00e9's car",
+   "verdict": "wrong",
+   "ttft_s": 0.1581
+  },
+  {
+   "qid": "q053",
+   "kind": "time",
+   "task": "Write a diary entry for the day I renewed my library card.",
+   "expected_tool": "write_diary",
+   "expected": "14 January",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-01-14",
+    "event": "Finally renewed my library card"
+   },
+   "said": "Write diary: date = 2026-01-14, event = Finally renewed my library card",
+   "verdict": "right",
+   "ttft_s": 0.1671
+  },
+  {
+   "qid": "q054",
+   "kind": "abstain",
+   "task": "Order a case for my sister's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": null,
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "Samsung"
+   },
+   "said": "Order phone case: phone = Samsung",
+   "verdict": "false_memory",
+   "ttft_s": 0.1582
+  },
+  {
+   "qid": "q055",
+   "kind": "single",
+   "task": "Buy my classmate a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Liverpool",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "the team they support"
+   },
+   "said": "Buy team scarf: team = the team they support",
+   "verdict": "wrong",
+   "ttft_s": 0.1586
+  },
+  {
+   "qid": "q056",
+   "kind": "single",
+   "task": "Order my roommate's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "bhajia",
+   "tool": "order_food",
+   "args": {
+    "dish": "my roommate's favourite food"
+   },
+   "said": "Order food: dish = my roommate's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1581
+  },
+  {
+   "qid": "q057",
+   "kind": "abstain",
+   "task": "Find a gift for my mum that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": null,
+   "tool": "find_gift",
+   "args": {
+    "work": "what they do for work"
+   },
+   "said": "Find gift: work = what they do for work",
+   "verdict": "false_memory",
+   "ttft_s": 0.2684
+  },
+  {
+   "qid": "q058",
+   "kind": "single",
+   "task": "Buy my mum a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Bandari",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "your mum's team"
+   },
+   "said": "Buy team scarf: team = your mum's team",
+   "verdict": "wrong",
+   "ttft_s": 0.1597
+  },
+  {
+   "qid": "q059",
+   "kind": "update",
+   "task": "Book my mum's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Mitsubishi Pajero",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my mum's car"
+   },
+   "said": "Book car service: car = my mum's car",
+   "verdict": "wrong",
+   "ttft_s": 0.1584
+  },
+  {
+   "qid": "q060",
+   "kind": "single",
+   "task": "Set a reminder for my mum's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "21 October",
+   "tool": "set_reminder",
+   "args": {
+    "person": "mum",
+    "date": "29 March"
+   },
+   "said": "Set reminder: person = mum, date = 29 March",
+   "verdict": "wrong",
+   "ttft_s": 0.1583
+  },
+  {
+   "qid": "q061",
+   "kind": "time",
+   "task": "Write a diary entry for the day I planted sukuma wiki on the balcony.",
+   "expected_tool": "write_diary",
+   "expected": "26 January",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-01-26",
+    "event": "Finally planted sukuma wiki on the balcony today, lol"
+   },
+   "said": "Write diary: date = 2026-01-26, event = Finally planted sukuma wiki on the balcony today, lol",
+   "verdict": "right",
+   "ttft_s": 0.1662
+  },
+  {
+   "qid": "q062",
+   "kind": "single",
+   "task": "Book a groomer for my lecturer's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Tiny",
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "the lecturer's dog"
+   },
+   "said": "Book dog groomer: dog_name = the lecturer's dog",
+   "verdict": "wrong",
+   "ttft_s": 0.1586
+  },
+  {
+   "qid": "q063",
+   "kind": "single",
+   "task": "Book me a ride to my landlord's home.",
+   "expected_tool": "book_ride",
+   "expected": "Bungoma",
+   "tool": "book_ride",
+   "args": {
+    "destination": "landlord's home"
+   },
+   "said": "Book ride: destination = landlord's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1584
+  },
+  {
+   "qid": "q064",
+   "kind": "multi",
+   "task": "Find a gift for my best friend's daughter that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "radio presenter",
+   "tool": "find_gift",
+   "args": {
+    "work": "what they do for work"
+   },
+   "said": "Find gift: work = what they do for work",
+   "verdict": "wrong",
+   "ttft_s": 0.1582
+  },
+  {
+   "qid": "q065",
+   "kind": "single",
+   "task": "Buy my best friend a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Liverpool",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "your best friend"
+   },
+   "said": "Buy team scarf: team = your best friend",
+   "verdict": "wrong",
+   "ttft_s": 0.1579
+  },
+  {
+   "qid": "q066",
+   "kind": "single",
+   "task": "Set a reminder for my brother's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "4 May",
+   "tool": "set_reminder",
+   "args": {
+    "person": "my brother",
+    "date": "29 March"
+   },
+   "said": "Set reminder: person = my brother, date = 29 March",
+   "verdict": "wrong",
+   "ttft_s": 0.1579
+  },
+  {
+   "qid": "q067",
+   "kind": "update",
+   "task": "Order a case for my cousin's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Oppo",
+   "tool": "order_phone_case",
+   "args": {
+    "phone": "Samsung"
+   },
+   "said": "Order phone case: phone = Samsung",
+   "verdict": "wrong",
+   "ttft_s": 0.1583
+  },
+  {
+   "qid": "q068",
+   "kind": "multi",
+   "task": "Find a gift for my classmate's son that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "radio presenter",
+   "tool": "find_gift",
+   "args": {
+    "work": "what they do for work"
+   },
+   "said": "Find gift: work = what they do for work",
+   "verdict": "wrong",
+   "ttft_s": 0.1584
+  },
+  {
+   "qid": "q069",
+   "kind": "abstain",
+   "task": "Book me a ride to my godmother's home.",
+   "expected_tool": "book_ride",
+   "expected": null,
+   "tool": "book_ride",
+   "args": {
+    "destination": "godmother's home"
+   },
+   "said": "Book ride: destination = godmother's home",
+   "verdict": "false_memory",
+   "ttft_s": 0.1592
+  },
+  {
+   "qid": "q070",
+   "kind": "abstain",
+   "task": "Book my best friend's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": null,
+   "tool": "book_car_service",
+   "args": {
+    "car": "my best friend's car"
+   },
+   "said": "Book car service: car = my best friend's car",
+   "verdict": "false_memory",
+   "ttft_s": 0.1583
+  },
+  {
+   "qid": "q071",
+   "kind": "single",
+   "task": "Buy my lecturer a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "AFC Leopards",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "the team they support"
+   },
+   "said": "Buy team scarf: team = the team they support",
+   "verdict": "wrong",
+   "ttft_s": 0.1596
+  },
+  {
+   "qid": "q072",
+   "kind": "single",
+   "task": "Book my landlord's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Isuzu D-Max",
+   "tool": "book_car_service",
+   "args": {
+    "car": "Landmark Car"
+   },
+   "said": "Book car service: car = Landmark Car",
+   "verdict": "wrong",
+   "ttft_s": 0.1591
+  },
+  {
+   "qid": "q073",
+   "kind": "time",
+   "task": "Write a diary entry for the day I moved into the new hostel room.",
+   "expected_tool": "write_diary",
+   "expected": "3 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-02-03",
+    "event": "Finally moved into the new hostel room today."
+   },
+   "said": "Write diary: date = 2026-02-03, event = Finally moved into the new hostel room today.",
+   "verdict": "right",
+   "ttft_s": 0.2435
+  },
+  {
+   "qid": "q074",
+   "kind": "single",
+   "task": "Buy my neighbour a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Liverpool",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "the team they support"
+   },
+   "said": "Buy team scarf: team = the team they support",
+   "verdict": "wrong",
+   "ttft_s": 0.1613
+  },
+  {
+   "qid": "q075",
+   "kind": "abstain",
+   "task": "Set a reminder for my classmate's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": null,
+   "tool": "set_reminder",
+   "args": {
+    "person": "my classmate",
+    "date": "today"
+   },
+   "said": "Set reminder: person = my classmate, date = today",
+   "verdict": "false_memory",
+   "ttft_s": 0.16
+  },
+  {
+   "qid": "q076",
+   "kind": "abstain",
+   "task": "Order my classmate's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": null,
+   "tool": "order_food",
+   "args": {
+    "dish": "classmate's favourite food"
+   },
+   "said": "Order food: dish = classmate's favourite food",
+   "verdict": "false_memory",
+   "ttft_s": 0.1594
+  },
+  {
+   "qid": "q077",
+   "kind": "time",
+   "task": "Write a diary entry for the day I sat the statistics CAT.",
+   "expected_tool": "write_diary",
+   "expected": "17 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-03-25",
+    "event": "sat the statistics CAT"
+   },
+   "said": "Write diary: date = 2026-03-25, event = sat the statistics CAT",
+   "verdict": "wrong",
+   "ttft_s": 0.1894
+  },
+  {
+   "qid": "q078",
+   "kind": "update",
+   "task": "Book me a ride to my best friend's home.",
+   "expected_tool": "book_ride",
+   "expected": "Eldoret",
+   "tool": "book_ride",
+   "args": {
+    "destination": "friend's home"
+   },
+   "said": "Book ride: destination = friend's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1607
+  },
+  {
+   "qid": "q079",
+   "kind": "time",
+   "task": "Write a diary entry for the day I bought a second-hand bicycle.",
+   "expected_tool": "write_diary",
+   "expected": "10 January",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-01-10",
+    "event": "This morning I bought a second-hand bicycle."
+   },
+   "said": "Write diary: date = 2026-01-10, event = This morning I bought a second-hand bicycle.",
+   "verdict": "right",
+   "ttft_s": 0.1686
+  },
+  {
+   "qid": "q080",
+   "kind": "single",
+   "task": "Buy my roommate a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Manchester United",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "your roommate"
+   },
+   "said": "Buy team scarf: team = your roommate",
+   "verdict": "wrong",
+   "ttft_s": 0.1594
+  },
+  {
+   "qid": "q081",
+   "kind": "multi",
+   "task": "Book my sister's roommate's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Mitsubishi Pajero",
+   "tool": "book_car_service",
+   "args": {
+    "car": "my sister's roommate's car"
+   },
+   "said": "Book car service: car = my sister's roommate's car",
+   "verdict": "wrong",
+   "ttft_s": 0.1612
+  },
+  {
+   "qid": "q082",
+   "kind": "time",
+   "task": "Write a diary entry for the day I started the library job.",
+   "expected_tool": "write_diary",
+   "expected": "21 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-03-21",
+    "event": "started the library job"
+   },
+   "said": "Write diary: date = 2026-03-21, event = started the library job",
+   "verdict": "right",
+   "ttft_s": 0.171
+  },
+  {
+   "qid": "q083",
+   "kind": "single",
+   "task": "Order my neighbour's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "githeri",
+   "tool": "order_food",
+   "args": {
+    "dish": "neighbour's favourite food"
+   },
+   "said": "Order food: dish = neighbour's favourite food",
+   "verdict": "wrong",
+   "ttft_s": 0.1607
+  },
+  {
+   "qid": "q084",
+   "kind": "abstain",
+   "task": "Book my sister's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": null,
+   "tool": "book_car_service",
+   "args": {
+    "car": "my sister's car"
+   },
+   "said": "Book car service: car = my sister's car",
+   "verdict": "false_memory",
+   "ttft_s": 0.1605
+  },
+  {
+   "qid": "q085",
+   "kind": "single",
+   "task": "Find a gift for my best friend that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "plumber",
+   "tool": "find_gift",
+   "args": {
+    "work": "plumber"
+   },
+   "said": "Find gift: work = plumber",
+   "verdict": "right",
+   "ttft_s": 0.2672
+  },
+  {
+   "qid": "q086",
+   "kind": "time",
+   "task": "Write a diary entry for the day I went to the career fair.",
+   "expected_tool": "write_diary",
+   "expected": "24 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "29 March 2026",
+    "event": "went to the career fair"
+   },
+   "said": "Write diary: date = 29 March 2026, event = went to the career fair",
+   "verdict": "wrong",
+   "ttft_s": 0.1703
+  },
+  {
+   "qid": "q087",
+   "kind": "single",
+   "task": "Find a gift for my lecturer that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "journalist",
+   "tool": "find_gift",
+   "args": {
+    "work": "lecturer"
+   },
+   "said": "Find gift: work = lecturer",
+   "verdict": "wrong",
+   "ttft_s": 0.2674
+  },
+  {
+   "qid": "q088",
+   "kind": "abstain",
+   "task": "Order my nephew's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": null,
+   "tool": "order_food",
+   "args": {
+    "dish": "my nephew's favourite food"
+   },
+   "said": "Order food: dish = my nephew's favourite food",
+   "verdict": "false_memory",
+   "ttft_s": 0.1621
+  },
+  {
+   "qid": "q089",
+   "kind": "multi",
+   "task": "Find a gift for my neighbour's roommate that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "nurse",
+   "tool": "find_gift",
+   "args": {
+    "work": "what they do for work"
+   },
+   "said": "Find gift: work = what they do for work",
+   "verdict": "wrong",
+   "ttft_s": 0.1612
+  },
+  {
+   "qid": "q090",
+   "kind": "single",
+   "task": "Buy my sister a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Arsenal",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "your sister's favorite team"
+   },
+   "said": "Buy team scarf: team = your sister's favorite team",
+   "verdict": "wrong",
+   "ttft_s": 0.1612
+  },
+  {
+   "qid": "q091",
+   "kind": "abstain",
+   "task": "Book me a ride to my lecturer's home.",
+   "expected_tool": "book_ride",
+   "expected": null,
+   "tool": "book_ride",
+   "args": {
+    "destination": "lecturer's home"
+   },
+   "said": "Book ride: destination = lecturer's home",
+   "verdict": "false_memory",
+   "ttft_s": 0.1612
+  },
+  {
+   "qid": "q092",
+   "kind": "single",
+   "task": "Find a gift for my roommate that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "journalist",
+   "tool": "find_gift",
+   "args": {
+    "work": "databases"
+   },
+   "said": "Find gift: work = databases",
+   "verdict": "wrong",
+   "ttft_s": 0.369
+  },
+  {
+   "qid": "q093",
+   "kind": "time",
+   "task": "Write a diary entry for the day I paid the semester fees.",
+   "expected_tool": "write_diary",
+   "expected": "6 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-03-07",
+    "event": "Paid the semester fees"
+   },
+   "said": "Write diary: date = 2026-03-07, event = Paid the semester fees",
+   "verdict": "wrong",
+   "ttft_s": 0.1699
+  },
+  {
+   "qid": "q094",
+   "kind": "update",
+   "task": "Book me a ride to my roommate's home.",
+   "expected_tool": "book_ride",
+   "expected": "Kakamega",
+   "tool": "book_ride",
+   "args": {
+    "destination": "roommate's home"
+   },
+   "said": "Book ride: destination = roommate's home",
+   "verdict": "wrong",
+   "ttft_s": 0.1611
+  },
+  {
+   "qid": "q095",
+   "kind": "single",
+   "task": "Buy my cousin a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Tusker FC",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "my cousin"
+   },
+   "said": "Buy team scarf: team = my cousin",
+   "verdict": "wrong",
+   "ttft_s": 0.1616
+  },
+  {
+   "qid": "q096",
+   "kind": "time",
+   "task": "Write a diary entry for the day I registered for the hackathon.",
+   "expected_tool": "write_diary",
+   "expected": "12 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "2026-03-13",
+    "event": "registered for the hackathon"
+   },
+   "said": "Write diary: date = 2026-03-13, event = registered for the hackathon",
+   "verdict": "wrong",
+   "ttft_s": 0.1707
+  },
+  {
+   "qid": "q097",
+   "kind": "single",
+   "task": "Buy my landlord a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Gor Mahia",
+   "tool": "buy_team_scarf",
+   "args": {
+    "team": "the team they support"
+   },
+   "said": "Buy team scarf: team = the team they support",
+   "verdict": "wrong",
+   "ttft_s": 0.1606
+  },
+  {
+   "qid": "q098",
+   "kind": "single",
+   "task": "Book a groomer for my neighbour's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Chui",
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "your_neighbour's_dog"
+   },
+   "said": "Book dog groomer: dog_name = your_neighbour's_dog",
+   "verdict": "wrong",
+   "ttft_s": 0.1617
+  },
+  {
+   "qid": "q099",
+   "kind": "single",
+   "task": "Book a groomer for my best friend's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Pendo",
+   "tool": "book_dog_groomer",
+   "args": {
+    "dog_name": "best friend's dog"
+   },
+   "said": "Book dog groomer: dog_name = best friend's dog",
+   "verdict": "wrong",
+   "ttft_s": 0.1609
+  },
+  {
+   "qid": "q100",
+   "kind": "abstain",
+   "task": "Book my uncle's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": null,
+   "tool": "book_car_service",
+   "args": {
+    "car": "my uncle's car"
+   },
+   "said": "Book car service: car = my uncle's car",
+   "verdict": "false_memory",
+   "ttft_s": 0.1617
+  }
+ ]
+}

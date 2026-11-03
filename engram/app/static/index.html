@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>engram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a bench with three drawers. Chat and Errands are where you use it; Brain is the microscope you look through. */
+:root {
+  color-scheme: dark;
+  --bg: #030505; --panel: #0a0f0d; --panel2: #0f1613; --rule: #1b2622; --fg: #e6ede9; --muted: #8a9c94;
+  --signal: #5ee08a; --maybe: #e2b04a; --no: #e25a7e;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
+.top { position: sticky; top: 0; z-index: 5; background: rgba(3,5,5,.95); border-bottom: 1px solid var(--rule); backdrop-filter: blur(8px); }
+.top-in { max-width: 1320px; margin: 0 auto; padding: 12px max(16px, env(safe-area-inset-left)); display: flex; gap: 12px 26px; align-items: center; flex-wrap: wrap; }
+.mark { font: 600 24px/1 var(--display); letter-spacing: .01em; }
+.mark i { font-style: normal; color: var(--signal); }
+.stats { font: 400 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.tabs { display: flex; gap: 4px; margin-left: auto; }
+.tabs button { font: 500 14px/1 var(--body); color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--fg); border-color: var(--rule); background: var(--panel); }
+main { max-width: 1320px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left)) 60px; }
+section[hidden] { display: none !important; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+@media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+h2 { font: 600 22px/1.1 var(--display); margin: 0; }
+h3 { font: 600 16px/1.2 var(--display); margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.log { display: grid; gap: 12px; min-height: 340px; max-height: 62vh; overflow-y: auto; padding-right: 4px; align-content: start; }
+.msg { max-width: 78%; padding: 10px 13px; border-radius: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.msg.you { justify-self: end; background: #1a2621; }
+.msg.it { justify-self: start; background: var(--panel2); border: 1px solid var(--rule); }
+.msg .meta { display: flex; gap: 10px; align-items: center; margin-top: 6px; font: 400 11px/1 var(--mono); color: var(--muted); }
+.look { font: 500 12px/1 var(--body); color: var(--signal); background: transparent; border: 1px solid #1f4a33; border-radius: 6px; padding: 5px 8px; cursor: pointer; }
+.look:hover { background: #0e2018; }
+form.say { display: flex; gap: 8px; }
+form.say input { flex: 1; min-width: 0; font: 15px/1.4 var(--body); color: var(--fg); background: #050807; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
+form.say input:focus-visible { outline: 2px solid var(--signal); outline-offset: 1px; }
+.btn { font: 600 14px/1 var(--body); color: var(--bg); background: var(--fg); border: 0; border-radius: 10px; padding: 12px 16px; cursor: pointer; }
+.btn.ghost { color: var(--fg); background: transparent; border: 1px solid var(--rule); }
+.btn:disabled { opacity: .45; cursor: wait; }
+.btn:focus-visible, .tabs button:focus-visible, .chip:focus-visible, .look:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 400 13px/1.25 var(--body); color: var(--fg); background: #070b0a; border: 1px solid var(--rule); border-radius: 999px; padding: 7px 11px; cursor: pointer; text-align: left; }
+.chip[aria-pressed="true"] { border-color: var(--fg); background: var(--panel2); }
+select { font: 14px var(--body); color: var(--fg); background: #050807; border: 1px solid var(--rule); border-radius: 8px; padding: 9px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.result { display: grid; gap: 8px; }
+.call { font: 400 14px/1.5 var(--mono); background: #050807; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; overflow-wrap: anywhere; }
+.call b { color: var(--signal); font-weight: 500; }
+.pill { font: 500 11px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; padding: 4px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.v-right, .v-right_abstain { color: var(--signal); } .v-wrong, .v-false_memory { color: var(--no); } .v-stale { color: var(--maybe); } .v-missed, .v-none { color: var(--muted); }
+.busy { font: 400 12px/1.3 var(--mono); color: var(--muted); }
+/* brain */
+.brain { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .brain { grid-template-columns: 1fr; } }
+.list { display: grid; gap: 6px; max-height: 76vh; overflow-y: auto; padding-right: 4px; align-content: start; }
+.item { text-align: left; font: 400 13px/1.3 var(--body); color: var(--fg); background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 9px 10px; cursor: pointer; display: grid; gap: 5px; }
+.item[aria-pressed="true"] { border-color: var(--fg); background: var(--panel2); }
+.item .k { display: flex; gap: 8px; align-items: center; font: 400 11px/1 var(--mono); color: var(--muted); }
+.scope { position: relative; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid #0f1714; }
+.scope canvas { display: block; width: 100%; }
+.legend { position: absolute; left: 14px; bottom: 12px; display: flex; gap: 14px; flex-wrap: wrap; font: 400 11px/1.3 var(--mono); color: #9fb0a9; pointer-events: none; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.view-switch { position: absolute; right: 12px; top: 12px; display: flex; gap: 4px; }
+.view-switch button { font: 500 12px/1 var(--body); color: #cfd8d4; background: rgba(10,15,13,.8); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+.view-switch button[aria-pressed="true"] { color: var(--bg); background: var(--fg); }
+.said { font: 400 15px/1.45 var(--body); color: var(--muted); overflow-wrap: anywhere; }
+.said b { color: var(--fg); font-weight: 500; } .said .now { color: var(--signal); } .said .told { font: 400 12px/1 var(--mono); }
+.transport { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.scrub { flex: 1 1 220px; accent-color: #5ee08a; }
+.strip { background: #000; border-radius: 12px; border: 1px solid #0f1714; overflow-x: auto; }
+.strip canvas { display: block; }
+.empty { color: var(--muted); padding: 40px 10px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="top"><div class="top-in">
+  <span class="mark">engram<i>.</i></span>
+  <span class="stats" id="stats">loading…</span>
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-chat" aria-selected="true" data-tab="chat">Chat</button>
+    <button role="tab" id="tab-errands" aria-selected="false" data-tab="errands">Errands</button>
+    <button role="tab" id="tab-brain" aria-selected="false" data-tab="brain">Brain</button>
+  </nav>
+</div></div>
+
+<main>
+  <section id="chat">
+    <div class="cols">
+      <div class="card">
+        <h2>Chat</h2>
+        <p class="muted small" style="margin:0">Tell it things and it remembers them. Ask with a question mark and it answers from memory. Every answer can be looked inside.</p>
+        <div class="log" id="chat-log"></div>
+        <form class="say" id="chat-form"><input id="chat-input" autocomplete="off" placeholder="My sister Amina moved to Nakuru.   or   Where does my sister live?" aria-label="Message"><button class="btn" id="chat-send">Send</button></form>
+      </div>
+      <aside class="card">
+        <h3>Try it on a whole life</h3>
+        <p class="muted small" style="margin:0">Load a scripted 12-week life (about 330 moments), then quiz it. Answers you can grade show up in Brain with what went right and wrong.</p>
+        <div class="row"><select id="persona" aria-label="Life"><option value="farmer">Dairy-cooperative manager</option><option value="student">Student</option><option value="developer">Developer</option></select>
+          <button class="btn ghost" id="load-life" type="button">Load life</button></div>
+        <div class="row"><button class="btn ghost" id="quiz-q" type="button">Ask its 100 questions</button><button class="btn ghost" id="quiz-e" type="button">Give it 100 errands</button></div>
+        <div class="busy" id="life-status"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="errands" hidden>
+    <div class="cols">
+      <div class="card">
+        <h2>Errands</h2>
+        <p class="muted small" style="margin:0">An agent with tools. Engram fills each tool's details from memory, and if it doesn't know, it should ask.</p>
+        <form class="say" id="errand-form"><input id="errand-input" autocomplete="off" placeholder="Set a reminder for my neighbour's birthday." aria-label="Errand"><button class="btn" id="errand-send">Do it</button></form>
+        <div class="chips" id="errand-examples"></div>
+        <div class="log" id="errand-log"></div>
+      </div>
+      <aside class="card">
+        <h3>Its tools</h3>
+        <p class="muted small" style="margin:0">Pretend tools: they only say what they would do.</p>
+        <div class="call small" id="tools">book_ride · set_reminder · order_food · book_car_service · order_phone_case · buy_team_scarf · find_gift · book_dog_groomer · write_diary · ask_user</div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="brain" hidden>
+    <div class="brain">
+      <aside class="card">
+        <h3>What it did</h3>
+        <div class="chips" id="filters"></div>
+        <div class="list" id="answers"></div>
+      </aside>
+      <div style="display:grid;gap:14px;min-width:0">
+        <div class="said" id="said"></div>
+        <div class="transport"><button class="btn" id="play" type="button">Play</button>
+          <input class="scrub" id="scrub" type="range" min="0" max="1" value="0" step="1" aria-label="Word"><span class="busy" id="wordno"></span></div>
+        <div class="scope"><canvas id="scope" aria-label="The memory, glowing where this answer leaned"></canvas>
+          <div class="view-switch"><button id="v-whole" aria-pressed="true" type="button">Whole</button><button id="v-close" aria-pressed="false" type="button">Close-up</button></div>
+          <div class="legend"><span><i style="background:#c4566c"></i>a moment</span><span><i style="border:1.5px solid #fff"></i>picked up</span><span><i style="background:#5ee08a;box-shadow:0 0 8px #5ee08a"></i>leaned on</span></div></div>
+        <div class="strip"><canvas id="strip" aria-label="Traces strip"></canvas></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const api = async (path, body) => {
+  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json(); if (!r.ok || j.error) throw new Error(j.error || r.statusText); return j;
+};
+const VERDICT = { right: "Right", right_abstain: "Held back", wrong: "Wrong", false_memory: "Made it up", stale: "Old answer", missed: "Missed it" };
+async function refreshStats() { try { const s = await api("/api/state"); $("stats").textContent = `${s.moments} moments · ${s.rooms} rooms · ${s.disk_mb} MB on the SSD`; } catch {} }
+
+// tabs
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
+function show(tab) {
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  for (const t of ["chat", "errands", "brain"]) $(t).hidden = t !== tab;
+  if (tab === "brain") loadBrain();
+}
+
+// chat
+function bubble(log, who, text, extra) {
+  const d = document.createElement("div"); d.className = `msg ${who}`; d.textContent = text;
+  if (extra) d.append(extra); $(log).append(d); $(log).scrollTop = $(log).scrollHeight; return d;
+}
+function meta(wait, event) {
+  const m = document.createElement("div"); m.className = "meta";
+  if (wait != null) m.append(`${Math.round(wait * 1000)} ms to the first word`);
+  if (event != null) { const b = document.createElement("button"); b.className = "look"; b.type = "button"; b.textContent = "Look inside";
+    b.addEventListener("click", () => { pickId = event; show("brain"); }); m.append(b); }
+  return m;
+}
+$("chat-form").addEventListener("submit", async e => {
+  e.preventDefault(); const text = $("chat-input").value.trim(); if (!text) return;
+  $("chat-input").value = ""; bubble("chat-log", "you", text); $("chat-send").disabled = true;
+  try { const r = await api("/api/chat", { text }); bubble("chat-log", "it", r.reply, r.event != null ? meta(r.wait_s, r.event) : null); refreshStats(); }
+  catch (err) { bubble("chat-log", "it", "Something went wrong: " + err.message); }
+  finally { $("chat-send").disabled = false; $("chat-input").focus(); }
+});
+
+// a whole life
+async function lifeJob(label, path, body) {
+  for (const id of ["load-life", "quiz-q", "quiz-e"]) $(id).disabled = true;
+  $("life-status").textContent = label + "… this takes up to a minute.";
+  try { const r = await api(path, body);
+    $("life-status").textContent = r.verdicts ? `Done: ${Object.entries(r.verdicts).map(([k, v]) => `${v} ${(VERDICT[k] || k).toLowerCase()}`).join(", ")}. See Brain.` : `Loaded: ${r.moments} moments in ${r.rooms} rooms.`;
+    refreshStats(); }
+  catch (err) { $("life-status").textContent = "Something went wrong: " + err.message; }
+  finally { for (const id of ["load-life", "quiz-q", "quiz-e"]) $(id).disabled = false; }
+}
+$("load-life").addEventListener("click", () => lifeJob("Remembering the life", "/api/life", { persona: $("persona").value, seed: 0 }));
+$("quiz-q").addEventListener("click", () => lifeJob("Asking its questions", "/api/quiz", { persona: $("persona").value, seed: 0 }));
+$("quiz-e").addEventListener("click", () => lifeJob("Giving it errands", "/api/quiz", { persona: $("persona").value, seed: 0, errands: true }));
+
+// errands
+const EXAMPLES = ["Set a reminder for my neighbour's birthday.", "Book me a ride to my vet's home.", "Order my sister's favourite food for dinner tonight.", "Book a groomer for my vet's dog.", "Buy my uncle a scarf of the team he supports."];
+EXAMPLES.forEach(t => { const c = document.createElement("button"); c.className = "chip"; c.type = "button"; c.textContent = t; c.addEventListener("click", () => { $("errand-input").value = t; $("errand-form").requestSubmit(); }); $("errand-examples").append(c); });
+$("errand-form").addEventListener("submit", async e => {
+  e.preventDefault(); const text = $("errand-input").value.trim(); if (!text) return;
+  $("errand-input").value = ""; bubble("errand-log", "you", text); $("errand-send").disabled = true;
+  try { const r = await api("/api/errand", { text });
+    const box = document.createElement("div"); box.className = "result";
+    const call = document.createElement("div"); call.className = "call";
+    const b = document.createElement("b"); b.textContent = r.tool || "no tool"; call.append(b, " ", JSON.stringify(r.args));
+    box.append(call, r.result, meta(r.wait_s, r.event)); bubble("errand-log", "it", "", box);
+  } catch (err) { bubble("errand-log", "it", "Something went wrong: " + err.message); }
+  finally { $("errand-send").disabled = false; }
+});
+
+// brain
+let B = null, XY = [], cur = null, pickId = null, word = -1, timer = null, focus = false, filter = "all";
+const glow = { v: new Float32Array(0) };
+const FILTERS = [["all", "All"], ["wrong", "Went wrong"], ["right", "Went right"], ["chat", "Chat and errands"]];
+FILTERS.forEach(([k, label]) => { const c = document.createElement("button"); c.className = "chip"; c.type = "button"; c.dataset.f = k; c.textContent = label;
+  c.addEventListener("click", () => { filter = k; renderList(); }); $("filters").append(c); });
+const WENT_WRONG = new Set(["wrong", "false_memory", "stale", "missed"]);
+function compress(layout) {
+  if (!layout.length) return [];
+  const cx = layout.reduce((a, p) => a + p[0], 0) / layout.length, cy = layout.reduce((a, p) => a + p[1], 0) / layout.length;
+  const rs = layout.map(p => Math.hypot(p[0] - cx, p[1] - cy)), rmax = Math.max(...rs) || 1;
+  return layout.map((p, i) => { const k = rs[i] ? rmax * Math.pow(rs[i] / rmax, 0.6) / rs[i] : 0; return [cx + (p[0] - cx) * k, cy + (p[1] - cy) * k]; });
+}
+async function loadBrain() {
+  $("answers").replaceChildren(Object.assign(document.createElement("div"), { className: "empty", textContent: "Reading the event log…" }));
+  try { B = await api("/api/brain"); } catch (err) { $("answers").replaceChildren(Object.assign(document.createElement("div"), { className: "empty", textContent: "Couldn't read the log: " + err.message })); return; }
+  XY = compress(B.layout); glow.v = new Float32Array(B.moments.length);
+  renderList();
+}
+function visible() {
+  const all = [...B.answers].reverse();
+  if (filter === "wrong") return all.filter(a => WENT_WRONG.has(a.verdict));
+  if (filter === "right") return all.filter(a => a.verdict === "right" || a.verdict === "right_abstain");
+  if (filter === "chat") return all.filter(a => !a.verdict);
+  return all;
+}
+function renderList() {
+  document.querySelectorAll("#filters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.f === filter)));
+  const list = visible(); $("answers").replaceChildren();
+  if (!list.length) { $("answers").append(Object.assign(document.createElement("div"), { className: "empty", textContent: B.answers.length ? "Nothing here under this filter." : "Ask it something in Chat, or load a life and quiz it." })); clearScene(); return; }
+  for (const a of list) {
+    const b = document.createElement("button"); b.className = "item"; b.type = "button"; b.dataset.id = a.id;
+    const k = document.createElement("span"); k.className = "k";
+    const p = document.createElement("span"); p.className = `pill v-${a.verdict || "none"}`; p.textContent = a.verdict ? VERDICT[a.verdict] : (a.kind === "agent" ? "Errand" : "Chat");
+    k.append(p, a.kind === "agent" ? "errand" : "answer");
+    const t = document.createElement("span"); t.textContent = a.question;
+    b.append(k, t); b.addEventListener("click", () => pick(a.id)); $("answers").append(b);
+  }
+  const want = list.find(a => a.id === pickId) || list[0]; pick(want.id);
+}
+function pick(id) {
+  pickId = id; cur = B.answers.find(a => a.id === id); word = -1; stop();
+  document.querySelectorAll(".item").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.id) === id)));
+  $("scrub").max = columns().length; $("scrub").value = 0; redraw();
+}
+function clearScene() { cur = null; $("said").textContent = ""; for (const c of [$("scope"), $("strip")]) c.getContext("2d").clearRect(0, 0, c.width, c.height); }
+function per() { return cur.looks.map(r => { const t = r.reduce((x, y) => x + y, 0) || 1; return r.map(x => x / t); }); }
+function columns() {   // the written pieces worth showing; for an errand, the values it filled in from memory
+  if (cur.kind !== "agent") return cur.words.map((_, k) => k);
+  let text = "", inArgs = false, inStr = false, isVal = false, last = "";
+  const cols = [];
+  cur.words.forEach((w, k) => {
+    let valueChars = 0;
+    for (const ch of w) {
+      if (!inArgs) { text += ch; if (text.endsWith('"arguments"')) inArgs = true; continue; }
+      if (inStr) { if (ch === '"') inStr = false; else if (isVal) valueChars++; continue; }
+      if (ch === '"') { inStr = true; isVal = last === ":"; continue; }
+      if (!/\s/.test(ch)) last = ch;
+    }
+    if (valueChars) cols.push(k);
+  });
+  return cols.length ? cols : cur.words.map((_, k) => k);
+}
+function labels() { const order = cur.nodes.map((n, i) => i).sort((i, j) => cur.share[j] - cur.share[i]); const label = {}; order.forEach((i, k) => label[cur.nodes[i]] = k + 1); return { order, label }; }
+function target() { const t = new Float32Array(B.moments.length), p = per(), k = word < 0 ? -1 : columns()[word];
+  cur.nodes.forEach((n, i) => { t[n] = Math.max(t[n], k < 0 ? cur.share[i] : (p[k] ? p[k][i] : 0)); }); return t; }
+function hull(pts) {
+  if (pts.length < 3) return pts;
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]); const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], hi = []; for (const q of p) { while (lo.length >= 2 && cr(lo.at(-2), lo.at(-1), q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of [...p].reverse()) { while (hi.length >= 2 && cr(hi.at(-2), hi.at(-1), q) <= 0) hi.pop(); hi.push(q); }
+  return lo.slice(0, -1).concat(hi.slice(0, -1));
+}
+function outline(ctx, pts, pad) {
+  ctx.beginPath();
+  if (pts.length < 3) { for (const p of pts) { ctx.moveTo(p[0] + pad, p[1]); ctx.arc(p[0], p[1], pad, 0, Math.PI * 2); } return; }
+  const c = pts.reduce((a, p) => [a[0] + p[0] / pts.length, a[1] + p[1] / pts.length], [0, 0]);
+  const q = pts.map(p => { const d = Math.hypot(p[0] - c[0], p[1] - c[1]) || 1; return [c[0] + (p[0] - c[0]) * (d + pad) / d, c[1] + (p[1] - c[1]) * (d + pad) / d]; });
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; const m0 = mid(q.at(-1), q[0]); ctx.moveTo(m0[0], m0[1]);
+  q.forEach((p, i) => { const m = mid(p, q[(i + 1) % q.length]); ctx.quadraticCurveTo(p[0], p[1], m[0], m[1]); }); ctx.closePath();
+}
+function scene() {
+  const c = $("scope"), w = c.parentElement.clientWidth, h = Math.round(w * (innerWidth < 700 ? .85 : .56)), d = devicePixelRatio || 1;
+  if (c.width !== Math.round(w * d) || c.height !== Math.round(h * d)) { c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + "px"; }
+  const ctx = c.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
+  if (!cur || !XY.length) return;
+  const M = B.moments, { label } = labels();
+  let ids = M.map((_, i) => i); if (focus) ids = [...new Set([...B.rooms[cur.room].members, ...cur.nodes])];
+  const xs = ids.map(i => XY[i][0]), ys = ids.map(i => XY[i][1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const m = focus ? .22 : .07, xr = Math.max(x1 - x0, .03), yr = Math.max(y1 - y0, .03), sc = Math.min(w * (1 - 2 * m) / xr, h * (1 - 2 * m) / yr);
+  const ox = (w - xr * sc) / 2 - x0 * sc, oy = (h - yr * sc) / 2 - y0 * sc, P = i => [ox + XY[i][0] * sc, oy + XY[i][1] * sc];
+  const cell = focus ? Math.min(9, 2.6 + sc * .004) : Math.max(2.2, Math.min(4.2, w / 300)), pad = cell * (focus ? 2.2 : 3.0);
+  if (!focus) { ctx.save(); outline(ctx, hull(M.map((_, i) => P(i))), pad * 4); ctx.fillStyle = "rgba(120,150,142,0.04)"; ctx.fill();
+    ctx.strokeStyle = "rgba(195,220,212,0.30)"; ctx.lineWidth = 1; ctx.shadowColor = "rgba(195,220,212,0.5)"; ctx.shadowBlur = 14; ctx.stroke(); ctx.restore(); }
+  for (const r of B.rooms) { const pts = hull(r.members.map(P)), lit = r.id === cur.room; ctx.save(); outline(ctx, pts, pad);
+    ctx.fillStyle = lit ? "rgba(94,224,138,0.10)" : (focus ? "rgba(124,47,63,0.07)" : "rgba(124,47,63,0.12)"); ctx.fill();
+    ctx.lineWidth = lit ? 1.5 : .8; ctx.strokeStyle = lit ? "rgba(226,242,233,0.8)" : "rgba(170,100,112,0.22)"; if (lit) { ctx.shadowColor = "rgba(94,224,138,0.9)"; ctx.shadowBlur = 16; } ctx.stroke(); ctx.restore(); }
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  M.forEach((mm, i) => { const [x, y] = P(i); if (x < -20 || y < -20 || x > w + 20 || y > h + 20) return; const g = ctx.createRadialGradient(x, y, 0, x, y, cell * 2.2), lit = mm.room === cur.room;
+    g.addColorStop(0, lit ? "rgba(236,120,142,0.95)" : "rgba(196,86,108,0.75)"); g.addColorStop(.45, lit ? "rgba(196,86,108,0.45)" : "rgba(150,56,74,0.28)"); g.addColorStop(1, "rgba(120,40,56,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, cell * 2.2, 0, Math.PI * 2); ctx.fill(); });
+  for (let i = 0; i < M.length; i++) { const v = glow.v[i]; if (v < .01) continue; const [x, y] = P(i), R = cell * (3 + 13 * Math.sqrt(v)), g = ctx.createRadialGradient(x, y, 0, x, y, R);
+    g.addColorStop(0, `rgba(235,255,240,${Math.min(1, .5 + v)})`); g.addColorStop(.18, `rgba(94,224,138,${Math.min(1, .35 + v * 1.4)})`); g.addColorStop(.55, `rgba(46,150,88,${Math.min(.6, .12 + v * .8)})`); g.addColorStop(1, "rgba(20,80,40,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+  ctx.save(); ctx.font = `500 ${focus ? 13 : 11}px "IBM Plex Mono", monospace`; ctx.textAlign = "center";
+  cur.nodes.forEach(n => { const [x, y] = P(n); ctx.beginPath(); ctx.arc(x, y, cell * 2.1, 0, Math.PI * 2); ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1; ctx.stroke();
+    const ang = (label[n] - 1) * 2.4, dd = cell * 2.1 + (focus ? 12 : 9); ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fillText(label[n], x + dd * Math.cos(ang), y + dd * Math.sin(ang) + 4); });
+  ctx.restore();
+}
+function strip() {
+  const c = $("strip"); if (!cur) return; const cols = columns(), all = per(), p = cols.map(k => all[k]), { order, label } = labels(), words = cols.map(k => cur.words[k]), n = words.length, rows = order.slice(0, 7), rowH = 46, top = 46;
+  const w = Math.max(760, c.parentElement.clientWidth), h = top + rows.length * rowH + 30, d = devicePixelRatio || 1;
+  c.width = w * d; c.height = h * d; c.style.width = w + "px"; c.style.height = h + "px";
+  const ctx = c.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
+  const left = 340, right = w - 24, cx = k => left + (k + .5) * (right - left) / n, colW = (right - left) / n;
+  if (word >= 0) { ctx.fillStyle = "#0b1611"; ctx.fillRect(cx(word) - colW / 2, top - 6, colW, rows.length * rowH + 4); }
+  ctx.font = '500 12px "IBM Plex Mono", monospace'; ctx.textAlign = "center";
+  words.forEach((wd, k) => { ctx.fillStyle = k === word ? "#5ee08a" : "#cfd8d4"; ctx.fillText((wd.trim() || "·").slice(0, 10), cx(k), 28); });
+  rows.forEach((i, r) => { const y0 = top + r * rowH, base = y0 + rowH - 10, node = cur.nodes[i], used = cur.used.includes(node);
+    ctx.textAlign = "left"; ctx.font = '500 12px "IBM Plex Mono", monospace'; ctx.fillStyle = used ? "#fff" : "#7d8c86"; ctx.fillText(String(label[node]), 16, y0 + 18);
+    ctx.font = '400 13px "IBM Plex Sans", sans-serif'; ctx.fillStyle = used ? "#e6ede9" : "#7d8c86"; let t = B.moments[node].text.replace(/^\[\d{4}-(\d\d)-(\d\d)\] /, ""); if (t.length > 40) t = t.slice(0, 39) + "…"; ctx.fillText(t, 38, y0 + 18);
+    ctx.font = '400 11px "IBM Plex Mono", monospace'; ctx.fillStyle = used ? "#5ee08a" : "#5f6e68"; ctx.fillText(`${Math.round(cur.share[i] * 100)}%${used ? "  used" : "  picked up"}`, 38, y0 + 34);
+    ctx.strokeStyle = "#17211d"; ctx.beginPath(); ctx.moveTo(left, base); ctx.lineTo(right, base); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(left, base); p.forEach((row, k) => ctx.lineTo(cx(k), base - row[i] * (rowH - 16))); ctx.lineTo(right, base); ctx.strokeStyle = used ? "rgba(200,214,208,0.75)" : "rgba(120,135,128,0.45)"; ctx.lineWidth = 1.3; ctx.stroke();
+    p.forEach((row, k) => { if (row[i] >= .25) { ctx.fillStyle = word < 0 || k === word ? "#5ee08a" : "rgba(94,224,138,0.35)"; ctx.shadowColor = "rgba(94,224,138,0.7)"; ctx.shadowBlur = 6; ctx.fillRect(cx(k) - 1.5, base - (rowH - 16), 3, rowH - 16); ctx.shadowBlur = 0; } }); });
+  const more = order.length - rows.length; if (more > 0) { ctx.textAlign = "left"; ctx.font = '400 11px "IBM Plex Mono", monospace'; ctx.fillStyle = "#5f6e68"; ctx.fillText(`+ ${more} more picked up, barely looked at`, 38, h - 10); }
+}
+function said() {
+  const box = $("said"); box.replaceChildren(); if (!cur) return;
+  const q = document.createElement("b"); q.textContent = cur.question + "  "; box.append(q);
+  if (cur.kind === "agent") { const cols = columns(), now = word < 0 ? -1 : cols[word];
+    box.append(`→ ${cur.tool || "no tool"}(`); cols.forEach(k => { const s = document.createElement("span"); s.textContent = cur.words[k]; if (k === now) s.className = "now"; box.append(s); }); box.append(")");
+  } else cur.words.forEach((wd, k) => { const s = document.createElement("span"); s.textContent = wd; if (k === word) s.className = "now"; box.append(s); });
+  const t = document.createElement("span"); t.className = "told";
+  t.textContent = cur.verdict ? `   ${VERDICT[cur.verdict]}${cur.expected ? " · told: " + cur.expected : " · never told"}` : ""; box.append(t);
+  $("wordno").textContent = word < 0 ? "whole answer" : `word ${word + 1} of ${columns().length}`;
+}
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches; let raf = null;
+function frame() { if (!cur) { raf = null; return; } const t = target(); let moving = false;
+  for (let i = 0; i < glow.v.length; i++) { const dd = t[i] - glow.v[i]; if (Math.abs(dd) > .002) { glow.v[i] += reduce ? dd : dd * .2; moving = true; } else glow.v[i] = t[i]; }
+  scene(); raf = moving ? requestAnimationFrame(frame) : null; }
+function redraw() { said(); strip(); if (!raf) raf = requestAnimationFrame(frame); }
+function stop() { clearInterval(timer); timer = null; $("play").textContent = "Play"; }
+$("play").addEventListener("click", () => { if (!cur) return; if (timer) return stop(); const n = columns().length; word = word < 0 || word >= n - 1 ? 0 : word + 1; $("play").textContent = "Pause";
+  const step = () => { $("scrub").value = word + 1; redraw(); if (word >= n - 1) { stop(); setTimeout(() => { word = -1; $("scrub").value = 0; redraw(); }, 1100); return; } word++; };
+  step(); timer = setInterval(step, reduce ? 1100 : 560); });
+$("scrub").addEventListener("input", e => { stop(); word = Number(e.target.value) - 1; redraw(); });
+for (const [id, f] of [["v-whole", false], ["v-close", true]]) $(id).addEventListener("click", () => { focus = f; $("v-whole").setAttribute("aria-pressed", String(!f)); $("v-close").setAttribute("aria-pressed", String(f)); redraw(); });
+addEventListener("resize", () => { if (cur) { strip(); if (!raf) raf = requestAnimationFrame(frame); } });
+refreshStats();
+</script>
+</body>
+</html>
