@@ -9,22 +9,26 @@ import json
 import math
 from pathlib import Path
 
-from engram.ruler.harness import RECORDS
+from engram.ruler.harness import RECORDS, environment
 
 BG, FG, MUTED, RULE = "#070a09", "#e4ebe7", "#93a49c", "#1f2b27"
-COLOURS = {"engram": "#5ee08a", "perfect": "#e4ebe7", "camr": "#e25a7e", "camr-4b": "#e2b04a", "bare": "#7d8a84"}
-LABELS = {"engram": "engram", "perfect": "perfect reader (everything pasted in)", "camr": "old CAMR, 1.7B",
-          "camr-4b": "old CAMR, 4B", "bare": "1.7B alone"}
+COLOURS = {"engram": "#5ee08a", "engram-words": "#2f7d4f", "perfect": "#e4ebe7", "camr": "#e25a7e", "camr-4b": "#e2b04a",
+           "bare": "#7d8a84"}
+LABELS = {"engram": "engram (its own notes)", "engram-words": "engram, read as words",
+          "perfect": "perfect reader (everything pasted in)", "camr": "old CAMR, 1.7B", "camr-4b": "old CAMR, 4B",
+          "bare": "1.7B alone"}
 
 
-def newest(persona: str, seed: int, records: Path = RECORDS) -> dict[str, dict]:
+def newest(persona: str, seed: int, records: Path = RECORDS, machine: str | None = None) -> dict[str, dict]:
+    """Each contender's most complete record of a life, newest first, made on ``machine`` (default: this one)."""
+    machine = machine or environment()["machine"]
     out: dict[str, tuple[str, dict]] = {}
     for p in sorted(records.glob(f"*/*-{persona}-s{seed}-*.json")):
         r = json.loads(p.read_text())
-        if r.get("kind") != "life" or not r.get("weeks"):
+        if r.get("kind") != "life" or not r.get("weeks") or r["environment"].get("machine") != machine:
             continue
         name = r["contender"]["name"]
-        key = (len(r["weeks"]), p.name)
+        key = (len(r["weeks"]), r["started"])
         if name not in out or key >= out[name][0]:
             out[name] = (key, r)
     return {k: v[1] for k, v in out.items()}
@@ -72,7 +76,8 @@ def draw(persona: str, seed: int, records: Path = RECORDS, out: Path | None = No
     w = W - L - R
     s = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" font-family="IBM Plex Sans, -apple-system, '
          f'Helvetica, sans-serif"><rect width="{W}" height="{H}" fill="{BG}"/>',
-         f'<text x="{L}" y="40" fill="{FG}" font-size="22" font-weight="700">Better, never heavier · {persona}, seed {seed}</text>']
+         f'<text x="{L}" y="40" fill="{FG}" font-size="22" font-weight="700">Better, never heavier · {persona}, seed {seed}'
+         f'{" · " + next(iter(runs.values()))["environment"]["chip"] if runs else ""}</text>']
     for i, n in enumerate(order):
         x = L + (i % 3) * 290
         y = 70 + (i // 3) * 22

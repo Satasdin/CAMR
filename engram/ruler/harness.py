@@ -57,6 +57,7 @@ def environment() -> dict:
     return {"machine": _sh("sysctl", "-n", "hw.model") or platform.machine(), "chip": _sh("sysctl", "-n",
             "machdep.cpu.brand_string"), "memory_gb": round(int(_sh("sysctl", "-n", "hw.memsize") or 0) / 2**30),
             "power": (_sh("pmset", "-g", "batt").splitlines() or [""])[0].replace("Now drawing from ", "").strip("'"),
+            "load_1m": float((_sh("sysctl", "-n", "vm.loadavg").strip("{} ").split() or ["nan"])[0]),
             "python": platform.python_version(), "engram_commit": _sh("git", "-C", str(ROOT), "rev-parse", "--short",
             "HEAD") or None, "engram_dirty": bool(_sh("git", "-C", str(ROOT), "status", "--porcelain")),
             "engram_source_sha": source_sha(), **versions}

@@ -1,7 +1,7 @@
 """The contenders the ruler measures. Each one is a memory approach in front of the same frozen reader.
 
 A contender sees a life one day at a time (``observe``), may work at night (``sleep``), and is quizzed at the end of
-each week (``begin_quiz``, then ``answer`` per question, then ``end_quiz``). Engram joins this list in step 1.
+each week (``begin_quiz``, then ``answer`` per question, then ``end_quiz``).
 """
 
 from __future__ import annotations
@@ -196,3 +196,58 @@ class CamrText(Contender):
 
     def close(self) -> None:
         self.store.conn.close()
+
+
+class Engram(Contender):
+    """Engram, step 1: moments become notes in rooms on the SSD; a question lays the one room it is about on the desk,
+    already read, and re-reads the moments closest to it as words.
+
+    With ``words=True`` it is the same memory read entirely as text: the same room and moments are chosen, but the
+    model reads the room's words instead of its saved notes. The pair measures what the notes are worth."""
+
+    def __init__(self, reader: Reader, embedder, workdir: Path, *, words: bool = False, **settings):
+        import shutil
+
+        from engram.memory import Memory
+
+        self.name = "engram-words" if words else "engram"
+        self.reader, self.words = reader, words
+        shutil.rmtree(workdir, ignore_errors=True)  # a run starts with an empty memory
+        self.memory = Memory(reader, embedder, workdir, **settings)
+
+    def observe(self, day: Day) -> None:
+        for text in day.dated():
+            self.memory.remember(text, day.index)
+
+    def sleep(self, day: Day) -> None:
+        self.memory.rooms.save()
+
+    def answer(self, question: str) -> Reply:
+        t = time.perf_counter()
+        m = self.memory
+        head, rest = m.prompt(self.today, question)
+        if self.words:
+            rec = m.choose(question)
+            ids = head + m.room_words(rec.room) + m.words(rec.closest) + rest
+            before = time.perf_counter() - t
+            reply = self.reader.generate(ids)
+        else:
+            rec = m.recall(question)
+            ids = m.words(rec.closest) + rest
+            before = time.perf_counter() - t
+            reply = self.reader.generate(ids, cache=rec.desk)
+            reply.prompt_tokens += len(head) + rec.tokens
+        reply.ttft_s += before
+        return reply
+
+    def disk_bytes(self) -> int:
+        return self.memory.disk_bytes()
+
+    def describe(self) -> dict:
+        m = self.memory
+        return {"name": self.name, "reader": self.reader.repo, "room_tokens": m.rooms.room_tokens,
+                "join": m.rooms.join, "closest": m.closest, "allowance_bytes": m.allowance,
+                "token_bytes": m.rooms.token_bytes}
+
+    def close(self) -> None:
+        self.memory.close()

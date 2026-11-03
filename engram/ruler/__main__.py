@@ -2,6 +2,7 @@
 
   python -m engram.ruler run --persona student --seed 1 --contender camr
   python -m engram.ruler chart --persona student --seed 1
+  python -m engram.ruler speed --persona student             # first word by memory on the desk: notes vs words
   python -m engram.ruler life --persona farmer --seed 0      # look at a life and its quiz
 """
 
@@ -14,7 +15,7 @@ from pathlib import Path
 
 from engram.ruler.life import PERSONAS, build
 
-CONTENDERS = ["bare", "perfect", "camr", "camr-4b"]
+CONTENDERS = ["bare", "perfect", "camr", "camr-4b", "engram", "engram-words"]
 # min_similarity for the old CAMR with the MLX embedder, chosen on the development lives (seed 0): DECISIONS.md E-04
 CAMR_MIN_SIMILARITY = 0.65
 
@@ -34,6 +35,9 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--persona", choices=sorted(PERSONAS), required=True)
     c.add_argument("--seed", type=int, default=1)
     c.add_argument("--records", type=Path)
+    s = sub.add_parser("speed", help="time to first word by memory on the desk: engram's notes against words")
+    s.add_argument("--persona", choices=sorted(PERSONAS), default="student")
+    s.add_argument("--records", type=Path)
     v = sub.add_parser("life", help="print a life's notes and quiz")
     v.add_argument("--persona", choices=sorted(PERSONAS), required=True)
     v.add_argument("--seed", type=int, default=0)
@@ -61,6 +65,15 @@ def main(argv: list[str] | None = None) -> int:
     from engram.ruler.harness import RECORDS, run
 
     records = a.records or RECORDS
+    if a.cmd == "speed":
+        import datetime as dt
+
+        from engram.ruler.speed import measure
+
+        out = records / "speed" / f"{dt.date.today().isoformat()}-{a.persona}.json"
+        measure(Reader(READER), Embedder(), records.parent / "work" / f"speed-{a.persona}", a.persona, out)
+        print(out)
+        return 0
     life = build(a.persona, a.seed)
     reader = Reader(READER_BIG if a.contender == "camr-4b" else READER)
     if a.contender == "bare":
@@ -69,7 +82,10 @@ def main(argv: list[str] | None = None) -> int:
         contender = cs.Perfect(reader)
     else:
         work = records.parent / "work" / f"{a.persona}-s{a.seed}-{a.contender}"
-        contender = cs.CamrText(reader, Embedder(), work, a.min_similarity, name=a.contender)
+        if a.contender.startswith("engram"):
+            contender = cs.Engram(reader, Embedder(), work, words=a.contender == "engram-words")
+        else:
+            contender = cs.CamrText(reader, Embedder(), work, a.min_similarity, name=a.contender)
     try:
         path = run(life, contender, weeks=a.weeks, limit=a.limit, records=records)
     finally:
