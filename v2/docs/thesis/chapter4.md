@@ -170,7 +170,7 @@ Table 4.6: Traceability matrix
 
 ### 4.3.1 Context Diagram
 
-The context diagram treats CAMR as one process and shows only what crosses its boundary. It fixes the scope of Section 1.6, in which the model and the memory run on the user's device, and shows which flows leave it (NFR-11, NFR-13, DR-11). Both versions share the boundary; flows that exist only in v1 are dashed.
+The context diagram treats CAMR as one process and shows only what crosses its boundary. It fixes the scope of Section 1.6, in which the model and the memory run on the user's device, and shows which flows leave it (NFR-11, NFR-13, DR-11). Both versions share the boundary. The diagram uses Gane–Sarson notation: CAMR is process 0, each shaded box is an external entity and each labelled arrow is a data flow; flows that exist only in v1 are dashed.
 
 ![Figure 4.1: Context diagram of CAMR, showing both versions](diagrams/context.png)
 
@@ -180,17 +180,17 @@ In v2, the user's moments and questions flow into CAMR and their answers flow ba
 
 ### 4.3.2 Use Case Diagram
 
-The use case diagram shows who uses CAMR and for what. Its actors are people and external systems only: the User, the Researcher, and two systems used by v1, the automation platform (n8n) and the cloud reference model. Rooms, the embedder and the event log are internal parts, not actors. Version-specific use cases are marked v1 or v2.
+The use case diagram shows who uses CAMR and for what. Its actors are people and external systems only: the User, the Researcher, and two systems used by v1, the automation platform (n8n) and the cloud reference model. Rooms, the embedder and the event log are internal parts, not actors. Actors are drawn as stick figures outside the system boundary, «include» and «extend» relations as dashed arrows, and generalisation as a hollow triangle. Version-specific use cases are marked v1 or v2.
 
 ![Figure 4.2: Use case diagram of CAMR](diagrams/use_cases.png)
 
 Figure 4.2: Use case diagram of CAMR
 
-"Recall from memory" is included by every use case that answers anything: asking, errands, quizzing a life, running a contender and running benchmark conditions. One read path serves chat, agentic work and evaluation, so what is measured is what the user gets. The researcher's use cases include grading by rule and writing a record, so no run finishes without evidence (FR-24, FR-25). Escalation extends asking only in v1, where a router or grounding check may send a question to the cloud (F11b, F15); v2 has no such extension, consistent with Figure 4.1. Inspecting what an answer leaned on is a user's use case, not only a research tool: it serves NFR-19 and shows a user when an answer rested on the wrong moment.
+"Recall from memory" is included by every use case that answers anything: asking, giving an errand, and the abstract use case "Run an evaluation", which watching a simulated life, running a contender through a life and running benchmark conditions all specialise. One read path serves chat, agentic work and evaluation, so what is measured is what the user gets. Running an evaluation includes grading by rule and writing a test record, and measuring speed also writes a record, so no run finishes without evidence (FR-24, FR-25). Escalation extends asking only in v1, where a router or grounding check may send a question to the cloud (F11b, F15); v2 has no such extension, consistent with Figure 4.1. Inspecting what an answer leaned on is a user's use case, not only a research tool: it serves NFR-19 and shows a user when an answer rested on the wrong moment.
 
 ### 4.3.3 Evaluation and Data Pipeline
 
-The study's contribution is a measurement, so the pipeline that produces each number is analysed as carefully as the engine. Figure 4.3 shows both pipelines and addresses objectives iv and v and DR-01 to DR-07 and DR-10.
+The study's contribution is a measurement, so the pipeline that produces each number is analysed as carefully as the engine. Figure 4.3 shows both pipelines as a UML activity diagram, one partition per version, and addresses objectives iv and v and DR-01 to DR-07 and DR-10.
 
 ![Figure 4.3: The evaluation and data pipelines of CAMR v1 and CAMR v2](diagrams/evaluation_pipeline.png)
 
@@ -216,7 +216,7 @@ Equation 4.2: The gate, where s_max is the best candidate's similarity (defaults
 
 Figure 4.4: Architecture of CAMR v1, the research engine
 
-The engine package does not depend on the harness, CLI or inspector (NFR-14), so the same engine runs under the harness, CAMR Personal and the n8n gateway. One file for notes, vectors, provenance and logs is what lets every table be regenerated from logs (NFR-15). The gate and entity bridging, in green, make the read path capability-adaptive: on 2WikiMultiHopQA, bridging raised the share of questions with both gold paragraphs in context from 35.8% to 78.4% with 7% fewer tokens (F1b). The composite score lowered that share (F1), so similarity became the default ranking (Section 4.5). The model is reached only through a loopback runner and the cloud only in ceiling conditions or on escalation, so NFR-11 holds by construction.
+The engine package does not depend on the harness, CLI or inspector (NFR-14), so the same engine runs under the harness, CAMR Personal and the n8n gateway. One file for notes, vectors, provenance and logs is what lets every table be regenerated from logs (NFR-15). The gate and entity bridging make the read path capability-adaptive: on 2WikiMultiHopQA, bridging raised the share of questions with both gold paragraphs in context from 35.8% to 78.4% with 7% fewer tokens (F1b). The composite score lowered that share (F1), so similarity became the default ranking (Section 4.5). The model is reached only through a loopback runner and the cloud only in ceiling conditions or on escalation, so NFR-11 holds by construction.
 
 ### 4.4.2 Architecture of CAMR v2
 
@@ -240,7 +240,7 @@ Two measurements on the MacBook Air shaped the design. Moments written alone and
 
 ### 4.4.3 Sequence Diagram: One Question Answered by CAMR v2
 
-Figure 4.6 follows one question, "Where does my vet live?", from the Chat tab to the answer. Lanes run left to right and time downwards; solid arrows are calls, dashed arrows returns, and boxes work inside a lane, all numbered in order. It realises FR-17 to FR-19 and shows where the wait of NFR-01 and NFR-03 is spent.
+Figure 4.6 follows one question, "Where does my vet live?", from the Chat tab to the answer. Lifelines run left to right and time downwards. Solid arrows with filled heads are calls, dashed arrows with open heads are returns, a looping arrow is work done inside one part, and a bar shows while a part is busy; every message is numbered in order. It realises FR-17 to FR-19 and shows where the wait of NFR-01 and NFR-03 is spent.
 
 ![Figure 4.6: Sequence diagram of one question answered by CAMR v2](diagrams/sequence_question_v2.png)
 
@@ -260,7 +260,7 @@ Equation 4.5: Share of the desk's attention drawn by moment j over an answer, wh
 
 Figure 4.7: State diagram of a moment and of its room in CAMR v2
 
-A moment has no final state: once stored it moves only between Stored and On the desk, and "used" describes its part in one answer, recorded in the event log. The memory is therefore append-only and auditable, but a changed fact is held as two moments that the reader must tell apart, which the quiz's "stale" verdict measures. A room is never closed; a moment that would overflow it joins the next-closest room with space or starts a new one, so the desk never exceeds one room of 512 tokens plus four moments, however large the memory grows (NFR-03). The attention record is meaningful: in 47 right single-fact answers, the most-attended moment held the answer every time, against 12% by chance (E-21).
+A moment has no final state: once stored it only cycles from Stored to On the desk, then to Used or Picked up only, and back to Stored; "used" describes its part in one answer, recorded in the event log. The memory is therefore append-only and auditable, but a changed fact is held as two moments that the reader must tell apart, which the quiz's "stale" verdict measures. A room is never closed; a moment that would overflow it joins the next-closest room with space or starts a new one, so the desk never exceeds one room of 512 tokens plus four moments, however large the memory grows (NFR-03). The attention record is meaningful: in 47 right single-fact answers, the most-attended moment held the answer every time, against 12% by chance (E-21).
 
 ### 4.4.5 Logical Schema of the CAMR v1 Store
 

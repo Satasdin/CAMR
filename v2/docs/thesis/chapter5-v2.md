@@ -318,15 +318,15 @@ Table 5.v2-15: Twelve weeks on the proof lives (three lives added; the wait is t
 | 8 | 164 | 113 | 110 | 0.069–0.072 | 1.077–1.144 | 1.80 | 613 |
 | 12 | 255 | 164 | 166 | 0.070 | 1.814–1.992 | 1.77 | 963 |
 
-![Figure 5.v2-7](../../records/charts/growth-student-s1.svg)
+![Figure 5.v2-7: Facts known, wait and peak memory over twelve weeks: student, seed 1 (`records/charts/growth-student-s1.svg`)](../../records/charts/growth-student-s1.png)
 
 Figure 5.v2-7: Facts known, wait and peak memory over twelve weeks: student, seed 1 (`records/charts/growth-student-s1.svg`)
 
-![Figure 5.v2-8](../../records/charts/growth-farmer-s1.svg)
+![Figure 5.v2-8: The same, dairy-cooperative manager (`records/charts/growth-farmer-s1.svg`)](../../records/charts/growth-farmer-s1.png)
 
 Figure 5.v2-8: The same, dairy-cooperative manager (`records/charts/growth-farmer-s1.svg`)
 
-![Figure 5.v2-9](../../records/charts/growth-developer-s1.svg)
+![Figure 5.v2-9: The same, developer (`records/charts/growth-developer-s1.svg`)](../../records/charts/growth-developer-s1.png)
 
 Figure 5.v2-9: The same, developer (`records/charts/growth-developer-s1.svg`)
 

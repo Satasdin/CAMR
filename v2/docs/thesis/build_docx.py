@@ -49,6 +49,20 @@ def relabel(c, style: str, label: str) -> None:
             return
 
 
+def orient(c, landscape: bool) -> None:
+    """Start a new page turned the given way. Headers, footers and the page count carry on from the page before."""
+    from docx.enum.section import WD_ORIENT, WD_SECTION
+    from docx.oxml.ns import qn
+
+    sec = c.doc.add_section(WD_SECTION.NEW_PAGE)
+    if landscape != (sec.page_width > sec.page_height):
+        sec.orientation = WD_ORIENT.LANDSCAPE if landscape else WD_ORIENT.PORTRAIT
+        sec.page_width, sec.page_height = sec.page_height, sec.page_width
+    pg = sec._sectPr.find(qn("w:pgNumType"))
+    if pg is not None and pg.get(qn("w:start")) is not None:
+        del pg.attrib[qn("w:start")]  # the copied section would restart numbering at 1
+
+
 def build(md: Path, n: int, out: Path, blocks: bool = False) -> Path:
     """``blocks``: the draft is insertion blocks for an existing chapter ("## Insert into 5.2 …"), so those lines
     become highlighted instructions, subsections bold lead-ins, and captions keep their own labels."""
@@ -65,10 +79,13 @@ def build(md: Path, n: int, out: Path, blocks: bool = False) -> Path:
             para.clear()
 
     i = 0
+    shown = None  # the alt text of the figure just placed, whose caption the draft repeats as a plain line
     while i < len(lines):
         line = lines[i]
         s = line.strip()
-        if s.startswith("<!--") and not s.endswith("-->"):  # a multi-line note: highlight it as one paragraph
+        if shown and s == shown:
+            shown = None
+        elif s.startswith("<!--") and not s.endswith("-->"):  # a multi-line note: highlight it as one paragraph
             flush()
             note = [s[4:]]
             while i + 1 < len(lines) and "-->" not in lines[i]:
@@ -96,6 +113,7 @@ def build(md: Path, n: int, out: Path, blocks: bool = False) -> Path:
         elif IMAGE.match(line):
             flush()
             alt, src = IMAGE.match(line).groups()
+            shown = alt.strip()
             cap = re.sub(r"^Figure\s+[\w.\-]+\s*[:.]\s*", "", alt)
             own = re.match(r"^(Figure\s+[\w.\-]+)\s*[:.]", alt)
             path = (md.parent / src)
@@ -103,8 +121,14 @@ def build(md: Path, n: int, out: Path, blocks: bool = False) -> Path:
             if png.exists():
                 from docx.image.image import Image as Picture
 
-                pic = Picture.from_file(str(png))  # fit the page: full text width, at most 19.5 cm tall
-                c.figure(png, cap, width_cm=min(v1.TEXT_WIDTH_CM, 19.5 * pic.px_width / pic.px_height))
+                pic = Picture.from_file(str(png))
+                aspect = pic.px_width / pic.px_height
+                if aspect > 1.25:  # a wide figure gets a landscape page of its own: 24.6 cm wide, 14.5 cm tall
+                    orient(c, True)
+                    c.figure(png, cap, width_cm=min(24.6, 14.5 * aspect))
+                    orient(c, False)
+                else:  # full text width, at most 19.5 cm tall
+                    c.figure(png, cap, width_cm=min(v1.TEXT_WIDTH_CM, 19.5 * aspect))
             else:
                 c.fig_n += 1
                 c.p(f"[[Figure to add here: {src}]]")
