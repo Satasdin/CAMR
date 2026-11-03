@@ -116,7 +116,7 @@ a:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
         <span class="chip">Model <b>Qwen3-1.7B</b></span>
         <span class="chip">Machine <b>MacBook Air M4 · 16 GB · fanless</b></span>
         <span class="chip">Free SSD <b>71 GB</b></span>
-        <span class="chip live">Step 0 done · step 1 next</span>
+        <span class="chip live">Step 1 done · step 2 next</span>
       </div>
     </div>
     <figure>
@@ -131,7 +131,7 @@ a:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   <div class="head">
     <p class="eyebrow">01 · Measured on your laptop</p>
     <h2>The machine sets the rules</h2>
-    <p class="lede">RAM is where the model thinks; the SSD is where memory lives. The SSD is fast only when it's read in big pieces, and the fanless Air slows down under long heavy work.</p>
+    <p class="lede">RAM is where the model thinks; the SSD is where memory lives. The SSD is fast only when it's read in big pieces, and the fanless Air slows down under long heavy work. These numbers are the MacBook Air M4. Since 3 November engram runs on a MacBook Pro M5 Pro, which reads text about 8× faster and its SSD about 4× faster (12 GB/s).</p>
   </div>
   <div class="tiles">
     <div class="tile"><span class="n">90 GB/s</span><span class="l">RAM speed, as the model sees it</span></div>
@@ -313,8 +313,8 @@ a:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <div class="def"><h3>The charts</h3><p>Growth (the thesis image) · scale · the forgetting curve · a week-1 vs week-12 brain time-lapse. Every run is saved as a dated test record.</p></div>
   </div>
   <figure style="margin-top:28px">
-    <img src="img/growth-student-s1.svg" alt="Growth chart for the student life: the old CAMR on the 4B rises highest, the old CAMR on the 1.7B next, the perfect reader lowest while its wait climbs to 22 seconds" width="960" height="860">
-    <figcaption><b>The baselines, measured 2 November.</b> The student life, week by week. All three lives at week 12: the old CAMR on the 4B knows 205 of 255 told facts and waits 3.3 s; on the 1.7B it knows 169, waits 1.3 s and makes up 29 answers; pasting everything in knows 91 and waits 19 s. Engram's green line joins in step 1.</figcaption>
+    <img src="img/growth-student-s1.svg" alt="Growth chart for the student life on the MacBook Pro: engram tracks the old CAMR on the 1.7B, the 4B rises highest, the perfect reader is lowest while its wait climbs; engram's wait and memory stay flat and lowest" width="960" height="860">
+    <figcaption><b>Step 1, measured 3 November on the MacBook Pro.</b> The student life, week by week. All three lives at week 12: engram knows 164 of 255 told facts, waits 0.07 s and peaks at 1.8 GB, flat for twelve weeks. The old CAMR on the same 1.7B knows 166 at 0.15 s and 2.2 GB; on the 4B it knows 208 at 0.35 s and 3.6 GB. Pasting everything in knows 90 and waits 1.9 s.</figcaption>
   </figure>
 </section>
 
@@ -329,11 +329,11 @@ a:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
       <div><dt>Build</dt><dd>New repo with CI; a harness that saves every run as a dated record; the three scripted lives with their weekly quiz; LongMemEval loader</dd></div>
       <div><dt>Proves</dt><dd>The yardstick works before anything is measured with it</dd></div>
       <div><dt>Done when</dt><dd>Baseline scores for the 1.7B alone, the old CAMR, the 4B and the perfect reader are on the growth chart</dd></div></dl></div></div>
-    <div class="phase"><span class="num">1</span><div class="body"><h3>Rooms and notes <span class="chip live" style="vertical-align:3px">next</span></h3><dl class="cols">
-      <div><dt>Build</dt><dd>Moments saved as notes, packed into rooms of 1 MB or more, fetched in one burst inside the allowance, with several rooms on the desk at once</dd></div>
-      <div><dt>Proves</dt><dd>Notes answer as well as text, at least 10× sooner</dd></div>
-      <div><dt>Done when</dt><dd>First word under 0.5 s with 2,000 words of memory, and quiz accuracy matches reading the text</dd></div></dl></div></div>
-    <div class="phase"><span class="num">2</span><div class="body"><h3>Event log and first view</h3><dl class="cols">
+    <div class="phase"><span class="num">1</span><div class="body"><h3>Rooms and notes <span class="chip" style="vertical-align:3px">done</span></h3><dl class="cols">
+      <div><dt>Built</dt><dd>Moments saved as notes in rooms of related moments, each room written as one continuous page. A question opens the one room it is about, fetched from the SSD in one burst, and re-reads its four closest moments as words. Several rooms side by side lost the thread, so the desk holds one.</dd></div>
+      <div><dt>Proves</dt><dd>Notes answer as well as text, at least 10× sooner. <b>Measured:</b> as well (164 vs 163 facts); 4.6× sooner at 2,000 words. The 10× came from the slower Air.</dd></div>
+      <div><dt>Done when</dt><dd>First word under 0.5 s with 2,000 words of memory, and quiz accuracy matches reading the text. <b>Met:</b> 0.23 s; accuracy matches.</dd></div></dl></div></div>
+    <div class="phase"><span class="num">2</span><div class="body"><h3>Event log and first view <span class="chip live" style="vertical-align:3px">next</span></h3><dl class="cols">
       <div><dt>Build</dt><dd>Log of what was opened and how hard each node was looked at; the Activity channel and traces strip</dd></div>
       <div><dt>Proves</dt><dd>"Picked up vs used" is measurable, and drawing doesn't slow talking</dd></div>
       <div><dt>Done when</dt><dd>Writing speed with the view on is within 5% of the view off</dd></div></dl></div></div>
@@ -386,6 +386,7 @@ a:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <li><time>2 Nov</time><span>Scripted lives only; no diary or volunteers.</span></li>
     <li><time>2 Nov</time><span>The name is engram, at ~/Developer/engram.</span></li>
     <li><time>2 Nov</time><span>Build it, starting with step 0.</span></li>
+    <li><time>3 Nov</time><span>Work on the new MacBook Pro M5 Pro; every contender re-run there.</span></li>
   </ul>
 </section>
 
