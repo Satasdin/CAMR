@@ -250,3 +250,61 @@ class Engram(Contender):
 
     def close(self) -> None:
         self.memory.close()
+
+
+class CamrWords(Contender):
+    """CAMR v2's memory read as words by any reader, for readers that cannot use its saved notes (a hybrid model's
+    linear-attention layers keep a running state, not keys and values). The same rooms, built by the same embedder
+    with the same size cap (counted in the 1.7B's tokens), and the same choice per question: the room holding the
+    closest moment, then the four closest moments. Only the reading differs: they are pasted in as text."""
+
+    def __init__(self, reader: Reader, embedder, workdir: Path, name: str = "camr2-words"):
+        import shutil
+
+        from huggingface_hub import snapshot_download
+        from transformers import AutoTokenizer
+
+        from engram.memory import CLOSEST, JOIN, ROOM_TOKENS
+        from engram.models import READER
+        from engram.rooms import Rooms
+
+        self.name, self.reader, self.embedder, self.closest = name, reader, embedder, CLOSEST
+        self.counter = AutoTokenizer.from_pretrained(snapshot_download(READER, local_files_only=True))
+        shutil.rmtree(workdir, ignore_errors=True)
+        self.rooms = Rooms(workdir, 1, ROOM_TOKENS, JOIN)
+
+    def observe(self, day: Day) -> None:
+        for text in day.dated():
+            vec = self.embedder.encode_one(text)
+            n = len(self.counter.encode(text + "\n"))
+            self.rooms.add(text, day.index, vec, b"x" * n, self.rooms.place(vec, n))
+
+    def notes_for(self, question: str) -> str:
+        import numpy as np
+
+        r = self.rooms
+        if not r.moments:
+            return "(none)"
+        order = np.argsort(-(r.vectors @ self.embedder.encode_one(question, is_query=True)))
+        room = r.rooms[r.moments[int(order[0])].room]
+        picked = list(room.members) + sorted(int(m) for m in order[:self.closest])
+        return "\n".join(r.moments[m].text for m in picked)
+
+    def answer(self, question: str) -> Reply:
+        t = time.perf_counter()
+        notes = self.notes_for(question)
+        before = time.perf_counter() - t
+        reply = self.reader.generate(self.reader.chat_ids(SYSTEM.format(today=today_text(self.today), notes=notes),
+                                                          question))
+        reply.ttft_s += before
+        return reply
+
+    def disk_bytes(self) -> int:
+        return self.rooms.disk_bytes()
+
+    def describe(self) -> dict:
+        return {"name": self.name, "reader": self.reader.repo, "room_tokens": self.rooms.room_tokens,
+                "join": self.rooms.join, "closest": self.closest}
+
+    def close(self) -> None:
+        self.rooms.close()

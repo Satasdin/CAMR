@@ -18,7 +18,7 @@ from engram.ruler.contenders import SYSTEM, today_text
 from engram.ruler.harness import RECORDS, environment
 
 
-def run(life, name: str, reader, embedder, work: Path, records: Path = RECORDS, progress=print) -> Path:
+def run(life, name: str, reader, embedder, work: Path, records: Path = RECORDS, progress=print, suffix: str = "") -> Path:
     day = life.days[-1]
     shutil.rmtree(work, ignore_errors=True)
     t0 = time.perf_counter()
@@ -35,6 +35,13 @@ def run(life, name: str, reader, embedder, work: Path, records: Path = RECORDS, 
             return tool, args, reply
     else:
         notes_for = lambda q: "(none)"
+        if name == "camr2-words":
+            from engram.ruler.contenders import CamrWords
+
+            words = CamrWords(reader, embedder, work)
+            for d in life.days:
+                words.observe(d)
+            notes_for = words.notes_for
         if name == "camr":
             from engram.ruler.__main__ import CAMR_MIN_SIMILARITY
             from engram.ruler.contenders import CamrText
@@ -71,6 +78,7 @@ def run(life, name: str, reader, embedder, work: Path, records: Path = RECORDS, 
                "asked": sum(r["tool"] == "ask_user" for r in rows), "no_tool": sum(r["tool"] is None for r in rows),
                "wait_median_s": waits[len(waits) // 2] if waits else None}
     started = dt.datetime.now()
+    name = name + suffix
     out = records / started.strftime("%Y-%m-%d") / f"{started.strftime('%H%M%S')}-{life.persona}-s{life.seed}-errands-{name}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"kind": "errands", "persona": life.persona, "seed": life.seed, "contender": name,
@@ -79,8 +87,10 @@ def run(life, name: str, reader, embedder, work: Path, records: Path = RECORDS, 
     progress(f"{life.persona} s{life.seed} errands {name}: knows {summary['knows']}/{told}, honest "
              f"{summary['honest']}/{summary['untold']}, false memories {summary['false_memories']}, asked "
              f"{summary['asked']}, wait {summary['wait_median_s']} s")
-    if name == "engram":
+    if name.startswith("engram"):
         memory.close()
-    elif name == "camr":
+    elif name.startswith("camr2-words"):
+        words.close()
+    elif name.startswith("camr"):
         camr.close()
     return out

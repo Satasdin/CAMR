@@ -77,7 +77,7 @@ def summarize(answers: list[dict]) -> dict:
 
 
 def run(life: Life, contender: Contender, *, weeks: int = 12, limit: int | None = None,
-        records: Path = RECORDS, progress=print) -> Path:
+        records: Path = RECORDS, progress=print, quiz_weeks: set[int] | None = None) -> Path:
     """Run ``contender`` through the first ``weeks`` of ``life``; returns the path of the test record."""
     questions = life.questions[:limit] if limit else life.questions
     started = dt.datetime.now()
@@ -85,7 +85,8 @@ def run(life: Life, contender: Contender, *, weeks: int = 12, limit: int | None 
         f"{started.strftime('%H%M%S')}-{life.persona}-s{life.seed}-{contender.name}.json")
     path.parent.mkdir(parents=True, exist_ok=True)
     record = {"kind": "life", "persona": life.persona, "seed": life.seed, "contender": contender.describe(),
-              "questions": len(questions), "weeks_planned": weeks, "started": started.isoformat(timespec="seconds"),
+              "questions": len(questions), "weeks_planned": weeks, "quiz_weeks": sorted(quiz_weeks) if quiz_weeks else None,
+              "started": started.isoformat(timespec="seconds"),
               "environment": environment(), "weeks": []}
     observe_s = sleep_s = 0.0
     for day in life.days[:weeks * 7]:
@@ -95,7 +96,7 @@ def run(life: Life, contender: Contender, *, weeks: int = 12, limit: int | None 
         t = time.perf_counter()
         contender.sleep(day)
         sleep_s += time.perf_counter() - t
-        if day.index not in life.quiz_days:
+        if day.index not in life.quiz_days or (quiz_weeks and day.index // 7 + 1 not in quiz_weeks):
             continue
         peak_reset()
         t = time.perf_counter()

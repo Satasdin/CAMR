@@ -16,7 +16,7 @@ from pathlib import Path
 
 from engram.ruler.life import PERSONAS, build
 
-CONTENDERS = ["bare", "perfect", "camr", "camr-4b", "engram", "engram-words"]
+CONTENDERS = ["bare", "perfect", "camr", "camr-4b", "engram", "engram-words", "bare-27b", "camr-27b", "camr2-words-27b"]
 # min_similarity for the old CAMR with the MLX embedder, chosen on the development lives (seed 0): DECISIONS.md E-04
 CAMR_MIN_SIMILARITY = 0.65
 
@@ -30,6 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--contender", choices=CONTENDERS, required=True)
     r.add_argument("--weeks", type=int, default=12)
     r.add_argument("--limit", type=int, help="ask only the first N questions (for quick checks)")
+    r.add_argument("--quiz-weeks", type=int, nargs="*", help="quiz only these weeks (a big reader is slow)")
     r.add_argument("--min-similarity", type=float, default=CAMR_MIN_SIMILARITY)
     r.add_argument("--records", type=Path)
     c = sub.add_parser("chart", help="draw the growth chart of a life from its records")
@@ -39,7 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     e = sub.add_parser("errands", help="every quiz question as a task with tools, on the life's last day")
     e.add_argument("--persona", choices=sorted(PERSONAS), required=True)
     e.add_argument("--seed", type=int, default=1)
-    e.add_argument("--contender", choices=["bare", "camr", "engram"], required=True)
+    e.add_argument("--contender", choices=["bare", "camr", "engram", "camr2-words"], required=True)
+    e.add_argument("--reader", choices=["1.7b", "27b"], default="1.7b")
     e.add_argument("--records", type=Path)
     s = sub.add_parser("speed", help="time to first word by memory on the desk: engram's notes against words")
     s.add_argument("--persona", choices=sorted(PERSONAS), default="student")
@@ -83,23 +85,33 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "errands":
         from engram.ruler.errands import run as errands
 
-        print(errands(build(a.persona, a.seed), a.contender, Reader(READER), Embedder(),
-                      records.parent / "work" / f"{a.persona}-s{a.seed}-errands-{a.contender}", records))
+        from engram.models import READER_27B
+
+        big = a.reader == "27b"
+        print(errands(build(a.persona, a.seed), a.contender, Reader(READER_27B if big else READER), Embedder(),
+                      records.parent / "work" / f"{a.persona}-s{a.seed}-errands-{a.contender}{'-27b' if big else ''}",
+                      records, suffix="-27b" if big else ""))
         return 0
     life = build(a.persona, a.seed)
-    reader = Reader(READER_BIG if a.contender == "camr-4b" else READER)
-    if a.contender == "bare":
+    from engram.models import READER_27B
+
+    reader = Reader(READER_BIG if a.contender == "camr-4b" else READER_27B if a.contender.endswith("-27b") else READER)
+    if a.contender in ("bare", "bare-27b"):
         contender = cs.Bare(reader)
+        contender.name = a.contender
     elif a.contender == "perfect":
         contender = cs.Perfect(reader)
     else:
         work = records.parent / "work" / f"{a.persona}-s{a.seed}-{a.contender}"
         if a.contender.startswith("engram"):
             contender = cs.Engram(reader, Embedder(), work, words=a.contender == "engram-words")
+        elif a.contender == "camr2-words-27b":
+            contender = cs.CamrWords(reader, Embedder(), work, name=a.contender)
         else:
             contender = cs.CamrText(reader, Embedder(), work, a.min_similarity, name=a.contender)
     try:
-        path = run(life, contender, weeks=a.weeks, limit=a.limit, records=records)
+        path = run(life, contender, weeks=a.weeks, limit=a.limit, records=records,
+                   quiz_weeks=set(a.quiz_weeks) if a.quiz_weeks else None)
     finally:
         contender.close()
     print(path)

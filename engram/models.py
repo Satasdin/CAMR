@@ -12,6 +12,7 @@ import numpy as np
 
 READER = "mlx-community/Qwen3-1.7B-4bit"
 READER_BIG = "mlx-community/Qwen3-4B-Instruct-2507-4bit"
+READER_27B = "mlx-community/Qwen3.8-27B-4bit"  # 16 GB; hybrid attention, so it reads CAMR v2's memory as words
 EMBEDDER = "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 MAX_ANSWER_TOKENS = 40
 PREFILL_STEP = 2048
