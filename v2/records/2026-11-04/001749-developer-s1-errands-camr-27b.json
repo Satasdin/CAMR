@@ -1,0 +1,1535 @@
+{
+ "kind": "errands",
+ "persona": "developer",
+ "seed": 1,
+ "contender": "camr-27b",
+ "day": 83,
+ "observe_s": 3.4,
+ "environment": {
+  "machine": "Mac17,9",
+  "chip": "Apple M5 Pro",
+  "memory_gb": 24,
+  "power": "Battery Power",
+  "load_1m": 2.17,
+  "python": "3.12.12",
+  "engram_commit": "1862288",
+  "engram_dirty": true,
+  "engram_source_sha": "04742c1088452d13",
+  "mlx": "0.32.4",
+  "mlx_lm": "0.32.2",
+  "numpy": "2.5.4"
+ },
+ "summary": {
+  "tasks": 100,
+  "told": 85,
+  "knows": 27,
+  "untold": 15,
+  "honest": 15,
+  "false_memories": 0,
+  "stale": 0,
+  "missed": 58,
+  "wrong": 0,
+  "asked": 61,
+  "no_tool": 12,
+  "wait_median_s": 3.8334
+ },
+ "tasks": [
+  {
+   "qid": "q001",
+   "kind": "update",
+   "task": "Order a case for my neighbour's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Samsung",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 7.3983
+  },
+  {
+   "qid": "q002",
+   "kind": "single",
+   "task": "Book my teammate's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Isuzu D-Max",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your teammate's car?"
+   },
+   "said": "Asked you: What is the make and model of your teammate's car?",
+   "raw": "I don't know the make and model of your teammate's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your teammate's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 2.7325
+  },
+  {
+   "qid": "q003",
+   "kind": "single",
+   "task": "Order my best friend's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "nyama choma",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your best friend's favourite food?"
+   },
+   "said": "Asked you: What is your best friend's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your best friend's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.6826
+  },
+  {
+   "qid": "q004",
+   "kind": "update",
+   "task": "Book my landlord's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Nissan Note",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your landlord's car?"
+   },
+   "said": "Asked you: What is the make and model of your landlord's car?",
+   "raw": "I don't know the make and model of your landlord's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your landlord's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.4951
+  },
+  {
+   "qid": "q005",
+   "kind": "abstain",
+   "task": "Book me a ride to my godmother's home.",
+   "expected_tool": "book_ride",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the name of the town or place where your godmother's home is located?"
+   },
+   "said": "Asked you: What is the name of the town or place where your godmother's home is located?",
+   "raw": "I don't know the name of the town or place where your godmother's home is located.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the name of the town or place where your godmother's home is located?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.8282
+  },
+  {
+   "qid": "q006",
+   "kind": "time",
+   "task": "Write a diary entry for the day I upgraded the database to Postgres 16.",
+   "expected_tool": "write_diary",
+   "expected": "23 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "23 February 2026",
+    "event": "Upgraded the database to Postgres 16"
+   },
+   "said": "Write diary: date = 23 February 2026, event = Upgraded the database to Postgres 16",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n23 February 2026\n</parameter>\n<parameter=event>\nUpgraded the database to Postgres 16\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 4.1615
+  },
+  {
+   "qid": "q007",
+   "kind": "single",
+   "task": "Order my sister's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "biryani",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your sister's favourite food?"
+   },
+   "said": "Asked you: What is your sister's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your sister's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 4.0684
+  },
+  {
+   "qid": "q008",
+   "kind": "time",
+   "task": "Write a diary entry for the day I hired the new intern.",
+   "expected_tool": "write_diary",
+   "expected": "27 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "27 February 2026",
+    "event": "hired the new intern"
+   },
+   "said": "Write diary: date = 27 February 2026, event = hired the new intern",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n27 February 2026\n</parameter>\n<parameter=event>\nhired the new intern\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.9569
+  },
+  {
+   "qid": "q009",
+   "kind": "time",
+   "task": "Write a diary entry for the day I shipped the mobile app to the Play Store.",
+   "expected_tool": "write_diary",
+   "expected": "5 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "5 March 2026",
+    "event": "shipped the mobile app to the Play Store"
+   },
+   "said": "Write diary: date = 5 March 2026, event = shipped the mobile app to the Play Store",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n5 March 2026\n</parameter>\n<parameter=event>\nshipped the mobile app to the Play Store\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 4.3683
+  },
+  {
+   "qid": "q010",
+   "kind": "single",
+   "task": "Set a reminder for my manager's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "21 December",
+   "tool": "set_reminder",
+   "args": {
+    "person": "Kiptoo",
+    "date": "21 December"
+   },
+   "said": "Set reminder: person = Kiptoo, date = 21 December",
+   "raw": "<tool_call>\n<function=set_reminder>\n<parameter=person>\nKiptoo\n</parameter>\n<parameter=date>\n21 December\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.7726
+  },
+  {
+   "qid": "q011",
+   "kind": "single",
+   "task": "Order my cousin's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "chapati",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your cousin's favourite food?"
+   },
+   "said": "Asked you: What is your cousin's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your cousin's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7645
+  },
+  {
+   "qid": "q012",
+   "kind": "multi",
+   "task": "Book my sister's roommate's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Nissan Note",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your sister's roommate's car?"
+   },
+   "said": "Asked you: What is the make and model of your sister's roommate's car?",
+   "raw": "I don't know the make and model of your sister's roommate's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your sister's roommate's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7558
+  },
+  {
+   "qid": "q013",
+   "kind": "single",
+   "task": "Book a groomer for my brother's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Bosco",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your brother's dog's name?"
+   },
+   "said": "Asked you: What is your brother's dog's name?",
+   "raw": "I don't know the dog's name.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your brother's dog's name?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7653
+  },
+  {
+   "qid": "q014",
+   "kind": "abstain",
+   "task": "Buy my manager a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your manager support?"
+   },
+   "said": "Asked you: Which football team does your manager support?",
+   "raw": "I don't know which football team your manager supports.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your manager support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 4.0646
+  },
+  {
+   "qid": "q015",
+   "kind": "single",
+   "task": "Find a gift for my mum that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "chef",
+   "tool": "find_gift",
+   "args": {
+    "work": "chef"
+   },
+   "said": "Find gift: work = chef",
+   "raw": "<tool_call>\n<function=find_gift>\n<parameter=work>\nchef\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 6.4296
+  },
+  {
+   "qid": "q016",
+   "kind": "abstain",
+   "task": "Find a gift for my grandfather that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What does your grandfather do for work?"
+   },
+   "said": "Asked you: What does your grandfather do for work?",
+   "raw": "I don't know what your grandfather does for work.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat does your grandfather do for work?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 6.3295
+  },
+  {
+   "qid": "q017",
+   "kind": "single",
+   "task": "Order a case for my brother's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Itel",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 3.9751
+  },
+  {
+   "qid": "q018",
+   "kind": "single",
+   "task": "Book a groomer for my sister's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Moto",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your sister's dog's name?"
+   },
+   "said": "Asked you: What is your sister's dog's name?",
+   "raw": "I don't know the dog's name.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your sister's dog's name?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.6181
+  },
+  {
+   "qid": "q019",
+   "kind": "single",
+   "task": "Book me a ride to my client's home.",
+   "expected_tool": "book_ride",
+   "expected": "Embu",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the address or town of your client's home?"
+   },
+   "said": "Asked you: What is the address or town of your client's home?",
+   "raw": "I don't know the client's home address, so I can't book the ride.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the address or town of your client's home?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 4.0205
+  },
+  {
+   "qid": "q020",
+   "kind": "single",
+   "task": "Set a reminder for my client's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "26 January",
+   "tool": "set_reminder",
+   "args": {
+    "person": "Sanaipei",
+    "date": "26 January"
+   },
+   "said": "Set reminder: person = Sanaipei, date = 26 January",
+   "raw": "<tool_call>\n<function=set_reminder>\n<parameter=person>\nSanaipei\n</parameter>\n<parameter=date>\n26 January\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.4339
+  },
+  {
+   "qid": "q021",
+   "kind": "multi",
+   "task": "Find a gift for my brother's wife that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "pharmacist",
+   "tool": "ask_user",
+   "args": {
+    "question": "What does your brother's wife do for work?"
+   },
+   "said": "Asked you: What does your brother's wife do for work?",
+   "raw": "I don't know what your brother's wife does for work.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat does your brother's wife do for work?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.9331
+  },
+  {
+   "qid": "q022",
+   "kind": "time",
+   "task": "Write a diary entry for the day I moved to the new co-working space.",
+   "expected_tool": "write_diary",
+   "expected": "8 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "8 February 2026",
+    "event": "I moved to the new co-working space"
+   },
+   "said": "Write diary: date = 8 February 2026, event = I moved to the new co-working space",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n8 February 2026\n</parameter>\n<parameter=event>\nI moved to the new co-working space\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 4.1966
+  },
+  {
+   "qid": "q023",
+   "kind": "update",
+   "task": "Order a case for my mum's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Oppo",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 4.1182
+  },
+  {
+   "qid": "q024",
+   "kind": "single",
+   "task": "Book me a ride to my neighbour's home.",
+   "expected_tool": "book_ride",
+   "expected": "Naivasha",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your neighbour's name or the address of their home?"
+   },
+   "said": "Asked you: What is your neighbour's name or the address of their home?",
+   "raw": "I don't know your neighbour's name or address, so I can't book the ride.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your neighbour's name or the address of their home?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.8624
+  },
+  {
+   "qid": "q025",
+   "kind": "time",
+   "task": "Write a diary entry for the day I passed my AWS certification.",
+   "expected_tool": "write_diary",
+   "expected": "22 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "22 February 2026",
+    "event": "I passed my AWS certification."
+   },
+   "said": "Write diary: date = 22 February 2026, event = I passed my AWS certification.",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n22 February 2026\n</parameter>\n<parameter=event>\nI passed my AWS certification.\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 4.1984
+  },
+  {
+   "qid": "q026",
+   "kind": "single",
+   "task": "Book me a ride to my sister's home.",
+   "expected_tool": "book_ride",
+   "expected": "Narok",
+   "tool": "ask_user",
+   "args": {
+    "question": "What town or place is your sister's home in?"
+   },
+   "said": "Asked you: What town or place is your sister's home in?",
+   "raw": "I don't know your sister's home address or town.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat town or place is your sister's home in?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 4.1886
+  },
+  {
+   "qid": "q027",
+   "kind": "single",
+   "task": "Set a reminder for my neighbour's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "9 April",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your neighbour's name and what is the date of their birthday?"
+   },
+   "said": "Asked you: What is your neighbour's name and what is the date of their birthday?",
+   "raw": "I don't know the neighbour's name or the birthday date, so I can't set the reminder.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your neighbour's name and what is the date of their birthday?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 4.2005
+  },
+  {
+   "qid": "q028",
+   "kind": "abstain",
+   "task": "Book me a ride to my best friend's home.",
+   "expected_tool": "book_ride",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the name or address of your best friend's home?"
+   },
+   "said": "Asked you: What is the name or address of your best friend's home?",
+   "raw": "I don't know your best friend's home address, so I can't book the ride.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the name or address of your best friend's home?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 4.2052
+  },
+  {
+   "qid": "q029",
+   "kind": "single",
+   "task": "Book my neighbour's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Honda Fit",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your neighbour's car?"
+   },
+   "said": "Asked you: What is the make and model of your neighbour's car?",
+   "raw": "I don't know the make and model of your neighbour's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your neighbour's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.8683
+  },
+  {
+   "qid": "q030",
+   "kind": "single",
+   "task": "Book a groomer for my teammate's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Tiny",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your teammate's dog's name?"
+   },
+   "said": "Asked you: What is your teammate's dog's name?",
+   "raw": "I don't know the dog's name.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your teammate's dog's name?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.9567
+  },
+  {
+   "qid": "q031",
+   "kind": "multi",
+   "task": "Book my teammate's husband's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Isuzu D-Max",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your teammate's husband's car?"
+   },
+   "said": "Asked you: What is the make and model of your teammate's husband's car?",
+   "raw": "I don't know the make and model of your teammate's husband's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your teammate's husband's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.8233
+  },
+  {
+   "qid": "q032",
+   "kind": "single",
+   "task": "Set a reminder for my brother's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "21 June",
+   "tool": "set_reminder",
+   "args": {
+    "person": "Kipkemboi",
+    "date": "21 June"
+   },
+   "said": "Set reminder: person = Kipkemboi, date = 21 June",
+   "raw": "I'll set a reminder for your brother Kipkemboi's birthday on 21 June.\n\n<tool_call>\n<function=set_reminder>\n<parameter=person>\nKipkemboi\n</parameter>\n<parameter=date>\n21 June\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.8193
+  },
+  {
+   "qid": "q033",
+   "kind": "single",
+   "task": "Book me a ride to my landlord's home.",
+   "expected_tool": "book_ride",
+   "expected": "Kericho",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the name or address of your landlord's home?"
+   },
+   "said": "Asked you: What is the name or address of your landlord's home?",
+   "raw": "I don't know the name or address of your landlord's home.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the name or address of your landlord's home?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.8136
+  },
+  {
+   "qid": "q034",
+   "kind": "time",
+   "task": "Write a diary entry for the day I bought a new laptop.",
+   "expected_tool": "write_diary",
+   "expected": "21 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "21 March 2026",
+    "event": "I bought a new laptop."
+   },
+   "said": "Write diary: date = 21 March 2026, event = I bought a new laptop.",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n21 March 2026\n</parameter>\n<parameter=event>\nI bought a new laptop.\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 4.2988
+  },
+  {
+   "qid": "q035",
+   "kind": "multi",
+   "task": "Book me a ride to my mum's husband's home.",
+   "expected_tool": "book_ride",
+   "expected": "Narok",
+   "tool": "ask_user",
+   "args": {
+    "question": "Where is your mum's husband's home?"
+   },
+   "said": "Asked you: Where is your mum's husband's home?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhere is your mum's husband's home?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.9414
+  },
+  {
+   "qid": "q036",
+   "kind": "single",
+   "task": "Buy my teammate a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Liverpool",
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your teammate support?"
+   },
+   "said": "Asked you: Which football team does your teammate support?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your teammate support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7224
+  },
+  {
+   "qid": "q037",
+   "kind": "abstain",
+   "task": "Find a gift for my landlord that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What does your landlord Njeri do for work?"
+   },
+   "said": "Asked you: What does your landlord Njeri do for work?",
+   "raw": "I don't know what your landlord Njeri does for work.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat does your landlord Njeri do for work?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 6.0429
+  },
+  {
+   "qid": "q038",
+   "kind": "single",
+   "task": "Book a groomer for my landlord's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Jasiri",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your landlord's dog's name?"
+   },
+   "said": "Asked you: What is your landlord's dog's name?",
+   "raw": "I don't know the dog's name.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your landlord's dog's name?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.8113
+  },
+  {
+   "qid": "q039",
+   "kind": "abstain",
+   "task": "Book a groomer for my mum's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your mum's dog's name?"
+   },
+   "said": "Asked you: What is your mum's dog's name?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your mum's dog's name?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.7988
+  },
+  {
+   "qid": "q040",
+   "kind": "multi",
+   "task": "Book me a ride to my client's daughter's home.",
+   "expected_tool": "book_ride",
+   "expected": "Kisumu",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the address or town of your client's daughter's home?"
+   },
+   "said": "Asked you: What is the address or town of your client's daughter's home?",
+   "raw": "I don't know the client's daughter's home address.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the address or town of your client's daughter's home?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.6885
+  },
+  {
+   "qid": "q041",
+   "kind": "multi",
+   "task": "Book my neighbour's husband's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Mazda Demio",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your neighbour's husband's car?"
+   },
+   "said": "Asked you: What is the make and model of your neighbour's husband's car?",
+   "raw": "I don't know the make and model of your neighbour's husband's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your neighbour's husband's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.8775
+  },
+  {
+   "qid": "q042",
+   "kind": "abstain",
+   "task": "Order my nephew's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your nephew's favourite food?"
+   },
+   "said": "Asked you: What is your nephew's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your nephew's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.8551
+  },
+  {
+   "qid": "q043",
+   "kind": "abstain",
+   "task": "Book me a ride to my mum's home.",
+   "expected_tool": "book_ride",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the town or place where your mum's home is located?"
+   },
+   "said": "Asked you: What is the town or place where your mum's home is located?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the town or place where your mum's home is located?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.7374
+  },
+  {
+   "qid": "q044",
+   "kind": "update",
+   "task": "Book me a ride to my teammate's home.",
+   "expected_tool": "book_ride",
+   "expected": "Narok",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your teammate's home address?"
+   },
+   "said": "Asked you: What is your teammate's home address?",
+   "raw": "I don't know your teammate's home address.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your teammate's home address?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7314
+  },
+  {
+   "qid": "q045",
+   "kind": "single",
+   "task": "Buy my landlord a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Tusker FC",
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your landlord support?"
+   },
+   "said": "Asked you: Which football team does your landlord support?",
+   "raw": "I don't know which football team your landlord supports.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your landlord support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7454
+  },
+  {
+   "qid": "q046",
+   "kind": "abstain",
+   "task": "Buy my cousin a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your cousin support?"
+   },
+   "said": "Asked you: Which football team does your cousin support?",
+   "raw": "I don't know which football team your cousin supports.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your cousin support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.8003
+  },
+  {
+   "qid": "q047",
+   "kind": "time",
+   "task": "Write a diary entry for the day I fixed the memory leak in the queue worker.",
+   "expected_tool": "write_diary",
+   "expected": "29 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "29 March 2026",
+    "event": "fixed the memory leak in the queue worker"
+   },
+   "said": "Write diary: date = 29 March 2026, event = fixed the memory leak in the queue worker",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n29 March 2026\n</parameter>\n<parameter=event>\nfixed the memory leak in the queue worker\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 4.5856
+  },
+  {
+   "qid": "q048",
+   "kind": "single",
+   "task": "Book my manager's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Nissan Note",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your manager's car?"
+   },
+   "said": "Asked you: What is the make and model of your manager's car?",
+   "raw": "I don't know the make and model of your manager's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your manager's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.8766
+  },
+  {
+   "qid": "q049",
+   "kind": "multi",
+   "task": "Book my landlord's daughter's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Mitsubishi Pajero",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your landlord's daughter's car?"
+   },
+   "said": "Asked you: What is the make and model of your landlord's daughter's car?",
+   "raw": "I don't know the make and model of your landlord's daughter's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your landlord's daughter's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7696
+  },
+  {
+   "qid": "q050",
+   "kind": "time",
+   "task": "Write a diary entry for the day I started learning Rust.",
+   "expected_tool": "write_diary",
+   "expected": "21 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "21 March 2026",
+    "event": "started learning Rust"
+   },
+   "said": "Write diary: date = 21 March 2026, event = started learning Rust",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n21 March 2026\n</parameter>\n<parameter=event>\nstarted learning Rust\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.9135
+  },
+  {
+   "qid": "q051",
+   "kind": "abstain",
+   "task": "Set a reminder for my landlord's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What date is your landlord's birthday?"
+   },
+   "said": "Asked you: What date is your landlord's birthday?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat date is your landlord's birthday?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.7323
+  },
+  {
+   "qid": "q052",
+   "kind": "single",
+   "task": "Order my brother's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "ugali and sukuma",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your brother's favourite food?"
+   },
+   "said": "Asked you: What is your brother's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your brother's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.5975
+  },
+  {
+   "qid": "q053",
+   "kind": "time",
+   "task": "Write a diary entry for the day I had the outage on the M-Pesa callback.",
+   "expected_tool": "write_diary",
+   "expected": "10 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "10 March 2026",
+    "event": "Finally had the outage on the M-Pesa callback"
+   },
+   "said": "Write diary: date = 10 March 2026, event = Finally had the outage on the M-Pesa callback",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n10 March 2026\n</parameter>\n<parameter=event>\nFinally had the outage on the M-Pesa callback\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.814
+  },
+  {
+   "qid": "q054",
+   "kind": "single",
+   "task": "Buy my brother a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Chelsea",
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your brother support?"
+   },
+   "said": "Asked you: Which football team does your brother support?",
+   "raw": "I don't know which football team your brother supports.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your brother support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7648
+  },
+  {
+   "qid": "q055",
+   "kind": "single",
+   "task": "Order my teammate's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "mukimo",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your teammate's favourite food?"
+   },
+   "said": "Asked you: What is your teammate's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your teammate's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7213
+  },
+  {
+   "qid": "q056",
+   "kind": "multi",
+   "task": "Book me a ride to my cousin's daughter's home.",
+   "expected_tool": "book_ride",
+   "expected": "Kitale",
+   "tool": "ask_user",
+   "args": {
+    "question": "What town or place is your cousin's daughter's home in?"
+   },
+   "said": "Asked you: What town or place is your cousin's daughter's home in?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat town or place is your cousin's daughter's home in?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.6177
+  },
+  {
+   "qid": "q057",
+   "kind": "single",
+   "task": "Book a groomer for my cousin's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Kahawa",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know the dog's name.",
+   "verdict": "missed",
+   "ttft_s": 3.6334
+  },
+  {
+   "qid": "q058",
+   "kind": "multi",
+   "task": "Book my manager's fianc\u00e9's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Mitsubishi Pajero",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your manager's fianc\u00e9's car?"
+   },
+   "said": "Asked you: What is the make and model of your manager's fianc\u00e9's car?",
+   "raw": "I don't know the make and model of your manager's fianc\u00e9's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your manager's fianc\u00e9's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.3932
+  },
+  {
+   "qid": "q059",
+   "kind": "update",
+   "task": "Find a gift for my manager that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "teacher",
+   "tool": "find_gift",
+   "args": {
+    "work": "teacher"
+   },
+   "said": "Find gift: work = teacher",
+   "raw": "I'll look up a gift suited to a teacher, since your manager Kiptoo now works as a teacher.\n\n<tool_call>\n<function=find_gift>\n<parameter=work>\nteacher\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.9595
+  },
+  {
+   "qid": "q060",
+   "kind": "time",
+   "task": "Write a diary entry for the day I gave a talk at the Python meetup.",
+   "expected_tool": "write_diary",
+   "expected": "22 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "22 March 2026",
+    "event": "gave a talk at the Python meetup"
+   },
+   "said": "Write diary: date = 22 March 2026, event = gave a talk at the Python meetup",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n22 March 2026\n</parameter>\n<parameter=event>\ngave a talk at the Python meetup\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.8775
+  },
+  {
+   "qid": "q061",
+   "kind": "update",
+   "task": "Book my brother's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Subaru Forester",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your brother's car?"
+   },
+   "said": "Asked you: What is the make and model of your brother's car?",
+   "raw": "I don't know the make and model of your brother's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your brother's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7075
+  },
+  {
+   "qid": "q062",
+   "kind": "single",
+   "task": "Book a groomer for my client's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Shiro",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know the dog's name.",
+   "verdict": "missed",
+   "ttft_s": 3.7155
+  },
+  {
+   "qid": "q063",
+   "kind": "single",
+   "task": "Buy my best friend a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Liverpool",
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your best friend support?"
+   },
+   "said": "Asked you: Which football team does your best friend support?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your best friend support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.3356
+  },
+  {
+   "qid": "q064",
+   "kind": "update",
+   "task": "Order a case for my landlord's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Xiaomi",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 3.6583
+  },
+  {
+   "qid": "q065",
+   "kind": "update",
+   "task": "Book my cousin's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Mitsubishi Pajero",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your cousin's car?"
+   },
+   "said": "Asked you: What is the make and model of your cousin's car?",
+   "raw": "I don't know the make and model of your cousin's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your cousin's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.3136
+  },
+  {
+   "qid": "q066",
+   "kind": "update",
+   "task": "Order a case for my client's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Nokia",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 3.7002
+  },
+  {
+   "qid": "q067",
+   "kind": "time",
+   "task": "Write a diary entry for the day I renewed the domain for the clinic site.",
+   "expected_tool": "write_diary",
+   "expected": "8 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "8 March 2026",
+    "event": "renewed the domain for the clinic site"
+   },
+   "said": "Write diary: date = 8 March 2026, event = renewed the domain for the clinic site",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n8 March 2026\n</parameter>\n<parameter=event>\nrenewed the domain for the clinic site\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.4807
+  },
+  {
+   "qid": "q068",
+   "kind": "time",
+   "task": "Write a diary entry for the day I signed the contract with the logistics client.",
+   "expected_tool": "write_diary",
+   "expected": "20 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "20 March 2026",
+    "event": "signed the contract with the logistics client"
+   },
+   "said": "Write diary: date = 20 March 2026, event = signed the contract with the logistics client",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n20 March 2026\n</parameter>\n<parameter=event>\nsigned the contract with the logistics client\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.8539
+  },
+  {
+   "qid": "q069",
+   "kind": "update",
+   "task": "Book my best friend's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Mitsubishi Pajero",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your best friend's car?"
+   },
+   "said": "Asked you: What is the make and model of your best friend's car?",
+   "raw": "I don't know the make and model of your best friend's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your best friend's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 4.0197
+  },
+  {
+   "qid": "q070",
+   "kind": "single",
+   "task": "Order my mum's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "ugali and sukuma",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your mum's favourite food?"
+   },
+   "said": "Asked you: What is your mum's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your mum's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 4.0364
+  },
+  {
+   "qid": "q071",
+   "kind": "single",
+   "task": "Order my client's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "bhajia",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your client's favourite food?"
+   },
+   "said": "Asked you: What is your client's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your client's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.643
+  },
+  {
+   "qid": "q072",
+   "kind": "single",
+   "task": "Set a reminder for my teammate's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "24 September",
+   "tool": "set_reminder",
+   "args": {
+    "person": "Akinyi",
+    "date": "24 September"
+   },
+   "said": "Set reminder: person = Akinyi, date = 24 September",
+   "raw": "<tool_call>\n<function=set_reminder>\n<parameter=person>\nAkinyi\n</parameter>\n<parameter=date>\n24 September\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.3344
+  },
+  {
+   "qid": "q073",
+   "kind": "update",
+   "task": "Book me a ride to my brother's home.",
+   "expected_tool": "book_ride",
+   "expected": "Machakos",
+   "tool": "ask_user",
+   "args": {
+    "question": "What town or place is your brother's home in?"
+   },
+   "said": "Asked you: What town or place is your brother's home in?",
+   "raw": "I don't know your brother's home address or town.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat town or place is your brother's home in?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.6889
+  },
+  {
+   "qid": "q074",
+   "kind": "time",
+   "task": "Write a diary entry for the day I switched the team to trunk-based development.",
+   "expected_tool": "write_diary",
+   "expected": "7 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "7 March 2026",
+    "event": "Switched the team to trunk-based development"
+   },
+   "said": "Write diary: date = 7 March 2026, event = Switched the team to trunk-based development",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n7 March 2026\n</parameter>\n<parameter=event>\nSwitched the team to trunk-based development\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.8944
+  },
+  {
+   "qid": "q075",
+   "kind": "abstain",
+   "task": "Order my neighbour's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your neighbour's favourite food?"
+   },
+   "said": "Asked you: What is your neighbour's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your neighbour's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.7263
+  },
+  {
+   "qid": "q076",
+   "kind": "single",
+   "task": "Set a reminder for my sister's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "3 November",
+   "tool": "set_reminder",
+   "args": {
+    "person": "Mumbua",
+    "date": "3 November"
+   },
+   "said": "Set reminder: person = Mumbua, date = 3 November",
+   "raw": "I'll set a reminder for your sister Mumbua's birthday on 3 November.\n\n<tool_call>\n<function=set_reminder>\n<parameter=person>\nMumbua\n</parameter>\n<parameter=date>\n3 November\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.4955
+  },
+  {
+   "qid": "q077",
+   "kind": "multi",
+   "task": "Find a gift for my best friend's fianc\u00e9 that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "journalist",
+   "tool": "ask_user",
+   "args": {
+    "question": "What does your best friend's fianc\u00e9 do for work?"
+   },
+   "said": "Asked you: What does your best friend's fianc\u00e9 do for work?",
+   "raw": "I don't know what your best friend's fianc\u00e9 does for work.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat does your best friend's fianc\u00e9 do for work?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7717
+  },
+  {
+   "qid": "q078",
+   "kind": "single",
+   "task": "Set a reminder for my best friend's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": "7 June",
+   "tool": "set_reminder",
+   "args": {
+    "person": "Ouma",
+    "date": "7 June"
+   },
+   "said": "Set reminder: person = Ouma, date = 7 June",
+   "raw": "I'll set a reminder for your best friend Ouma's birthday on 7 June.\n\n<tool_call>\n<function=set_reminder>\n<parameter=person>\nOuma\n</parameter>\n<parameter=date>\n7 June\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.5904
+  },
+  {
+   "qid": "q079",
+   "kind": "single",
+   "task": "Order a case for my best friend's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Itel",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 3.8334
+  },
+  {
+   "qid": "q080",
+   "kind": "single",
+   "task": "Find a gift for my sister that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "electrician",
+   "tool": "find_gift",
+   "args": {
+    "work": "electrician"
+   },
+   "said": "Find gift: work = electrician",
+   "raw": "I'll find a gift that suits your sister Mumbua's work as an electrician.\n\n<tool_call>\n<function=find_gift>\n<parameter=work>\nelectrician\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.5554
+  },
+  {
+   "qid": "q081",
+   "kind": "single",
+   "task": "Order a case for my manager's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Itel",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 3.6731
+  },
+  {
+   "qid": "q082",
+   "kind": "single",
+   "task": "Order my landlord's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "samaki wa kupaka",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your landlord's favourite food?"
+   },
+   "said": "Asked you: What is your landlord's favourite food?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your landlord's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.3276
+  },
+  {
+   "qid": "q083",
+   "kind": "single",
+   "task": "Order a case for my teammate's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Infinix",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 3.5653
+  },
+  {
+   "qid": "q084",
+   "kind": "abstain",
+   "task": "Book my uncle's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your uncle's car?"
+   },
+   "said": "Asked you: What is the make and model of your uncle's car?",
+   "raw": "I don't know the make and model of your uncle's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your uncle's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.3083
+  },
+  {
+   "qid": "q085",
+   "kind": "time",
+   "task": "Write a diary entry for the day I deployed version 2 of the payments service.",
+   "expected_tool": "write_diary",
+   "expected": "5 February",
+   "tool": "write_diary",
+   "args": {
+    "date": "5 February 2026",
+    "event": "Deployed version 2 of the payments service"
+   },
+   "said": "Write diary: date = 5 February 2026, event = Deployed version 2 of the payments service",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n5 February 2026\n</parameter>\n<parameter=event>\nDeployed version 2 of the payments service\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.8917
+  },
+  {
+   "qid": "q086",
+   "kind": "single",
+   "task": "Book a groomer for my best friend's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Moto",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your best friend's dog's name?"
+   },
+   "said": "Asked you: What is your best friend's dog's name?",
+   "raw": "I don't know the dog's name.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your best friend's dog's name?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 4.5628
+  },
+  {
+   "qid": "q087",
+   "kind": "update",
+   "task": "Book my mum's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Nissan Note",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your mum's car?"
+   },
+   "said": "Asked you: What is the make and model of your mum's car?",
+   "raw": "I don't know the make and model of your mum's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your mum's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.817
+  },
+  {
+   "qid": "q088",
+   "kind": "abstain",
+   "task": "Order a case for my cousin's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": null,
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "right_abstain",
+   "ttft_s": 4.3908
+  },
+  {
+   "qid": "q089",
+   "kind": "update",
+   "task": "Find a gift for my brother that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "chef",
+   "tool": "find_gift",
+   "args": {
+    "work": "chef"
+   },
+   "said": "Find gift: work = chef",
+   "raw": "<tool_call>\n<function=find_gift>\n<parameter=work>\nchef\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 6.2274
+  },
+  {
+   "qid": "q090",
+   "kind": "abstain",
+   "task": "Set a reminder for my mum's birthday.",
+   "expected_tool": "set_reminder",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your mum Wekesa's birthday date?"
+   },
+   "said": "Asked you: What is your mum Wekesa's birthday date?",
+   "raw": "I don't know your mum's birthday date from the notes.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your mum Wekesa's birthday date?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 5.6291
+  },
+  {
+   "qid": "q091",
+   "kind": "single",
+   "task": "Buy my neighbour a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": "Tusker FC",
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your neighbour support?"
+   },
+   "said": "Asked you: Which football team does your neighbour support?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your neighbour support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.7132
+  },
+  {
+   "qid": "q092",
+   "kind": "single",
+   "task": "Book my sister's car in for a service.",
+   "expected_tool": "book_car_service",
+   "expected": "Toyota Vitz",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is the make and model of your sister's car?"
+   },
+   "said": "Asked you: What is the make and model of your sister's car?",
+   "raw": "I don't know the make and model of your sister's car.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is the make and model of your sister's car?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.9479
+  },
+  {
+   "qid": "q093",
+   "kind": "single",
+   "task": "Book a groomer for my manager's dog.",
+   "expected_tool": "book_dog_groomer",
+   "expected": "Bosco",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your manager's dog's name?"
+   },
+   "said": "Asked you: What is your manager's dog's name?",
+   "raw": "I don't know the dog's name.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your manager's dog's name?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.6762
+  },
+  {
+   "qid": "q094",
+   "kind": "update",
+   "task": "Order a case for my sister's phone.",
+   "expected_tool": "order_phone_case",
+   "expected": "Oppo",
+   "tool": null,
+   "args": {},
+   "said": "No tool was called.",
+   "raw": "I don't know.",
+   "verdict": "missed",
+   "ttft_s": 3.7047
+  },
+  {
+   "qid": "q095",
+   "kind": "single",
+   "task": "Order my manager's favourite food for dinner tonight.",
+   "expected_tool": "order_food",
+   "expected": "chapati",
+   "tool": "ask_user",
+   "args": {
+    "question": "What is your manager's favourite food?"
+   },
+   "said": "Asked you: What is your manager's favourite food?",
+   "raw": "I don't know.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat is your manager's favourite food?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.349
+  },
+  {
+   "qid": "q096",
+   "kind": "single",
+   "task": "Book me a ride to my cousin's home.",
+   "expected_tool": "book_ride",
+   "expected": "Bungoma",
+   "tool": "ask_user",
+   "args": {
+    "question": "What town or place is your cousin's home in?"
+   },
+   "said": "Asked you: What town or place is your cousin's home in?",
+   "raw": "I don't know the name of the town or place where your cousin lives.\n\n<tool_call>\n<function=ask_user>\n<parameter=question>\nWhat town or place is your cousin's home in?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "missed",
+   "ttft_s": 3.6917
+  },
+  {
+   "qid": "q097",
+   "kind": "abstain",
+   "task": "Buy my client a scarf of the team they support.",
+   "expected_tool": "buy_team_scarf",
+   "expected": null,
+   "tool": "ask_user",
+   "args": {
+    "question": "Which football team does your client support?"
+   },
+   "said": "Asked you: Which football team does your client support?",
+   "raw": "<tool_call>\n<function=ask_user>\n<parameter=question>\nWhich football team does your client support?\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right_abstain",
+   "ttft_s": 3.7395
+  },
+  {
+   "qid": "q098",
+   "kind": "update",
+   "task": "Find a gift for my neighbour that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "veterinary officer",
+   "tool": "find_gift",
+   "args": {
+    "work": "veterinary officer"
+   },
+   "said": "Find gift: work = veterinary officer",
+   "raw": "<tool_call>\n<function=find_gift>\n<parameter=work>\nveterinary officer\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 5.9997
+  },
+  {
+   "qid": "q099",
+   "kind": "time",
+   "task": "Write a diary entry for the day I set up the backup server.",
+   "expected_tool": "write_diary",
+   "expected": "13 March",
+   "tool": "write_diary",
+   "args": {
+    "date": "13 March 2026",
+    "event": "I set up the backup server."
+   },
+   "said": "Write diary: date = 13 March 2026, event = I set up the backup server.",
+   "raw": "<tool_call>\n<function=write_diary>\n<parameter=date>\n13 March 2026\n</parameter>\n<parameter=event>\nI set up the backup server.\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 3.712
+  },
+  {
+   "qid": "q100",
+   "kind": "single",
+   "task": "Find a gift for my best friend that suits their work.",
+   "expected_tool": "find_gift",
+   "expected": "matatu driver",
+   "tool": "find_gift",
+   "args": {
+    "work": "matatu driver"
+   },
+   "said": "Find gift: work = matatu driver",
+   "raw": "<tool_call>\n<function=find_gift>\n<parameter=work>\nmatatu driver\n</parameter>\n</function>\n</tool_call>",
+   "verdict": "right",
+   "ttft_s": 6.2976
+  }
+ ]
+}
