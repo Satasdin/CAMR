@@ -138,3 +138,7 @@ Contenders:
 - `engram-words`: CAMR v2's memory read as words.
 
 Models (MLX, downloaded once): Qwen3-1.7B-4bit, Qwen3-4B-Instruct-2507-4bit, Qwen3-Embedding-0.6B-4bit-DWQ.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
