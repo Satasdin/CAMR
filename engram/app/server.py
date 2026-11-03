@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import secrets
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -132,7 +133,24 @@ class App:
 
 
 def serve(app: App, port: int) -> None:
+    # Only this page may talk to the server: other websites the user visits can reach 127.0.0.1 too. Requests must
+    # name this host (stops DNS rebinding), POSTs must be JSON from this origin, and every API call carries a secret
+    # made at launch that only the served page knows.
+    hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+    origins = {f"http://{h}" for h in hosts}
+    token = secrets.token_urlsafe(24)
+
     class Handler(BaseHTTPRequestHandler):
+        def _allowed(self, api: bool, post: bool) -> bool:
+            if self.headers.get("Host") not in hosts:
+                return False
+            origin = self.headers.get("Origin")
+            if origin is not None and origin not in origins:
+                return False
+            if post and (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json":
+                return False
+            return not api or secrets.compare_digest(self.headers.get("X-Engram-Token", ""), token)
+
         def _send(self, code: int, body: bytes, kind: str) -> None:
             self.send_response(code)
             self.send_header("Content-Type", kind)
@@ -148,8 +166,11 @@ def serve(app: App, port: int) -> None:
             pass
 
         def do_GET(self) -> None:
+            if not self._allowed(api=self.path.startswith("/api/"), post=False):
+                return self._json({"error": "forbidden"}, 403)
             if self.path in ("/", "/index.html"):
-                return self._send(200, (STATIC / "index.html").read_bytes(), "text/html; charset=utf-8")
+                page = (STATIC / "index.html").read_text().replace("__ENGRAM_TOKEN__", token)
+                return self._send(200, page.encode(), "text/html; charset=utf-8")
             if self.path == "/api/state":
                 return self._json(app.state())
             if self.path == "/api/brain":
@@ -157,6 +178,8 @@ def serve(app: App, port: int) -> None:
             self._json({"error": "not found"}, 404)
 
         def do_POST(self) -> None:
+            if not self._allowed(api=True, post=True):
+                return self._json({"error": "forbidden"}, 403)
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0) or 0)) or b"{}")
             try:
                 if self.path == "/api/chat":

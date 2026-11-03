@@ -154,8 +154,10 @@ select { font: 14px var(--body); color: var(--fg); background: #050807; border: 
 
 <script>
 const $ = id => document.getElementById(id);
+const TOKEN = "__ENGRAM_TOKEN__";   // filled in by the server at each launch; other sites can't read it
 const api = async (path, body) => {
-  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const headers = { "X-Engram-Token": TOKEN };
+  const r = await fetch(path, body ? { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(body) } : { headers });
   const j = await r.json(); if (!r.ok || j.error) throw new Error(j.error || r.statusText); return j;
 };
 const VERDICT = { right: "Right", right_abstain: "Held back", wrong: "Wrong", false_memory: "Made it up", stale: "Old answer", missed: "Missed it" };
