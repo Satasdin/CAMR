@@ -82,6 +82,22 @@ select { font: 14px var(--body); color: var(--fg); background: #050807; border: 
 .strip { background: #000; border-radius: 12px; border: 1px solid #0f1714; overflow-x: auto; }
 .strip canvas { display: block; }
 .empty { color: var(--muted); padding: 40px 10px; text-align: center; }
+/* simulation */
+.sim-head { display: flex; gap: 14px 24px; justify-content: space-between; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
+.sim-head > div:first-child { max-width: 70ch; display: grid; gap: 6px; }
+.sim-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .sim-grid { grid-template-columns: 1fr; } }
+.sim-day { position: absolute; left: 18px; top: 14px; display: grid; gap: 2px; pointer-events: none; }
+.sim-day b { font: 600 34px/1 var(--display); color: var(--fg); font-variant-numeric: tabular-nums; }
+.sim-day span { font: 400 12px/1.3 var(--mono); color: #9fb0a9; }
+.sim-side { display: grid; gap: 12px; }
+.chart { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; }
+.chart h3 { font: 600 15px/1.2 var(--display); display: flex; justify-content: space-between; gap: 8px; }
+.chart h3 small { font: 500 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chart canvas { width: 100%; display: block; }
+.asking { font: 400 14px/1.45 var(--body); color: var(--muted); min-height: 44px; margin-top: 12px; overflow-wrap: anywhere; }
+.asking b { color: var(--fg); font-weight: 500; }
+.ticker { font: 400 12px/1.4 var(--mono); color: #9fb0a9; margin-top: 8px; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -89,14 +105,41 @@ select { font: 14px var(--body); color: var(--fg); background: #050807; border: 
   <span class="mark">CAMR<i>.</i></span>
   <span class="stats" id="stats">loading…</span>
   <nav class="tabs" role="tablist">
-    <button role="tab" id="tab-chat" aria-selected="true" data-tab="chat">Chat</button>
+    <button role="tab" id="tab-sim" aria-selected="true" data-tab="sim">Simulation</button>
+    <button role="tab" id="tab-chat" aria-selected="false" data-tab="chat">Chat</button>
     <button role="tab" id="tab-errands" aria-selected="false" data-tab="errands">Errands</button>
     <button role="tab" id="tab-brain" aria-selected="false" data-tab="brain">Brain</button>
   </nav>
 </div></div>
 
 <main>
-  <section id="chat">
+  <section id="sim">
+    <div class="sim-head">
+      <div><h2>Simulation</h2>
+        <p class="muted small" style="margin:0">Twelve weeks of a scripted life arrive day by day, about 330 moments. Each moment becomes a red cell in CAMR's memory, in the room it belongs to. At the end of every week CAMR is quizzed on the same 25 of the life's 100 questions, and the moments each answer leans on flare green. Memory grows; the wait and the memory in use should not.</p></div>
+      <div class="row">
+        <select id="sim-persona" aria-label="Life"><option value="farmer">Dairy-cooperative manager</option><option value="student">Student</option><option value="developer">Developer</option></select>
+        <select id="sim-seed" aria-label="Which life"><option value="1">Held-out life</option><option value="0">Development life</option></select>
+        <button class="btn" id="sim-start" type="button">Start</button><button class="btn ghost" id="sim-stop" type="button">Stop</button>
+      </div>
+    </div>
+    <div class="sim-grid">
+      <div>
+        <div class="scope"><canvas id="sim-scope" aria-label="CAMR's memory growing"></canvas>
+          <div class="sim-day"><b id="sim-week">Week 0</b><span id="sim-date">Press Start</span></div>
+          <div class="legend"><span><i style="background:#c4566c"></i>a moment</span><span><i style="background:#fff"></i>just arrived</span><span><i style="background:#5ee08a;box-shadow:0 0 8px #5ee08a"></i>leaned on by an answer</span></div></div>
+        <div class="asking" id="sim-asking"></div>
+        <div class="ticker" id="sim-ticker"></div>
+      </div>
+      <div class="sim-side">
+        <div class="chart"><h3>Facts it knows <small id="k-knows">–</small></h3><canvas id="ch-knows" height="150"></canvas></div>
+        <div class="chart"><h3>Wait for the first word <small id="k-wait">–</small></h3><canvas id="ch-wait" height="110"></canvas></div>
+        <div class="chart"><h3>Memory in use <small id="k-ram">–</small></h3><canvas id="ch-ram" height="110"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="chat" hidden>
     <div class="cols">
       <div class="card">
         <h2>Chat</h2>
@@ -161,13 +204,14 @@ const api = async (path, body) => {
   const j = await r.json(); if (!r.ok || j.error) throw new Error(j.error || r.statusText); return j;
 };
 const VERDICT = { right: "Right", right_abstain: "Held back", wrong: "Wrong", false_memory: "Made it up", stale: "Old answer", missed: "Missed it" };
-async function refreshStats() { try { const s = await api("/api/state"); $("stats").textContent = `${s.moments} moments · ${s.rooms} rooms · ${s.disk_mb} MB on the SSD`; } catch {} }
+async function refreshStats() { try { const s = await api("/api/state"); $("stats").textContent = `Your memory: ${s.moments} moments · ${s.rooms} rooms · ${(s.disk_mb / 1000).toFixed(1)} GB on the SSD`; } catch {} }
 
 // tabs
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
 function show(tab) {
   document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
-  for (const t of ["chat", "errands", "brain"]) $(t).hidden = t !== tab;
+  for (const t of ["sim", "chat", "errands", "brain"]) $(t).hidden = t !== tab;
+  if (tab === "sim") drawSim();
   if (tab === "brain") loadBrain();
 }
 
@@ -283,7 +327,7 @@ function columns() {   // the written pieces worth showing; for an errand, the v
   });
   return cols.length ? cols : cur.words.map((_, k) => k);
 }
-function labels() { const order = cur.nodes.map((n, i) => i).sort((i, j) => cur.share[j] - cur.share[i]); const label = {}; order.forEach((i, k) => label[cur.nodes[i]] = k + 1); return { order, label }; }
+function labels() { return labelsOf(cur); }
 function target() { const t = new Float32Array(B.moments.length), p = per(), k = word < 0 ? -1 : columns()[word];
   cur.nodes.forEach((n, i) => { t[n] = Math.max(t[n], k < 0 ? cur.share[i] : (p[k] ? p[k][i] : 0)); }); return t; }
 function hull(pts) {
@@ -301,36 +345,42 @@ function outline(ctx, pts, pad) {
   const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; const m0 = mid(q.at(-1), q[0]); ctx.moveTo(m0[0], m0[1]);
   q.forEach((p, i) => { const m = mid(p, q[(i + 1) % q.length]); ctx.quadraticCurveTo(p[0], p[1], m[0], m[1]); }); ctx.closePath();
 }
-function scene() {
-  const c = $("scope"), w = c.parentElement.clientWidth, h = Math.round(w * (innerWidth < 700 ? .85 : .56)), d = devicePixelRatio || 1;
+function drawSpecimen(c, o) {   // o: {D, XY, ans, glow, focus, flash, frame, ratio}
+  const w = c.parentElement.clientWidth, h = Math.round(w * o.ratio), d = devicePixelRatio || 1;
   if (c.width !== Math.round(w * d) || c.height !== Math.round(h * d)) { c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + "px"; }
   const ctx = c.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
-  if (!cur || !XY.length) return;
-  const M = B.moments, { label } = labels();
-  let ids = M.map((_, i) => i); if (focus) ids = [...new Set([...B.rooms[cur.room].members, ...cur.nodes])];
-  const xs = ids.map(i => XY[i][0]), ys = ids.map(i => XY[i][1]);
+  const D = o.D, XYs = o.XY, ans = o.ans; if (!D || !XYs.length) return;
+  const M = D.moments, n = M.length; const label = ans ? labelsOf(ans).label : {};
+  let fr = o.frame; if (!fr) { let ids = M.map((_, i) => i); if (o.focus && ans) ids = [...new Set([...D.rooms[ans.room].members, ...ans.nodes])]; fr = ids.map(i => XYs[i]); }
+  if (!fr.length) return;
+  const xs = fr.map(p => p[0]), ys = fr.map(p => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-  const m = focus ? .22 : .07, xr = Math.max(x1 - x0, .03), yr = Math.max(y1 - y0, .03), sc = Math.min(w * (1 - 2 * m) / xr, h * (1 - 2 * m) / yr);
-  const ox = (w - xr * sc) / 2 - x0 * sc, oy = (h - yr * sc) / 2 - y0 * sc, P = i => [ox + XY[i][0] * sc, oy + XY[i][1] * sc];
-  const cell = focus ? Math.min(9, 2.6 + sc * .004) : Math.max(2.2, Math.min(4.2, w / 300)), pad = cell * (focus ? 2.2 : 3.0);
-  if (!focus) { ctx.save(); outline(ctx, hull(M.map((_, i) => P(i))), pad * 4); ctx.fillStyle = "rgba(120,150,142,0.04)"; ctx.fill();
+  const m = o.focus ? .22 : .07, xr = Math.max(x1 - x0, .03), yr = Math.max(y1 - y0, .03), sc = Math.min(w * (1 - 2 * m) / xr, h * (1 - 2 * m) / yr);
+  const ox = (w - xr * sc) / 2 - x0 * sc, oy = (h - yr * sc) / 2 - y0 * sc, P = i => [ox + XYs[i][0] * sc, oy + XYs[i][1] * sc];
+  const cell = o.focus ? Math.min(9, 2.6 + sc * .004) : Math.max(2.2, Math.min(4.2, w / 300)), pad = cell * (o.focus ? 2.2 : 3.0);
+  const room = ans ? ans.room : -1;
+  if (!o.focus && n > 2) { ctx.save(); outline(ctx, hull((o.frame ? o.frame.map(p => [ox + p[0] * sc, oy + p[1] * sc]) : M.map((_, i) => P(i)))), pad * 4); ctx.fillStyle = "rgba(120,150,142,0.04)"; ctx.fill();
     ctx.strokeStyle = "rgba(195,220,212,0.30)"; ctx.lineWidth = 1; ctx.shadowColor = "rgba(195,220,212,0.5)"; ctx.shadowBlur = 14; ctx.stroke(); ctx.restore(); }
-  for (const r of B.rooms) { const pts = hull(r.members.map(P)), lit = r.id === cur.room; ctx.save(); outline(ctx, pts, pad);
-    ctx.fillStyle = lit ? "rgba(94,224,138,0.10)" : (focus ? "rgba(124,47,63,0.07)" : "rgba(124,47,63,0.12)"); ctx.fill();
+  for (const r of D.rooms) { const pts = hull(r.members.filter(i => i < n).map(P)), lit = r.id === room; if (!pts.length) continue; ctx.save(); outline(ctx, pts, pad);
+    ctx.fillStyle = lit ? "rgba(94,224,138,0.10)" : (o.focus ? "rgba(124,47,63,0.07)" : "rgba(124,47,63,0.12)"); ctx.fill();
     ctx.lineWidth = lit ? 1.5 : .8; ctx.strokeStyle = lit ? "rgba(226,242,233,0.8)" : "rgba(170,100,112,0.22)"; if (lit) { ctx.shadowColor = "rgba(94,224,138,0.9)"; ctx.shadowBlur = 16; } ctx.stroke(); ctx.restore(); }
   ctx.save(); ctx.globalCompositeOperation = "lighter";
-  M.forEach((mm, i) => { const [x, y] = P(i); if (x < -20 || y < -20 || x > w + 20 || y > h + 20) return; const g = ctx.createRadialGradient(x, y, 0, x, y, cell * 2.2), lit = mm.room === cur.room;
+  M.forEach((mm, i) => { const [x, y] = P(i); if (x < -20 || y < -20 || x > w + 20 || y > h + 20) return; const g = ctx.createRadialGradient(x, y, 0, x, y, cell * 2.2), lit = mm.room === room;
     g.addColorStop(0, lit ? "rgba(236,120,142,0.95)" : "rgba(196,86,108,0.75)"); g.addColorStop(.45, lit ? "rgba(196,86,108,0.45)" : "rgba(150,56,74,0.28)"); g.addColorStop(1, "rgba(120,40,56,0)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, cell * 2.2, 0, Math.PI * 2); ctx.fill(); });
-  for (let i = 0; i < M.length; i++) { const v = glow.v[i]; if (v < .01) continue; const [x, y] = P(i), R = cell * (3 + 13 * Math.sqrt(v)), g = ctx.createRadialGradient(x, y, 0, x, y, R);
+  if (o.flash) for (const i of o.flash) { if (i >= n) continue; const [x, y] = P(i), R = cell * 4.5, g = ctx.createRadialGradient(x, y, 0, x, y, R);
+    g.addColorStop(0, "rgba(255,255,255,0.95)"); g.addColorStop(.3, "rgba(255,220,228,0.45)"); g.addColorStop(1, "rgba(255,200,210,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); }
+  for (let i = 0; i < n; i++) { const v = o.glow[i] || 0; if (v < .01) continue; const [x, y] = P(i), R = cell * (3 + 13 * Math.sqrt(v)), g = ctx.createRadialGradient(x, y, 0, x, y, R);
     g.addColorStop(0, `rgba(235,255,240,${Math.min(1, .5 + v)})`); g.addColorStop(.18, `rgba(94,224,138,${Math.min(1, .35 + v * 1.4)})`); g.addColorStop(.55, `rgba(46,150,88,${Math.min(.6, .12 + v * .8)})`); g.addColorStop(1, "rgba(20,80,40,0)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); }
   ctx.restore();
-  ctx.save(); ctx.font = `500 ${focus ? 13 : 11}px "IBM Plex Mono", monospace`; ctx.textAlign = "center";
-  cur.nodes.forEach(n => { const [x, y] = P(n); ctx.beginPath(); ctx.arc(x, y, cell * 2.1, 0, Math.PI * 2); ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1; ctx.stroke();
-    const ang = (label[n] - 1) * 2.4, dd = cell * 2.1 + (focus ? 12 : 9); ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fillText(label[n], x + dd * Math.cos(ang), y + dd * Math.sin(ang) + 4); });
-  ctx.restore();
+  if (ans) { ctx.save(); ctx.font = `500 ${o.focus ? 13 : 11}px "IBM Plex Mono", monospace`; ctx.textAlign = "center";
+    ans.nodes.forEach(nd => { if (nd >= n) return; const [x, y] = P(nd); ctx.beginPath(); ctx.arc(x, y, cell * 2.1, 0, Math.PI * 2); ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1; ctx.stroke();
+      const ang = (label[nd] - 1) * 2.4, dd = cell * 2.1 + (o.focus ? 12 : 9); ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fillText(label[nd], x + dd * Math.cos(ang), y + dd * Math.sin(ang) + 4); });
+    ctx.restore(); }
 }
+function labelsOf(a) { const order = a.nodes.map((n, i) => i).sort((i, j) => a.share[j] - a.share[i]); const label = {}; order.forEach((i, k) => label[a.nodes[i]] = k + 1); return { order, label }; }
+function scene() { drawSpecimen($("scope"), { D: B, XY, ans: cur, glow: glow.v, focus, ratio: innerWidth < 700 ? .85 : .56 }); }
 function strip() {
   const c = $("strip"); if (!cur) return; const cols = columns(), all = per(), p = cols.map(k => all[k]), { order, label } = labels(), words = cols.map(k => cur.words[k]), n = words.length, rows = order.slice(0, 7), rowH = 46, top = 46;
   const w = Math.max(760, c.parentElement.clientWidth), h = top + rows.length * rowH + 30, d = devicePixelRatio || 1;
@@ -371,6 +421,81 @@ $("play").addEventListener("click", () => { if (!cur) return; if (timer) return 
 $("scrub").addEventListener("input", e => { stop(); word = Number(e.target.value) - 1; redraw(); });
 for (const [id, f] of [["v-whole", false], ["v-close", true]]) $(id).addEventListener("click", () => { focus = f; $("v-whole").setAttribute("aria-pressed", String(!f)); $("v-close").setAttribute("aria-pressed", String(f)); redraw(); });
 addEventListener("resize", () => { if (cur) { strip(); if (!raf) raf = requestAnimationFrame(frame); } });
+// simulation: a whole life arriving, quizzed every week
+let SIM = null, SB = null, SXY = [], SFULL = [], simGlow = new Float32Array(0), simAns = null, simQueue = [], simCycle = null, simTimer = null, simRaf = null, simWeeks = 0, simBrainAt = -1;
+const VERB = { right: "Right", right_abstain: "Held back", wrong: "Wrong", false_memory: "Made it up", stale: "Old answer", missed: "Missed it" };
+$("sim-start").addEventListener("click", async () => {
+  $("sim-start").disabled = true; $("sim-asking").textContent = "Laying out the life's map…";
+  try { SIM = await api("/api/sim/start", { persona: $("sim-persona").value, seed: Number($("sim-seed").value), questions: 25 });
+    SB = null; SXY = []; SFULL = []; simAns = null; simQueue = []; simWeeks = 0; simBrainAt = -1; simGlow = new Float32Array(400); pollSim(); }
+  catch (err) { $("sim-asking").textContent = "Couldn't start: " + err.message; }
+  finally { $("sim-start").disabled = false; }
+});
+$("sim-stop").addEventListener("click", async () => { try { await api("/api/sim/stop", {}); } catch {} });
+async function pollSim() {
+  clearTimeout(simTimer);
+  try {
+    SIM = await api("/api/sim/state");
+    if (SIM.idle) { SIM = null; return; }
+    const wantBrain = SIM.mapped && (SIM.moments !== simBrainAt || SIM.weeks.length !== simWeeks);
+    if (wantBrain && (SIM.moments - simBrainAt >= 4 || SIM.weeks.length !== simWeeks || SIM.done || simBrainAt < 0)) {
+      SB = await api("/api/sim/brain"); simBrainAt = SB.moments.length;
+      if (SB.full && SFULL.length !== SB.full.length) { SFULL = compress(SB.full); }
+      SXY = SFULL; if (simGlow.length < SFULL.length) simGlow = new Float32Array(SFULL.length);
+      if (SIM.weeks.length !== simWeeks) { simWeeks = SIM.weeks.length; simQueue = SB.answers.filter(x => x.verdict).slice(-SIM.asked); startCycle(); }
+    }
+    simStatus(); drawSim();
+  } catch (err) { $("sim-asking").textContent = "Lost touch with CAMR: " + err.message; }
+  if (!SIM || !SIM.done) simTimer = setTimeout(pollSim, 600);
+}
+function startCycle() {
+  clearInterval(simCycle); let k = 0;
+  const show = () => { if (!simQueue.length) return; simAns = simQueue[k % simQueue.length]; k++;
+    const v = simAns.verdict; const box = $("sim-asking"); box.replaceChildren();
+    const q = document.createElement("b"); q.textContent = simAns.question + "  "; const said = document.createElement("span"); said.textContent = "→ " + simAns.words.join("").trim() + "  ";
+    const pill = document.createElement("span"); pill.className = `pill v-${v}`; pill.textContent = VERB[v] || v; box.append(q, said, pill);
+    if (!simRaf) simRaf = requestAnimationFrame(simFrame); };
+  show(); simCycle = setInterval(show, reduce ? 2400 : 1500);
+}
+function simTarget() { const t = new Float32Array(simGlow.length); if (simAns) simAns.nodes.forEach((n, i) => { if (n < t.length) t[n] = Math.max(t[n], simAns.share[i]); }); return t; }
+function simFrame() { const t = simTarget(); let moving = false;
+  for (let i = 0; i < simGlow.length; i++) { const dd = t[i] - simGlow[i]; if (Math.abs(dd) > .002) { simGlow[i] += reduce ? dd : dd * .16; moving = true; } else simGlow[i] = t[i]; }
+  drawSim(); simRaf = moving ? requestAnimationFrame(simFrame) : null; }
+function simStatus() {
+  if (!SIM || SIM.day < 0) return;
+  const d = new Date(SIM.date + "T12:00:00");
+  $("sim-week").textContent = `Week ${Math.floor(SIM.day / 7) + 1} · day ${SIM.day + 1}`;
+  $("sim-date").textContent = `${d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${SIM.moments} moments in ${SIM.rooms} rooms${SIM.done ? " · finished" : ""}`;
+  $("sim-ticker").textContent = SIM.latest ? "Just remembered: " + SIM.latest.replace(/^\[[^\]]+\] /, "") : "";
+  if (!SIM.mapped) $("sim-asking").textContent = "Laying out the life's map…";
+  if (SIM.error) $("sim-asking").textContent = "Stopped: " + SIM.error;
+  const last = SIM.weeks.at(-1);
+  if (last) { $("k-knows").textContent = `${last.knows} of ${last.told} told`; $("k-wait").textContent = `${Math.round(last.wait_s * 1000)} ms`; $("k-ram").textContent = `${last.peak_gb.toFixed(2)} GB`; }
+}
+function drawSim() {
+  if ($("sim").hidden) return;
+  const flash = SIM && SB ? new Set(SIM.recent.slice(-6)) : null;
+  drawSpecimen($("sim-scope"), { D: SB, XY: SXY, ans: simAns, glow: simGlow, focus: false, flash, frame: SFULL.length ? SFULL : null, ratio: innerWidth < 700 ? .85 : .62 });
+  const W = SIM ? SIM.weeks : [];
+  lineChart($("ch-knows"), [{ pts: W.map(w => [w.week, w.told]), color: "rgba(160,180,172,.8)", dash: [4, 4], label: "told so far" }, { pts: W.map(w => [w.week, w.knows]), color: "#5ee08a", glow: true, label: "knows" }], SIM ? SIM.asked : 25, v => v.toFixed(0));
+  lineChart($("ch-wait"), [{ pts: W.map(w => [w.week, w.wait_s]), color: "#5ee08a", glow: true }], Math.max(.2, ...W.map(w => w.wait_s * 1.4)), v => `${Math.round(v * 1000)}`);
+  lineChart($("ch-ram"), [{ pts: W.map(w => [w.week, w.peak_gb]), color: "#5ee08a", glow: true }], Math.max(4, ...W.map(w => w.peak_gb * 1.3)), v => v.toFixed(1));
+}
+function lineChart(c, series, ymax, fmt) {
+  if (!c.dataset.h) c.dataset.h = c.getAttribute("height");   // the drawn height; the pixel buffer is scaled from it
+  const w = c.parentElement.clientWidth - 28, h = Number(c.dataset.h), d = devicePixelRatio || 1;
+  c.width = w * d; c.height = h * d; c.style.height = h + "px"; const ctx = c.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, w, h);
+  const L = 34, R = 8, T = 8, Bm = 18, X = wk => L + (wk - 1) / 11 * (w - L - R), Y = v => T + (1 - v / ymax) * (h - T - Bm);
+  ctx.font = '400 10px "IBM Plex Mono", monospace'; ctx.fillStyle = "#6f807a"; ctx.strokeStyle = "#17211d"; ctx.lineWidth = 1;
+  for (let i = 0; i <= 2; i++) { const v = ymax * i / 2, y = Y(v); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(fmt(v), L - 5, y + 3); }
+  ctx.textAlign = "center"; for (const wk of [1, 4, 8, 12]) ctx.fillText(`w${wk}`, X(wk), h - 4);
+  for (const sr of series) { if (!sr.pts.length) continue; ctx.save(); ctx.beginPath(); sr.pts.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)));
+    ctx.strokeStyle = sr.color; ctx.lineWidth = sr.dash ? 1.2 : 2; if (sr.dash) ctx.setLineDash(sr.dash); if (sr.glow) { ctx.shadowColor = "rgba(94,224,138,.7)"; ctx.shadowBlur = 8; } ctx.stroke(); ctx.restore();
+    const [lx, ly] = sr.pts.at(-1); ctx.fillStyle = sr.color; ctx.beginPath(); ctx.arc(X(lx), Y(ly), 3, 0, Math.PI * 2); ctx.fill(); }
+}
+addEventListener("resize", () => drawSim());
+show("sim");
+simGlow = new Float32Array(400); pollSim();   // join a simulation that is already running
 refreshStats();
 </script>
 </body>

@@ -30,6 +30,17 @@ class App:
         self.memory = Memory(self.reader, self.embedder, path)
         self.lock = threading.Lock()  # one model, one job at a time
         self.today = dt.date.today()
+        self.sim = None
+        self.sim_root = Path(path).parent / "simulations"
+
+    def simulate(self, persona: str, seed: int, questions: int) -> dict:
+        from engram.app.sim import Simulation
+
+        if self.sim and not self.sim.done:
+            self.sim.stop()
+            self.sim.thread.join(timeout=30)
+        self.sim = Simulation(self, persona, seed, max(5, min(questions, 100)), self.sim_root)
+        return self.sim.state()
 
     def _day(self, d: dt.date) -> int:
         return (d - START).days
@@ -104,13 +115,14 @@ class App:
                     verdicts[v] += 1
         return {"asked": sum(verdicts.values()), "verdicts": dict(verdicts)}
 
-    def brain(self) -> dict:
+    def brain(self, memory=None, layout=None) -> dict:
         from engram.view.layout import positions
 
+        memory = memory or self.memory
         with self.lock:
-            r = self.memory.rooms
-            xy = positions(r)
-            events = self.memory.log.read()
+            r = memory.rooms
+            xy = layout[:len(r.moments)] if layout is not None else positions(r)
+            events = memory.log.read()
         verdict = {e["event"]: e for e in events if e["type"] == "verdict"}
         tools = {}
         for i, e in enumerate(events):
@@ -175,6 +187,12 @@ def serve(app: App, port: int) -> None:
                 return self._json(app.state())
             if self.path == "/api/brain":
                 return self._json(app.brain())
+            if self.path == "/api/sim/state":
+                return self._json(app.sim.state() if app.sim else {"day": -1, "idle": True})
+            if self.path == "/api/sim/brain":
+                if not app.sim or app.sim.layout is None:
+                    return self._json({"moments": [], "rooms": [], "layout": [], "answers": []})
+                return self._json({**app.brain(app.sim.memory, app.sim.layout), "full": app.sim.layout})
             self._json({"error": "not found"}, 404)
 
         def do_POST(self) -> None:
@@ -188,6 +206,13 @@ def serve(app: App, port: int) -> None:
                     return self._json(app.errand(str(body.get("text", ""))))
                 if self.path == "/api/life":
                     return self._json(app.load_life(str(body.get("persona", "farmer")), int(body.get("seed", 0))))
+                if self.path == "/api/sim/start":
+                    return self._json(app.simulate(str(body.get("persona", "farmer")), int(body.get("seed", 1)),
+                                                   int(body.get("questions", 25))))
+                if self.path == "/api/sim/stop":
+                    if app.sim:
+                        app.sim.stop()
+                    return self._json({"stopped": True})
                 if self.path == "/api/quiz":
                     return self._json(app.quiz(str(body.get("persona", "farmer")), int(body.get("seed", 0)),
                                                bool(body.get("errands")), int(body.get("limit", 100))))
