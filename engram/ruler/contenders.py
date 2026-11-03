@@ -223,20 +223,15 @@ class Engram(Contender):
         self.memory.rooms.save()
 
     def answer(self, question: str) -> Reply:
-        t = time.perf_counter()
         m = self.memory
+        if not self.words:
+            return m.answer(question, self.today)
+        t = time.perf_counter()
         head, rest = m.prompt(self.today, question)
-        if self.words:
-            rec = m.choose(question)
-            ids = head + m.room_words(rec.room) + m.words(rec.closest) + rest
-            before = time.perf_counter() - t
-            reply = self.reader.generate(ids)
-        else:
-            rec = m.recall(question)
-            ids = m.words(rec.closest) + rest
-            before = time.perf_counter() - t
-            reply = self.reader.generate(ids, cache=rec.desk)
-            reply.prompt_tokens += len(head) + rec.tokens
+        rec = m.choose(question)
+        ids = head + m.room_words(rec.room) + m.words(rec.closest) + rest
+        before = time.perf_counter() - t
+        reply = self.reader.generate(ids)
         reply.ttft_s += before
         return reply
 
@@ -247,7 +242,7 @@ class Engram(Contender):
         m = self.memory
         return {"name": self.name, "reader": self.reader.repo, "room_tokens": m.rooms.room_tokens,
                 "join": m.rooms.join, "closest": m.closest, "allowance_bytes": m.allowance,
-                "token_bytes": m.rooms.token_bytes}
+                "token_bytes": m.rooms.token_bytes, "event_log": m.log is not None}
 
     def close(self) -> None:
         self.memory.close()

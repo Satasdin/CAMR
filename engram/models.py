@@ -6,7 +6,7 @@ Imports of MLX are inside the classes, so the rest of the package (lives, gradin
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -24,6 +24,7 @@ class Reply:
     gen_tps: float
     prompt_tokens: int
     gen_tokens: int
+    pieces: list[str] = field(default_factory=list)  # the text each written token added, in order
 
 
 class Reader:
@@ -54,11 +55,12 @@ class Reader:
         from mlx_lm import stream_generate
 
         t0 = time.perf_counter()
-        first, text, r = None, "", None
+        first, pieces, r = None, [], None
         for r in stream_generate(self.model, self.tok, ids, max_tokens=self.max_tokens, prompt_cache=cache):
             first = first or time.perf_counter() - t0
-            text += r.text
-        return Reply(text.strip(), first or 0.0, r.generation_tps if r else 0.0, len(ids), r.generation_tokens if r else 0)
+            pieces.append(r.text)
+        return Reply("".join(pieces).strip(), first or 0.0, r.generation_tps if r else 0.0, len(ids),
+                     r.generation_tokens if r else 0, pieces)
 
     def new_cache(self, ids: list[int]):
         """A cache holding the model's notes on ``ids`` (read in steps, so a long text fits in memory)."""

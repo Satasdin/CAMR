@@ -183,3 +183,35 @@ Engram matches the old CAMR on the same model, at half the wait and 0.4 GB less 
 hand-written rules: no entity bridging, time filters or slot gates. It does not yet reach the 4B. Knowing more and
 inventing less is the job of the later steps (the translation layer, sleep, and settling unsure facts at recall),
 measured by the proof in step 6.
+
+## Step 2: event log and first view (3 November 2026)
+
+**E-21 What "used" means, and what watching costs.** While engram writes each word, it records that word's attention
+over every node on the desk: the room's moments, and the closest moments re-read as words. Attention is averaged
+over every head of four middle-to-late layers (12, 16, 20, 24 of 28). A node is *used* when it draws at least 10%
+of the desk's attention over the whole answer; the others were only picked up. Measured on the development lives:
+
+| Watching | Writing speed |
+|---|---|
+| off | 232.8 words/s |
+| 4 layers | 231.5 words/s (−0.6%) |
+| all 28 layers | 215.4 words/s (−7.5%) |
+
+Four layers keep inside step 2's 5% limit. All 28 do not.
+
+In 47 right answers to single facts, the node looked at hardest was the moment holding the answer every time; chance
+was 12%. Any band of layers agreed (98–100%), so the four cheap ones lose nothing.
+
+The log is one JSON line per event, `events.jsonl`, beside the rooms. A whole farmer life with 200 answers came to
+0.26 MB, and writing it with the log on was 0.8% slower than with it off.
+
+Per answer, a median of 7 nodes were picked up and 3 used. How much the top node draws already separates knowing
+from not knowing:
+
+| Answer | Top node's share (median) |
+|---|---|
+| right | 0.46 |
+| wrong | 0.52 |
+| false memory | 0.34 |
+| missed | 0.19 |
+| "I don't know" | 0.20 |
