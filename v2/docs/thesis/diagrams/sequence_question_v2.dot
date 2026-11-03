@@ -1,0 +1,228 @@
+// Figure 4.6: Sequence diagram of one question answered by CAMR v2 (Chat tab). Lanes left to right, time downwards.
+digraph sequence_question_v2 {
+  rankdir=TB;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+  graph [nodesep=0.12 ranksep=0.16 splines=line];
+  node [fontsize=10];
+  edge [fontsize=9];
+  h_user [label="User" fillcolor="white" color="#2a78d6" penwidth=1.3 fontname="Helvetica-Bold" width=1.7];
+  h_page [label="Browser page\n(Chat tab)" fillcolor="#e9f1fb" color="#2a78d6" penwidth=1.3 fontname="Helvetica-Bold" width=1.7];
+  h_server [label="App server\n(server.py)" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.3 fontname="Helvetica-Bold" width=1.7];
+  h_memory [label="Memory\n(memory.py)" fillcolor="#e8f7f0" color="#1baf7a" penwidth=1.3 fontname="Helvetica-Bold" width=1.7];
+  h_rooms [label="Rooms on the SSD\n(rooms.py)" fillcolor="#e9f1fb" color="#2a78d6" penwidth=1.3 fontname="Helvetica-Bold" width=1.7];
+  h_notebook [label="Notebook\n(notes.py)" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.3 fontname="Helvetica-Bold" width=1.7];
+  h_models [label="MLX models\nembedder · reader" fillcolor="#fdeee6" color="#eb6834" penwidth=1.3 fontname="Helvetica-Bold" width=1.7];
+  {rank=same; h_user; h_page; h_server; h_memory; h_rooms; h_notebook; h_models;}
+  h_user -> h_page -> h_server -> h_memory -> h_rooms -> h_notebook -> h_models [style=invis];
+  r1_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r1_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r1_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r1_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r1_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r1_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r1_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r1_user; r1_page; r1_server; r1_memory; r1_rooms; r1_notebook; r1_models;}
+  r1_user -> r1_page -> r1_server -> r1_memory -> r1_rooms -> r1_notebook -> r1_models [style=invis];
+  r1_user -> r1_page [label="1. types “Where does my vet live?”\nand presses Send" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r2_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r2_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r2_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r2_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r2_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r2_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r2_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r2_user; r2_page; r2_server; r2_memory; r2_rooms; r2_notebook; r2_models;}
+  r2_user -> r2_page -> r2_server -> r2_memory -> r2_rooms -> r2_notebook -> r2_models [style=invis];
+  r2_page -> r2_server [label="2. POST /api/chat {text}\n+ X-Engram-Token" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r3_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r3_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r3_server [label="3. check host, origin, JSON, token;\ntake the lock; text ends with “?”" shape=box style="filled" fillcolor="#f3f5f9" color="#9aa3b2" fontsize=9 margin="0.08,0.04"];
+  r3_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r3_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r3_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r3_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r3_user; r3_page; r3_server; r3_memory; r3_rooms; r3_notebook; r3_models;}
+  r3_user -> r3_page -> r3_server -> r3_memory -> r3_rooms -> r3_notebook -> r3_models [style=invis];
+  r4_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r4_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r4_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r4_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r4_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r4_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r4_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r4_user; r4_page; r4_server; r4_memory; r4_rooms; r4_notebook; r4_models;}
+  r4_user -> r4_page -> r4_server -> r4_memory -> r4_rooms -> r4_notebook -> r4_models [style=invis];
+  r4_server -> r4_memory [label="4. answer(question, today)" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r5_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r5_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r5_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r5_memory [label="5. prompt(): header (its notes stay in RAM)\n+ the part after the room" shape=box style="filled" fillcolor="#e8f7f0" color="#1baf7a" fontsize=9 margin="0.08,0.04"];
+  r5_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r5_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r5_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r5_user; r5_page; r5_server; r5_memory; r5_rooms; r5_notebook; r5_models;}
+  r5_user -> r5_page -> r5_server -> r5_memory -> r5_rooms -> r5_notebook -> r5_models [style=invis];
+  r6_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r6_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r6_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r6_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r6_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r6_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r6_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r6_user; r6_page; r6_server; r6_memory; r6_rooms; r6_notebook; r6_models;}
+  r6_user -> r6_page -> r6_server -> r6_memory -> r6_rooms -> r6_notebook -> r6_models [style=invis];
+  r6_memory -> r6_models [label="6. embed the question (query instruction)" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r7_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r7_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r7_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r7_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r7_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r7_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r7_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r7_user; r7_page; r7_server; r7_memory; r7_rooms; r7_notebook; r7_models;}
+  r7_user -> r7_page -> r7_server -> r7_memory -> r7_rooms -> r7_notebook -> r7_models [style=invis];
+  r7_memory -> r7_models [label="7. unit vector q" style=dashed dir=back arrowtail=vee arrowhead=vee];
+  r8_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r8_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r8_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r8_memory [label="8. choose(): q against every moment;\nroom of the closest; 4 closest, date order" shape=box style="filled" fillcolor="#e8f7f0" color="#1baf7a" fontsize=9 margin="0.08,0.04"];
+  r8_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r8_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r8_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r8_user; r8_page; r8_server; r8_memory; r8_rooms; r8_notebook; r8_models;}
+  r8_user -> r8_page -> r8_server -> r8_memory -> r8_rooms -> r8_notebook -> r8_models [style=invis];
+  r9_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r9_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r9_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r9_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r9_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r9_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r9_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r9_user; r9_page; r9_server; r9_memory; r9_rooms; r9_notebook; r9_models;}
+  r9_user -> r9_page -> r9_server -> r9_memory -> r9_rooms -> r9_notebook -> r9_models [style=invis];
+  r9_memory -> r9_rooms [label="9. fetch([room])" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r10_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r10_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r10_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r10_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r10_rooms [label="10. read the whole file in 1 MB\npieces, 8 at once, cache bypassed" shape=box style="filled" fillcolor="#e9f1fb" color="#2a78d6" fontsize=9 margin="0.08,0.04"];
+  r10_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r10_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r10_user; r10_page; r10_server; r10_memory; r10_rooms; r10_notebook; r10_models;}
+  r10_user -> r10_page -> r10_server -> r10_memory -> r10_rooms -> r10_notebook -> r10_models [style=invis];
+  r11_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r11_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r11_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r11_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r11_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r11_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r11_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r11_user; r11_page; r11_server; r11_memory; r11_rooms; r11_notebook; r11_models;}
+  r11_user -> r11_page -> r11_server -> r11_memory -> r11_rooms -> r11_notebook -> r11_models [style=invis];
+  r11_memory -> r11_rooms [label="11. the room's notes (bytes)" style=dashed dir=back arrowtail=vee arrowhead=vee];
+  r12_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r12_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r12_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r12_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r12_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r12_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r12_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r12_user; r12_page; r12_server; r12_memory; r12_rooms; r12_notebook; r12_models;}
+  r12_user -> r12_page -> r12_server -> r12_memory -> r12_rooms -> r12_notebook -> r12_models [style=invis];
+  r12_memory -> r12_notebook [label="12. desk([room notes])" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r13_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r13_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r13_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r13_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r13_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r13_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r13_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r13_user; r13_page; r13_server; r13_memory; r13_rooms; r13_notebook; r13_models;}
+  r13_user -> r13_page -> r13_server -> r13_memory -> r13_rooms -> r13_notebook -> r13_models [style=invis];
+  r13_memory -> r13_notebook [label="13. cache: header + room, already read" style=dashed dir=back arrowtail=vee arrowhead=vee];
+  r14_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r14_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r14_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r14_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r14_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r14_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r14_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r14_user; r14_page; r14_server; r14_memory; r14_rooms; r14_notebook; r14_models;}
+  r14_user -> r14_page -> r14_server -> r14_memory -> r14_rooms -> r14_notebook -> r14_models [style=invis];
+  r14_memory -> r14_models [label="14. generate(4 closest as words + question,\ncache = desk), watched by Looks" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r15_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r15_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r15_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r15_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r15_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r15_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r15_models [label="15. reader reads the new words, then writes\ngreedily, at most 40 tokens" shape=box style="filled" fillcolor="#fdeee6" color="#eb6834" fontsize=9 margin="0.08,0.04"];
+  {rank=same; r15_user; r15_page; r15_server; r15_memory; r15_rooms; r15_notebook; r15_models;}
+  r15_user -> r15_page -> r15_server -> r15_memory -> r15_rooms -> r15_notebook -> r15_models [style=invis];
+  r16_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r16_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r16_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r16_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r16_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r16_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r16_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r16_user; r16_page; r16_server; r16_memory; r16_rooms; r16_notebook; r16_models;}
+  r16_user -> r16_page -> r16_server -> r16_memory -> r16_rooms -> r16_notebook -> r16_models [style=invis];
+  r16_memory -> r16_models [label="16. words, time to first word,\nattention per word" style=dashed dir=back arrowtail=vee arrowhead=vee];
+  r17_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r17_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r17_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r17_memory [label="17. used(): each moment's share (≥ 0.10 = used);\nappend one line to events.jsonl" shape=box style="filled" fillcolor="#e8f7f0" color="#1baf7a" fontsize=9 margin="0.08,0.04"];
+  r17_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r17_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r17_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r17_user; r17_page; r17_server; r17_memory; r17_rooms; r17_notebook; r17_models;}
+  r17_user -> r17_page -> r17_server -> r17_memory -> r17_rooms -> r17_notebook -> r17_models [style=invis];
+  r18_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r18_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r18_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r18_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r18_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r18_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r18_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r18_user; r18_page; r18_server; r18_memory; r18_rooms; r18_notebook; r18_models;}
+  r18_user -> r18_page -> r18_server -> r18_memory -> r18_rooms -> r18_notebook -> r18_models [style=invis];
+  r18_server -> r18_memory [label="18. reply" style=dashed dir=back arrowtail=vee arrowhead=vee];
+  r19_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r19_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r19_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r19_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r19_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r19_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r19_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r19_user; r19_page; r19_server; r19_memory; r19_rooms; r19_notebook; r19_models;}
+  r19_user -> r19_page -> r19_server -> r19_memory -> r19_rooms -> r19_notebook -> r19_models [style=invis];
+  r19_page -> r19_server [label="19. {reply, event, wait_s}" style=dashed dir=back arrowtail=vee arrowhead=vee];
+  r20_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r20_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r20_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r20_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r20_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r20_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  r20_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
+  {rank=same; r20_user; r20_page; r20_server; r20_memory; r20_rooms; r20_notebook; r20_models;}
+  r20_user -> r20_page -> r20_server -> r20_memory -> r20_rooms -> r20_notebook -> r20_models [style=invis];
+  r20_user -> r20_page [label="20. answer with its wait;\nreplay it in the Brain tab" style=dashed dir=back arrowtail=vee arrowhead=vee];
+  f_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2"];
+  f_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2"];
+  f_server [label="" shape=point width=0.05 height=0.05 color="#9aa3b2"];
+  f_memory [label="" shape=point width=0.05 height=0.05 color="#9aa3b2"];
+  f_rooms [label="" shape=point width=0.05 height=0.05 color="#9aa3b2"];
+  f_notebook [label="" shape=point width=0.05 height=0.05 color="#9aa3b2"];
+  f_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2"];
+  {rank=same; f_user; f_page; f_server; f_memory; f_rooms; f_notebook; f_models;}
+  h_user -> r1_user -> r2_user -> r3_user -> r4_user -> r5_user -> r6_user -> r7_user -> r8_user -> r9_user -> r10_user -> r11_user -> r12_user -> r13_user -> r14_user -> r15_user -> r16_user -> r17_user -> r18_user -> r19_user -> r20_user -> f_user [style=dashed arrowhead=none color="#9aa3b2" weight=1000];
+  h_page -> r1_page -> r2_page -> r3_page -> r4_page -> r5_page -> r6_page -> r7_page -> r8_page -> r9_page -> r10_page -> r11_page -> r12_page -> r13_page -> r14_page -> r15_page -> r16_page -> r17_page -> r18_page -> r19_page -> r20_page -> f_page [style=dashed arrowhead=none color="#9aa3b2" weight=1000];
+  h_server -> r1_server -> r2_server -> r3_server -> r4_server -> r5_server -> r6_server -> r7_server -> r8_server -> r9_server -> r10_server -> r11_server -> r12_server -> r13_server -> r14_server -> r15_server -> r16_server -> r17_server -> r18_server -> r19_server -> r20_server -> f_server [style=dashed arrowhead=none color="#9aa3b2" weight=1000];
+  h_memory -> r1_memory -> r2_memory -> r3_memory -> r4_memory -> r5_memory -> r6_memory -> r7_memory -> r8_memory -> r9_memory -> r10_memory -> r11_memory -> r12_memory -> r13_memory -> r14_memory -> r15_memory -> r16_memory -> r17_memory -> r18_memory -> r19_memory -> r20_memory -> f_memory [style=dashed arrowhead=none color="#9aa3b2" weight=1000];
+  h_rooms -> r1_rooms -> r2_rooms -> r3_rooms -> r4_rooms -> r5_rooms -> r6_rooms -> r7_rooms -> r8_rooms -> r9_rooms -> r10_rooms -> r11_rooms -> r12_rooms -> r13_rooms -> r14_rooms -> r15_rooms -> r16_rooms -> r17_rooms -> r18_rooms -> r19_rooms -> r20_rooms -> f_rooms [style=dashed arrowhead=none color="#9aa3b2" weight=1000];
+  h_notebook -> r1_notebook -> r2_notebook -> r3_notebook -> r4_notebook -> r5_notebook -> r6_notebook -> r7_notebook -> r8_notebook -> r9_notebook -> r10_notebook -> r11_notebook -> r12_notebook -> r13_notebook -> r14_notebook -> r15_notebook -> r16_notebook -> r17_notebook -> r18_notebook -> r19_notebook -> r20_notebook -> f_notebook [style=dashed arrowhead=none color="#9aa3b2" weight=1000];
+  h_models -> r1_models -> r2_models -> r3_models -> r4_models -> r5_models -> r6_models -> r7_models -> r8_models -> r9_models -> r10_models -> r11_models -> r12_models -> r13_models -> r14_models -> r15_models -> r16_models -> r17_models -> r18_models -> r19_models -> r20_models -> f_models [style=dashed arrowhead=none color="#9aa3b2" weight=1000];
+}

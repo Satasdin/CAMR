@@ -1,0 +1,450 @@
+<title>Engram Plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one 1120px column; every section pairs real microscope images with measured numbers; the build order is a numbered sequence */
+:root{
+  color-scheme:dark;
+  --bg:#070a09;--panel:#0d1311;--panel-2:#16201c;--fg:#e4ebe7;--muted:#93a49c;--rule:#1f2b27;
+  --signal:#5ee08a;--structure:#e25a7e;--depth:#e2b04a;--on-signal:#04140a;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){color-scheme:light;--bg:#f3f6f4;--panel:#ffffff;--panel-2:#e6ede9;--fg:#0c1411;--muted:#53625b;--rule:#d3ddd8;--signal:#117a3c;--structure:#b02350;--depth:#8d6007;--on-signal:#ffffff}}
+:root[data-theme="light"]{color-scheme:light;--bg:#f3f6f4;--panel:#ffffff;--panel-2:#e6ede9;--fg:#0c1411;--muted:#53625b;--rule:#d3ddd8;--signal:#117a3c;--structure:#b02350;--depth:#8d6007;--on-signal:#ffffff}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 var(--body)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+section{padding-block:56px;border-top:1px solid var(--rule);display:grid;gap:28px}
+section.hero{border-top:0;padding-block:16px 48px}
+.eyebrow{font:500 12px/1.4 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-family:var(--display);font-stretch:120%;font-weight:800;font-size:clamp(56px,10vw,112px);line-height:.9;margin:6px 0 0;letter-spacing:-.01em}
+.claim{font-family:var(--display);font-stretch:100%;font-weight:600;font-size:clamp(26px,3.8vw,40px);line-height:1.1;color:var(--signal);margin:14px 0 0}
+h2{font-family:var(--display);font-stretch:110%;font-weight:700;font-size:clamp(28px,4.2vw,42px);line-height:1.05;margin:6px 0 0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:650;font-size:19px;line-height:1.25;margin:0;text-wrap:balance}
+p{margin:0;max-width:65ch}
+.lede{color:var(--muted);font-size:18px;max-width:58ch}
+.head{display:grid;gap:10px}
+figure{margin:0;display:grid;gap:8px;min-width:0}
+figure img{display:block;width:100%;height:auto;max-width:100%;border-radius:10px;border:1px solid var(--rule);background:#000}
+figcaption{font:400 12px/1.45 var(--mono);color:var(--muted)}
+figcaption b{color:var(--fg);font-weight:500}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:28px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px;align-items:start}
+.stack{display:grid;gap:16px;min-width:0}
+.hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:36px;align-items:center}
+.status{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chip{font:500 12px/1 var(--mono);padding:8px 10px;border:1px solid var(--rule);border-radius:999px;background:var(--panel);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:500}
+.chip.live{border-color:var(--signal);color:var(--signal)}
+.note{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;font-size:15px;color:var(--muted);max-width:none}
+.note b{color:var(--fg);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px;display:grid;gap:6px;align-content:start}
+.tile .n{font:700 36px/1 var(--display);font-stretch:105%;font-variant-numeric:tabular-nums}
+.tile .l{color:var(--muted);font-size:14px;line-height:1.4}
+.sig{color:var(--signal)}.str{color:var(--structure)}.dep{color:var(--depth)}
+.chart{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0}
+.key{display:flex;flex-wrap:wrap;gap:14px;font:400 12px var(--mono);color:var(--muted)}
+.key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.bars{display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:12px;align-items:center}
+.bar .lab{font-size:14px;color:var(--muted);line-height:1.3}
+.track{position:relative;height:24px;background:var(--panel-2);border-radius:4px}
+.fill{position:absolute;top:0;bottom:0;left:0;border-radius:4px}
+.val{position:absolute;top:50%;transform:translateY(-50%);font:500 12px var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.group{display:grid;gap:6px}
+.group .gl{font:500 12px var(--mono);color:var(--fg)}
+svg.line{width:100%;height:auto;display:block}
+.ax{stroke:var(--rule);stroke-width:1}
+.band{fill:var(--panel-2)}
+.ln{stroke:var(--signal);stroke-width:2.5;fill:none}
+.dot{fill:var(--signal)}
+.lbl{fill:var(--muted);font:12px var(--mono)}
+.ann{fill:var(--fg);font:500 13px var(--body)}
+.defs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+.def{border-top:2px solid var(--signal);padding-top:10px;display:grid;gap:4px}
+.def p{color:var(--muted);font-size:15px}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:560px}
+th{text-align:left;font:500 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--rule);padding:12px 14px}
+td{padding:12px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.k{font-weight:600;white-space:nowrap}
+ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px;counter-reset:s}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start}
+ol.steps li::before{content:counter(s);font:700 15px/30px var(--display);text-align:center;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--signal);color:var(--signal)}
+ol.steps b{font-weight:600}
+ol.steps span{color:var(--muted)}
+.channel{display:grid;gap:10px}
+.tag{justify-self:start;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border-radius:4px;border:1px solid currentColor}
+.phases{display:grid}
+.phase{display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;padding-block:24px;border-top:1px solid var(--rule)}
+.phase:first-child{border-top:0;padding-top:0}
+.phase .num{font:800 44px/1 var(--display);font-stretch:110%;color:var(--signal);font-variant-numeric:tabular-nums}
+.phase .body{display:grid;gap:12px;min-width:0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:14px}
+.cols div{display:grid;gap:4px;align-content:start}
+.cols dt{font:500 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.cols dd{margin:0;font-size:15px}
+.risks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.risk{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px;display:grid;gap:6px;align-content:start}
+.risk p{color:var(--muted);font-size:15px}
+ul.log{list-style:none;margin:0;padding:0;display:grid;gap:0;border:1px solid var(--rule);border-radius:10px;background:var(--panel)}
+ul.log li{display:grid;grid-template-columns:86px minmax(0,1fr);gap:14px;padding:12px 16px;border-top:1px solid var(--rule)}
+ul.log li:first-child{border-top:0}
+ul.log time{font:500 12px/1.9 var(--mono);color:var(--muted)}
+ul.log li.open b{color:var(--depth)}
+.credits{font:400 12px/1.6 var(--mono);color:var(--muted);display:grid;gap:4px}
+a{color:var(--signal)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+@media (max-width:560px){.bar{grid-template-columns:1fr;gap:4px}.phase{grid-template-columns:1fr;gap:6px}ul.log li{grid-template-columns:1fr;gap:2px}}
+</style>
+
+<div class="wrap">
+
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <p class="eyebrow">Plan · 2 November 2026</p>
+      <h1>Engram</h1>
+      <p class="claim">Better, never heavier.</p>
+      <p class="lede" style="margin-top:16px">A small language model on your MacBook Air whose memory lives on the SSD and grows. It keeps getting better at your life without getting slower or bigger.</p>
+      <div class="status">
+        <span class="chip">Model <b>Qwen3-1.7B</b></span>
+        <span class="chip">Machine <b>MacBook Air M4 · 16 GB · fanless</b></span>
+        <span class="chip">Free SSD <b>71 GB</b></span>
+        <span class="chip live">Step 1 done · step 2 next</span>
+      </div>
+    </div>
+    <figure>
+      <img src="img/fly-brain.jpg" alt="Labelled neurons glowing cyan and yellow in a fruit fly brain on a black background" width="960" height="960">
+      <figcaption><b>The look we're after.</b> Neurons labelled in a fruit fly brain. [1]</figcaption>
+    </figure>
+  </div>
+  <p class="note"><b>Mark it up.</b> Comment on anything you'd change, cut or question, and I'll update the plan. Building started on 2 November: the code is in ~/Developer/engram, and its technical calls are in DECISIONS.md.</p>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">01 · Measured on your laptop</p>
+    <h2>The machine sets the rules</h2>
+    <p class="lede">RAM is where the model thinks; the SSD is where memory lives. The SSD is fast only when it's read in big pieces, and the fanless Air slows down under long heavy work. These numbers are the MacBook Air M4. Since 3 November engram runs on a MacBook Pro M5 Pro, which reads text about 8× faster and its SSD about 4× faster (12 GB/s).</p>
+  </div>
+  <div class="tiles">
+    <div class="tile"><span class="n">90 GB/s</span><span class="l">RAM speed, as the model sees it</span></div>
+    <div class="tile"><span class="n sig">3.2 GB/s</span><span class="l">SSD, read in big pieces several at once</span></div>
+    <div class="tile"><span class="n str">0.04 GB/s</span><span class="l">SSD, read in tiny scraps one at a time</span></div>
+    <div class="tile"><span class="n">0.19 s</span><span class="l">To fetch 512 MB of memory into the model</span></div>
+  </div>
+  <div class="grid2">
+    <div class="chart">
+      <h3>Read size changes everything</h3>
+      <div class="bars" id="reads"></div>
+      <div class="key"><span><i style="background:var(--signal)"></i>How engram reads</span><span><i style="background:var(--muted)"></i>Other ways</span></div>
+    </div>
+    <div class="chart">
+      <h3>Heavy work: full speed for about a minute, then it settles</h3>
+      <div id="throttle"></div>
+      <div class="key"><span>GPU speed as % of its starting speed, 4 minutes of training-like load</span></div>
+    </div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Remember first, then talk</td><td>Reading the SSD while the model writes slows writing by 21%. Fetch memory in one burst before answering.</td></tr>
+      <tr><td class="k">Big boxes, not scraps</td><td>Related memories are stored together and read as whole rooms of 1 MB or more. That's 75× faster than scraps.</td></tr>
+      <tr><td class="k">Same allowance per question</td><td>For example 256 MB, about 0.1 s here, sized for the slowest Mac we support so it feels the same everywhere.</td></tr>
+      <tr><td class="k">Fixed RAM budget, about 5 GB</td><td>Model 2 GB, memory in use 2 GB, always-on core 0.5 GB. The rest stays free for you, so nothing freezes.</td></tr>
+      <tr><td class="k">Heavy learning on the charger</td><td>Steady 80–90% is fine when you're away. While you're working, jobs stay under a minute.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">02 · The memory</p>
+    <h2>Rooms and doors, not chains</h2>
+    <p class="lede">Memory is a 3D space. Position is meaning, so similar things sit together. Height is how distilled it is: moments at the bottom, facts in the middle, concepts on top.</p>
+  </div>
+  <div class="grid2">
+    <figure>
+      <img src="img/doors.jpg" alt="Wiring map of a fly brain: coloured circles for neuron groups joined by grey lines whose thickness shows connection strength" width="760" height="405">
+      <figcaption><b>Areas joined by doors.</b> Real fly-brain wiring; line thickness is connection strength. [2]</figcaption>
+    </figure>
+    <figure>
+      <img src="img/neuron.jpg" alt="A single red neuron with branching dendrites on black" width="960" height="960">
+      <figcaption><b>One node, up close.</b> A cortical neuron. [3]</figcaption>
+    </figure>
+  </div>
+  <div class="defs">
+    <div class="def"><h3>Node</h3><p>One memory with two faces: the vectors the model reads, and the words you read.</p></div>
+    <div class="def"><h3>Room</h3><p>1 MB or more of related nodes stored side by side on the SSD, fetched in one read.</p></div>
+    <div class="def"><h3>Door</h3><p>A link between rooms. It thickens each time both rooms are used together and fades when they're not.</p></div>
+    <div class="def"><h3>Core</h3><p>The most-used rooms, always in RAM. They never dim.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">03 · How the model reads</p>
+    <h2>Its own notes are 11–16× faster than reading</h2>
+    <p class="lede">When the model reads anything, it writes itself notes inside its layers. Saved to the SSD and put back later, those notes let it answer without rereading. I tested this with one fact hidden in a pile of memories; both ways answered correctly.</p>
+  </div>
+  <div class="grid2">
+    <div class="chart">
+      <h3>Time until the first word of the answer</h3>
+      <div class="bars" id="firstword"></div>
+      <div class="key"><span><i style="background:var(--structure)"></i>Reading the words</span><span><i style="background:var(--signal)"></i>Its own saved notes</span></div>
+    </div>
+    <div class="stack">
+      <div class="tiles">
+        <div class="tile"><span class="n str">115 KB</span><span class="l">Notes per word-piece. About 29,000× bigger than the text.</span></div>
+        <div class="tile"><span class="n">76 → 46</span><span class="l">Word-pieces per second as memory on the desk grows from 1,700 to 7,000 words</span></div>
+      </div>
+      <p class="note">Fast but huge, so notes are kept only for what's fresh. Everything on the desk also costs every word, so the desk has to stay small.</p>
+    </div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Form</th><th>What it is</th><th>Good at</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td class="k sig">Notes</td><td>The model's own saved notes, for fresh moments</td><td>Exact, instant</td><td>Huge; recent and busy rooms only</td></tr>
+      <tr><td class="k sig">Shorthand</td><td>One small vector per fact, about 2 KB, made during sleep</td><td>A million facts fit in about 2 GB</td><td>Needs the translation layer</td></tr>
+      <tr><td class="k sig">Words</td><td>The original text: the node's human face</td><td>Smallest, kept forever</td><td>Slow to read; used when exactness matters</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note"><b>The translation layer:</b> a small network, trained once, that turns shorthand back into notes the frozen model already understands. The model itself never changes.</p>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">04 · Sleep</p>
+    <h2>Where it actually grows</h2>
+    <p class="lede">It naps on the charger while you're away: about 2 minutes for a normal day, about 10 minutes for a day with a 100-page PDF. It stops the moment you're back.</p>
+  </div>
+  <figure>
+    <img src="img/spines.jpg" alt="The same dendrite on day 1 and day 2, with plus signs where spines were born and minus signs where they vanished" width="1132" height="400">
+    <figcaption><b>Born (+) and lost (−) overnight.</b> The same dendrite on two days. Engram's morning report works the same way. [4]</figcaption>
+  </figure>
+  <div class="grid2">
+    <ol class="steps">
+      <li><div><b>Replay.</b> <span>Go through today: what was used, and what lit up together.</span></div></li>
+      <li><div><b>Distil.</b> <span>Rewrite moments as facts. A fact replaces its moments only if it passes a quiz built from the originals.</span></div></li>
+      <li><div><b>Shrink.</b> <span>Facts become shorthand. The bulky notes are deleted and the words are archived.</span></div></li>
+      <li><div><b>Rise.</b> <span>Five or more facts that keep firing together get a concept line above them.</span></div></li>
+      <li><div><b>Prune and tidy.</b> <span>Everything fades a little, the weakest leave, rooms are re-packed and the core is re-chosen.</span></div></li>
+    </ol>
+    <div class="tbl"><table style="min-width:0">
+      <thead><tr><th>Used</th><th>Fades 5% a day; each use adds strength</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Once</td><td>Leaves after about 6 weeks</td></tr>
+        <tr><td class="k">Monthly</td><td>Survives</td></tr>
+        <tr><td class="k">Weekly</td><td>Lives indefinitely</td></tr>
+        <tr><td class="k">Pinned</td><td>Never fades: "remember this" and your corrections</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="grid2">
+    <div class="def"><h3>Fade, never destroy</h3><p>Faded memories leave the brain, but their words stay in the archive and can come back. Only you delete forever.</p></div>
+    <div class="def"><h3>Unsure? Settled when it comes up</h3><p>First it tries to resolve the doubt from evidence. If it can't, it keeps both versions with dates and asks in one line only when that memory is needed. Unsure nodes get a dashed outline.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">05 · The brain view</p>
+    <h2>A microscope on its memory</h2>
+    <p class="lede">Every light is a real event. Nodes that were picked up but not used show as outlines; only nodes it actually leaned on glow. Colour has one meaning at a time, switched like a microscope's channels.</p>
+  </div>
+  <div class="grid3">
+    <figure class="channel">
+      <span class="tag sig">Activity · default</span>
+      <img src="img/green-red.jpg" alt="A green neuron over red structure, a classic two-channel microscope image" width="915" height="799">
+      <figcaption><b>Green = in use now,</b> over a dim red structure. [5]</figcaption>
+    </figure>
+    <figure class="channel">
+      <span class="tag str">Areas</span>
+      <img src="img/regions.jpg" alt="Eight renders of a fly brain, each highlighting one class of neurons in its own colour inside a grey shell" width="1200" height="350">
+      <figcaption><b>Tint = area,</b> inside a see-through shell. [2]</figcaption>
+    </figure>
+    <figure class="channel">
+      <span class="tag dep">Depth</span>
+      <img src="img/depth.jpg" alt="Depth-coded microscope stack where colour shows how deep each structure sits" width="960" height="960">
+      <figcaption><b>Colour = height:</b> moments, facts, concepts. [6]</figcaption>
+    </figure>
+  </div>
+  <div class="grid2">
+    <figure>
+      <img src="img/traces.jpg" alt="Rastermap software window: a large activity raster with a brain scatter plot and traces below" width="800" height="418">
+      <figcaption><b>The traces strip.</b> One row per node, a tick per word it helped write, with the translation beside it. [7]</figcaption>
+    </figure>
+    <figure>
+      <img src="img/raster.jpg" alt="Two activity rasters: randomly sorted rows look like noise, sorted rows reveal structure" width="1400" height="800">
+      <figcaption><b>Sorted rows reveal structure.</b> Nodes that fire together sit together. [7]</figcaption>
+    </figure>
+  </div>
+  <div class="defs">
+    <div class="def"><h3>Ghost shell</h3><p>A see-through outline of the whole memory, always there.</p></div>
+    <div class="def"><h3>Zoom like a map</h3><p>Areas, then rooms, then cells. Only lit parts are drawn in detail.</p></div>
+    <div class="def"><h3>Night vs night</h3><p>Side by side, with + and − marking what was born and what died.</p></div>
+    <div class="def"><h3>Plays a log</h3><p>The engine writes a tiny event log and the view replays it, so drawing never slows the model.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">06 · The proof</p>
+    <h2>Four claims, each with its failure written down first</h2>
+    <p class="lede">Three scripted 12-week lives (a student, a farm-cooperative manager, a developer), deliberately messy, plus the public LongMemEval benchmark. Each simulated day ends in a nap. A full life runs in about an evening, and anyone can re-run it.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Claim</th><th>Test</th><th>Wrong if</th></tr></thead>
+    <tbody>
+      <tr><td class="k">It gets better</td><td>The same 100-question quiz every week</td><td>The line goes flat while memory keeps growing</td></tr>
+      <tr><td class="k">It doesn't get heavier</td><td>Grow from 1,000 to 1,000,000 facts</td><td>Time to first word or RAM climbs</td></tr>
+      <tr><td class="k">It doesn't lose things</td><td>Week-1 facts asked again in week 12</td><td>Old answers fade faster than the 5% rule predicts</td></tr>
+      <tr><td class="k">It stays honest</td><td>Questions about things it was never told</td><td>False memories rise as it grows</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid2">
+    <div class="def"><h3>Contenders, same laptop</h3><p>Qwen3-1.7B alone · the old CAMR with text notes · engram on 1.7B · Qwen3-4B with the old CAMR · a perfect reader with everything pasted in (small sizes only).</p></div>
+    <div class="def"><h3>The charts</h3><p>Growth (the thesis image) · scale · the forgetting curve · a week-1 vs week-12 brain time-lapse. Every run is saved as a dated test record.</p></div>
+  </div>
+  <figure style="margin-top:28px">
+    <img src="img/growth-student-s1.svg" alt="Growth chart for the student life on the MacBook Pro: engram tracks the old CAMR on the 1.7B, the 4B rises highest, the perfect reader is lowest while its wait climbs; engram's wait and memory stay flat and lowest" width="960" height="860">
+    <figcaption><b>Step 1, measured 3 November on the MacBook Pro.</b> The student life, week by week. All three lives at week 12: engram knows 164 of 255 told facts, waits 0.07 s and peaks at 1.8 GB, flat for twelve weeks. The old CAMR on the same 1.7B knows 166 at 0.15 s and 2.2 GB; on the 4B it knows 208 at 0.35 s and 3.6 GB. Pasting everything in knows 90 and waits 1.9 s.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">07 · Build order</p>
+    <h2>Seven steps, each one proving something</h2>
+    <p class="lede">The ruler comes first, so every later step is measured from day one.</p>
+  </div>
+  <div class="phases">
+    <div class="phase"><span class="num">0</span><div class="body"><h3>The ruler <span class="chip" style="vertical-align:3px">done</span></h3><dl class="cols">
+      <div><dt>Build</dt><dd>New repo with CI; a harness that saves every run as a dated record; the three scripted lives with their weekly quiz; LongMemEval loader</dd></div>
+      <div><dt>Proves</dt><dd>The yardstick works before anything is measured with it</dd></div>
+      <div><dt>Done when</dt><dd>Baseline scores for the 1.7B alone, the old CAMR, the 4B and the perfect reader are on the growth chart</dd></div></dl></div></div>
+    <div class="phase"><span class="num">1</span><div class="body"><h3>Rooms and notes <span class="chip" style="vertical-align:3px">done</span></h3><dl class="cols">
+      <div><dt>Built</dt><dd>Moments saved as notes in rooms of related moments, each room written as one continuous page. A question opens the one room it is about, fetched from the SSD in one burst, and re-reads its four closest moments as words. Several rooms side by side lost the thread, so the desk holds one.</dd></div>
+      <div><dt>Proves</dt><dd>Notes answer as well as text, at least 10× sooner. <b>Measured:</b> as well (164 vs 163 facts); 4.6× sooner at 2,000 words. The 10× came from the slower Air.</dd></div>
+      <div><dt>Done when</dt><dd>First word under 0.5 s with 2,000 words of memory, and quiz accuracy matches reading the text. <b>Met:</b> 0.23 s; accuracy matches.</dd></div></dl></div></div>
+    <div class="phase"><span class="num">2</span><div class="body"><h3>Event log and first view <span class="chip live" style="vertical-align:3px">next</span></h3><dl class="cols">
+      <div><dt>Build</dt><dd>Log of what was opened and how hard each node was looked at; the Activity channel and traces strip</dd></div>
+      <div><dt>Proves</dt><dd>"Picked up vs used" is measurable, and drawing doesn't slow talking</dd></div>
+      <div><dt>Done when</dt><dd>Writing speed with the view on is within 5% of the view off</dd></div></dl></div></div>
+    <div class="phase"><span class="num">3</span><div class="body"><h3>Translation layer and shorthand</h3><dl class="cols">
+      <div><dt>Build</dt><dd>Train the translation layer once, as a long job on the charger; facts stored as about 2 KB of shorthand each</dd></div>
+      <div><dt>Proves</dt><dd>A million facts at the speed of a thousand</dd></div>
+      <div><dt>Done when</dt><dd>The scale chart is flat from 1,000 to 1,000,000 facts, and shorthand accuracy is measured against notes and words</dd></div></dl></div></div>
+    <div class="phase"><span class="num">4</span><div class="body"><h3>Sleep</h3><dl class="cols">
+      <div><dt>Build</dt><dd>Replay, distil with the quiz, shrink, rise, fade, re-pack, settling unsure facts, the morning report</dd></div>
+      <div><dt>Proves</dt><dd>Growth, retention and honesty start to show</dd></div>
+      <div><dt>Done when</dt><dd>A 2-week scripted life shows quiz scores rising, with RAM and speed flat</dd></div></dl></div></div>
+    <div class="phase"><span class="num">5</span><div class="body"><h3>The full brain view</h3><dl class="cols">
+      <div><dt>Build</dt><dd>Zoom from areas to rooms to cells; the Areas and Depth channels; the night-vs-night comparison</dd></div>
+      <div><dt>Proves</dt><dd>Growth can be seen, not just counted</dd></div>
+      <div><dt>Done when</dt><dd>A week-1 vs week-2 time-lapse plays straight from the log</dd></div></dl></div></div>
+    <div class="phase"><span class="num">6</span><div class="body"><h3>The proof run</h3><dl class="cols">
+      <div><dt>Build</dt><dd>Three lives × 12 weeks, plus LongMemEval, against every contender</dd></div>
+      <div><dt>Proves</dt><dd>Better, never heavier</dd></div>
+      <div><dt>Done when</dt><dd>The four charts and the test records exist; then Chapters 4 and 5 are reframed around them</dd></div></dl></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">08 · Watch list</p>
+    <h2>What could go wrong</h2>
+  </div>
+  <div class="risks">
+    <div class="risk"><h3>Smaller notes broke</h3><p>Shrinking notes 4× produced nonsense in a quick test. Papers say it works, so it gets a proper re-test in step 1. If it fails, notes stay full size and fewer fit.</p></div>
+    <div class="risk"><h3>Rooms side by side</h3><p>Each room is saved as if it were alone, so placed together they can confuse order. The known fix re-reads a small slice of each; its cost is measured in step 1.</p></div>
+    <div class="risk"><h3>Shorthand may lose detail</h3><p>In the old CAMR, facts baked into weights scored about 13%, while readable notes scored about 72–75%. The words archive and the sleep quiz are the guard.</p></div>
+    <div class="risk"><h3>Training on a fanless Air</h3><p>The translation layer is the one long job. It runs only on the charger, saving progress often so it can stop and resume.</p></div>
+    <div class="risk"><h3>Disk fills with notes</h3><p>Notes are about 29,000× the text. They get a cap (for example 20 GB), and sleep demotes older notes to shorthand.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <p class="eyebrow">09 · Decided</p>
+    <h2>Your calls so far</h2>
+  </div>
+  <ul class="log">
+    <li><time>1 Nov</time><span>Start afresh in a new repo; the old CAMR is the baseline.</span></li>
+    <li><time>1 Nov</time><span>MLX on the Mac. No 8B: Qwen3-1.7B is the brain, and Qwen3-4B is an optional second opinion.</span></li>
+    <li><time>1 Nov</time><span>Theorize before building. Chapters 4 and 5 are redone after the engine works.</span></li>
+    <li><time>2 Nov</time><span>The microscope look: crisp glow on black, colour that means something, no Brainbow.</span></li>
+    <li><time>2 Nov</time><span>Fade, never destroy.</span></li>
+    <li><time>2 Nov</time><span>Unsure facts are settled when they come up, not in a morning quiz.</span></li>
+    <li><time>2 Nov</time><span>Headline: better, never heavier.</span></li>
+    <li><time>2 Nov</time><span>Scripted lives only; no diary or volunteers.</span></li>
+    <li><time>2 Nov</time><span>The name is engram, at ~/Developer/engram.</span></li>
+    <li><time>2 Nov</time><span>Build it, starting with step 0.</span></li>
+    <li><time>3 Nov</time><span>Work on the new MacBook Pro M5 Pro; every contender re-run there.</span></li>
+  </ul>
+</section>
+
+<section>
+  <div class="credits">
+    <span>Images</span>
+    <span>[1] Pramit57, "Neurons labelled in the brain of a fruit fly", CC BY-SA 4.0, <a href="https://commons.wikimedia.org/wiki/File:Neurons_labelled_in_the_brain_of_a_fruit_fly.tif">Wikimedia Commons</a></span>
+    <span>[2] Dorkenwald et al., "Neuronal wiring diagram of an adult brain", Nature 2024 (FlyWire), CC BY 4.0, <a href="https://www.nature.com/articles/s41586-024-07558-y">nature.com</a></span>
+    <span>[3] Sergb95, cortical neuron with dendritic spines, CC BY-SA 4.0, <a href="https://commons.wikimedia.org/wiki/File:%D0%9D%D0%B5%D0%B9%D1%80%D0%BE%D0%BD_%D0%BA%D0%BE%D1%80%D1%8B_%D1%81_%D0%BC%D0%BD%D0%BE%D0%B6%D0%B5%D1%81%D1%82%D0%B2%D0%BE%D0%BC_%D0%B4%D0%B5%D0%BD%D0%B4%D1%80%D0%B8%D1%82%D0%BD%D1%8B%D1%85_%D1%88%D0%B8%D0%BF%D0%B8%D0%BA%D0%BE%D0%B2.jpg">Wikimedia Commons</a></span>
+    <span>[4] De Roo, Klauser and Muller, "LTP promotes a selective long-term stabilization and clustering of dendritic spines", CC BY-SA 3.0, <a href="https://commons.wikimedia.org/wiki/File:LTP_Promotes_a_Selective_Long-Term_Stabilization_and_Clustering_of_Dendritic_Spines.png">Wikimedia Commons</a></span>
+    <span>[5] Lee et al., PLoS Biology 2006, CC BY 2.5, <a href="https://commons.wikimedia.org/wiki/File:PLoSBiol4.e126.Fig6fNeuron.jpg">Wikimedia Commons</a></span>
+    <span>[6] Howard Vindin, depth-coded stack of actin filaments, CC BY-SA 4.0, <a href="https://commons.wikimedia.org/wiki/File:STD_Depth_Coded_Stack_Phallodin_Stained_Actin_Filaments.png">Wikimedia Commons</a></span>
+    <span>[7] Stringer, Pachitariu et al., Rastermap, GPL-3.0, <a href="https://github.com/MouseLand/rastermap">github.com/MouseLand/rastermap</a></span>
+    <span>Numbers measured on this MacBook Air on 1–2 November 2026: cold SSD reads with the cache bypassed, MLX with Qwen3-1.7B-4bit.</span>
+  </div>
+</section>
+
+</div>
+
+<script>
+function bars(el, rows, max, fmt){
+  el.innerHTML = rows.map(r => {
+    const pct = Math.max(0.6, r.v / max * 100);
+    const inside = pct > 62;
+    const pos = inside ? `right:${100 - pct}%;padding-right:8px;color:var(--on-signal)` : `left:calc(${pct}% + 8px);color:var(--fg)`;
+    return `<div class="bar"><span class="lab">${r.label}</span><div class="track"><div class="fill" style="width:${pct}%;background:${r.color}"></div><span class="val" style="${pos}">${fmt(r.v)}</span></div></div>`;
+  }).join("");
+}
+const big = "var(--signal)", other = "var(--muted)";
+bars(document.getElementById("reads"), [
+  {label:"4 KB, one at a time", v:42, color:other},
+  {label:"4 KB, 16 at once", v:263, color:other},
+  {label:"64 KB, one at a time", v:460, color:other},
+  {label:"64 KB, 16 at once", v:2158, color:other},
+  {label:"1 MB, one at a time", v:1693, color:other},
+  {label:"1 MB, 8 at once", v:3180, color:big},
+  {label:"4 MB, 4 at once", v:3295, color:big}
+], 3400, v => (v / 1000).toFixed(2) + " GB/s");
+
+const fw = document.getElementById("firstword");
+fw.innerHTML = [["1,700 words of memory", 2.88, 0.25], ["7,000 words of memory", 13.66, 0.84]].map(([g, t, n], i) =>
+  `<div class="group"><span class="gl">${g}</span><div class="bars" id="fw${i}"></div></div>`).join("");
+[[2.88, 0.25], [13.66, 0.84]].forEach(([t, n], i) => bars(document.getElementById("fw" + i), [
+  {label:"Reading the words", v:t, color:"var(--structure)"},
+  {label:"Its own notes", v:n, color:"var(--signal)"}
+], 14.5, v => v.toFixed(2) + " s"));
+
+(function(){
+  const pts = [[10,100],[21,103],[31,112],[41,114],[51,108],[62,95],[72,93],[82,84],[93,83],[103,84],[113,87],[124,88],[134,89],[145,89],[155,80],[166,77],[176,82],[187,84],[197,85],[208,88],[218,82],[229,82],[239,79],[250,83]];
+  const W = 640, H = 270, L = 52, R = 16, T = 16, B = 38;
+  const x = s => L + (s / 260) * (W - L - R), y = p => T + (1 - (p - 70) / 50) * (H - T - B);
+  let g = `<rect class="band" x="${x(60)}" y="${y(90)}" width="${x(260) - x(60)}" height="${y(80) - y(90)}" rx="3"/>`;
+  [70, 80, 90, 100, 110, 120].forEach(p => g += `<line class="ax" x1="${L}" x2="${W - R}" y1="${y(p)}" y2="${y(p)}"/><text class="lbl" x="${L - 8}" y="${y(p) + 4}" text-anchor="end">${p}%</text>`);
+  [0, 60, 120, 180, 240].forEach(s => g += `<text class="lbl" x="${x(s)}" y="${H - 12}" text-anchor="middle">${s} s</text>`);
+  g += `<path class="ln" d="${pts.map((p, i) => (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1)).join(" ")}"/>`;
+  g += `<circle class="dot" cx="${x(41)}" cy="${y(114)}" r="4.5"/><circle class="dot" cx="${x(250)}" cy="${y(83)}" r="4.5"/>`;
+  g += `<text class="ann" x="${x(48)}" y="${y(114) - 2}">full speed for about a minute</text>`;
+  g += `<text class="ann" x="${x(250)}" y="${y(80) + 22}" text-anchor="end">then steady at 80–90%</text>`;
+  document.getElementById("throttle").innerHTML = `<svg class="line" viewBox="0 0 ${W} ${H}" role="img" aria-label="GPU speed rose to 114% of its start in the first 41 seconds, then fell and held between 77% and 89% until 250 seconds">${g}</svg>`;
+})();
+</script>

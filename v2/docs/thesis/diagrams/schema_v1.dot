@@ -1,0 +1,111 @@
+// Figure 4.8: Logical schema of the CAMR v1 store (one SQLite file). From camr/memory/store.py and camr/eval/logger.py.
+digraph schema_v1 {
+  rankdir=LR;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+  graph [nodesep=0.45 ranksep=1.0];
+  node [shape=plain style="" margin=0];
+  edge [dir=both arrowsize=0.8];
+  subgraph cluster_mem { label="Memory tables (camr.memory.store)"; fontname="Helvetica-Bold"; color="#1baf7a"; style="rounded"; penwidth=1.3;
+    source [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#1baf7a" BGCOLOR="#e8f7f0">
+<TR><TD BGCOLOR="#1baf7a"><FONT COLOR="white"><B>source</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk"><B>PK</B> source_id</TD></TR>
+<TR><TD ALIGN="LEFT">dataset</TD></TR>
+<TR><TD ALIGN="LEFT">doc_id</TD></TR>
+<TR><TD ALIGN="LEFT">note_type</TD></TR>
+<TR><TD ALIGN="LEFT">title</TD></TR>
+<TR><TD ALIGN="LEFT">ingested_at</TD></TR>
+<TR><TD ALIGN="LEFT">screener_verdict</TD></TR>
+<TR><TD ALIGN="LEFT"><I>UNIQUE (dataset, doc_id, note_type)</I></TD></TR>
+</TABLE>>];
+    note [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#1baf7a" BGCOLOR="#e8f7f0">
+<TR><TD BGCOLOR="#1baf7a"><FONT COLOR="white"><B>note</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk"><B>PK</B> note_id</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="src"><B>FK</B> source_id → source</TD></TR>
+<TR><TD ALIGN="LEFT">note_type</TD></TR>
+<TR><TD ALIGN="LEFT">text</TD></TR>
+<TR><TD ALIGN="LEFT">token_count</TD></TR>
+<TR><TD ALIGN="LEFT">importance</TD></TR>
+<TR><TD ALIGN="LEFT">created_at</TD></TR>
+<TR><TD ALIGN="LEFT">last_accessed_at</TD></TR>
+<TR><TD ALIGN="LEFT">access_count</TD></TR>
+<TR><TD ALIGN="LEFT"><B>UQ</B> checksum</TD></TR>
+</TABLE>>];
+    note_embedding [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#1baf7a" BGCOLOR="#e8f7f0">
+<TR><TD BGCOLOR="#1baf7a"><FONT COLOR="white"><B>note_embedding</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk"><B>PK, FK</B> note_id → note</TD></TR>
+<TR><TD ALIGN="LEFT">embedding (float32 vector)</TD></TR>
+<TR><TD ALIGN="LEFT"><I>ON DELETE CASCADE</I></TD></TR>
+</TABLE>>];
+    note_vec [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#1baf7a" BGCOLOR="#e8f7f0">
+<TR><TD BGCOLOR="#1baf7a"><FONT COLOR="white"><B>note_vec  (sqlite-vec virtual table)</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk">rowid = note_id</TD></TR>
+<TR><TD ALIGN="LEFT">note_type</TD></TR>
+<TR><TD ALIGN="LEFT">embedding (cosine distance)</TD></TR>
+</TABLE>>];
+    rejection [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#1baf7a" BGCOLOR="#e8f7f0">
+<TR><TD BGCOLOR="#1baf7a"><FONT COLOR="white"><B>rejection</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk"><B>PK</B> rejection_id</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="src"><B>FK</B> source_id → source (may be null)</TD></TR>
+<TR><TD ALIGN="LEFT">note_type</TD></TR>
+<TR><TD ALIGN="LEFT">reason</TD></TR>
+<TR><TD ALIGN="LEFT">text</TD></TR>
+<TR><TD ALIGN="LEFT">created_at</TD></TR>
+</TABLE>>];
+    meta [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#1baf7a" BGCOLOR="#e8f7f0">
+<TR><TD BGCOLOR="#1baf7a"><FONT COLOR="white"><B>meta</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT"><B>PK</B> key</TD></TR>
+<TR><TD ALIGN="LEFT">value  (schema version, embedder, dimension)</TD></TR>
+</TABLE>>];
+  }
+  subgraph cluster_run { label="Harness tables (camr.eval.logger)"; fontname="Helvetica-Bold"; color="#2a78d6"; style="rounded"; penwidth=1.3;
+    run [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#2a78d6" BGCOLOR="#e9f1fb">
+<TR><TD BGCOLOR="#2a78d6"><FONT COLOR="white"><B>run</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk"><B>PK</B> run_id</TD></TR>
+<TR><TD ALIGN="LEFT">label</TD></TR>
+<TR><TD ALIGN="LEFT">condition ∈ {floor, ceiling, treatment, ceiling_rag}</TD></TR>
+<TR><TD ALIGN="LEFT">benchmark · task_type</TD></TR>
+<TR><TD ALIGN="LEFT">model_name · model_version</TD></TR>
+<TR><TD ALIGN="LEFT">config_json · config_hash</TD></TR>
+<TR><TD ALIGN="LEFT">template_id · seed</TD></TR>
+<TR><TD ALIGN="LEFT">started_at · finished_at · status</TD></TR>
+</TABLE>>];
+    query_log [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#2a78d6" BGCOLOR="#e9f1fb">
+<TR><TD BGCOLOR="#2a78d6"><FONT COLOR="white"><B>query_log</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk"><B>PK</B> query_id</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="run"><B>FK</B> run_id → run</TD></TR>
+<TR><TD ALIGN="LEFT">question_id · dataset · task_type</TD></TR>
+<TR><TD ALIGN="LEFT">question · prompt · answer_text</TD></TR>
+<TR><TD ALIGN="LEFT">status ∈ {ok, failed} · error</TD></TR>
+<TR><TD ALIGN="LEFT">context, prompt and generated tokens</TD></TR>
+<TR><TD ALIGN="LEFT">retrieval, generation, end-to-end latency</TD></TR>
+<TR><TD ALIGN="LEFT">budget · abstained · top_similarity</TD></TR>
+<TR><TD ALIGN="LEFT">prefill_ms · decode_ms · served_model · logged_at</TD></TR>
+</TABLE>>];
+    score [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#2a78d6" BGCOLOR="#e9f1fb">
+<TR><TD BGCOLOR="#2a78d6"><FONT COLOR="white"><B>score</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="pk"><B>PK</B> score_id</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="q"><B>FK</B> query_id → query_log</TD></TR>
+<TR><TD ALIGN="LEFT">metric · value</TD></TR>
+</TABLE>>];
+    retrieved_note [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" STYLE="ROUNDED" COLOR="#2a78d6" BGCOLOR="#e9f1fb">
+<TR><TD BGCOLOR="#2a78d6"><FONT COLOR="white"><B>retrieved_note</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT" PORT="q"><B>PK, FK</B> query_id → query_log</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="note"><B>PK</B> note_id  (logical reference)</TD></TR>
+<TR><TD ALIGN="LEFT">rank · tokens · admitted</TD></TR>
+<TR><TD ALIGN="LEFT">similarity · recency_score</TD></TR>
+<TR><TD ALIGN="LEFT">importance_score · composite_score</TD></TR>
+<TR><TD ALIGN="LEFT">via_note_id  (bridged from)</TD></TR>
+</TABLE>>];
+  }
+  source:pk:e -> note:src:w [arrowtail=teetee arrowhead=crowodot];
+  source:pk:e -> rejection:src:w [arrowtail=teeodot arrowhead=crowodot];
+  note:pk:e -> note_embedding:pk:w [arrowtail=teetee arrowhead=teetee];
+  note:pk:e -> note_vec:pk:w [arrowtail=teetee arrowhead=teeodot style=dashed];
+  run:pk:e -> query_log:run:w [arrowtail=teetee arrowhead=crowodot];
+  query_log:pk:e -> score:q:w [arrowtail=teetee arrowhead=crowodot];
+  query_log:pk:e -> retrieved_note:q:w [arrowtail=teetee arrowhead=crowodot];
+  note:pk:e -> retrieved_note:note:w [arrowtail=teetee arrowhead=crowodot style=dashed constraint=false label="logical reference:\nthe harness does not\nimport the engine"];
+  meta -> source [style=invis];
+}
