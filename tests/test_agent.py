@@ -31,3 +31,9 @@ def test_errands_are_graded_like_the_quiz():
     assert grade(never, "ask_user", {"question": "?"}, day) == "right_abstain"
     assert grade(never, never.tool, {never.arg: "Nairobi"}, day) == "false_memory"
     assert len(FORMS) == 9
+
+
+def test_newer_qwen_tool_calls_are_read_too():
+    xml = ("<tool_call>\n<function=set_reminder>\n<parameter=person>\nmy neighbour\n</parameter>\n"
+           "<parameter=date>\n10 October\n</parameter>\n</function>\n</tool_call>")
+    assert parse(xml) == ("set_reminder", {"person": "my neighbour", "date": "10 October"})

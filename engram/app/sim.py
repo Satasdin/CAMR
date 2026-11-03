@@ -79,6 +79,22 @@ class Simulation:
             self.error = f"{type(e).__name__}: {e}"
         finally:
             self.done = True
+            self._record()
+
+    def _record(self) -> None:
+        """A test record of the run, like the ruler's, so what the page showed can be cited."""
+        import datetime as dt
+        import json
+
+        from engram.ruler.harness import RECORDS, environment
+
+        now = dt.datetime.now()
+        out = RECORDS / "simulation" / now.strftime("%Y-%m-%d") / f"{now.strftime('%H%M%S')}-{self.persona}-s{self.seed}.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps({"kind": "simulation", "persona": self.persona, "seed": self.seed,
+                                   "questions": [self.life.questions[i].qid for i in self.sample],
+                                   "days_done": self.day + 1, "finished": self.day + 1 == len(self.life.days),
+                                   "error": self.error, "environment": environment(), "weeks": self.weeks}, indent=1))
 
     def state(self) -> dict:
         d = self.life.days[max(self.day, 0)]

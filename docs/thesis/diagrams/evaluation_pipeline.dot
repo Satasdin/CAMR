@@ -1,0 +1,51 @@
+// Figure 4.3: The evaluation and data pipelines of CAMR v1 (public benchmarks) and CAMR v2 (scripted lives).
+digraph evaluation_pipeline {
+  rankdir=TB;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+  graph [nodesep=0.3 ranksep=0.38];
+
+  subgraph cluster_v1 {
+    label="CAMR v1: public benchmarks"; fontname="Helvetica-Bold"; color="#2a78d6"; style="rounded"; penwidth=1.3;
+    v1_data   [label="Official benchmark files (real data)\nPopQA · HotpotQA · 2WikiMultiHopQA · GSM8K" fillcolor="#e9f1fb" color="#2a78d6"];
+    v1_sample [label="Fixed sample per benchmark\nseed 13 · question ids + source-file hash"];
+    v1_split  [label="Disjoint uses of the questions\nvalidation (pilot, tuning) · held-out confirmation\nGSM8K train split: worked examples only"];
+    v1_guard  [label="Holdout guard\nno evaluation question enters memory"];
+    v1_ingest [label="Write path: supporting and distractor\ndocuments → screened notes (one SQLite file)"];
+    subgraph cluster_v1c {
+      label="Conditions on the same questions"; fontname="Helvetica"; color="#9aa3b2"; style="rounded,dotted";
+      v1_floor [label="floor\nsmall model alone"];
+      v1_treat [label="treatment\nsmall model + CAMR" fillcolor="#e8f7f0" color="#1baf7a"];
+      v1_ceil  [label="ceiling\nKimi K3 alone" fillcolor="#fdeee6" color="#eb6834"];
+      v1_crag  [label="ceiling_rag\nKimi K3 + the same notes" fillcolor="#fdeee6" color="#eb6834"];
+    }
+    v1_rec    [label="Per-query records (SQLite + JSONL)\nprompt · notes · tokens · latencies · answer"];
+    v1_score  [label="Scoring\ncontains · exact match · F1 · final number"];
+    v1_ana    [label="Analysis\ngap closed + paired bootstrap CI (Eq. 3.1)\nablation · budget sweep · device profile"];
+    v1_out    [label="tables/ · figures/ · FINDINGS.md" fillcolor="#e9f1fb" color="#2a78d6"];
+    v1_data -> v1_sample -> v1_split -> v1_guard -> v1_ingest;
+    v1_ingest -> v1_floor; v1_ingest -> v1_treat; v1_ingest -> v1_ceil; v1_ingest -> v1_crag;
+    v1_floor -> v1_rec; v1_treat -> v1_rec; v1_ceil -> v1_rec; v1_crag -> v1_rec;
+    v1_rec -> v1_score -> v1_ana -> v1_out;
+  }
+
+  subgraph cluster_v2 {
+    label="CAMR v2: scripted lives"; fontname="Helvetica-Bold"; color="#1baf7a"; style="rounded"; penwidth=1.3;
+    v2_life  [label="Persona + seed → one scripted life (synthetic, messy)\n84 days · about 330 notes · 100 questions\n45 single · 15 changing · 10 two-note · 15 dates · 15 never told" fillcolor="#e9f1fb" color="#2a78d6"];
+    v2_split [label="Seed 0: development and calibration only\nSeed 1: proof, run after the pass marks were written"];
+    v2_cont  [label="Contenders: one embedder for all, and the 1.7B reader\n(the 4B reads for one baseline only)\n1.7B alone · perfect reader · CAMR v1 (1.7B and 4B) ·\nCAMR v2 · CAMR v2 memory read as words"];
+    v2_day   [label="Each day: the contender observes the day's moments,\nthen saves (no consolidation is built yet)"];
+    v2_quiz  [label="End of each week: the same 100 questions,\ngraded against that day's right answers"];
+    v2_err   [label="Last day: 100 errands\n(each needs one told fact)"];
+    v2_speed [label="Speed: one room of 250 to 3,000 words\nnotes vs words, SSD cache bypassed"];
+    v2_grade [label="Rule-based verdicts\nright · stale · missed · wrong ·\nright_abstain · false_memory" fillcolor="#e8f7f0" color="#1baf7a"];
+    v2_rec   [label="Dated test record (JSON)\nmachine · load · code hash · every answer"];
+    v2_out   [label="Growth charts (SVG) ·\nREADME and DECISIONS.md tables" fillcolor="#e9f1fb" color="#2a78d6"];
+    v2_life -> v2_split -> v2_cont -> v2_day -> v2_quiz -> v2_grade -> v2_rec -> v2_out;
+    v2_quiz -> v2_day [label="next week" style=dashed constraint=false];
+    v2_cont -> v2_err -> v2_grade;
+    v2_split -> v2_speed [label="development life"];
+    v2_speed -> v2_rec;
+  }
+}

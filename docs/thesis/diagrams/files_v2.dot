@@ -1,0 +1,62 @@
+// Figure 4.9: File and data design of CAMR v2: one folder per memory, and the test records.
+digraph files_v2 {
+  rankdir=LR;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+  graph [nodesep=0.35 ranksep=0.75];
+  folder [label="~/.engram/default/\n(one memory; the simulation\nuses its own folder)" shape=folder style="filled" fillcolor="#e9f1fb" color="#2a78d6"];
+  repo [label="repository records/\n(the ruler)" shape=folder style="filled" fillcolor="#fdeee6" color="#eb6834"];
+  node [shape=plain style="" margin=0];
+  room [label=<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5" COLOR="#2a78d6" BGCOLOR="white">
+<TR><TD COLSPAN="5" BGCOLOR="#2a78d6"><FONT COLOR="white"><B>room-000042.notes</B>   append-only; written and read with F_NOCACHE</FONT></TD></TR>
+<TR><TD PORT="t0" BGCOLOR="#e9f1fb">token 0</TD><TD BGCOLOR="#e9f1fb">token 1</TD><TD>…</TD><TD BGCOLOR="#e9f1fb">token n − 1</TD><TD BGCOLOR="#fdeee6">next moment →</TD></TR>
+<TR><TD COLSPAN="5" ALIGN="LEFT">moment k fills tokens start … start + tokens − 1 (from index.json); n ≤ 512</TD></TR>
+<TR><TD COLSPAN="5" ALIGN="LEFT">read whole, in 1 MB pieces, eight at once (preadv)</TD></TR>
+</TABLE>>];
+  token [label=<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5" COLOR="#1baf7a" BGCOLOR="white">
+<TR><TD COLSPAN="4" BGCOLOR="#1baf7a"><FONT COLOR="white"><B>one token's notes = 114,688 bytes</B></FONT></TD></TR>
+<TR><TD PORT="in" BGCOLOR="#e8f7f0">layer 0<BR/>K: 8 heads × 128<BR/>V: 8 heads × 128</TD><TD BGCOLOR="#e8f7f0">layer 1<BR/>K · V</TD><TD>…</TD><TD BGCOLOR="#e8f7f0">layer 27<BR/>K · V</TD></TR>
+<TR><TD COLSPAN="4" ALIGN="LEFT">28 layers × 2 (K, V) × 8 KV heads × 128 numbers × 2 bytes (Eq. 4.4)</TD></TR>
+</TABLE>>];
+  index [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" STYLE="ROUNDED" COLOR="#2a78d6" BGCOLOR="#e9f1fb">
+<TR><TD BGCOLOR="#2a78d6"><FONT COLOR="white"><B>index.json</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT">token_bytes (114,688) · room_tokens (512) · join (0.80)</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="moments">moments[ ]: mid · room · day · text · start · tokens</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="rooms">rooms[ ]: rid · members[ ] · tokens</TD></TR>
+</TABLE>>];
+  vectors [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" STYLE="ROUNDED" COLOR="#2a78d6" BGCOLOR="#e9f1fb">
+<TR><TD BGCOLOR="#2a78d6"><FONT COLOR="white"><B>vectors.npy</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT">float32 matrix, one unit row per moment</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="row">row i is moment mid = i</TD></TR>
+</TABLE>>];
+  events [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" STYLE="ROUNDED" COLOR="#1baf7a" BGCOLOR="#e8f7f0">
+<TR><TD BGCOLOR="#1baf7a"><FONT COLOR="white"><B>events.jsonl</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT">one JSON object per line; every line has type and at</TD></TR>
+<TR><TD ALIGN="LEFT">remember: moment · room · day · tokens · new_room</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="ans">answer, agent: question · room · closest · nodes · share ·<BR ALIGN="LEFT"/>used · words · looks · wait_s · seconds</TD></TR>
+<TR><TD ALIGN="LEFT">tool: task · tool · args · result</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="ver">verdict: event (line of the answer) · verdict · expected</TD></TR>
+</TABLE>>];
+  layout [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" STYLE="ROUNDED" COLOR="#2a78d6" BGCOLOR="#e9f1fb">
+<TR><TD BGCOLOR="#2a78d6"><FONT COLOR="white"><B>layout.json</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT">moments (how many were laid out)</TD></TR>
+<TR><TD ALIGN="LEFT" PORT="xy">xy[ ]: one [x, y] per moment</TD></TR>
+</TABLE>>];
+  record [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" STYLE="ROUNDED" COLOR="#eb6834" BGCOLOR="#fdeee6">
+<TR><TD BGCOLOR="#eb6834"><FONT COLOR="white"><B>records/YYYY-MM-DD/HHMMSS-persona-sS-contender.json</B></FONT></TD></TR>
+<TR><TD ALIGN="LEFT">kind · persona · seed · questions · weeks_planned · started · finished</TD></TR>
+<TR><TD ALIGN="LEFT">contender{ }: name · reader · room_tokens · join · closest · token_bytes</TD></TR>
+<TR><TD ALIGN="LEFT">environment{ }: machine · chip · memory_gb · power · load_1m ·<BR ALIGN="LEFT"/>python · commit · dirty · source sha · mlx · mlx_lm · numpy</TD></TR>
+<TR><TD ALIGN="LEFT">weeks[ ]: week · date · notes_so_far · quiz_s · peak_ram_gb · disk_mb</TD></TR>
+<TR><TD ALIGN="LEFT">    summary{ }: knows · told · honest · false_memories · stale ·<BR ALIGN="LEFT"/>missed · wrong · wait_median_s · wait_p90_s</TD></TR>
+<TR><TD ALIGN="LEFT">    answers[ ]: qid · kind · question · expected · answer ·<BR ALIGN="LEFT"/>verdict · ttft_s · gen_tps · prompt_tokens</TD></TR>
+</TABLE>>];
+  folder -> room; folder -> index; folder -> vectors; folder -> events; folder -> layout;
+  repo -> record;
+  room:t0 -> token:in [label="each token"];
+  index:moments:e -> room [label="start, tokens:\nbyte offsets" style=dashed constraint=false];
+  index:moments:e -> vectors:row:w [label="mid = row" style=dashed];
+  events:ans:e -> index:moments [label="nodes, closest, used:\nmoment ids" style=dashed constraint=false];
+  layout:xy:e -> vectors:row:e [label="xy[i] from row i (t-SNE)" style=dashed constraint=false];
+}

@@ -1,0 +1,50 @@
+// Figure 4.4: Architecture of CAMR v1, the research engine (camr-repo).
+digraph architecture_v1 {
+  rankdir=TB;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+
+  who [label="User · Researcher · n8n workflow" shape=ellipse fillcolor="white"];
+  ui  [label="Interfaces: camr CLI · CAMR Personal (web app on 127.0.0.1) ·\nread-only Inspector · automation gateway (localhost)" fillcolor="#e9f1fb" color="#2a78d6"];
+
+  subgraph cluster_engine {
+    label="CAMR v1 memory engine (camr.memory), on the device"; fontname="Helvetica-Bold"; color="#1baf7a"; style="rounded"; penwidth=1.4;
+    subgraph cluster_write {
+      label="Write path (teach, ingest)"; fontname="Helvetica"; color="#9aa3b2"; style="rounded,dotted";
+      wp   [label="Write policy\nverbatim chunks | structured notes"];
+      sc   [label="Screener\nempty · duplicate · injection-like"];
+      im   [label="Importance score\n+ timestamp"];
+      emb1 [label="Embedder\nbge-small-en-v1.5 (384-d);\nnomic-embed-text in the app"];
+    }
+    subgraph cluster_read {
+      label="Read path (ask)"; fontname="Helvetica"; color="#9aa3b2"; style="rounded,dotted";
+      emb2   [label="Embed the question"];
+      knn    [label="kNN search, k = 20\n(sqlite-vec, exact)"];
+      rank   [label="Retrieval policy\nsimilarity only | composite (Eq. 4.1)"];
+      gate   [label="Gate (Eq. 4.2)\nabstain below τ · admit within δ of the best" fillcolor="#e8f7f0" color="#1baf7a"];
+      bridge [label="Entity bridging\nfollow named entities (second hop)" fillcolor="#e8f7f0" color="#1baf7a"];
+      budg   [label="Token budgeter\nsum of note tokens ≤ B (default 512)"];
+    }
+    store [label="One SQLite file + sqlite-vec\nnotes · vectors · provenance ·\nrejections · runs · query logs" shape=cylinder fillcolor="#e9f1fb" color="#2a78d6"];
+  }
+
+  prompt  [label="Prompt template\n(fixed, recorded verbatim)"];
+  slm     [label="Frozen small model (0.5B to 3B)\nthrough Ollama, loopback only" fillcolor="#fdeee6" color="#eb6834"];
+  router  [label="Learned router +\ngrounding cascade" fillcolor="#e8f7f0" color="#1baf7a" style="rounded,filled,dashed"];
+  cloud   [label="Cloud reference model: Kimi K3 (Moonshot API)\nceiling · ceiling_rag · escalation only" fillcolor="#fdeee6" color="#eb6834" style="rounded,filled,dashed"];
+  harness [label="Harness (camr.harness, camr.eval)\nbenchmarks · conditions · scoring · gap closed ·\nablation · budget sweep · profile · diagnostics"];
+
+  who -> ui;
+  ui -> wp [label="teach"]; wp -> sc -> im -> emb1 -> store;
+  sc -> store [label="rejections, with source" style=dashed];
+  ui -> emb2 [label="ask"]; emb2 -> knn -> rank -> gate -> bridge -> budg;
+  store -> knn [label="vectors" style=dashed];
+  store -> bridge [label="notes on named entities" style=dashed];
+  budg -> prompt -> slm;
+  slm -> ui [label="answer + cited notes" constraint=false];
+  router -> slm [style=dashed];
+  router -> cloud [label="escalate" style=dashed];
+  harness -> ui [label="drives runs" style=dotted arrowhead=none];
+  harness -> cloud [label="ceiling runs" style=dashed];
+}

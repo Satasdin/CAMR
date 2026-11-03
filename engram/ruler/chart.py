@@ -14,8 +14,8 @@ from engram.ruler.harness import RECORDS, environment
 BG, FG, MUTED, RULE = "#070a09", "#e4ebe7", "#93a49c", "#1f2b27"
 COLOURS = {"engram": "#5ee08a", "engram-words": "#2f7d4f", "perfect": "#e4ebe7", "camr": "#e25a7e", "camr-4b": "#e2b04a",
            "bare": "#7d8a84"}
-LABELS = {"engram": "engram (its own notes)", "engram-words": "engram, read as words",
-          "perfect": "perfect reader (everything pasted in)", "camr": "old CAMR, 1.7B", "camr-4b": "old CAMR, 4B",
+LABELS = {"engram": "CAMR v2 (its own notes)", "engram-words": "CAMR v2, read as words",
+          "perfect": "perfect reader (everything pasted in)", "camr": "CAMR v1, 1.7B", "camr-4b": "CAMR v1, 4B",
           "bare": "1.7B alone"}
 
 

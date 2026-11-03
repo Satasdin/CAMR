@@ -33,6 +33,21 @@ def models_ready() -> bool:
     return True
 
 
+def record(ok: bool, reply, loaded_s: float) -> None:
+    """Keep each health check as a test record, so its timings can be cited."""
+    import datetime as dt
+    import json
+
+    from engram.ruler.harness import RECORDS, environment
+
+    now = dt.datetime.now()
+    out = RECORDS / "health" / now.strftime("%Y-%m-%d") / f"{now.strftime('%H%M%S')}-check.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"kind": "health", "passed": ok, "question": "Where does my sister live?",
+                               "answer": reply.text, "ttft_s": round(reply.ttft_s, 4), "gen_tps": round(reply.gen_tps, 1),
+                               "models_loaded_s": round(loaded_s, 2), "environment": environment()}, indent=1))
+
+
 def check() -> int:
     import datetime as dt
 
@@ -53,6 +68,7 @@ def check() -> int:
         print(f"First word after {reply.ttft_s * 1000:.0f} ms, writing at {reply.gen_tps:.0f} tokens/s.")
         print("PASS: CAMR remembered and answered." if ok else "FAIL: the answer did not name Nakuru.")
         m.close()
+        record(ok, reply, loaded)
         return 0 if ok else 1
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

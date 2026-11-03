@@ -69,7 +69,12 @@ def tasks(life) -> list[Task]:
 
 
 def parse(text: str) -> tuple[str | None, dict]:
-    """The tool call in a reply: (tool name, arguments), or (None, {}) when there is none."""
+    """The tool call in a reply: (tool name, arguments), or (None, {}) when there is none. Qwen3 writes JSON inside
+    <tool_call>; newer Qwen models (3.5 and later, such as the 27B) write <function=name><parameter=key>value."""
+    x = re.search(r"<function=([\w.-]+)>(.*?)(?:</function>|$)", text, re.S)
+    if x:
+        args = {k: v.strip() for k, v in re.findall(r"<parameter=([\w.-]+)>(.*?)(?:</parameter>|(?=<parameter=)|$)", x.group(2), re.S)}
+        return x.group(1), args
     m = re.search(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", text, re.S) or re.search(r"(\{.*\})", text, re.S)
     if not m:
         return None, {}

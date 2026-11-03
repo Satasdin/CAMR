@@ -1,0 +1,55 @@
+// Figure 4.2: Use case diagram of CAMR. Actors are people and external systems only.
+digraph use_cases {
+  rankdir=LR;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+  graph [nodesep=0.22 ranksep=0.75];
+
+  // actors, outside the system boundary
+  a_user  [label="«actor»\nUser" fillcolor="#e9f1fb" color="#2a78d6" penwidth=1.3];
+  a_res   [label="«actor»\nResearcher" fillcolor="#e9f1fb" color="#2a78d6" penwidth=1.3];
+  a_n8n   [label="«actor»\nAutomation platform\n(n8n), v1" style="rounded,filled,dashed" fillcolor="white"];
+  a_cloud [label="«actor»\nCloud reference model\n(Kimi K3), v1" style="rounded,filled,dashed" fillcolor="#fdeee6" color="#eb6834"];
+  {rank=min; a_user; a_res; a_n8n;}
+  {rank=max; a_cloud;}
+
+  subgraph cluster_camr {
+    label="CAMR (system boundary)"; fontname="Helvetica-Bold"; color="#1baf7a"; style="rounded"; penwidth=1.4;
+    node [shape=ellipse style="filled" fillcolor="white" color="#2a78d6" margin="0.05,0.03" fontsize=10];
+    u_tell    [label="Tell or teach\nsomething to remember"];
+    u_ask     [label="Ask a question\nfrom memory"];
+    u_errand  [label="Give an errand\n(one tool call), v2"];
+    u_inspect [label="Inspect what an\nanswer leaned on"];
+    u_life    [label="Load, quiz or watch\na sample life, v2"];
+    u_bench   [label="Run benchmark conditions\nand ablations, v1"];
+    u_run     [label="Run a contender\nthrough a life, v2"];
+    u_speed   [label="Measure speed\nand memory use"];
+    u_repro   [label="Regenerate tables\nand charts"];
+    u_recall  [label="Recall from memory" fillcolor="#e8f7f0" color="#1baf7a"];
+    u_grade   [label="Grade answers\nby rule"];
+    u_record  [label="Write a test record"];
+    u_escal   [label="Escalate to the\ncloud model, v1" style="filled,dashed"];
+  }
+
+  // associations: plain lines
+  edge [arrowhead=none];
+  a_user -> u_tell; a_user -> u_ask; a_user -> u_errand; a_user -> u_inspect; a_user -> u_life;
+  a_res -> u_bench; a_res -> u_run; a_res -> u_speed; a_res -> u_repro;
+  a_n8n -> u_tell [style=dashed]; a_n8n -> u_ask [style=dashed];
+  u_escal -> a_cloud [style=dashed]; u_bench -> a_cloud [style=dashed];
+
+  // include and extend: dashed, open arrow towards the included (or extended) use case
+  edge [style=dashed arrowhead=vee fontsize=8.5];
+  u_ask -> u_recall    [label="«include»"];
+  u_errand -> u_recall [label="«include»"];
+  u_life -> u_recall   [label="«include»"];
+  u_run -> u_recall    [label="«include»"];
+  u_bench -> u_recall  [label="«include»"];
+  u_life -> u_grade    [label="«include»"];
+  u_run -> u_grade     [label="«include»"];
+  u_run -> u_record    [label="«include»"];
+  u_bench -> u_record  [label="«include»"];
+  u_speed -> u_record  [label="«include»"];
+  u_escal -> u_ask     [label="«extend»" constraint=false];
+}

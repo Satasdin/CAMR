@@ -71,3 +71,14 @@ def test_a_saved_memory_opens_where_it_left_off(tmp_path):
     again = Rooms(tmp_path, TB, room_tokens=100, join=0.8)
     assert [m.text for m in again.moments] == ["Amina moved to Nakuru.", "Paid the electricity bill."]
     assert again.vectors.shape == (2, 2) and bytes(again.fetch([0])[0]) == notes(3, 1)
+
+
+def test_notes_written_after_the_last_save_are_dropped_on_reopening(tmp_path):
+    rooms = Rooms(tmp_path, TB, room_tokens=100, join=0.5)
+    put(rooms, "one", 0, unit(1, 0), notes(3, 1))
+    rooms.save()
+    put(rooms, "two", 1, unit(1, 0.1), notes(2, 2))  # a crash here: notes on disk, index not saved
+    again = Rooms(tmp_path, TB, room_tokens=100, join=0.5)
+    m = put(again, "two, again", 1, unit(1, 0.1), notes(2, 3))
+    assert (m.start, again.rooms[m.room].tokens) == (3, 5)
+    assert bytes(again.fetch([m.room])[m.room]) == notes(3, 1) + notes(2, 3)

@@ -88,8 +88,8 @@ questions about things it never told.
 | **CAMR v2, 1.7B** | **164** | **25** | **0.07 s** | **1.82 GB** |
 | CAMR v2, same memory read as words | 163 | 24 | 0.09 s | 2.20 GB |
 
-- **Never heavier, so far.** CAMR v2's wait stayed between 0.066 and 0.070 s for all twelve weeks, and its RAM between
-  1.74 and 1.83 GB, while its notes on the SSD grew from 82 MB to 963 MB.
+- **Never heavier, so far.** CAMR v2's wait stayed between 0.064 and 0.072 s in every week of every life, and its RAM between
+  1.65 and 1.83 GB, while its notes on the SSD grew from 82 MB to 963 MB.
 - **As good as the CAMR v1 on the same model,** at half the wait and 0.4 GB less RAM, with none of its
   hand-written rules.
 - **Notes answer like words:** the same answer 96.8% of the time, and 164 facts against 163.

@@ -69,6 +69,7 @@ def run(life, name: str, reader, embedder, work: Path, records: Path = RECORDS, 
         verdicts[v] += 1
         rows.append({"qid": t.question.qid, "kind": t.question.kind, "task": t.text, "expected_tool": t.tool,
                      "expected": right[0] if right else None, "tool": tool, "args": args, "said": done(tool, args),
+                     "raw": "".join(reply.pieces),
                      "verdict": v, "ttft_s": round(reply.ttft_s, 4)})
     told = sum(r["expected"] is not None for r in rows)
     waits = sorted(r["ttft_s"] for r in rows)

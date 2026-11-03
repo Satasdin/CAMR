@@ -66,6 +66,10 @@ class Rooms:
             self.moments = [Moment(**m) for m in saved["moments"]]
             self.rooms = [Room(**r) for r in saved["rooms"]]
             self.vectors = np.load(self.path / "vectors.npy")
+            for room in self.rooms:  # notes appended after the last save belong to no moment: drop them
+                f, size = self.file(room.rid), room.tokens * token_bytes
+                if f.exists() and f.stat().st_size > size:
+                    os.truncate(f, size)
 
     def file(self, rid: int) -> Path:
         return self.path / f"room-{rid:06d}.notes"

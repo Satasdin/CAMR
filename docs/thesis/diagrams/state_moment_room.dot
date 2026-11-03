@@ -1,0 +1,53 @@
+// Figure 4.7: State diagram of a moment and of its room in CAMR v2.
+digraph state_moment_room {
+  rankdir=LR;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+  graph [nodesep=0.4 ranksep=0.5];
+
+  subgraph cluster_moment {
+    label="A moment"; fontname="Helvetica-Bold"; color="#1baf7a"; style="rounded"; penwidth=1.4;
+    m0       [label="" shape=point width=0.16 color="#111111" fillcolor="#111111"];
+    told     [label="Told\n“[date] text” arrives"];
+    embedded [label="Embedded\none unit vector"];
+    choice   [label="" shape=diamond width=0.32 height=0.32 style="filled" fillcolor="white" color="#52514e"];
+    joined   [label="Placed in an\nexisting room"];
+    newroom  [label="Placed in a\nnew room"];
+    written  [label="Written\nnotes made by reading it once,\nafter the header and the room so far"];
+    stored   [label="Stored\nnotes appended to its room file;\nwords, day and vector in the index" fillcolor="#e9f1fb" color="#2a78d6"];
+    desk     [label="On the desk\nin the opened room,\nor among the 4 closest" fillcolor="#fdeee6" color="#eb6834"];
+    used     [label="Used\nshare ≥ 0.10" fillcolor="#e8f7f0" color="#1baf7a"];
+    picked   [label="Picked up only\nshare < 0.10"];
+    note_m   [label="No final state: CAMR v2 never deletes a moment.\nFading and forgetting belong to sleep (future work)." shape=note style="filled" fillcolor="white" fontsize=9];
+
+    m0 -> told         [label="a Chat message, a life's day,\nor the simulation"];
+    told -> embedded   [label="encode_one(text)"];
+    embedded -> choice [label="place()"];
+    choice -> joined   [label="[some moment with similarity ≥ 0.80\nhas a room with space for it]"];
+    choice -> newroom  [label="[otherwise]"];
+    joined -> written;
+    newroom -> written;
+    written -> stored  [label="append to\nroom-NNNNNN.notes"];
+    stored -> desk     [label="a question\n/ recall()"];
+    desk -> used       [label="answer ends\n[share ≥ 0.10]"];
+    desk -> picked     [label="answer ends\n[share < 0.10]"];
+    used -> stored     [label="logged" style=dashed constraint=false];
+    picked -> stored   [label="logged" style=dashed constraint=false];
+    stored -> note_m   [style=dotted arrowhead=none];
+  }
+
+  subgraph cluster_room {
+    label="A room"; fontname="Helvetica-Bold"; color="#2a78d6"; style="rounded"; penwidth=1.4;
+    r0      [label="" shape=point width=0.16 color="#111111" fillcolor="#111111"];
+    growing [label="Growing\none file on the SSD,\nat most 512 tokens" fillcolor="#e9f1fb" color="#2a78d6"];
+    ondesk  [label="On the desk\nwhole file read in one burst,\nkeys not turned" fillcolor="#fdeee6" color="#eb6834"];
+    note_r  [label="A moment that would overflow this room joins the\nnext-closest room with space, or starts a new room.\nA room is never closed, split or rewritten." shape=note style="filled" fillcolor="white" fontsize=9];
+
+    r0 -> growing      [label="a moment joins no existing\nroom / create the file"];
+    growing -> growing [label="a moment joins\n[similarity ≥ 0.80 and\ntokens + n ≤ 512] / append"];
+    growing -> ondesk  [label="holds the moment closest\nto a question / fetch"];
+    ondesk -> growing  [label="answer ends / desk copy\ndropped, file unchanged"];
+    growing -> note_r  [style=dotted arrowhead=none];
+  }
+}

@@ -168,7 +168,7 @@ GPU memory, about 0.1 s at 2,000 words. The head start grows with memory: 1.9× 
 3,000. On the quiz itself the desk is one room of about 210 tokens, so notes save only 0.02 s there (0.070 s
 against 0.090 s). Their weight shows in RAM instead: 1.82 GB against 2.20 GB.
 
-Engram's wait stayed flat for all twelve weeks (0.066 to 0.070 s) and its peak RAM stayed between 1.74 and 1.83 GB,
+CAMR v2's wait stayed flat in every week of every life (0.064 to 0.072 s) and its peak RAM stayed between 1.65 and 1.83 GB,
 while its notes on the SSD grew from 82 MB to 963 MB. Against the baselines on the same machine, week 12:
 
 | Contender | Knows (of 255) | False memories (of 45) | Wait | Peak RAM |
@@ -239,7 +239,7 @@ On the development lives, a stricter wording ("every argument must be a value wr
 model never called `ask_user`. It filled a never-told argument with a guess, or with words copied from the task
 ("mum's home").
 
-**E-24 The app.** `python -m engram.app` serves one local page with three tabs: Chat, Errands and Brain.
+**E-24 The app.** `python -m engram.app` serves one local page with four tabs: Simulation (added later, in commit 0c27183), Chat, Errands and Brain.
 - **Chat:** a message ending in "?" is answered from memory; anything else is remembered as a dated moment.
 - **Errands:** one task, one tool call, filled from memory.
 - **Brain:** any answer or errand replayed word by word on the specimen view from the design rounds, with the
@@ -265,3 +265,31 @@ request is worded.
 
 None of them ever asked. A 1.7B agent fills a never-told argument with a guess. That is the weakness to fix next
 (settling unsure facts at recall, from the plan) and the clearest thing the Brain tab can show.
+
+**E-26 A model sixteen times bigger, on the same Mac.** Qwen3.8-27B (4-bit, 16 GB, `mlx-community/Qwen3.8-27B-4bit`)
+runs on the same MacBook Pro as every other contender. It keeps a running state instead of keys and values in 48
+of its 64 layers, so it cannot use CAMR v2's saved notes. It reads CAMR v2's memory as words instead (`CamrWords`):
+the same rooms, built by the same embedder with the same size cap counted in the 1.7B's tokens, and the same
+choice per question. It is measured three ways on the held-out lives:
+- alone;
+- with CAMR v1, configured as for the 1.7B;
+- with CAMR v2's memory as words.
+
+Being about ten times slower per answer, it is quizzed at week 12 only, the week every table compares, and then
+given the errands. The app is stopped during these runs so the 27B has the RAM.
+
+**E-27 A crash window in the room files, found while documenting.** A moment's notes are appended to its room's
+file at once, but the index that says where each moment starts is saved later. A crash in between left a room
+file longer than its index. Every later moment in that room would have pointed at the wrong notes.
+
+Opening a memory now cuts each room file back to the length its index records. The few notes written after the
+last save are dropped, and nothing already saved is lost. There is a test. The fix was committed after the 27B
+runs finished, so those records name the code that made them; the fix changes nothing in a run, since every run
+starts from an empty memory.
+
+**E-28 The 27B's tool calls were not being read.** The first two 27B errand runs scored 0 of 85 told and 15 of 15
+"held back", because no reply was recognised as a tool call. Qwen3.8's chat template asks for
+`<tool_call><function=name><parameter=key>value</parameter></function></tool_call>`. The parser only understood
+Qwen3's JSON form. It now reads both, with a test for each, and every errand record keeps the raw reply so a format
+surprise shows at once. The two runs are kept in `records/superseded/`, and all 27B errands were rerun with the
+fixed parser. The 27B's quiz runs were unaffected: they need no tool calls.

@@ -1,0 +1,58 @@
+// Figure 4.10: Deployment diagram of the CAMR v2 app on the Mac.
+digraph deployment_mac {
+  rankdir=TB;
+  graph [fontname="Helvetica" fontsize=11 bgcolor="white" pad=0.25 nodesep=0.35 ranksep=0.45 newrank=true];
+  node [fontname="Helvetica" fontsize=10.5 shape=box style="rounded,filled" fillcolor="#f3f5f9" color="#9aa3b2" penwidth=1.1 fontcolor="#111111" margin="0.14,0.07"];
+  edge [fontname="Helvetica" fontsize=9 color="#52514e" fontcolor="#52514e" arrowsize=0.7 penwidth=1.0];
+  graph [ranksep=0.5 nodesep=0.3];
+
+  subgraph cluster_mac {
+    label="«device» MacBook Pro M5 Pro (Mac17,9) · macOS · 24 GB unified memory · internal SSD"; fontname="Helvetica-Bold";
+    color="#52514e"; style="rounded"; penwidth=1.6;
+
+    subgraph cluster_browser {
+      label="«execution environment» Web browser"; fontname="Helvetica"; color="#2a78d6"; style="rounded,dashed";
+      page [label="«artifact» index.html\nSimulation · Chat · Errands · Brain\n(carries the key made at launch)" shape=note style="filled" fillcolor="#e9f1fb" color="#2a78d6"];
+    }
+
+    subgraph cluster_py {
+      label="«execution environment» Python 3.12 virtual environment (.venv)"; fontname="Helvetica"; color="#1baf7a"; style="rounded,dashed";
+      srv   [label="«component» App server\nThreadingHTTPServer on 127.0.0.1:8765\nstarted by scripts/install.sh after --check"];
+      eng   [label="«component» Memory engine\nMemory · Rooms · Notebook · Event log" fillcolor="#e8f7f0" color="#1baf7a"];
+      ruler [label="«component» Ruler\n(evaluation, run from a terminal)"];
+      v1lib [label="«component» CAMR v1 engine\n(editable install; baseline only)" style="rounded,filled,dashed"];
+    }
+
+    subgraph cluster_mlx {
+      label="«execution environment» MLX on the Apple-silicon GPU (Metal)"; fontname="Helvetica"; color="#eb6834"; style="rounded,dashed";
+      reader [label="Qwen3-1.7B-4bit\nreader, frozen" fillcolor="#fdeee6" color="#eb6834"];
+      emb    [label="Qwen3-Embedding-0.6B-4bit-DWQ\nembedder, frozen" fillcolor="#fdeee6" color="#eb6834"];
+    }
+
+    subgraph cluster_ssd {
+      label="«device» Internal SSD"; fontname="Helvetica"; color="#2a78d6"; style="rounded,dashed";
+      mem  [label="«artifact» ~/.engram/default/\nroom-*.notes · index.json · vectors.npy ·\nevents.jsonl · layout.json" shape=note style="filled" fillcolor="#e9f1fb" color="#2a78d6"];
+      sims [label="«artifact» ~/.engram/simulations/\nrebuilt for each simulation" shape=note style="filled" fillcolor="white" color="#2a78d6"];
+      hf   [label="«artifact» ~/.cache/huggingface/\nmodel weights, about 1.3 GB" shape=note style="filled" fillcolor="white" color="#2a78d6"];
+      recs [label="«artifact» repository records/\ndated test records (JSON)" shape=note style="filled" fillcolor="white" color="#2a78d6"];
+    }
+  }
+
+  hub [label="«external» Hugging Face Hub" shape=box3d style="filled" fillcolor="white"];
+  ci  [label="«external» GitHub Actions, ubuntu-latest\ntests of lives, grading, records and charts\n(no MLX needed)" shape=box3d style="filled" fillcolor="white"];
+
+  page -> srv     [label="HTTP + JSON on loopback\nHost · Origin · X-Engram-Token"];
+  srv -> eng;
+  srv -> sims     [style=dashed];
+  ruler -> eng;
+  ruler -> v1lib  [style=dashed];
+  ruler -> recs;
+  eng -> reader   [label="generate"];
+  eng -> emb      [label="encode"];
+  v1lib -> reader [style=dashed];
+  eng -> mem      [label="append · burst read\n(F_NOCACHE)"];
+  hf -> reader    [label="load" style=dashed];
+  hf -> emb       [style=dashed];
+  hub -> hf       [label="first run only;\nthen HF_HUB_OFFLINE=1" style=dashed];
+  ci -> ruler     [label="same code, on every push" style=dotted arrowhead=none];
+}
