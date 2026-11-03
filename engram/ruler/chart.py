@@ -58,7 +58,7 @@ def _panel(x0, y0, w, h, title, series, ymax, unit, ceiling=None):
         s.append(f'<polyline points="{pts}" fill="none" stroke="{MUTED}" stroke-width="1.5" stroke-dasharray="4 4"/>')
         wk, v = ceiling[-1]
         s.append(f'<text x="{X(wk) - 4:.1f}" y="{Y(v) - 8:.1f}" fill="{MUTED}" font-size="11" text-anchor="end">told so far</text>')
-    for name, pts in series:
+    for name, pts in reversed(series):  # the first-named (engram) is drawn last, on top
         if not pts:
             continue
         c = COLOURS.get(name, FG)
