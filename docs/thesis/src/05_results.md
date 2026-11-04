@@ -461,7 +461,21 @@ On twelve test sentences, "Auto" filed all 12 on the right shelf, including all 
 
 ### The Assistant in the App {#assistant-results}
 
-The assistant's parts were checked in the app on the night of 4 November (E-55 to E-57). The router adds about 0.1 s to a question. Reading the closest moment of every other shelf when it is within 0.12 of the best found a photographed receipt that the 737 Long Haul notes had outscored (closeness 0.70 against 0.81). Revision judged five test moments on the 4B correctly, 5 of 5: a raised minimum order and new opening hours as updates, a repeat as the same, and a birthday and another branch's hours as new. The eyes read a photographed receipt line by line (a total of KES 730.00, paid by M-Pesa) in about 25 s including loading the vision model, and the 8B then answered both questions about it from memory. These are demonstrations on a handful of cases, not benchmarks.
+The assistant's parts were checked in the app on the night of 4 November (E-55 to E-57). The router adds about 0.1 s to a question. Reading the closest moment of every other shelf when it is within 0.12 of the best found a photographed receipt that the 737 Long Haul notes had outscored (closeness 0.70 against 0.81). Revision judged five test moments on the 4B correctly, 5 of 5: a raised minimum order and new opening hours as updates, a repeat as the same, and a birthday and another branch's hours as new. The eyes read a photographed receipt line by line (a total of KES 730.00, paid by M-Pesa) in about 25 s including loading the vision model, and the 8B then answered both questions about it from memory. When the router sees memory, a question naming a person or business found in its five closest notes goes to memory outright, and otherwise the model judges with the closest note in view; routing blind, the 8B had sent "the number plate of Kitengela Ventures' delivery truck" to its own knowledge, and seeing memory it routed 13 of 14 test questions right on its Long Haul memory, the miss being a never-said name that it then answered honestly (E-55). Figure {fig:app-receipt} shows the receipt answered later from memory. These are demonstrations on a handful of cases, not benchmarks.
+
+![{#app-receipt} A photographed receipt read into memory by Qwen3-VL-4B-Thinking, its total and an item answered later by the 8B from memory ("from memory · note 549 · read from the SSD")](figures/app/chat-receipt-photo-recalled.png){width=15.9}
+
+#### Storage at 8 and 4 bits
+
+The 1.7B with CAMR was rerun on the Long Haul's first two cuts with its rooms stored at 16, 8 and 4 bits (records of 5 November, `v2/records/bench/2026-11-05/`; Table {tab:bits}). At 8 bits it answered as at 16 bits, 14 and 20, with the room files held to 8.6 GB at 256K by an 8 GB disk budget against 34.3 GB at 16 bits; at 4 bits it lost 2 answers at 256K (18 against 20) and took 9.7 GB.
+
+Table: {#bits} Room storage at 16, 8 and 4 bits (`engine:qwen3-1.7b`, the first two cuts)
+
+| Rooms stored at | Right, 64K (34) | Right, 256K (40) | Disk at 256K | First word p50, 256K | Process RAM, 256K |
+|---|---|---|---|---|---|
+| 16 bits | 14 | 20 | 34.3 GB | 0.10 s | 5.2 GB |
+| 8 bits (8 GB disk budget) | 14 | 20 | 8.6 GB | 0.13 s | 3.8 GB |
+| 4 bits | 14 | 18 | 9.7 GB | 0.15 s | 4.1 GB |
 
 ### The Claude Yardstick: Time and Cost {#yardstick}
 

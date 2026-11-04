@@ -56,6 +56,7 @@ Table: {#records} The records behind Chapter 5 (`v2/records/bench/2026-11-04/`)
 | Ollama on the Long Haul | `053819-longhaul-ollama-qwen3-1.7b.json`; `052439-longhaul-ollama-bare-qwen3-1.7b.json` |
 | Claude on the Long Haul | `022518-…`, `022717-…`, `023106-…`, `094146-…`, `094325-claude-*-longhaul.json` |
 | Speed as memory grows | `055344-speed-engine-qwen3-1.7b.json` |
+| Storage at 16, 8 and 4 bits (5 November) | `003939-…-16bit.json`, `004714-…-8bit-8GB.json`, `004321-…-4bit.json` |
 | Reach | `195128-…`, `195633-…`, `200137-…`, `201043-reach-engine-qwen3-4b-*.json` |
 | The suites | `*-math500-*`, `*-aime-*`, `*-harp-*`, `*-babilong-*.json` |
 | Claude's spending | `v2/records/bench/claude-ledger.jsonl` |

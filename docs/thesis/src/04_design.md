@@ -321,6 +321,10 @@ Code is a coding agent on the same local model (Figure {fig:app-code}). The user
 
 ![{#app-onoff} The weights view with memory on (left), where the room read lights and flows into the model, and off (right), where the model answers alone and the memory stays dark](figures/app/weights-on-off.png){width=12}
 
+As an assistant, Chat also keeps saved conversations, can be stopped mid-answer, and has a Settings window; the tensors are drawn only while a model loads or when the user asks for them (Command-T). A thinking model's reasoning streams into a block that folds once the answer is written (Figure {fig:app-reasoning}), and each answer says whether it came from memory, from the model's own knowledge or from the web.
+
+![{#app-reasoning} The 8B's reasoning, folded once the answer is written ("Thought for 27.8 seconds")](figures/app/chat-reasoning-folded.png){width=15.9}
+
 Figure {fig:app-onoff} sets the two states side by side. The difference is the design's main idea made visible: with memory on, an answer reads one room from the SSD or RAM; with it off, nothing outside the model is read.
 
 ## Design Changes Since the Proposal {#changes}
