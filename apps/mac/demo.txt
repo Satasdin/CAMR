@@ -1,10 +1,17 @@
 # The 8am demo, played by the app itself: CAMR_SCRIPT=apps/mac/demo.txt dist/CAMR.app/Contents/MacOS/CAMR
-# The 4B's memory holds the Long Haul's first 256K tokens (python -m camr_engine.app.seed).
+# The 4B's Projects shelf holds the Long Haul's first 256K tokens (python -m camr_engine.app.seed).
 ask: Who is the landlord of the Karen branch?
 ask: What is the number plate of Kitengela Ventures' delivery truck?
 ask: What is Otieno's surname?
-remember: The tasting menu for the Kamau wedding is on Saturday 14 November at 3 pm.
-ask: When is the Kamau wedding tasting?
+# Shelves: Auto files each moment by meaning; a question reads every shelf
+remember: The split_bill test failed because of a float rounding bug; we switched it to whole cents.
+remember: Amina's paper shows retrieval from memory beats a long context window past one million tokens.
+remember: My sister's birthday is on 3 March, and she wants a cake from the Karen branch.
+ask: Why did the split_bill test fail?
+ask: When is my sister's birthday?
+# Memory off: the model alone
 memory: off
 ask: What is the number plate of Kitengela Ventures' delivery truck?
 memory: on
+view: large
+ask: What locker number does Ndinda Kerubo have?
