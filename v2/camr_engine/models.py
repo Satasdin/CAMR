@@ -41,9 +41,16 @@ class Reader:
     def __init__(self, repo: str = READER, max_tokens: int = MAX_ANSWER_TOKENS):
         from mlx_lm import load
 
+        from camr_engine.live import current, load_layers
+
         limit_cache()
         self.repo, self.max_tokens = repo, max_tokens
-        self.model, self.tok = load(repo)
+        live = current()
+        if live is None:
+            self.model, self.tok = load(repo)
+        else:  # read in layer by layer, so whoever watches sees the weights arrive
+            self.model, self.tok = load(repo, lazy=True)
+            load_layers(self.model, live, repo)
 
     def chat_ids(self, system: str, user: str, tools: list | None = None) -> list[int]:
         msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -64,11 +71,18 @@ class Reader:
     def generate(self, ids: list[int], cache=None, max_tokens: int | None = None) -> Reply:
         from mlx_lm import stream_generate
 
+        from camr_engine.live import current, measuring_layers, taken
+
         t0 = time.perf_counter()
         first, pieces, r = None, [], None
-        for r in stream_generate(self.model, self.tok, ids, max_tokens=max_tokens or self.max_tokens, prompt_cache=cache):
-            first = first or time.perf_counter() - t0
-            pieces.append(r.text)
+        live = current()
+        with measuring_layers():
+            for r in stream_generate(self.model, self.tok, ids, max_tokens=max_tokens or self.max_tokens,
+                                     prompt_cache=cache):
+                first = first or time.perf_counter() - t0
+                pieces.append(r.text)
+                if live is not None:
+                    live.add("token", n=len(pieces), text=r.text, layers=taken())
         return Reply("".join(pieces).strip(), first or 0.0, r.generation_tps if r else 0.0, len(ids),
                      r.generation_tokens if r else 0, pieces)
 
@@ -77,10 +91,16 @@ class Reader:
         import mlx.core as mx
         from mlx_lm.models.cache import make_prompt_cache
 
+        from camr_engine.live import current, measuring_layers, taken
+
         cache = make_prompt_cache(self.model)
-        for i in range(0, len(ids), PREFILL_STEP):
-            self.model(mx.array(ids[i:i + PREFILL_STEP])[None], cache=cache)
-            mx.eval([c.state for c in cache])
+        live = current()
+        with measuring_layers():
+            for i in range(0, len(ids), PREFILL_STEP):
+                self.model(mx.array(ids[i:i + PREFILL_STEP])[None], cache=cache)
+                mx.eval([c.state for c in cache])
+                if live is not None:
+                    live.add("read", tokens=min(i + PREFILL_STEP, len(ids)), of=len(ids), layers=taken())
         return cache
 
     @staticmethod

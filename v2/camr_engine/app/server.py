@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import secrets
 import threading
 import urllib.parse
@@ -31,12 +32,12 @@ TYPES = {".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; char
 
 
 class App:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, reader: str | None = None):
         from camr_engine.app.runtime import Runtime
         from camr_engine.memory import Memory
         from camr_engine.models import Embedder, Reader
 
-        self.reader, self.embedder = Reader(), Embedder()
+        self.reader, self.embedder = (Reader(reader) if reader else Reader()), Embedder()
         self.memory = Memory(self.reader, self.embedder, path)
         self.lock = threading.Lock()  # one model, one job at a time
         self.today = dt.date.today()
@@ -193,7 +194,7 @@ def make_server(app, port: int, *, routes: Routes | None = None, static: Path = 
     # call carries a secret made at launch that only the served page knows.
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     origins = {f"http://{h}" for h in hosts}
-    token = secrets.token_urlsafe(24)
+    token = os.environ.get("CAMR_TOKEN") or secrets.token_urlsafe(24)  # the Mac app makes its own and passes it
     routes = routes if routes is not None else collect()
     app.route_errors = dict(routes.errors)
 

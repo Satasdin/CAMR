@@ -30,6 +30,7 @@ from typing import Iterable
 import numpy as np
 
 from camr_engine.core import CORE_TOKENS, Core
+from camr_engine.live import current
 from camr_engine.events import EventLog, Looks, used
 from camr_engine.metrics import Meter, folder_bytes, measure
 from camr_engine.notes import Notebook
@@ -213,6 +214,11 @@ class Memory:
         t = time.perf_counter() if started is None else started
         head, rest = self.prompt(today, question, then, tools)
         rec = self.recall(question, chosen=chosen, core=core)
+        live = current()
+        if live is not None:  # the room on the desk, before any word is written
+            live.add("room", reach=self.reach, room=rec.room, rooms=len(self.rooms.rooms), score=rec.score,
+                     tier=rec.tier, tokens=rec.tokens, bytes=rec.bytes, read_bytes=rec.read_bytes,
+                     asleep=rec.asleep, closest=len(rec.closest), core=rec.core, ms=rec.ms)
         lead = self.room_words(rec.room) if rec.asleep else []  # an asleep room is read as words
         ids = lead + self.words(rec.closest) + rest
         c = rec.core

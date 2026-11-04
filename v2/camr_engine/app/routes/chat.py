@@ -7,7 +7,11 @@
 - ``POST /api/chat`` ``{text, intent}``: ``tell`` keeps a moment, ``ask`` answers, ``errand`` makes one tool call.
   Without an intent, text ending in a question mark is asked and anything else is told;
 - ``POST /api/errand`` ``{text}``: the same as an errand intent;
-- ``GET /api/chat/thread``: this run's turns, so a reload shows the conversation again.
+- ``GET /api/chat/thread``: this run's turns, so a reload shows the conversation again;
+- ``POST /api/chat/message`` ``{text, intent}``: the same as ``POST /api/chat``, started at once and answered with
+  ``{id}``; ``GET /api/live?id=&from=N`` then gives the job's events as they happen (camr_engine.live): the room
+  read, each word with every layer's activity, and the reply (``done``). The Mac app draws its weights view from
+  these.
 
 The session lives on the app as ``app.session`` (the shell's ``/api/state`` lists its reaches from there). It is
 opened the first time a screen asks for it, with every engine layer on: the vault, the core, the RAM and SSD tiers,
@@ -30,12 +34,14 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from camr_engine.app.web import Refused, Request, Routes, part
+from camr_engine.live import Live, current, probe, reporting
 
 INTENTS = ("tell", "ask", "errand")
 DEFAULT_READS = ("session", "global")
 TURNS = 400  # turns kept for the thread
 TEXT_MAX = 4000  # characters in one message; a longer one is refused, never cut
 RETRY_S = 30.0  # after a failed open, a poll tries again at most this often
+JOBS = 30  # live jobs kept for GET /api/live
 
 
 def _measuring() -> dict | None:
@@ -72,6 +78,7 @@ class Talk:
         # default stream, and the session keeps lazy arrays between requests (a hot room's copy, joined with new
         # notes), which another request's thread could not evaluate.
         self.worker = ThreadPoolExecutor(1, thread_name_prefix="camr-session")
+        self.jobs: dict[str, Live] = {}
 
     # -- the session
 
@@ -128,6 +135,10 @@ class Talk:
             self.failed = time.monotonic()
             raise Refused(409, f"the memory could not be opened: {self.error}") from None
         self.app.session = self.session
+        try:  # each layer's activity can now be measured while a Live listens
+            probe(self.app.reader.model)
+        except (AttributeError, ValueError):  # a stand-in reader has no layers
+            pass
         return self.session
 
     def configure(self, *, on: bool | None = None, reads: list[str] | None = None, writes: str | None = None,
@@ -186,8 +197,40 @@ class Talk:
                 self.app.session = None
 
     def run(self, fn, *args):
-        """``fn(*args)`` on the session's own thread, waited for."""
-        return self.worker.submit(fn, *args).result()
+        """``fn(*args)`` on the session's own thread, waited for. It reports to the caller's Live."""
+        live = current()
+
+        def within():
+            with reporting(live):
+                return fn(*args)
+
+        return self.worker.submit(within).result()
+
+    def start(self, text: str, intent: str | None = None) -> dict:
+        """``say`` on a thread of its own, reporting to a new Live: ``{id}`` names it for ``GET /api/live``."""
+        import secrets
+
+        live = Live("message")
+        jid = secrets.token_hex(6)
+        self.jobs[jid] = live
+        for old in list(self.jobs)[:-JOBS]:
+            del self.jobs[old]
+
+        def work():
+            with reporting(live):
+                live.add("start", text=" ".join(text.split()), intent=intent, on=self.on)
+                try:
+                    out = self.say(text, intent)
+                except Refused as e:
+                    live.finish(error=e.why, code=e.code)
+                except Exception as e:  # noqa: BLE001 (shown in the chat)
+                    live.finish(error=f"{type(e).__name__}: {e}"[:300])
+                else:
+                    live.finish(**{k: out.get(k) for k in ("intent", "on", "reply", "reach", "wait_s", "metric",
+                                                          "kept", "room", "moment", "tokens", "seconds")})
+
+        threading.Thread(target=work, daemon=True, name="camr-message").start()
+        return {"id": jid}
 
     # -- talking
 
@@ -455,6 +498,22 @@ def register(routes: Routes) -> None:
                 raise Refused(409, "this app has no memory to talk to (a fixture is read-only)")
             return fn(text)
         return t.say(text, "errand")
+
+    @routes.post("/api/chat/message")
+    def message(req: Request) -> dict:
+        text = _text(req)
+        t = talk(req.app)
+        if t is None:
+            raise Refused(409, "this app has no memory to talk to (a fixture is read-only)")
+        return t.start(text, req.str("intent", limit=10) or None)
+
+    @routes.get("/api/live")
+    def live(req: Request) -> dict:
+        t = talk(req.app)
+        job = t.jobs.get(req.str("id", limit=20)) if t is not None else None
+        if job is None:
+            raise Refused(404, "no such job")
+        return job.since(req.int("from", 0, lo=0) or 0)
 
     @routes.get("/api/chat/thread")
     def thread(req: Request) -> dict:

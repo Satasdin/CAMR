@@ -339,3 +339,60 @@ def test_a_message_too_long_is_refused_whole_never_kept_cut(chat):
     assert call("/api/chat/thread")[1]["turns"] == []
     told = call("/api/chat", {"text": "z" * TEXT_MAX, "intent": "tell"})[1]
     assert told["kept"] and told["tokens"] == len(f"[{TODAY.isoformat()}] " + "z" * TEXT_MAX + "\n")
+
+
+def test_a_message_started_now_reports_its_room_and_reply_live(chat):
+    import time
+
+    app, call = chat
+    status, job = call("/api/chat/message", {"text": "Amina moved to Nakuru."})
+    assert status == 200 and job["id"]
+    events, n, done = [], 0, False
+    for _ in range(200):
+        got = call(f"/api/live?id={job['id']}&from={n}")[1]
+        events += got["events"]
+        n, done = got["next"], got["done"]
+        if done:
+            break
+        time.sleep(0.02)
+    assert done and events[0]["kind"] == "start" and events[-1]["kind"] == "done"
+    assert events[-1]["intent"] == "tell" and events[-1]["kept"] and [e["i"] for e in events] == list(range(len(events)))
+    job = call("/api/chat/message", {"text": "Where did Amina move?"})[1]
+    for _ in range(200):
+        got = call(f"/api/live?id={job['id']}")[1]
+        if got["done"]:
+            break
+        time.sleep(0.02)
+    kinds = [e["kind"] for e in got["events"]]
+    assert "room" in kinds and kinds[-1] == "done" and got["events"][-1]["intent"] == "ask"
+    room = next(e for e in got["events"] if e["kind"] == "room")
+    assert room["reach"] == "session:s1" and room["tier"] in ("ram", "ssd", "vault")
+    assert call("/api/live?id=nope")[0] == 404
+
+
+def test_a_layer_probe_measures_only_while_a_live_listens():
+    mx = pytest.importorskip("mlx.core")
+    from camr_engine.live import BINS, Live, measuring_layers, probe, reporting, taken
+
+    class Block:
+        def __call__(self, x):
+            return x * 2
+
+    class Model:
+        layers = [Block(), Block(), Block()]
+
+        def __call__(self, x):
+            for layer in self.layers:
+                x = layer(x)
+            return x
+
+    m = Model()
+    assert probe(m) == 3 and probe(m) == 3  # wrapped once
+    x = mx.ones((1, 2, BINS * 2))
+    with measuring_layers():
+        m(x)
+        assert taken() is None  # nobody listening
+        with reporting(Live()):
+            m(x)
+            rows = taken()
+    assert len(rows) == 3 and len(rows[0]) == BINS and rows[0][0] == 2.0 and rows[2][0] == 8.0
