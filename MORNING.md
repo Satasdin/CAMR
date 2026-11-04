@@ -43,12 +43,12 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 - `engram/bench/`: the Long Haul (our own test, now extendable to 4M tokens), the local, Ollama and Claude runners,
   and the Hugging Face suites.
 - Records: `v2/records/bench/2026-11-04/`.
-- Decisions: `v2/DECISIONS.md` E-29 to E-40.
+- Decisions: `v2/DECISIONS.md` E-29 to E-43.
 
 **The docs:** `v2/docs/site/` for people, and `v2/llms.txt` / `llms-full.txt` for agents. The README is rewritten
 for the engine as it stands.
 
-**Tests:** 728 pass.
+**Tests:** 730 pass.
 
 ## The Long Haul
 
@@ -84,6 +84,22 @@ At 2M, by family (10 questions each; for "never said", declining is right):
 | Two hops | 0 | 1 | 0 | 0 | 0 |
 | Never said | 9 | 3 | 10 | 10 | 10 |
 | The page that grows (3) | 0 | 0 | 0 | 0 | 0 |
+
+## Which reach works best (4B engine, 256K tokens, 40 questions)
+
+| Set-up | Right | Facts | First word | Disk |
+|---|---|---|---|---|
+| Session: each week its own memory, asked in the last week | 11 | 0 of 10 | 0.24 s | 44 GB |
+| **Project: every week into one project memory** | **26** | **8 of 10** | 0.19 s | 44 GB |
+| Global: this project and another one in one memory | 24 | 8 of 10 | 0.19 s | 85 GB |
+| Project + global: both read, the closest room wins | 24 | 7 of 10 | 0.19 s | 85 GB |
+
+- **Project reach is the best.** A session alone sees only its own week.
+- **Mixing in a second project costs 2 answers.**
+  - In global, the other project's look-alike maths rule was taken twice.
+  - In project + global, the other project's room won 7 of the 40 questions. The 4B declined the 2 it could not
+    answer rather than borrow the other project's facts.
+- **Never-said questions:** 10 of 10 declined every time (E-42).
 
 ## Speed as memory grows (1.7B engine)
 
@@ -138,14 +154,14 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 
 ## What is not done
 
-- **Swarms are built but not measured**, and neither is the best reach (session against project against global).
-  The app has both, but there is no benchmark for them yet.
+- **Swarms are built but not measured.** Reach is measured (above). The app's swarm screen has no benchmark yet.
 - **No live demo with a loaded model.** The app screenshots are from a recorded memory with no model loaded, since
   the GPU was measuring all night.
 - **The engine is not run on the Hugging Face suites.** `suite_run` takes Claude and Ollama only; the engine needs
   a suite wording.
 - **LongMemEval, MemoryAgentBench and Web-Bench** have loaders but no runs.
-- **Running since 16:12 (queue8):** Ollama on the suites and the reach benchmark. The 8B and 27B are done.
+- **Running now (queue9):** the Ollama suite runs redone (E-43). The bare BABILong lost 58 answers to a too-strict
+  thinking check, and HARP's 400-token limit cut off 80% of the 1.7B's working. Paired BABILong (20 of 100) stands.
 - **4M:** rerun on power with the cache cap: 29 of 73 at 3M and at 4M.
 
 ## Your calls (taste and vision only)

@@ -427,3 +427,34 @@ before them (1.7B and 4B) ran without it; their scores are unaffected, and their
 7.5 GB is about what the parts add up to: the 4B's weights, the embedder, the 2 GB pool of hot rooms, the 1 GB
 cache and Python. Records: `100255-longhaul-engine-qwen3-4b.json` (before), `143706-longhaul-engine-qwen3-4b.json`
 (after).
+
+**E-42 Project reach is the best reach; global is close; a session alone is not enough.** The 4B engine heard the
+Long Haul's first 256K tokens four ways and was asked the same 40 questions (`engram.bench.reach_run`):
+
+| Set-up | Right of 40 | Facts | First word p50 | Disk |
+|---|---|---|---|---|
+| session (each week its own memory; asked in the last week's) | 11 | 0 of 10 | 0.24 s | 44 GB |
+| project (every week into one project memory) | **26** | 8 of 10 | 0.19 s | 44 GB |
+| global (this project and another seed's, in one memory) | 24 | 8 of 10 | 0.19 s | 85 GB |
+| project + global (read both, best room wins) | 24 | 7 of 10 | 0.19 s | 85 GB |
+
+- **session:** the last week holds only that week, so 10 of its 11 are never-said questions declined.
+- **global:** two maths answers went stale, because they took the other project's look-alike rule.
+- **project + global:** the other project's room won 7 of the 40 questions and cost exactly 2 answers (a fact and
+  a changed fact). The 4B declined both rather than answer with the other project's facts.
+- **never said:** 10 of 10 declined in every set-up.
+
+So the app's default stays project reach. A session reads its project before global, and global's room should win
+only by a clear margin; that is not built yet. Records: `195128`, `195633`, `200137` and `201043-reach-engine-qwen3-4b-*.json`.
+
+**E-43 The Ollama suite runs redone where the runner, not the model, set the score.**
+- **BABILong, bare:** 58 of the bare 1.7B's 100 answers were thrown out as "thinking" with zero characters of
+  thinking. With a long prompt qwen3 opens its answer with the `</think>` that its think-off template ends the
+  prompt with. An empty block is now cut off the answer, real thinking is still an error, and the run was resumed
+  for the 58.
+- **HARP:** at the shared 400-token limit, 82 of the bare 1.7B's 120 answers and 95 of the paired one's were cut off
+  mid-working. Claude had 400 + 8,192 tokens to think in; the 1.7B's thinking is off, so it can only work in its
+  words. `--work-room 8192` gives it the same room. Both 400-token records are kept, and the rerun is a new record
+  beside them.
+- **BABILong, paired (unaffected):** 20 of 100. The pairing's 512 tokens of notes miss most "where is X now"
+  answers, which need the latest of many mentions.

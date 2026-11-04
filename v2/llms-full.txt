@@ -1238,6 +1238,19 @@ The Hugging Face suites (right answers):
 | HARP pairs, memory off (60) | 48 | 52 |
 | BABILong qa1–qa5, 4k to 128k (100) | 78 | |
 
+Which reach works best (`engram.bench.reach_run`, `engine:qwen3-4b`, the first 256K tokens, 40 questions; the other
+project is the Long Haul built from seed 2):
+
+| Set-up | Right | Facts (10) | First word p50 | Disk |
+| --- | --- | --- | --- | --- |
+| `session`: each working week its own memory, asked in the last | 11 | 0 | 0.24 s | 44 GB |
+| `project`: every week into one project memory | 26 | 8 | 0.19 s | 44 GB |
+| `global`: both projects in one memory | 24 | 8 | 0.19 s | 85 GB |
+| `project+global`: both read, the closest room wins | 24 | 7 | 0.19 s | 85 GB |
+
+In `project+global` the other project's room won 7 of the 40 questions and cost 2 answers, both declined rather than
+answered from the wrong project. Every set-up declined all 10 never-said questions.
+
 The wait as the engine's memory grows (`engram.bench.local speed`, `engine:qwen3-1.7b`):
 
 | Moments kept | History | First word, p50 | Retrieval, p50 | Peak RAM | Disk |
