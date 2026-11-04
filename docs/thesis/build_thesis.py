@@ -40,7 +40,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_COLOR_INDEX, WD_TAB_
 from docx.image.image import Image as Picture
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Pt
+from docx.shared import Cm, Pt, Twips
 from lxml import etree
 
 HERE = Path(__file__).resolve().parent
@@ -122,6 +122,13 @@ def parse(text: str) -> list[tuple]:
             flush()
             while "-->" not in lines[i]:
                 i += 1
+        elif s.startswith("> "):
+            flush()
+            t = s[2:].strip()
+            if t.startswith("- "):
+                blocks.append(("box", t[2:], True))
+            else:
+                blocks.append(("box", t, False))
         elif s.startswith("::") and s.endswith("::"):
             flush()
             blocks.append((s.strip(":"),))
@@ -352,6 +359,31 @@ class Thesis:
         self.runs(p, text)
         return p
 
+    def box(self, text: str, bullet: bool = False, first: bool = False, last: bool = False):
+        """The shaded 'In plain words' box of the Chapter 5 template: a blue rule on the left, 10.5 pt."""
+        p = self.doc.add_paragraph(style="Normal")
+        pf = p.paragraph_format
+        pf.space_before, pf.space_after = Pt(6 if first and not bullet else 0), Pt(8 if last else 2)
+        pf.left_indent, pf.right_indent = Twips(510 if bullet else 170), Twips(113)
+        pf.first_line_indent = Twips(-255) if bullet else Twips(0)
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        ppr = p._p.get_or_add_pPr()
+        bdr = OxmlElement("w:pBdr")
+        left = OxmlElement("w:left")
+        for a, v in (("val", "single"), ("sz", "18"), ("space", "6"), ("color", "2A78D6")):
+            left.set(qn("w:" + a), v)
+        bdr.append(left)
+        shd = OxmlElement("w:shd")
+        for a, v in (("val", "clear"), ("color", "auto"), ("fill", "EAF1F8")):
+            shd.set(qn("w:" + a), v)
+        anchor = next((c for c in ppr if c.tag in (qn("w:tabs"), qn("w:spacing"), qn("w:ind"), qn("w:jc"))), None)
+        if anchor is not None:
+            anchor.addprevious(bdr)
+            anchor.addprevious(shd)
+        else:
+            ppr.append(bdr); ppr.append(shd)
+        self.runs(p, ("• " if bullet else "") + text, size=10.5)
+
     def lead(self, text: str):
         p = self.doc.add_paragraph(style="Normal")
         p.paragraph_format.keep_with_next = True
@@ -575,6 +607,10 @@ class Thesis:
                 m = re.match(r"~?Appendix ([A-Z])", title)
                 if m:
                     self.chlabel, self.fig, self.tab, self.eq = m.group(1), 0, 0, 0
+            elif k == "box":
+                prev = blocks[i - 1][0] if i else ""
+                nxt = blocks[i + 1][0] if i + 1 < len(blocks) else ""
+                self.box(b[1], bullet=b[2], first=(prev != "box"), last=(nxt != "box"))
             elif k == "bib":
                 self.bib = True
             elif k == "bib-end":

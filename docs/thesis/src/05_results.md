@@ -2,27 +2,23 @@
 
 ## Introduction {#results-intro}
 
-**Chapter 5 at a glance. What CAMR is.** A language model writes text by predicting the next word, and it only knows what it absorbed in training and what is in front of it now. A model small enough for a laptop knows little and can hold only a short history in front of it. CAMR is a memory placed beside the model. Whatever the user tells it is read once by the model, and the notes the model writes to itself while reading (its keys and values) are kept on the Mac's SSD. For each question CAMR opens the one room of notes the question is about and lays it in front of the model, already read. The model itself is never changed.
-
-**What was tested.** One scripted software project of 2 to 4 million tokens (the Long Haul) with 216 questions graded by rule; Qwen3 models of 1.7, 4 and 8 billion parameters with and without CAMR; a 27-billion-parameter model and Ollama reading CAMR's memory as words; Claude Haiku, Sonnet and Opus 5.5 answering alone as the yardstick; four public suites; four ways of sharing memory; and the time and RAM of every answer as memory grew.
-
-**What was found.**
-
-- At 2 million tokens, a 4B model with CAMR answered 29 of 73 questions; Claude Sonnet alone answered 32 and Opus 31. At 3 and 4 million tokens CAMR still answered 29, while Sonnet fell to 13 and then 10.
-- Without CAMR, the same 4B answered 11 to 13 and needed a 15.2 GB process; with CAMR the process needed 5.4 to 7.5 GB once a graphics buffer cache was capped.
-- The first word came in 0.2 to 0.3 seconds with CAMR, against 13 to 105 seconds for Sonnet and Opus.
-- As memory grew from 112 thousand to 2 million tokens, the wait for the first word stayed at about 0.1 s and the RAM at about 4.3 GB (1.7B model); the SSD was held at its 40 GB budget by putting old rooms to sleep.
-- Past 1M tokens most rooms were asleep, so most answers read their room as words; the saved notes bought speed where rooms were awake, not accuracy.
-- CAMR helped most on facts told far back and declined almost every question about things never told. It did not help with joining two facts, or with building a page from a design decided weeks earlier; no contender, Claude included, managed that.
-- Project memory was the best way to share memory (26 of 40); mixing in a second project cost 2 answers.
-
-**How to read the numbers.** Most results are counts of right answers out of a set of questions, graded by rule. *Right* means the expected answer; for a question about something never told, a decline is right. *Declined* means the model said it did not know something it had been told. *First word* is the wait from the question to the first word of the answer. *Peak RAM* and *footprint* are the memory the whole process used. Every number comes from a dated record in the repository (`v2/records/bench/2026-11-04/`) or from the decision log (E-nn).
+> **Chapter 5 at a glance. What CAMR is.** A language model writes text by predicting the next word, and it only knows what it absorbed in training and what is in front of it now. A model small enough for a laptop knows little and can hold only a short history in front of it. CAMR is a memory placed beside the model. Whatever the user tells it is read once by the model, and the notes the model writes to itself while reading (its keys and values) are kept on the Mac's SSD. For each question CAMR opens the one room of notes the question is about and lays it in front of the model, already read. The model itself is never changed.
+> **What was tested.** One scripted software project of 2 to 4 million tokens (the Long Haul) with 216 questions graded by rule; Qwen3 models of 1.7, 4 and 8 billion parameters with and without CAMR; a 27-billion-parameter model and Ollama reading CAMR's memory as words; Claude Haiku, Sonnet and Opus 5.5 answering alone as the yardstick; four public suites; four ways of sharing memory; and the time and RAM of every answer as memory grew.
+> **What was found.**
+> - At 2 million tokens, a 4B model with CAMR answered 29 of 73 questions; Claude Sonnet alone answered 32 and Opus 31. At 3 and 4 million tokens CAMR still answered 29, while Sonnet fell to 13 and then 10.
+> - Without CAMR, the same 4B answered 11 to 13 and needed a 15.2 GB process; with CAMR the process needed 5.4 to 7.5 GB once a graphics buffer cache was capped.
+> - The first word came in 0.2 to 0.3 seconds with CAMR, against 13 to 105 seconds for Sonnet and Opus.
+> - As memory grew from 112 thousand to 2 million tokens, the wait for the first word stayed at about 0.1 s and the RAM at about 4.3 GB (1.7B model); the SSD was held at its 40 GB budget by putting old rooms to sleep.
+> - Past 1M tokens most rooms were asleep, so most answers read their room as words; the saved notes bought speed where rooms were awake, not accuracy.
+> - CAMR helped most on facts told far back and declined almost every question about things never told. It did not help with joining two facts, or with building a page from a design decided weeks earlier; no contender, Claude included, managed that.
+> - Project memory was the best way to share memory (26 of 40); mixing in a second project cost 2 answers.
+> **How to read the numbers.** Most results are counts of right answers out of a set of questions, graded by rule. *Right* means the expected answer; for a question about something never told, a decline is right. *Declined* means the model said it did not know something it had been told. *First word* is the wait from the question to the first word of the answer. *Peak RAM* and *footprint* are the memory the whole process used. Every number comes from a dated record in the repository (`v2/records/bench/2026-11-04/`) or from the decision log (E-nn).
 
 This chapter reports what was built, how it was tested, and what the measurements showed, including where the system failed. Section {sec:env} describes the environment and Section {sec:datasets} the data. Section {sec:impl} describes the implementation and the application. Section {sec:testing} reports testing, Sections {sec:vc} and {sec:ai-use} the evidence and the use of AI tools, and Section {sec:eval} the evaluation results, discussion and limitations.
 
 ## Implementation Environment {#env}
 
-**In plain words.** CAMR runs on one Apple-silicon Mac. The model, the memory and the app stay on that Mac; the internet is used to download the models and public datasets once, and, in the benchmarks only, to ask the Claude yardstick.
+> **In plain words.** CAMR runs on one Apple-silicon Mac. The model, the memory and the app stay on that Mac; the internet is used to download the models and public datasets once, and, in the benchmarks only, to ask the Claude yardstick.
 
 ### Hardware and Deployment Environment
 
@@ -66,7 +62,7 @@ The engine installs with one script on an Apple-silicon Mac, which checks the ma
 
 ## Dataset Description {#datasets}
 
-**In plain words.** The main test is an invented software project, told event by event over 110 working days and then 110 more, with questions about things said weeks earlier. It is fixed by its seed, so anyone can build the same one. Four public test sets add mathematics and long-text reading.
+> **In plain words.** The main test is an invented software project, told event by event over 110 working days and then 110 more, with questions about things said weeks earlier. It is fixed by its seed, so anyone can build the same one. Four public test sets add mathematics and long-text reading.
 
 ### The Long Haul {#longhaul-data}
 
@@ -133,7 +129,7 @@ The rooms build was developed and judged on three scripted twelve-week lives of 
 
 ## System Implementation {#impl}
 
-**In plain words.** The engine is a Python package of a few thousand lines. A moment is read once by the model and its notes are appended to a room file; a question picks one room, reads it from RAM or the SSD, and the model reads only a few lines more before it answers.
+> **In plain words.** The engine is a Python package of a few thousand lines. A moment is read once by the model and its notes are appended to a room file; a question picks one room, reads it from RAM or the SSD, and the model reads only a few lines more before it answers.
 
 ### The Engine's Modules
 
@@ -191,7 +187,7 @@ The yardstick runner sends a checkpoint's questions in one streamed request that
 
 ## Testing {#testing}
 
-**In plain words.** Automated tests checked each part; benchmark runs checked the whole system against requirements written beforehand; and defects found by the measurements were fixed and the runs repeated. Two requirements were not met and are kept as written.
+> **In plain words.** Automated tests checked each part; benchmark runs checked the whole system against requirements written beforehand; and defects found by the measurements were fixed and the runs repeated. Two requirements were not met and are kept as written.
 
 ### Test Strategy
 
@@ -257,7 +253,7 @@ Claude (Anthropic), used through Claude Code, assisted with this project. Under 
 
 ## Evaluation Results, Discussion and Limitations {#eval}
 
-**In plain words.** A 4B model with CAMR answers a long project's questions about as well as Claude Sonnet alone at 2 million tokens, and better past Claude's window, at a fraction of the wait and in a process of 5 to 8 GB. It stays as fast as memory grows. It is weakest at joining facts and at following a design over weeks.
+> **In plain words.** A 4B model with CAMR answers a long project's questions about as well as Claude Sonnet alone at 2 million tokens, and better past Claude's window, at a fraction of the wait and in a process of 5 to 8 GB. It stays as fast as memory grows. It is weakest at joining facts and at following a design over weeks.
 
 ### Results at a Glance {#glance}
 
@@ -281,7 +277,7 @@ Table: {#scorecard} Scorecard: each claim, its evidence and whether it was met
 
 ### The Long Haul: Right Answers as the History Grows {#haul-results}
 
-**In plain words.** Up to a million tokens Claude Sonnet sees most of the history and answers the most. At 2 million the 4B with CAMR is three answers behind it. Without memory, the same 4B falls to 11.
+> **In plain words.** Up to a million tokens Claude Sonnet sees most of the history and answers the most. At 2 million the 4B with CAMR is three answers behind it. Without memory, the same 4B falls to 11.
 
 Table {tab:longhaul} gives every contender's right answers at every cut, with its median wait for the first word and its peak RAM, and Figure {fig:longhaul} plots them as shares, since the cuts ask different numbers of questions.
 
@@ -324,13 +320,13 @@ Table: {#tiers} Where the 4B's room came from at each cut (`summary.all.tiers` a
 
 ### Past the Window: 3M and 4M {#past-window}
 
-**In plain words.** Pushed to 3 and 4 million tokens, Claude can only see the last days, which have nothing planted, and it answers little beyond the questions about things never said. CAMR answers exactly as it did at 2 million.
+> **In plain words.** Pushed to 3 and 4 million tokens, Claude can only see the last days, which have nothing planted, and it answers little beyond the questions about things never said. CAMR answers exactly as it did at 2 million.
 
 At 3M and 4M the same 73 questions were asked under one and two million more tokens of noise (E-39). The 4B with CAMR answered 29 both times, as at 2M, and declined all 10 never-said questions, with a median first word of 0.31 s. Claude Sonnet answered 13 and then 10, and Haiku 10 and 10: their windows held only the newest days, so they declined almost every question, and what they scored was mostly the never-said questions, which a decline answers right (Sonnet also answered 3 corrected-maths questions at 3M). The 4B alone answered 12 and 13, from the newest 64K tokens. A memory that lives outside the window therefore keeps its answers however long the history grows, while a window, however large, forgets the beginning.
 
 ### What Was Answered: Knowledge Against Reasoning {#families}
 
-**In plain words.** CAMR is best at facts told long ago and at code that must use the project's own helpers. It does not join two facts told weeks apart, and nobody built the page that needed a design from week 1 and a colour change from day 61.
+> **In plain words.** CAMR is best at facts told long ago and at code that must use the project's own helpers. It does not join two facts told weeks apart, and nobody built the page that needed a design from week 1 and a colour change from day 61.
 
 Table {tab:families2m} and Figure {fig:families} break the 2M checkpoint down by family.
 
@@ -357,7 +353,7 @@ The 8B with CAMR answered 26, 26, 24 and 27, level with the 4B, with a slower fi
 
 ### The 1.7B: Its Wording, Not Its Memory {#wording}
 
-**In plain words.** The smallest model did badly at first. The cause was not its memory but the instructions: told to answer only from its notes and to say "I don't know" otherwise, it said "I don't know" even when the answer was in front of it.
+> **In plain words.** The smallest model did badly at first. The cause was not its memory but the instructions: told to answer only from its notes and to say "I don't know" otherwise, it said "I don't know" even when the answer was in front of it.
 
 With the yardstick's instructions, the 1.7B with CAMR scored on facts 2 of 10 at 64K, 5 at 256K, 1 at 1M and 0 at 2M; most of its total came from declining the never-said questions (E-37). Three checks on its own 2M memory found the cause (Table {tab:diagnosis}).
 
@@ -377,7 +373,7 @@ The same 1.7B, with the same wording, can be given its memory two ways: as notes
 
 ### Speed as Memory Grows {#speed-results}
 
-**In plain words.** The wait for the first word did not grow as the memory grew eighteenfold. RAM stayed flat. Only the disk filled, and sleep held it at its budget.
+> **In plain words.** The wait for the first word did not grow as the memory grew eighteenfold. RAM stayed flat. Only the disk filled, and sleep held it at its budget.
 
 The 1.7B was told the whole Long Haul and measured at 1,000, 10,000 and 17,676 moments, with 5 questions at each point (Table {tab:speed}, Figure {fig:speed}).
 
@@ -395,7 +391,7 @@ The first word stays at about 0.1 s because the desk is always one room of at mo
 
 ### RAM: the Cap on the Buffer Cache {#ram-results}
 
-**In plain words.** The engine first seemed to use 5.7 GB. A closer look showed the whole process holding 19 GB, because the graphics library kept freed buffers. Capping that cache cut the process to 7.5 GB and made it almost twice as fast, with the same answers.
+> **In plain words.** The engine first seemed to use 5.7 GB. A closer look showed the whole process holding 19 GB, because the graphics library kept freed buffers. Capping that cache cut the process to 7.5 GB and made it almost twice as fast, with the same answers.
 
 During the 4B's 4M-token run, the process's physical footprint (what Activity Monitor shows) was 19.2 GB, of which only 1.0 GB was resident; the rest sat compressed or in swap, which was full (8.8 of 9.2 GB). The records' "peak RAM" of 5.7 GB was MLX's peak of arrays in use during one answer, so it never saw this. The cause was MLX's cache of freed graphics buffers, which is unbounded up to the graphics limit (about 18 GB here), while a long ingest frees a desk's worth of buffers for every moment (E-40). The cache is now capped at 1 GB when a reader or embedder loads, which changes no computation, only how many freed buffers are kept for reuse. Table {tab:cap} and Figure {fig:ram} give the effect.
 
@@ -415,7 +411,7 @@ The 7.5 GB is about what the parts add up to: the 4B's weights, the embedder, th
 
 ### Which Reach Works Best {#reach-results}
 
-**In plain words.** Keeping one memory per project is best. A memory per conversation forgets everything said in other weeks, and mixing two projects in one memory sometimes takes the wrong project's rule.
+> **In plain words.** Keeping one memory per project is best. A memory per conversation forgets everything said in other weeks, and mixing two projects in one memory sometimes takes the wrong project's rule.
 
 The 4B with CAMR heard the Long Haul's first 256K tokens four ways and was asked the same 40 questions; the other project was the Long Haul built from seed 2 (Table {tab:reach}, Figure {fig:reach}).
 
@@ -490,7 +486,7 @@ The engine can also remember files (E-44). A PDF becomes one moment per page, an
 
 ### Development Evidence: the Rooms Build on Scripted Lives {#rooms-results}
 
-**In plain words.** Before the final engine, its first build was tested on three invented twelve-week lives. Its notes answered as well as the words they came from, it stayed as fast in week 12 as in week 1, and it did errands three times as well as the baseline. It also made things up about what it was never told.
+> **In plain words.** Before the final engine, its first build was tested on three invented twelve-week lives. Its notes answered as well as the words they came from, it stayed as fast in week 12 as in week 1, and it did errands three times as well as the baseline. It also made things up about what it was never told.
 
 The rooms build stored one room of notes per question and was judged on the three held-out lives, with pass marks written before the runs (E-19, E-20). Its design came from a negative finding: notes written one moment at a time, then laid side by side, lost the thread; with 30 unrelated moments beside the right one, the reader found 2 of 46 facts from such notes against 32 from the words (E-15). Writing each room as one page fixed this within a room, and Table {tab:desks} shows the desk that won.
 
@@ -542,7 +538,7 @@ The room size was tuned on the development lives for the most facts known (E-18)
 
 ### The Baseline, CAMR v1, on Public Benchmarks {#baseline-results}
 
-**In plain words.** The first version of CAMR, which kept text notes, showed on public test sets that a small model with memory can match a cloud model on facts, but not on reasoning.
+> **In plain words.** The first version of CAMR, which kept text notes, showed on public test sets that a small model with memory can match a cloud model on facts, but not on reasoning.
 
 The baseline was evaluated before the engine existed, on CPU-only machines with Kimi K3 as the cloud ceiling. Its results still hold for the baseline and are the real-data complement to the scripted tests above; they are not results of the final engine. Table {tab:baseline} summarises them.
 
