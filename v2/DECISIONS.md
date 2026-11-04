@@ -462,3 +462,52 @@ only by a clear margin; that is not built yet. Records: `195128`, `195633`, `200
 **E-50 Swarm removed: the app is Chat and Code.** The Swarm screen, its routes (`/api/swarm/*`), `agentic/swarm.py`, the
 Bench "Swarms" tab and the stage's `well` mode are gone; the shared RAM pool, `engine_brains` and the agent reach stay,
 since Code uses them.
+
+**E-47 An OpenAI-compatible endpoint with memory, built from the Ollama pairing's code.** `camr serve`
+(`camr_engine/pair/openai.py`) listens on 127.0.0.1:11436, next to the pairing's 11435. Its routes are
+`/v1/chat/completions` (streamed or whole, with memory), `/v1/models`, and the other `/v1/` paths (passed through).
+Nothing outside `/v1/` is served.
+- **Backends:** Ollama (11434), LM Studio's server (1234), and mlx_lm.server (8080). All three already speak this API,
+  so `Endpoint` is the pairing's `Pairing` narrowed: one path gets notes, and only `/v1/` is forwarded. The proxy,
+  the tap, the security and the metrics are the same code. `Pairing` gained `memory`, `serves()` and `name` for this;
+  the Ollama pairing behaves as before (its 40 tests pass unchanged).
+- **The same memory folder** (`~/.camr/default`, notes under `ollama/`): a note comes back whichever door it came in
+  by. The folder name stays, so existing pairing memories still load.
+- **Agents:** an answer that ends by calling a tool (`finish_reason` "tool_calls") is no longer remembered, in either
+  door. Before, a tool loop remembered the question again with every step that had words. The notes still go in
+  front of the last user message on every step, so they stay with the question through the loop. The answer that ends
+  the turn is remembered once, with it.
+- **The native engine (tensors) is not behind these routes yet.** Through all three backends, memory goes in as words.
+- **Tested:** 10 tests against a stand-in backend. The OpenAI Python SDK 3.45 and `@ai-sdk/openai-compatible` 3.0
+  (what OpenCode's config names) were run against the stand-in. One smoke test went through the real Ollama with
+  qwen3:1.7b: a fact told, then asked back streamed, came back right ("Pilipili") with 187 characters of notes.
+
+**E-48 One `camr` command, and installers that keep the engine in an environment of its own.** `camr_engine/cli.py`
+is the `[project.scripts]` entry: `serve`, `ollama`, `app`, `doctor` (it only looks: no model, nothing past
+127.0.0.1), `bench` (pointers) and `version`.
+- **The old CAMR baseline also installs a command named `camr`.** So no route installs the engine into an
+  environment that might hold the old one. `packaging/install.sh` uses `~/.camr/engine`, not `~/.camr/venv`, which
+  the CAMR Personal installer uses. The dev venv was not reinstalled.
+- **install.sh** uses uv when it finds uv, else `python3 -m venv`. It resolves the interpreter's real path first: a
+  venv made through a link to uv's standalone Python (`~/.local/bin/python3.12`) could not find its standard library.
+  Tested into temp HOMEs both ways, from the local v2 folder.
+- **npm** (`packaging/npm`, `camr-memory`) is a launcher. It installs the engine with the same `install.sh` on first
+  run, then runs `camr`. It is not a second copy of the engine. Tested with `npm pack` and from a clone, into temp
+  prefixes.
+- **`uv tool install` was tested; pipx was not** (it is not installed). The Homebrew formula
+  (`packaging/homebrew/camr.rb`, head-only, with a `brew services` entry) passes `ruby -c` but was never run: there is
+  no Homebrew here and no tap.
+- Nothing was published: no npm package, no tap, no release.
+
+**E-49 The landing page is static, and carried by the app's own screenshots and the Long Haul's numbers.** `site/`
+is HTML, CSS and a little JS (tabs, copy buttons, the chart), with no build step.
+- **Colour means something:** memory is cyan, the model is amber, and Claude (the yardstick, with no memory) is grey
+  and dashed. The chart's marks are validated for a dark surface. Claude's grey fails the chroma floor on purpose; the
+  dash and the direct labels carry it.
+- **The chart plots the share right**, since the cuts ask 34, 40, 69 and 73 questions; the counts are in its tooltip
+  and its table. It shows the whole story: Sonnet leads up to 2M, then falls to 13 and 10 past its window, while the
+  engine stays at 29.
+- **Screenshots:** the web app's (`v2/docs/screens/`), copied into `site/screens/`. Each is one `<img>` line, to
+  swap for the Mac app's. Their top bar still carries the old name and the Swarm tab, so CSS keeps it out of view (`trim`).
+  `swarm.png`, `chat.png` and `code.png` are not used: the last two are empty in the read-only fixture.
+- **No photography:** none in the repository has a known licence, and nothing was downloaded.

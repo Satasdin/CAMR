@@ -29,6 +29,7 @@ Its name is not chosen yet. The code is the Python package `camr`. Earlier write
 | [Reach and the switch](reach.md) | Whose memory a question reads, and turning memory off |
 | [RAM, the SSD and sleep](swapping.md) | Where each room's notes are, and what happens when memory outgrows the disk |
 | [Python library](library.md) | `Memory` and `Session`: `remember` and `answer`, with their real signatures |
+| [Install and integrate](install.md) | `camr` from curl, uv, pipx, Homebrew or npm; the OpenAI-compatible endpoint; OpenCode, LM Studio, Ollama and curl |
 | [Pairing with Ollama](ollama.md) | Memory for the `ollama` CLI through a local proxy, and the macOS app's limits |
 | [Benchmarks](benchmarks.md) | The Long Haul, the Hugging Face suites, the Claude yardstick, and how to rerun them |
 | [Metrics](metrics.md) | What every answer records |

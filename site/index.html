@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CAMR: memory for on-device models</title>
+<meta name="description" content="CAMR is a lightweight memory engine for language models on your Mac. A 4B model with CAMR answers a 4M-token project history 29 of 73 right; Claude Sonnet alone gets 10.">
+<link rel="stylesheet" href="style.css">
+<!--
+  Images: each screenshot is one <img> line below, with src="screens/<name>.png".
+  To swap in the Mac app's screenshots (apps/mac/screens/), copy them into site/screens/mac/ and change that one
+  line's src to "screens/mac/<name>.png", dropping the "trim" class (it hides the web app's top bar).
+-->
+</head>
+<body>
+
+<header class="bar">
+  <a class="mark" href="#top">CAMR</a>
+  <nav>
+    <a href="#results">Results</a>
+    <a href="#download">Download</a>
+    <a href="#install">Install</a>
+    <a href="#use">Use it</a>
+    <a href="https://github.com/Satasdin/CAMR">GitHub</a>
+  </nav>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Memory for on-device language models</p>
+    <h1>The model on your Mac <span class="mem">remembers the whole project</span>.</h1>
+    <div class="vs" aria-label="At 4 million tokens of history: Qwen3 4B with CAMR, 29 of 73 right; Claude Sonnet 5.5 alone, 10 of 73">
+      <div class="vs-us"><b>29</b><span>Qwen3 4B <i class="mem">+ CAMR</i></span></div>
+      <div class="vs-them"><b>10</b><span>Claude Sonnet 5.5 alone</span></div>
+      <p class="vs-note">right of 73, after 4M tokens of project history</p>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="#download">Download for Mac</a>
+      <a class="btn" href="#install">Install the engine</a>
+    </div>
+  </div>
+  <figure class="hero-shot glow">
+    <img class="trim" src="screens/memory-answer.png" alt="CAMR's memory view: 237 rooms of saved keys and values on the SSD, one room lit as it answers in 0.10 s" width="1512" height="945">
+    <figcaption><span class="mem">237 rooms</span> of saved keys and values on the SSD. One lights up; the first word comes 0.10 s later.</figcaption>
+  </figure>
+</section>
+
+<section class="strip" aria-label="Measured on a MacBook Pro M5 Pro">
+  <div><b>0.31 s</b><span>to the first word at 4M tokens. Claude: 13–105 s</span></div>
+  <div><b>7.5 GB</b><span>the whole process. The same 4B bare: 15.2 GB</span></div>
+  <div><b>10 / 10</b><span>never-said questions declined, not made up</span></div>
+  <div><b>Local</b><span>the model, the memory and the answers stay on the Mac</span></div>
+</section>
+
+<section id="results" class="results">
+  <div class="head">
+    <p class="eyebrow">The Long Haul · one project, 220 working days, up to 4.01M tokens</p>
+    <h2>Past Claude's window, Claude forgets. <span class="mem">CAMR holds.</span></h2>
+  </div>
+  <figure class="chart-card">
+    <div class="legend" role="list">
+      <span role="listitem"><i class="key key-mem"></i>Qwen3 4B + CAMR</span>
+      <span role="listitem"><i class="key key-model"></i>the same 4B, bare</span>
+      <span role="listitem"><i class="key key-claude"></i>Claude Sonnet 5.5 alone</span>
+    </div>
+    <div id="chart" class="chart" role="img" aria-label="Share of questions right against history told, for the three contenders"></div>
+    <div id="tip" class="tip" hidden></div>
+    <details class="table">
+      <summary>The numbers</summary>
+      <table>
+        <thead><tr><th>Right answers</th><th>64K</th><th>256K</th><th>1M</th><th>2M</th><th>3M</th><th>4M</th><th>First word</th></tr></thead>
+        <tbody>
+          <tr><th class="mem">Qwen3 4B + CAMR</th><td>25/34</td><td>26/40</td><td>25/69</td><td>29/73</td><td>29/73</td><td>29/73</td><td>0.2–0.31 s</td></tr>
+          <tr><th>Qwen3 4B, bare</th><td>18</td><td>14</td><td>20</td><td>11</td><td>12</td><td>13</td><td>0.32–0.38 s</td></tr>
+          <tr><th>Claude Sonnet 5.5 alone</th><td>28</td><td>35</td><td>43</td><td>32</td><td>13</td><td>10</td><td>13–53 s</td></tr>
+          <tr><th>Claude Opus 5.5 alone</th><td>24</td><td>33</td><td>42</td><td>31</td><td></td><td></td><td>19–105 s</td></tr>
+          <tr><th>Claude Haiku 5.5 alone</th><td>22</td><td>21</td><td>17</td><td>10</td><td>10</td><td>10</td><td>13–43 s</td></tr>
+        </tbody>
+      </table>
+      <p class="fine">216 questions, graded by rule; 3M and 4M ask the 2M questions again. MacBook Pro M5 Pro, 24 GB, 4 November 2026. Records: <code>v2/records/bench/2026-11-04/</code>.</p>
+    </details>
+  </figure>
+  <div class="facts">
+    <div><b class="mem">6</b><span>of 10 planted facts recalled across the gap at 2M</span><em>Sonnet and Opus alone: 4</em></div>
+    <div><b class="mem">29</b><span>right at 2M, 3M and 4M: it does not fade</span><em>Sonnet alone: 32, 13, 10</em></div>
+    <div><b class="mem">0.08 s</b><span>first word with 2.01M tokens told, on the 1.7B</span><em>112K told: 0.11 s</em></div>
+  </div>
+</section>
+
+<section class="how">
+  <div class="head">
+    <p class="eyebrow">How it works</p>
+    <h2>Memory as the model's own <span class="mem">keys and values</span>, on the SSD.</h2>
+  </div>
+  <figure class="shot glow">
+    <div class="frame"><img class="zoom-rooms" src="screens/memory-answer.png" alt="Close up: every room of saved notes drawn as a tile; the room this answer read is lit" width="1512" height="945" loading="lazy"></div>
+    <figcaption><span class="mem">Rooms</span> of saved keys and values on the SSD. A question opens one (<span class="model">lit</span>) and reads it in one burst. Hot rooms stay in RAM; cold ones sleep.</figcaption>
+  </figure>
+</section>
+
+<section id="download" class="download">
+  <div class="dl-card glow">
+    <div class="dl-copy">
+      <p class="eyebrow">CAMR for Mac</p>
+      <h2>The app</h2>
+      <p class="fine">For Apple-silicon Macs (M1 or later). Unzip, then open CAMR.</p>
+      <a id="dl" class="btn primary big" href="../dist/CAMR.app.zip" download>Download CAMR.app.zip</a>
+    </div>
+    <figure class="dl-shot">
+      <img class="trim" src="screens/bench.png" alt="The CAMR app's Bench screen: every benchmark record against Claude alone" width="1512" height="945" loading="lazy">
+    </figure>
+  </div>
+</section>
+
+<section id="install" class="install">
+  <div class="head">
+    <p class="eyebrow">The engine</p>
+    <h2>Install it one way. <span class="dim">Any way.</span></h2>
+  </div>
+  <div class="tabs" data-tabs>
+    <div class="tablist" role="tablist">
+      <button role="tab" aria-selected="true" aria-controls="i-curl" id="t-curl">curl</button>
+      <button role="tab" aria-selected="false" aria-controls="i-uv" id="t-uv">uv / pipx</button>
+      <button role="tab" aria-selected="false" aria-controls="i-brew" id="t-brew">Homebrew</button>
+      <button role="tab" aria-selected="false" aria-controls="i-npm" id="t-npm">npm</button>
+    </div>
+    <div class="panel" role="tabpanel" id="i-curl" aria-labelledby="t-curl">
+<pre><code>curl -fsSL https://raw.githubusercontent.com/Satasdin/CAMR/camr-build/packaging/install.sh | sh
+camr doctor</code></pre>
+      <p class="fine">Into <code>~/.camr/engine</code>, with uv if you have it, else Python 3.11+. The command goes in <code>~/.local/bin</code>.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="i-uv" aria-labelledby="t-uv" hidden>
+<pre><code>uv tool install "camr-engine @ git+https://github.com/Satasdin/CAMR.git@camr-build#subdirectory=v2"
+pipx install "git+https://github.com/Satasdin/CAMR.git@camr-build#subdirectory=v2"</code></pre>
+      <p class="fine">Either one. Both give you the <code>camr</code> command in an environment of its own.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="i-brew" aria-labelledby="t-brew" hidden>
+<pre><code>brew tap-new $USER/camr
+cp packaging/homebrew/camr.rb "$(brew --repo $USER/camr)/Formula/"
+brew install --HEAD $USER/camr/camr
+brew services start camr</code></pre>
+      <p class="fine">From a clone of the repository. There is no public tap yet.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="i-npm" aria-labelledby="t-npm" hidden>
+<pre><code>npm install -g ./packaging/npm
+camr-memory serve --backend ollama</code></pre>
+      <p class="fine">From a clone; <code>camr-memory</code> is not on the npm registry yet. It installs the engine the first time it runs.</p>
+    </div>
+  </div>
+</section>
+
+<section id="use" class="use">
+  <div class="head">
+    <p class="eyebrow">Use it with what you have</p>
+    <h2><span class="model">Your model</span>, <span class="mem">CAMR's memory</span>, one URL.</h2>
+    <p class="url"><code>http://127.0.0.1:11436/v1</code><span>OpenAI-compatible · <code>/v1/chat/completions</code> · <code>/v1/models</code></span></p>
+  </div>
+  <div class="use-grid">
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist">
+        <button role="tab" aria-selected="true" aria-controls="u-ollama" id="ut-ollama">Ollama</button>
+        <button role="tab" aria-selected="false" aria-controls="u-lms" id="ut-lms">LM Studio</button>
+        <button role="tab" aria-selected="false" aria-controls="u-oc" id="ut-oc">OpenCode</button>
+        <button role="tab" aria-selected="false" aria-controls="u-curl" id="ut-curl">curl</button>
+      </div>
+      <div class="panel" role="tabpanel" id="u-ollama" aria-labelledby="ut-ollama">
+<pre><code>camr serve --backend ollama        # for any OpenAI client
+
+camr ollama                        # or the ollama CLI itself:
+OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:4b</code></pre>
+      </div>
+      <div class="panel" role="tabpanel" id="u-lms" aria-labelledby="ut-lms" hidden>
+<pre><code>lms server start                   # LM Studio's server, on :1234
+camr serve --backend lmstudio      # CAMR in front of it, on :11436
+
+# in your client: http://localhost:1234/v1  ->  http://127.0.0.1:11436/v1</code></pre>
+      </div>
+      <div class="panel" role="tabpanel" id="u-oc" aria-labelledby="ut-oc" hidden>
+<pre><code>{
+    "$schema": "https://opencode.ai/config.json",
+    "provider": {
+      "camr": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "CAMR (local model with memory)",
+        "options": { "baseURL": "http://127.0.0.1:11436/v1", "apiKey": "camr" },
+        "models": { "qwen3:4b": { "name": "Qwen3 4B with CAMR memory" } }
+      }
+    },
+    "model": "camr/qwen3:4b"
+}</code></pre>
+        <p class="fine"><code>opencode.json</code>, in your project or <code>~/.config/opencode/</code>. A copy is in <code>packaging/configs/</code>.</p>
+      </div>
+      <div class="panel" role="tabpanel" id="u-curl" aria-labelledby="ut-curl" hidden>
+<pre><code>curl http://127.0.0.1:11436/v1/chat/completions -H 'Content-Type: application/json' -d '{
+    "model": "qwen3:4b", "stream": true,
+    "messages": [{"role": "user", "content": "What main colour did the client pick?"}]
+}'</code></pre>
+      </div>
+    </div>
+    <figure class="shot glow">
+      <img class="trim-models" src="screens/models.png" alt="The Models screen: which models fit this Mac, measured, and whether each reads memory as tensors or as words" width="1512" height="945" loading="lazy">
+      <figcaption>MLX models read memory as <span class="mem">tensors</span>; <span class="model">Ollama</span> and LM Studio models, as words.</figcaption>
+    </figure>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <a class="mark" href="https://github.com/Satasdin/CAMR">CAMR on GitHub</a>
+  <p>A Lightweight External Memory Engine to Bridge the Capability Gap Between On-Device and Cloud Language Models. Ibrahim Sudheysi Ali, 2026. MIT licence.</p>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>

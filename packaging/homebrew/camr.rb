@@ -1,6 +1,9 @@
 # Homebrew formula for CAMR, the memory engine. Written for a tap (Satasdin/homebrew-camr), not tested: Homebrew is
 # not installed on the machine it was written on, and no tap exists yet.
-#   brew install --HEAD ./packaging/homebrew/camr.rb     # from a clone, today
+# From a clone, today (Homebrew installs formulae only from a tap):
+#   brew tap-new $USER/camr
+#   cp packaging/homebrew/camr.rb "$(brew --repo $USER/camr)/Formula/"
+#   brew install --HEAD $USER/camr/camr
 #   brew services start camr                            # camr serve --backend ollama, kept running
 class Camr < Formula
   desc "Memory for on-device language models: an OpenAI-compatible endpoint with memory"
