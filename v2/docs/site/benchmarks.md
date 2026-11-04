@@ -304,13 +304,18 @@ on the longer script):
 
 The Hugging Face suites (right answers):
 
-| Suite | `claude-haiku-5-5` | `claude-sonnet-5-5` |
-| --- | --- | --- |
-| MATH-500, levels 3 to 5 (50) | 44 | 47 |
-| AIME 2025 and 2026 (60) | 54 | 56 |
-| HARP pairs, memory on (60) | 55 | 58 |
-| HARP pairs, memory off (60) | 48 | 52 |
-| BABILong qa1–qa5, 4k to 128k (100) | 78 | |
+| Suite | `claude-haiku-5-5` | `claude-sonnet-5-5` | `ollama-bare:qwen3:1.7b` | `ollama:qwen3:1.7b` |
+| --- | --- | --- | --- | --- |
+| MATH-500, levels 3 to 5 (50) | 44 | 47 | | |
+| AIME 2025 and 2026 (60) | 54 | 56 | | |
+| HARP pairs, memory on (60) | 55 | 58 | running | 34 |
+| HARP pairs, memory off (60) | 48 | 52 | running | 21 |
+| BABILong qa1–qa5, 4k to 128k (100) | 78 | | 39 | 20 |
+
+The Ollama 1.7B answers with its thinking off. On HARP it is given `--work-room 8192`: the room Claude has to think
+in, to work in its words. At the shared 400 tokens, 80% of its answers were cut off mid-working (E-43). The pairing
+carries a worked correction (34 against 21), but loses on BABILong, where "where is X now" needs the latest of many
+mentions and 512 tokens of notes hold too few.
 
 Which reach works best (`camr_engine.bench.reach_run`, `engine:qwen3-4b`, the first 256K tokens, 40 questions; the other
 project is the Long Haul built from seed 2):
