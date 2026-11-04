@@ -14,6 +14,9 @@ struct Turn: Identifiable {
     var thinking = ""  // the model's reasoning, shown folded
     var route: String?  // memory, general (the model's own knowledge) or web
     var source: (title: String, url: String)?
+    var model = ""  // which model wrote it
+    var thinkStart: Date?
+    var thinkEnd: Date?
 }
 
 /// One chat with the engine: each message is started at once and its live events are read as they come, so the
@@ -94,7 +97,7 @@ final class ChatModel: ObservableObject {
         defer { busy = false }
         let label = mode == .remember ? "remember" : mode == .research ? "research online" : ""
         turns.append(Turn(who: .you, text: text, meta: label))
-        turns.append(Turn(who: .camr, text: "", memory: memoryOn, pending: true))
+        turns.append(Turn(who: .camr, text: "", memory: memoryOn, pending: true, model: engine.model.name))
         let k = turns.count - 1
         weights.beginAnswer(memory: memoryOn)
         let intent = mode == .remember ? "tell" : mode == .research ? "research" : "chat"
@@ -172,7 +175,9 @@ final class ChatModel: ObservableObject {
         turns[k].raw += piece
         let raw = turns[k].raw
         if let open = raw.range(of: "<think>") {
+            if turns[k].thinkStart == nil { turns[k].thinkStart = Date() }
             if let close = raw.range(of: "</think>") {
+                if turns[k].thinkEnd == nil { turns[k].thinkEnd = Date() }
                 turns[k].thinking = String(raw[open.upperBound..<close.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
                 turns[k].text = String(raw[close.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             } else {
@@ -265,8 +270,9 @@ struct ChatView: View {
                     .frame(maxWidth: 820, alignment: .leading)
                     .frame(maxWidth: .infinity)
                 }
-                .onChange(of: chat.turns.last?.text) { _, _ in
-                    if let id = chat.turns.last?.id { proxy.scrollTo(id, anchor: .bottom) }
+                .onChange(of: chat.turns.count) { _, n in  // once per message: yours at the top, the answer below
+                    guard n >= 2 else { return }
+                    withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(chat.turns[n - 2].id, anchor: .top) }
                 }
             }
             composer
@@ -323,7 +329,7 @@ struct ChatView: View {
                     .lineLimit(1...6)
                     .focused($focused)
                     .onSubmit { Task { await chat.send(.ask) } }
-                    .disabled(engine.phase != .ready || chat.busy)
+                    .disabled(engine.phase != .ready)
                     .padding(12)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.line))
@@ -387,26 +393,36 @@ struct TurnView: View {
                 }
             }
             if !turn.thinking.isEmpty {
-                if turn.pending && turn.text.isEmpty {  // thinking now: shown as it is written
+                if turn.pending && turn.text.isEmpty {  // thinking now: the newest lines in view, as Ollama shows it
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("THINKING…").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.model)
-                        reasoning
+                        Text("Thinking…").font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
+                        ScrollView { reasoning }
+                            .defaultScrollAnchor(.bottom)
+                            .frame(maxHeight: 160)
+                            .mask(LinearGradient(colors: [.clear, .black, .black], startPoint: .top, endPoint: .init(x: 0.5, y: 0.25)))
                     }
                 } else {
                     DisclosureGroup {
                         reasoning
                     } label: {
-                        Text("REASONING").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.model)
+                        Text(thoughtFor).font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
                     }
                     .tint(Theme.model)
                 }
             }
             if !(turn.text.isEmpty && !turn.thinking.isEmpty) {
-                Text(rendered(turn.text.isEmpty && turn.pending ? "…" : turn.text))
-                    .font(Theme.ui(15))
-                    .foregroundStyle(turn.failed ? Theme.error : Theme.text)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                let text = turn.text.isEmpty && turn.pending ? "…" : turn.text
+                ForEach(Array(blocks(text).enumerated()), id: \.offset) { _, b in
+                    if b.code {
+                        CodeBlock(code: b.text)
+                    } else {
+                        Text(rendered(b.text))
+                            .font(Theme.ui(15))
+                            .foregroundStyle(turn.failed ? Theme.error : Theme.text)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
             }
             if let s = turn.source, let url = URL(string: s.url) {
                 Link(destination: url) {
@@ -417,6 +433,7 @@ struct TurnView: View {
             if turn.who == .camr, !turn.pending {
                 HStack(spacing: 10) {
                     if !turn.meta.isEmpty { Text(turn.meta).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
+                    if !turn.model.isEmpty { Text(turn.model).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
                     Button {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(turn.text, forType: .string)
@@ -427,6 +444,12 @@ struct TurnView: View {
         }
     }
 
+    private var thoughtFor: String {
+        guard let a = turn.thinkStart, let b = turn.thinkEnd else { return "Thought" }
+        let s = b.timeIntervalSince(a)
+        return s < 2 ? "Thought for a moment" : String(format: "Thought for %.1f seconds", s)
+    }
+
     private var reasoning: some View {
         Text(turn.thinking).font(Theme.ui(13)).foregroundStyle(Theme.dim).textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -434,9 +457,39 @@ struct TurnView: View {
             .overlay(alignment: .leading) { Rectangle().fill(Theme.model.opacity(0.35)).frame(width: 2) }
     }
 
+    /// The answer split at its fenced code blocks: prose and code in turn.
+    private func blocks(_ text: String) -> [(code: Bool, text: String)] {
+        var out: [(Bool, String)] = []
+        let parts = text.components(separatedBy: "```")
+        for (i, part) in parts.enumerated() {
+            if i % 2 == 1 {  // inside a fence: drop the language line
+                let body = part.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+                let code = body.count > 1 && !body[0].contains(" ") ? String(body[1]) : part
+                out.append((true, code.trimmingCharacters(in: .newlines)))
+            } else if !part.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                out.append((false, part.trimmingCharacters(in: .newlines)))
+            }
+        }
+        return out.isEmpty ? [(false, text)] : out
+    }
+
     /// Markdown as the model writes it (bold, code, links), line breaks kept.
     private func rendered(_ text: String) -> AttributedString {
-        var out = (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+        // headings and bullets, as the model writes them: a heading bold, a "- " item a bullet
+        let lines = text.components(separatedBy: "\n").map { line -> String in
+            let t = line.trimmingCharacters(in: .whitespaces)
+            if t.hasPrefix("#") {
+                let h = t.drop(while: { $0 == "#" }).trimmingCharacters(in: .whitespaces)
+                return h.isEmpty ? "" : "**\(h)**"
+            }
+            if t.hasPrefix("- ") || t.hasPrefix("* ") {
+                let indent = String(line.prefix(while: { $0 == " " }))
+                return indent + "• " + t.dropFirst(2)
+            }
+            return line
+        }
+        var out = (try? AttributedString(markdown: lines.joined(separator: "\n"),
+                                         options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
             ?? AttributedString(text)
         for run in out.runs {  // a model's words may carry a page's links: only plain web links stay clickable
             if let url = run.link, !["http", "https"].contains(url.scheme?.lowercased() ?? "") {
@@ -458,5 +511,30 @@ struct Pill: ButtonStyle {
             .padding(.vertical, 10)
             .background(Capsule().fill(color.opacity(configuration.isPressed ? 0.7 : 1)))
             .glow(color, radius: 6, opacity: 0.35)
+    }
+}
+
+/// A code block in an answer: monospaced, scrolling sideways, with its own Copy button.
+struct CodeBlock: View {
+    let code: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Spacer()
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(code, forType: .string)
+                } label: { Label("Copy", systemImage: "doc.on.doc").font(Theme.mono(10)) }
+                .buttonStyle(.plain).foregroundStyle(Theme.dim)
+            }
+            .padding(.horizontal, 10).padding(.top, 6)
+            ScrollView(.horizontal) {
+                Text(code).font(Theme.mono(12)).foregroundStyle(Theme.text).textSelection(.enabled)
+                    .padding(.horizontal, 12).padding(.bottom, 10).padding(.top, 2)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.black))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.line))
     }
 }

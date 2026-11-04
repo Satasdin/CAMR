@@ -27,6 +27,9 @@ enum Script {
         let env = ProcessInfo.processInfo.environment
         guard let path = env["CAMR_SCRIPT"], let text = try? String(contentsOfFile: path, encoding: .utf8) else { return }
         Task {
+            for _ in 0..<40 where world.chat.shelves.isEmpty {  // shelves on before the first line
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
             for raw in text.split(separator: "\n") {
                 let line = raw.trimmingCharacters(in: .whitespaces)
                 guard let colon = line.firstIndex(of: ":"), !line.hasPrefix("#") else { continue }

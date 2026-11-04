@@ -70,8 +70,7 @@ final class World: ObservableObject {
 
     func pick(_ m: ModelChoice) {
         UserDefaults.standard.set(m.id, forKey: "model")
-        chat.turns = []
-        engine.start(m)
+        engine.start(m)  // the chat stays: each answer says which model wrote it
     }
 }
 
