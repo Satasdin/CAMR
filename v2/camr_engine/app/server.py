@@ -197,7 +197,9 @@ def make_server(app, port: int, *, routes: Routes | None = None, static: Path = 
     # call carries a secret made at launch that only the served page knows.
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     origins = {f"http://{h}" for h in hosts}
-    token = os.environ.get("CAMR_TOKEN") or secrets.token_urlsafe(24)  # the Mac app makes its own and passes it
+    given = os.environ.get("CAMR_TOKEN")  # the Mac app makes its own and passes it
+    token = given or secrets.token_urlsafe(24)
+    shown = "" if given else token  # then the page never carries it: any local process could fetch the page
     routes = routes if routes is not None else collect()
     app.route_errors = dict(routes.errors)
 
@@ -266,7 +268,7 @@ def make_server(app, port: int, *, routes: Routes | None = None, static: Path = 
             if not self._allowed(api=path.startswith("/api/"), post=False):
                 return self._json({"error": "forbidden"}, 403)
             if path in ("/", "/index.html"):
-                page = (static / "index.html").read_text().replace("__CAMR_TOKEN__", token)
+                page = (static / "index.html").read_text().replace("__CAMR_TOKEN__", shown)
                 return self._send(200, page.encode(), "text/html; charset=utf-8")
             if path.startswith("/static/"):
                 f = static_file(path[len("/static/"):], static)

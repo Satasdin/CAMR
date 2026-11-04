@@ -238,9 +238,17 @@ struct CodeView: View {
             ForEach(Array(code.waiting.enumerated()), id: \.offset) { _, a in
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.shield").foregroundStyle(Theme.model)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Run this?").font(Theme.ui(12, .semibold)).foregroundStyle(Theme.text)
-                        Text(a.str("what") ?? "").font(Theme.mono(11)).foregroundStyle(Theme.dim).lineLimit(3)
+                    VStack(alignment: .leading, spacing: 4) {
+                        let what = a.str("what") ?? ""
+                        let lines = what.split(separator: "\n", omittingEmptySubsequences: false).count
+                        Text(lines > 1 ? "Run this? (\(lines) lines)" : "Run this?")
+                            .font(Theme.ui(12, .semibold)).foregroundStyle(lines > 1 ? Theme.model : Theme.text)
+                        ScrollView {  // the whole command, never cut short, with line breaks shown
+                            Text(what.replacingOccurrences(of: "\n", with: "⏎\n").replacingOccurrences(of: "\t", with: "⇥"))
+                                .font(Theme.mono(11)).foregroundStyle(Theme.text).textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 160)
                     }
                     Spacer()
                     Button("Deny") { Task { await code.decide(a.str("id") ?? "", allow: false) } }

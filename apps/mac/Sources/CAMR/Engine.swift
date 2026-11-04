@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import SwiftUI
 
@@ -28,15 +29,32 @@ final class Engine: ObservableObject {
     @Published var lines: [String] = []
 
     let weights: WeightsModel
-    let port: Int
+    private(set) var port: Int
     private let token = (UUID().uuidString + UUID().uuidString).replacingOccurrences(of: "-", with: "")
     private var process: Process?
     private var stopping = false
     private var buffer = Data()
 
-    init(weights: WeightsModel, port: Int = 8790) {
+    init(weights: WeightsModel) {
         self.weights = weights
-        self.port = port
+        self.port = Engine.freePort()
+    }
+
+    /// A port nothing listens on now, picked by the system, so no other process sits where the engine will be.
+    static func freePort() -> Int {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        defer { close(fd) }
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        addr.sin_port = 0
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let bound = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(fd, $0, len) == 0 && getsockname(fd, $0, &len) == 0
+            }
+        }
+        return bound ? Int(UInt16(bigEndian: addr.sin_port)) : 8790
     }
 
     /// Where the engine lives: CAMR_ROOT, or the folder chosen before, or ~/.camr/engine (the installer's), or the
@@ -73,6 +91,7 @@ final class Engine: ObservableObject {
         if let m { model = m }
         stop()
         stopping = false
+        port = Engine.freePort()
         phase = .starting
         lines = []
         weights.beginLoad(model: model.name)
@@ -151,6 +170,7 @@ final class Engine: ObservableObject {
     private func waitReady() async {
         for _ in 0..<1200 {
             if case .failed = phase { return }
+            guard process?.isRunning == true else { break }  // only our own engine counts as ready
             if (try? await get("/api/chat/state")) != nil {
                 phase = .ready
                 weights.loadDone()

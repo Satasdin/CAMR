@@ -202,3 +202,16 @@ def test_every_route_module_loads(tmp_path):
               "/api/models", "/api/models/search", "/api/models/load", "/api/sim/state", "/api/quiz"]:
         assert p in paths, p
     assert Path(STATIC / "index.html").read_text().count("__CAMR_TOKEN__") == 1
+
+
+def test_an_engine_started_by_the_mac_app_never_puts_its_token_in_the_page(monkeypatch):
+    monkeypatch.setenv("CAMR_TOKEN", "made-by-the-mac-app")
+    port, token, httpd = start()
+    host = {"Host": f"127.0.0.1:{port}"}
+    try:
+        status, page, _ = call(port, "GET", "/", host)
+        assert token == "made-by-the-mac-app" and status == 200 and token not in page
+        assert call(port, "GET", "/api/state", {**host, "X-CAMR-Token": token})[0] == 200
+        assert call(port, "GET", "/api/state", host)[0] in (401, 403)
+    finally:
+        httpd.shutdown()
