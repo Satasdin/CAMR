@@ -2,16 +2,30 @@
 
 ## For the 8am presentation
 
+- **New after midnight: the chat is an assistant** (E-55 to E-57).
+  - It keeps the conversation, answers from its own knowledge, and reaches into memory only when the model routes
+    a question there. Each answer says which: "from memory", "from the model" or "from the web".
+  - Qwen3 1.7B and 8B show their reasoning live, then fold it to "Thought for N seconds". The 4B Instruct build
+    does not reason.
+  - The globe button researches online (Wikipedia), answers with the source, and keeps it on the Research shelf.
+  - Drop a PDF, image or video onto the chat, or use the clip. Images and videos are read by Qwen3-VL-4B-Thinking,
+    a vision model that reasons. A receipt photo was read line by line, and the 8B answered its total and payment.
+  - Memory revises itself: a new price updates the old note, which is tagged superseded and kept as history. A
+    repeat is not kept twice.
+  - Chats are saved and listed in the sidebar (⌘N for a new one). Stop with ⌘. while it writes. Copy any answer or
+    code block. Maths reads as √, ×, ≈.
+  - The tensors show while a model fires up, or when you choose to see them (⌘T, or ⌘E for large); otherwise they
+    stay hidden.
+  - Code streams the step it is writing and lists the files a run wrote; a web page opens in the browser.
+- **Demo order:** `apps/mac/demo.txt`. Suggestions on the empty chat start it with one click.
 - **Shelves (new at midnight):** memory is now kept on four shelves: Projects (the Long Haul), Coding, Research
   and Personal.
   - "Remember on" Auto files each moment by meaning; or pick a shelf.
   - Every question reads all of them, and the answer names the note and shelf it read, e.g. "note 0 on Coding".
   - When a model loads, its kernels are built and the newest notes are warmed into RAM.
   - Screens: `apps/mac/screens/chat-shelves.png`.
-- **Models:** Qwen3 1.7B, 4B and 8B only. The rest are in the Trash, and their records are kept. The 1.7B and 4B
-  memories are seeded with the Long Haul. The 8B's is not: there was no disk space. Once the Trash is emptied:
-  `cd ~/Desktop/camr-build-wt/v2 && .venv/bin/python -m camr_engine.app.seed --model mlx-community/Qwen3-8B-4bit`
-  (about 7 minutes, about 37 GB).
+- **Models:** Qwen3 1.7B, 4B and 8B, all three seeded with the Long Haul (737 rooms each), plus Qwen3-VL-4B-Thinking
+  as the eyes. The rest are gone, and their records are kept.
 - **The app:** `dist/CAMR.app`, a native Mac app with Chat and Code, plus the weights view. Double-click it; it
   starts the engine with Qwen3 4B, whose memory already holds the Long Haul's first 256K tokens (737 rooms).
 - **The demo:** type the questions from `apps/mac/demo.txt`, or let the app play them:

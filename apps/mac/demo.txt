@@ -1,17 +1,22 @@
 # The 8am demo, played by the app itself: CAMR_SCRIPT=apps/mac/demo.txt dist/CAMR.app/Contents/MacOS/CAMR
-# The 4B's Projects shelf holds the Long Haul's first 256K tokens (python -m camr_engine.app.seed).
+# Each model's Projects shelf holds the Long Haul's first 256K tokens (python -m camr_engine.app.seed).
+# 1. Memory: facts from months of a project, and honesty about what was never said
 ask: Who is the landlord of the Karen branch?
 ask: What is the number plate of Kitengela Ventures' delivery truck?
 ask: What is Otieno's surname?
-# Shelves: Auto files each moment by meaning; a question reads every shelf
-remember: The split_bill test failed because of a float rounding bug; we switched it to whole cents.
-remember: Amina's paper shows retrieval from memory beats a long context window past one million tokens.
+# 2. The model's own knowledge, reasoning shown, and a follow-up in the conversation
+ask: What is the square root of 56? Show your working.
+ask: Now do the same for 72.
+# 3. Shelves, and memory that revises itself
 remember: My sister's birthday is on 3 March, and she wants a cake from the Karen branch.
-ask: Why did the split_bill test fail?
-ask: When is my sister's birthday?
-# Memory off: the model alone
+remember: Iten Traders raised their minimum order to KES 52,000 from next week.
+ask: What is Iten Traders' minimum order now?
+# 4. Research online, kept on the Research shelf
+research: Who founded the Kenya Wildlife Service?
+# 5. Memory off: the model alone
 memory: off
 ask: What is the number plate of Kitengela Ventures' delivery truck?
 memory: on
+# 6. The tensors, large
 view: large
 ask: What locker number does Ndinda Kerubo have?
