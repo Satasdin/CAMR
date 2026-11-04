@@ -477,6 +477,19 @@ Table: {#bits} Room storage at 16, 8 and 4 bits (`engine:qwen3-1.7b`, the first 
 | 8 bits (8 GB disk budget) | 14 | 20 | 8.6 GB | 0.13 s | 3.8 GB |
 | 4 bits | 14 | 18 | 9.7 GB | 0.15 s | 4.1 GB |
 
+### Code: Café Websites from Memory {#code-results}
+
+The Code agent was benchmarked on building from what it was told (E-58). Memory is told six notes about a café: its name, two brand colours as hex, three menu items with prices in KES, its opening hours, its address, and the rule that prices always show KES and two decimals. The agent is then asked, in an empty workspace, for "a one-page website for our café: index.html and style.css". Ten rules grade each site with no model: both files exist, the HTML parses, it links `style.css`, and it holds the name, all three items, every price as "KES n.00", the opening and closing times, the address and both colours, with nothing invented (no price or menu word the notes do not hold). Shell commands are refused, since a site needs only file writes. Each model ran four ways on five cafés: memory off, the notes pasted into the prompt (the ceiling), memory with the notes on the Coding shelf the day before, and note context, with the notes told ten days earlier among 6,000 tokens of Long Haul events (Table {tab:cafe}).
+
+Table: {#cafe} Code: café websites, average rules met per site (of 10) over five cafés (records `013817-code-cafe-code-qwen3-4b.json` and `014735-code-cafe-code-qwen3-8b.json`)
+
+| Model | Memory off | Notes in the prompt (ceiling) | Memory on | Notes told 10 days earlier among noise |
+|---|---|---|---|---|
+| Qwen3 4B | 3.0 | 9.8 | **10.0** (5 of 5 complete) | 9.2 |
+| Qwen3 8B | 4.0 | 10.0 | 9.6 | 9.2 |
+
+With memory, the sites were as good as with the notes in the prompt. The 4B met every rule on every café from memory (10.0 against 9.8), in fewer steps (3.6 against 9.0) and about half the time (18.0 s against 36.0 s per site); the 8B met 9.6 against 10.0. With memory off the page worked but knew nothing: the 4B invented a menu every time (cappuccino, espresso, latte) and failed "nothing invented", while the 8B wrote a two-line welcome page with no menu. Told ten days back among other events, memory still found most of it, 9.2 on both models. The records show three kinds of miss: the price rule (three runs), whose note was on the desk though the model still wrote "KES 220"; one café's colours and address, which were in neither the room memory chose nor its closest words; and, for the 8B with memory on, one site with no stylesheet, after the model twice said it would write `style.css` and stopped.
+
 ### The Claude Yardstick: Time and Cost {#yardstick}
 
 Claude was only a yardstick: it answered the same questions alone, with no memory. Table {tab:claude} gives what it cost on the Long Haul.

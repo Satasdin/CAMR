@@ -317,7 +317,7 @@ The weights view can be shown large beside the chat (Figure {fig:app-weights}). 
 
 ![{#app-code} Code: the agent lists the files of a project folder, reads `money.py` and answers from what it read; the answer is kept in memory](figures/app/code-reads-then-answers.png){width=15.9}
 
-Code is a coding agent on the same local model (Figure {fig:app-code}). The user picks a folder; the agent can list, search, read and edit files and run commands there, and every shell command waits for an explicit Allow. Its turns, tool calls and the files it opened are shown as it works, and with memory on what it learns about the project is kept for the next question.
+Code is a coding agent on the same local model (Figure {fig:app-code}). Building from memory needed small fixes to the agent, each with its test: the notes' answer rules no longer end a task, an empty workspace and the files still to write are named at every step, a look repeated with nothing changed is not run again, a reply cut off inside a tool call gets more room, and a code step re-reads its eight closest moments (E-59); the attention record is also worked out as each look is made, so a long desk no longer runs the graphics memory out (E-60). The user picks a folder; the agent can list, search, read and edit files and run commands there, and every shell command waits for an explicit Allow. Its turns, tool calls and the files it opened are shown as it works, and with memory on what it learns about the project is kept for the next question.
 
 ![{#app-onoff} The weights view with memory on (left), where the room read lights and flows into the model, and off (right), where the model answers alone and the memory stays dark](figures/app/weights-on-off.png){width=12}
 

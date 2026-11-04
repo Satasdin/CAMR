@@ -56,6 +56,7 @@ Table: {#records} The records behind Chapter 5 (`v2/records/bench/2026-11-04/`)
 | Ollama on the Long Haul | `053819-longhaul-ollama-qwen3-1.7b.json`; `052439-longhaul-ollama-bare-qwen3-1.7b.json` |
 | Claude on the Long Haul | `022518-…`, `022717-…`, `023106-…`, `094146-…`, `094325-claude-*-longhaul.json` |
 | Speed as memory grows | `055344-speed-engine-qwen3-1.7b.json` |
+| Code: café websites (5 November) | `013817-code-cafe-code-qwen3-4b.json`, `014735-code-cafe-code-qwen3-8b.json` |
 | Storage at 16, 8 and 4 bits (5 November) | `003939-…-16bit.json`, `004714-…-8bit-8GB.json`, `004321-…-4bit.json` |
 | Reach | `195128-…`, `195633-…`, `200137-…`, `201043-reach-engine-qwen3-4b-*.json` |
 | The suites | `*-math500-*`, `*-aime-*`, `*-harp-*`, `*-babilong-*.json` |
@@ -111,3 +112,6 @@ Table: {#decisions} Decision log entries cited in this report
 | E-55 | The chat is an assistant, and the model decides when to reach into memory |
 | E-56 | Memory that revises itself, never by deleting |
 | E-57 | Eyes: a vision model that also reasons (Qwen3-VL-4B-Thinking) |
+| E-58 | Code: café websites, a benchmark for building from what was told |
+| E-59 | The Code agent finishes what it starts |
+| E-60 | Looks are worked out at once |
