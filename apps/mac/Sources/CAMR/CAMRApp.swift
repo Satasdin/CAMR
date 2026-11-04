@@ -57,6 +57,7 @@ final class World: ObservableObject {
         let saved = UserDefaults.standard.string(forKey: "model")
         if let m = MODELS.first(where: { $0.id == saved }) { engine.model = m }
         engine.start()
+        Script.startShots()
     }
 
     func pick(_ m: ModelChoice) {

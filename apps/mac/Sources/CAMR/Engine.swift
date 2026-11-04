@@ -30,7 +30,8 @@ final class Engine: ObservableObject {
 
     let weights: WeightsModel
     private(set) var port: Int
-    private let token = (UUID().uuidString + UUID().uuidString).replacingOccurrences(of: "-", with: "")
+    private var token = Engine.newToken()
+    private var bound = false  // our own engine said it holds the port (its CAMR-PORT line): only then the token goes
     private var process: Process?
     private var stopping = false
     private var buffer = Data()
@@ -54,7 +55,11 @@ final class Engine: ObservableObject {
                 bind(fd, $0, len) == 0 && getsockname(fd, $0, &len) == 0
             }
         }
-        return bound ? Int(UInt16(bigEndian: addr.sin_port)) : 8790
+        return bound ? Int(UInt16(bigEndian: addr.sin_port)) : 49152 + Int.random(in: 0..<16000)
+    }
+
+    static func newToken() -> String {
+        (UUID().uuidString + UUID().uuidString).replacingOccurrences(of: "-", with: "")
     }
 
     /// Where the engine lives: CAMR_ROOT, or the folder chosen before, or ~/.camr/engine (the installer's), or the
@@ -92,6 +97,8 @@ final class Engine: ObservableObject {
         stop()
         stopping = false
         port = Engine.freePort()
+        token = Engine.newToken()
+        bound = false
         phase = .starting
         lines = []
         weights.beginLoad(model: model.name)
@@ -154,6 +161,8 @@ final class Engine: ObservableObject {
             if s.hasPrefix("CAMR-LIVE "), let j = s.dropFirst(10).data(using: .utf8),
                let e = try? JSONSerialization.jsonObject(with: j) as? [String: Any] {
                 weights.loadEvent(e)
+            } else if s == "CAMR-PORT \(port)" {
+                bound = true
             } else {
                 note(s)
             }
@@ -171,7 +180,7 @@ final class Engine: ObservableObject {
         for _ in 0..<1200 {
             if case .failed = phase { return }
             guard process?.isRunning == true else { break }  // only our own engine counts as ready
-            if (try? await get("/api/chat/state")) != nil {
+            if bound, (try? await get("/api/chat/state")) != nil {
                 phase = .ready
                 weights.loadDone()
                 return

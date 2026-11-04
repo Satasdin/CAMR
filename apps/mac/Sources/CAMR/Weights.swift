@@ -76,7 +76,8 @@ final class WeightsModel: ObservableObject {
     /// Shows the next layer that arrived, no faster than one every 40 ms, so a load from a warm disk (a tenth of a
     /// second) can still be followed by eye. The order and the sizes are the engine's.
     func tick(_ now: Date) {
-        if !pending.isEmpty, now.timeIntervalSince(lastShown) > 0.04 {
+        let pace = loadingDone ? 0.006 : 0.04  // once the engine is ready, what is left is shown at once
+        if !pending.isEmpty, now.timeIntervalSince(lastShown) > pace {
             let (i, _) = pending.removeFirst()
             arrived[i] = now
             loadedLayers = max(loadedLayers, i + 1)

@@ -7,20 +7,25 @@ import SwiftUI
 /// every half second while it plays, for screenshots of the real app.
 @MainActor
 enum Script {
+    static var timer: Timer?
+
+    /// Snapshots from launch on (the weights loading too), when CAMR_SNAPSHOT_DIR is set: every 0.25 s.
+    static func startShots() {
+        guard let dir = ProcessInfo.processInfo.environment["CAMR_SNAPSHOT_DIR"].map({ URL(fileURLWithPath: $0) })
+        else { return }
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        var n = 0
+        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+            MainActor.assumeIsolated {
+                n += 1
+                snapshot(dir.appendingPathComponent(String(format: "shot-%04d.png", n)))
+            }
+        }
+    }
+
     static func play(_ world: World) {
         let env = ProcessInfo.processInfo.environment
         guard let path = env["CAMR_SCRIPT"], let text = try? String(contentsOfFile: path, encoding: .utf8) else { return }
-        let shots = env["CAMR_SNAPSHOT_DIR"].map { URL(fileURLWithPath: $0) }
-        if let shots { try? FileManager.default.createDirectory(at: shots, withIntermediateDirectories: true) }
-        var n = 0
-        let timer = shots.map { dir in
-            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                MainActor.assumeIsolated {
-                    n += 1
-                    snapshot(dir.appendingPathComponent(String(format: "shot-%04d.png", n)))
-                }
-            }
-        }
         Task {
             for raw in text.split(separator: "\n") {
                 let line = raw.trimmingCharacters(in: .whitespaces)
@@ -51,6 +56,7 @@ enum Script {
             }
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             timer?.invalidate()
+            timer = nil
             if env["CAMR_SCRIPT_QUIT"] == "1" { NSApp.terminate(nil) }
         }
     }
