@@ -1,0 +1,19 @@
+{
+  "name": "camr-memory",
+  "version": "0.0.1",
+  "description": "CAMR: memory for on-device language models. Installs the CAMR engine and runs its OpenAI-compatible endpoint with memory in front of Ollama, LM Studio or MLX.",
+  "keywords": ["llm", "memory", "ollama", "lm-studio", "mlx", "openai-compatible", "local-first", "opencode"],
+  "homepage": "https://github.com/Satasdin/CAMR",
+  "repository": { "type": "git", "url": "git+https://github.com/Satasdin/CAMR.git", "directory": "packaging/npm" },
+  "license": "MIT",
+  "author": "Ibrahim Sudheysi Ali",
+  "bin": { "camr-memory": "bin/camr-memory.js" },
+  "files": ["bin/", "install.sh", "README.md"],
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "prepack": "cp ../install.sh install.sh",
+    "postpack": "rm -f install.sh"
+  }
+}

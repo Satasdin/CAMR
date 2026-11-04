@@ -12,6 +12,14 @@ dependencies = [
   "regex>=2024.0",
 ]
 
+[project.scripts]
+# camr serve | ollama | app | doctor | bench. The old CAMR baseline also installs a `camr` command: keep the two in
+# separate environments (the installers in ../packaging put this one in ~/.camr/engine)
+camr = "camr_engine.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Satasdin/CAMR"
+
 [project.optional-dependencies]
 # the old CAMR contender; camr itself is installed from ~/Desktop/camr-repo (uv pip install --no-deps -e)
 baseline = ["pyyaml>=6.0", "requests>=2.31", "sqlite-vec>=0.1.6"]

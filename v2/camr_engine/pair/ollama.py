@@ -13,8 +13,10 @@ change each turn there would make Ollama read the whole history again every turn
 without the notes, so the prompt stays the same up to the previous question and Ollama's prompt cache holds. For
 ``/api/generate``, which has no history, the notes go into its ``system`` field, after the model's own system prompt.
 Once the answer has streamed back, the exchange is remembered on one background worker, so the connection is free at
-once; the next recall waits for it, and that wait is counted in its ``recall_ms``. Answers stream through byte for
-byte; every other path is passed through as it is.
+once; the next recall waits for it, and that wait is counted in its ``recall_ms``. An OpenAI-style answer that ends
+by calling a tool (``finish_reason`` "tool_calls") is not remembered: the agent sends the tool's result back with the
+same question, and the answer that ends the turn is remembered with it. Answers stream through byte for byte; every
+other path is passed through as it is.
 
 Security, as in camr_engine.app.server. The proxy listens on 127.0.0.1 only. A request must name this host (stops DNS
 rebinding). What a web page sends is refused, since any page the user visits can reach 127.0.0.1 too: a request with
@@ -125,6 +127,7 @@ class Tap:
 
     def __init__(self, kind: str):
         self.kind, self.buf, self.parts, self.counts, self.done = kind, b"", [], {}, False
+        self.finish = None  # an OpenAI-style answer's finish_reason: "tool_calls" when it ends by calling a tool
 
     def feed(self, data: bytes) -> None:
         *lines, self.buf = (self.buf + data).split(b"\n")
@@ -161,7 +164,7 @@ class Tap:
                 if isinstance(part, str):
                     self.parts.append(part)
                 if c.get("finish_reason"):
-                    self.done = True
+                    self.done, self.finish = True, c["finish_reason"]
             usage = obj.get("usage") or {}
             self.counts.update({k: usage[k] for k in ("prompt_tokens", "completion_tokens") if k in usage})
             return
@@ -191,14 +194,21 @@ class Tap:
 
 
 class Pairing:
-    """What the proxy needs: the memory provider, where the real Ollama listens, and the limits."""
+    """What the proxy needs: the memory provider, where the real Ollama listens, and the limits.
+
+    ``memory`` maps each path whose answers get notes to the format the tap reads, and ``serves`` says which paths
+    are forwarded at all (every one, here); camr_engine.pair.openai narrows both. ``name`` is the runtime behind the
+    proxy, as its errors name it."""
+
+    memory = MEMORY
+    name = "Ollama"
 
     def __init__(self, provider: Provider, upstream: str = UPSTREAM, *, budget_tokens: int = BUDGET,
                  max_body: int = MAX_BODY, timeout_s: float = TIMEOUT_S, allow_origins: tuple[str, ...] = (),
                  metrics_path: Path | None = None, keep: int = KEEP, wait_s: float = WAIT_S):
         u = urlsplit(upstream if "://" in upstream else f"http://{upstream}")
         if u.scheme != "http" or u.hostname not in LOOPBACK:
-            raise ValueError("the real Ollama must be on this Mac: notes are personal and never leave it")
+            raise ValueError(f"the real {self.name} must be on this Mac: notes are personal and never leave it")
         self.provider, self.host, self.port = provider, u.hostname, u.port or 11434
         self.upstream = f"[{self.host}]:{self.port}" if ":" in self.host else f"{self.host}:{self.port}"
         self.budget_tokens, self.max_body, self.timeout_s, self.wait_s = budget_tokens, max_body, timeout_s, wait_s
@@ -212,6 +222,10 @@ class Pairing:
         self._turns = threading.Condition()
         self._told = self._kept = 0  # exchanges handed to the worker, and how many it has kept
         self._worker: threading.Thread | None = None
+
+    def serves(self, path: str) -> bool:
+        """Whether ``path`` is forwarded; the rest get a 404 from the proxy itself."""
+        return True
 
     def allowed(self, origin: str) -> bool:
         """Whether ``origin`` was let in, exactly or as ``scheme://host:*`` (any port)."""
@@ -362,7 +376,7 @@ def make_server(pairing: Pairing, port: int = PORT) -> ThreadingHTTPServer:
             origin = self.headers.get("Origin")
             if origin is not None:
                 plain = re.sub(r"/+", "/", unquote(path)).rstrip("/")  # however a page spells the path
-                if plain in MEMORY or plain == METRICS:
+                if plain in pairing.memory or plain == METRICS:
                     return "web pages may not reach memory"
                 return "" if pairing.allowed(origin) else "web pages may not use this proxy"
             if self.headers.get("Sec-Fetch-Site", "none") not in ("none", "same-origin"):
@@ -457,6 +471,8 @@ def make_server(pairing: Pairing, port: int = PORT) -> ThreadingHTTPServer:
             except ValueError:
                 return self._refuse(400, "bad body")
             self.unread = False
+            if path != METRICS and not pairing.serves(path):
+                return self._refuse(404, f"{path} is not served here")
             if path == METRICS and self.command == "GET":
                 out = json.dumps({"requests": pairing.latest()}).encode()
                 self.send_response_only(200)
@@ -464,7 +480,7 @@ def make_server(pairing: Pairing, port: int = PORT) -> ThreadingHTTPServer:
                 self.send_header("Content-Length", str(len(out)))
                 self.end_headers()
                 return self.wfile.write(out)
-            kind = MEMORY.get(path) if self.command == "POST" else None  # an answer the tap can read
+            kind = pairing.memory.get(path) if self.command == "POST" else None  # an answer the tap can read
             memory = bool(kind) and self.headers.get("X-CAMR-Memory", "").lower() != "off"
             m = {"at": dt.datetime.now().isoformat(timespec="milliseconds"), "method": self.command, "path": path,
                  "memory": False}
@@ -495,7 +511,7 @@ def make_server(pairing: Pairing, port: int = PORT) -> ThreadingHTTPServer:
                 conn.close()
                 m.update(status=502, error=f"upstream: {type(e).__name__}", total_ms=_ms(t0))
                 pairing.record(m)
-                return self._refuse(502, f"Ollama is not answering at {pairing.upstream}")
+                return self._refuse(502, f"{pairing.name} is not answering at {pairing.upstream}")
             headed = time.perf_counter()
             no_body = self.command == "HEAD" or resp.status in (204, 304) or 100 <= resp.status < 200
             length = resp.getheader("Content-Length")
@@ -544,7 +560,7 @@ def make_server(pairing: Pairing, port: int = PORT) -> ThreadingHTTPServer:
             if tap:
                 tap.close()
                 m.update(tap.stats())
-                if memory and query and whole and tap.done and tap.answer:
+                if memory and query and whole and tap.done and tap.answer and tap.finish != "tool_calls":
                     return pairing.later(query, tap.answer, m)  # recorded once it is remembered
             pairing.record(m)
 
@@ -555,9 +571,9 @@ def make_server(pairing: Pairing, port: int = PORT) -> ThreadingHTTPServer:
     return httpd
 
 
-def build(argv: list[str] | None = None) -> tuple[Pairing, int]:
+def build(argv: list[str] | None = None, prog: str = "python -m camr_engine.pair.ollama") -> tuple[Pairing, int]:
     """The pairing and port the command line asks for. Nothing is loaded yet."""
-    ap = argparse.ArgumentParser(prog="python -m camr_engine.pair.ollama",
+    ap = argparse.ArgumentParser(prog=prog,
                                  description="Memory for the ollama CLI: run this, then OLLAMA_HOST=127.0.0.1:11435.")
     ap.add_argument("--port", type=int, default=PORT)
     ap.add_argument("--memory", type=Path, default=Path.home() / ".camr" / "default",
@@ -579,8 +595,8 @@ def build(argv: list[str] | None = None) -> tuple[Pairing, int]:
     return pairing, a.port
 
 
-def main(argv: list[str] | None = None) -> None:
-    pairing, port = build(argv)
+def main(argv: list[str] | None = None, prog: str = "python -m camr_engine.pair.ollama") -> None:
+    pairing, port = build(argv, prog)
     if isinstance(pairing.provider, VaultWords):  # load the embedder now, and refuse notes another one wrote
         print("Loading the embedder...", flush=True)
         try:
