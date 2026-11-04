@@ -1,4 +1,4 @@
-// camr's shell: the top strip (the name, six screen keys, live meters and the bus line), the keyboard, the polling,
+// camr's shell: the top strip (the name, five screen keys, live meters and the bus line), the keyboard, the polling,
 // and the `api` object every screen is given. Screens live in /static/screens/<name>.js and export
 // mount(el, api); screens/README.md is the contract.
 
@@ -9,7 +9,7 @@ const { html, render, signal, computed, effect } = ui;
 
 export const SCREENS = [
   { id: "models", label: "Models" }, { id: "chat", label: "Chat" }, { id: "code", label: "Code" },
-  { id: "swarm", label: "Swarm" }, { id: "memory", label: "Memory" }, { id: "bench", label: "Bench" },
+  { id: "memory", label: "Memory" }, { id: "bench", label: "Bench" },
 ];
 const DEFAULT = "models";
 const TIMEBASES = [1, 10, 100];
@@ -400,7 +400,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   const k = e.key;
-  if (/^[1-6]$/.test(k)) show(SCREENS[Number(k) - 1].id);
+  if (/^[1-5]$/.test(k)) show(SCREENS[Number(k) - 1].id);
   else if (k === " ") running.value = !running.value;
   else if (k === "[") timebase.value = TIMEBASES[Math.max(0, TIMEBASES.indexOf(timebase.value) - 1)];
   else if (k === "]") timebase.value = TIMEBASES[Math.min(TIMEBASES.length - 1, TIMEBASES.indexOf(timebase.value) + 1)];

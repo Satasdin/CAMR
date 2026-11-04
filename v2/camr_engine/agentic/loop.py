@@ -2,8 +2,8 @@
 (their results come back next step) or answers in plain words, which ends the run. A run also ends when it is
 stopped, after ``max_steps``, or on an error.
 
-The model runs one step at a time under the app's model lock, so a chat answer, a code run and the agents of a swarm
-take turns on the one GPU. While a benchmark measures, a run waits before its next step.
+The model runs one step at a time under the app's model lock, so a chat answer and a code run take turns on the one
+GPU. While a benchmark measures, a run waits before its next step.
 
 What a run keeps, for the page:
 - ``turns``: the transcript (the task, each step's words and memory, each call with its result);

@@ -1,8 +1,8 @@
-// Bench: the evidence (design/DIRECTION.md, "6. Bench"). The headline is Qwen 27B with memory against without. Six
+// Bench: the evidence (design/DIRECTION.md, "5. Bench"). The headline is Qwen 27B with memory against without. Five
 // tabs, one per question, each with one hero chart drawn from the dated records and its run table under it: past the
 // window (score, first word and peak RAM against history length, each model's window a wall the memory lines run
 // through), how far it grows (retrieval ms and GB/s against the memory's size on the SSD, the ruler's lives, decode
-// tok/s), which reach, swarms, sleep (rooms awake and asleep) and the gap (LMArena's WebDev history). Under every
+// tok/s), which reach, sleep (rooms awake and asleep) and the gap (LMArena's WebDev history). Under every
 // tab sits the Long Haul probe matrix per contender and cut, with the generated catering page as its real
 // headless-browser screenshot. The right column is the yardstick: what Claude cost, against the night's cap.
 // Records keep arriving while benchmarks run: new results land as dots that flare and decay. Measured or nothing.
@@ -12,7 +12,6 @@ const TABS = [
   { id: "window", label: "Past the window" },
   { id: "grows", label: "How far it grows" },
   { id: "reach", label: "Which reach" },
-  { id: "swarms", label: "Swarms" },
   { id: "sleep", label: "Sleep" },
   { id: "gap", label: "The gap" },
 ];
@@ -733,7 +732,6 @@ export function mount(el, api) {
     if (id === "grows") return runs.filter((r) => ["speed", "throughput", "life", "errands", "ruler-speed"].includes(r.kind)
       || (r.task === "longhaul" && (r.memory === "tensors" || r.memory === "words")));
     if (id === "reach") return runs.filter((r) => /reach/.test(r.task || ""));
-    if (id === "swarms") return runs.filter((r) => /swarm/.test(r.task || ""));
     if (id === "sleep") return runs.filter((r) => /sleep/.test(r.task || "") || r.kind === "speed"
       || (r.task === "longhaul" && r.memory === "tensors"));
     if (id === "gap") return runs.filter((r) => r.kind === "webdev");
@@ -1104,8 +1102,8 @@ export function mount(el, api) {
         <${Headline} />
         <${Tabs} />
         ${t === "window" ? html`<${PastTheWindow} />` : t === "grows" ? html`<${HowFar} />` : t === "sleep" ? html`<${Sleep} />`
-          : t === "gap" ? html`<${Gap} />` : t === "reach" ? html`<${Generic} id="reach" what="no reach runs yet · a run reading session, project, agent and global, one at a time and together, fills this" />`
-          : html`<${Generic} id="swarms" what="no swarm runs yet · eight agents sharing the hot shelf fill this" />`}
+          : t === "gap" ? html`<${Gap} />`
+          : html`<${Generic} id="reach" what="no reach runs yet · a run reading session, project, agent and global, one at a time and together, fills this" />`}
         <${Matrix} />
         ${d.errors.length ? html`<div class="bx-errors t-readout" title=${d.errors.map((e) => `${e.path}: ${e.error}`).join("\n")}>
           <span class="fault-text"><${Glyph} kind="cross" /></span> ${d.errors.length} ${d.errors.length === 1 ? "record" : "records"} could not be read (one may be being written)</div>` : null}

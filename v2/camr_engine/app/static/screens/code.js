@@ -911,7 +911,7 @@ export async function mount(el, api) {
   function Asks() {
     const waiting = (st.value?.waiting || []).concat(run.value?.waiting || []);
     const seen = new Set();
-    const list = waiting.filter((a) => !seen.has(a.id) && seen.add(a.id) && !(a.owner || "").startsWith("swarm-"));
+    const list = waiting.filter((a) => !seen.has(a.id) && seen.add(a.id));
     if (!list.length) return null;
     return html`${list.map((a) => html`<${AskCard} a=${a} key=${a.id} />`)}`;
   }

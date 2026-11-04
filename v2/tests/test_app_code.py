@@ -1,7 +1,7 @@
-"""The Code and Swarm screens' routes, through the real server with a stand-in app and a scripted brain (no model).
+"""The Code screen's routes, through the real server with a stand-in app and a scripted brain (no model).
 A workspace is chosen and checked, files open and save inside it only, a run waits for the person before any
 command, the approval must be an exact yes from the page, a saved fix to the agent's code is marked and told to the
-next run, and a swarm reports every agent."""
+next run."""
 
 from __future__ import annotations
 
@@ -200,7 +200,6 @@ def test_no_run_starts_without_a_model_or_while_a_benchmark_measures(tmp_path, p
     status, got = api("/api/code/run", {"thread": tid, "task": "x"})
     assert status == 409 and "no model" in got["error"]
     assert api("/api/code/files")[0] == 200  # the editor still works on a fixture
-    assert api("/api/swarm/start", {"task": "x", "n": 2})[0] == 409
     httpd.shutdown()
     api, httpd = serve(StandIn(tmp_path))
     api("/api/code/workspace", {"path": str(project)})
@@ -208,35 +207,14 @@ def test_no_run_starts_without_a_model_or_while_a_benchmark_measures(tmp_path, p
     with measuring.measuring("longhaul"):
         status, got = api("/api/code/run", {"thread": tid, "task": "x"})
         assert status == 409 and "measuring (longhaul)" in got["error"]
-        assert api("/api/swarm/start", {"task": "x", "n": 2})[0] == 409
-    httpd.shutdown()
-
-
-def test_a_swarm_starts_reports_every_agent_and_stops(tmp_path, project):
-    app = StandIn(tmp_path, [tool_call("list_files"), "Done."])
-    api, httpd = serve(app)
-    status, s = api("/api/swarm/state")
-    assert status == 200 and s["swarm"] is None and s["can_run"] is None
-    api("/api/code/workspace", {"path": str(project)})
-    status, snap = api("/api/swarm/start", {"task": "List the files", "n": 3})
-    assert status == 200 and [a["label"] for a in snap["agents"]] == ["A1", "A2", "A3"]
-    assert [m["agent"] for m in app.made] == ["swarm-a1", "swarm-a2", "swarm-a3"]
-    assert all(m["writes"] == "agent" and m["reads"][0] == "agent" for m in app.made)
-    assert api("/api/swarm/start", {"task": "again", "n": 2})[0] in (200, 409)
-    t = time.monotonic()
-    while api("/api/swarm/state")[1]["swarm"]["live"] and time.monotonic() - t < 5:
-        time.sleep(0.02)
-    snap = api("/api/swarm/state")[1]["swarm"]
-    assert snap["done"] == snap["total"] and all(a["tokens"]["written"] > 0 for a in snap["agents"])
-    assert api("/api/swarm/stop", {})[0] == 200
-    assert api("/api/swarm/start", {"task": "", "n": 2})[0] == 400
     httpd.shutdown()
 
 
 def test_looking_at_the_screens_leaves_no_folder_behind(tmp_path):
     app = StandIn(tmp_path)
     api, httpd = serve(app)
-    assert api("/api/code/state")[0] == 200 and api("/api/swarm/state")[0] == 200 and api("/api/code/files")[0] == 200
+    assert api("/api/code/state")[0] == 200 and api("/api/code/files")[0] == 200
+    assert api("/api/swarm/state")[0] == 404  # the Swarm screen is gone
     assert not app.agentic_root.exists()
     httpd.shutdown()
 

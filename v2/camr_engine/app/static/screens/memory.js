@@ -1,4 +1,4 @@
-// Memory: the full stage (DIRECTION.md, "5. Memory: the stage"). A LIVE / VAULT toggle and the reach picker at the
+// Memory: the full stage (DIRECTION.md, "4. Memory: the stage"). A LIVE / VAULT toggle and the reach picker at the
 // stage's top left; the stage itself (SSD plate, bus, RAM plate with the core, the hot shelf and the desk) with the
 // vault drawer under it; then the eight-row trace strip. Room and note sheets open on the right.
 //

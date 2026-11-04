@@ -21,8 +21,8 @@ class Ask:
     id: str
     kind: str  # "shell" or "mcp"
     what: dict  # exactly what will run: {"command", "cwd"} or {"server", "tool", "arguments"}
-    owner: str  # the run (or swarm agent) that asked
-    label: str = ""  # who asked, for the page: "A3", or the thread's title
+    owner: str  # the run that asked
+    label: str = ""  # who asked, for the page: the thread's title
     at: float = field(default_factory=time.time)
     decision: str | None = None  # "allowed", "denied", "timed out" or "stopped"
     decided_at: float | None = None

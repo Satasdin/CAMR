@@ -1,4 +1,4 @@
-# The stage: shared by Chat, Memory and (later) Swarm
+# The stage: shared by Chat and Memory
 
 `design/DIRECTION.md` ("The live memory visual") is the spec. These modules implement it; screens import them from
 `/static/stage/`.
@@ -35,8 +35,7 @@ hide() { stage.hide(); feed.stop(); }
 
 - The host is any positioned element; the stage fills it and follows its size.
 - Modes: `live` (with the vault drawer), `compact` (smaller labels, no drawer, no halo), `path` (one answer: call
-  `setPath({e, m})` or `share(otherStage)` first), `well` (compact, for one Swarm agent). `setVault(true)` draws notes
-  and doors at the same positions.
+  `setPath({e, m})` or `share(otherStage)` first). `setVault(true)` draws notes and doors at the same positions.
 - `setRam(ram)` updates the hot shelf (`ramFromState(api.state.value, stage.data, tokenBytes)` reads it from
   `/api/state`); `setRead(labels)` closes the aperture on other reaches; `setOn(false)` shows `memory off`.
 - `nodeFlare(reach, moment, used)` flares one moment (a word hovered in the chat). `select(key)` outlines a room in
@@ -45,6 +44,4 @@ hide() { stage.hide(); feed.stop(); }
 
 ## Not done yet
 
-- Swarm's eight wells in one canvas (viewport and scissor per well): a `Stage` owns one canvas today, so eight wells
-  would be eight WebGL contexts. One canvas needs `Renderer.draw` to take a viewport and scissor per well.
 - The vault mode's local-graph depth slider and the growth scrub (P2/P3).

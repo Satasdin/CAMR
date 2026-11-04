@@ -11,7 +11,7 @@
 // more than six half-lives late is dropped too, never run in a burst.
 //
 // Modes: live (Memory), compact (Chat's eyepiece), path (one answer in the light path sheet), vault (notes and doors
-// at the same positions), well (compact, no labels, for a Swarm well).
+// at the same positions).
 
 import { DOT, F, NEVER, RECT, Renderer, S, SEG } from "/static/stage/gl.js";
 import { CH, HL, STEP, palette } from "/static/stage/palette.js";
@@ -104,7 +104,7 @@ export class Stage {
     this.api = api;
     this.host = host;
     this.mode = opts.mode || "live";
-    this.small = this.mode === "compact" || this.mode === "well";
+    this.small = this.mode === "compact";
     this.drawer = opts.drawer ?? this.mode === "live";
     this.onSelect = opts.onSelect || (() => {});
     this.onWord = opts.onWord || (() => {});

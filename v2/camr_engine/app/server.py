@@ -2,7 +2,7 @@
 
     python -m camr_engine.app                      # http://127.0.0.1:8765, memory in ~/.camr/default
 
-One page (``static/index.html``) with six screens: Models, Chat, Code, Swarm, Memory and Bench. The shell
+One page (``static/index.html``) with five screens: Models, Chat, Code, Memory and Bench. The shell
 (``static/shell.js``) draws the top strip and switches screens; each screen is a module in ``static/screens/`` and
 keeps its server routes in ``routes/<screen>.py``. Everything runs on this Mac; the server listens on 127.0.0.1 only
 and serves nothing but its own page, its static files and its API.

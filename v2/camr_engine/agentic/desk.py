@@ -12,8 +12,7 @@ A thread is one conversation, with a session reach of its own (``session:<thread
 after the workspace folder, and the agent reach after the persona. The persona chosen in the rack is the one that
 runs, in any thread. The model is made by ``brains``, given what to open:
 ``{"memory", "session", "project", "agent", "reads", "writes", "pool"}``, so tests pass fakes and the app passes the
-engine (``engine_brains``). Every Code thread and every swarm agent shares one RAM budget for hot rooms (one
-``swap.Pool``, the Desk's).
+engine (``engine_brains``). Every Code thread shares one RAM budget for hot rooms (one ``swap.Pool``, the Desk's).
 
 A person's fix to the agent's code (saved in the editor) is told to the next run in that workspace, and, with memory
 on, kept in the project's memory as a "Your fix" moment, so later answers can lean on it and the gutter can show it.
@@ -90,9 +89,8 @@ class Desk:
         self.runs: dict[str, Run] = {}
         self.open: dict[tuple, Brain] = {}  # brains kept open between runs, by what they read
         self.used_tools: set[str] = set()
-        self.swarm = None  # the swarm running now, or the last one
-        self.pool = None  # one RAM budget for the hot rooms of every thread's and swarm agent's memory
-        self._marks: dict[str, Marks] = {}  # one per workspace, shared by runs, swarms and the editor
+        self.pool = None  # one RAM budget for the hot rooms of every thread's memory
+        self._marks: dict[str, Marks] = {}  # one per workspace, shared by runs and the editor
         self._keeping: list[threading.Thread] = []  # fixes being kept in memory
         self._listed: dict[Path, tuple[float, dict]] = {}  # thread file -> (its mtime, its line in the list)
 
@@ -149,8 +147,8 @@ class Desk:
 
     @property
     def marks(self) -> Marks | None:
-        """The workspace's memory gutter: one Marks for it in this app, so runs, swarms and the editor never write
-        over each other's marks."""
+        """The workspace's memory gutter: one Marks for it in this app, so runs and the editor never write over
+        each other's marks."""
         if self.workspace is None:
             return None
         key = hashlib.sha1(str(self.workspace.root).encode()).hexdigest()[:12]
@@ -346,49 +344,6 @@ class Desk:
         r.stop()
         return {"stopped": rid}
 
-    # -- a swarm
-
-    def can_swarm(self) -> str | None:
-        if self.brains is None:
-            return "no model here (a fixture is read-only)"
-        if self.measuring is not None and self.measuring():
-            return f"a benchmark is measuring ({self.measuring()['job']}); try again when it is done"
-        if self.swarm is not None and self.swarm.live:
-            return "a swarm is running; stop it first"
-        return None
-
-    def start_swarm(self, task: str, n: int, *, persona: str | None = None, memory: bool = True,
-                    max_steps: int | None = None):
-        """N agents on one task, each with its own agent reach, sharing one RAM budget for hot rooms (the Desk's,
-        which the Code threads use too: their rooms show as ``other``)."""
-        from camr_engine.agentic.swarm import STEPS, Swarm
-
-        why = self.can_swarm()
-        if why:
-            raise Busy(why)
-        p = self.personas.get(persona or self.settings["persona"])
-        project = slug(self.workspace.name) if self.workspace else None
-        extra = [r for r in p.reads if r in ("project", "global") and (r != "project" or project)]
-        reads = ["agent", *extra]
-        pool = self._pool() if memory else None
-        sid = f"swarm-{thread_id()}"
-
-        def brain(i: int) -> Brain:
-            return self.brains({"memory": memory, "session": None, "project": project, "agent": f"swarm-a{i}",
-                                "reads": reads, "writes": "agent", "pool": pool})
-
-        def toolbox(agent) -> Toolbox:
-            return Toolbox(self.workspace, self.gate, skills=self.skills, servers=self.servers, allows=p.allows)
-
-        old = self.swarm
-        if old is not None:
-            old.close()
-        self.swarm = Swarm(sid, task, n, brains=brain, toolbox=toolbox, persona=p, gate=self.gate,
-                           model_lock=self.model_lock, workspace=self.workspace.name if self.workspace else "",
-                           skills=self.skills.index(), marks=self.marks, pool=pool, max_steps=max_steps or STEPS,
-                           measuring=self.measuring).start()
-        return self.swarm
-
     # -- the editor
 
     def save_file(self, rel: str, text: str, base: str | None) -> dict:
@@ -490,12 +445,10 @@ class Desk:
         self.open.clear()
 
     def close(self) -> None:
-        """Stop every run and swarm, finish keeping fixes, and close every memory and MCP server (at the app's exit).
+        """Stop every run, finish keeping fixes, and close every memory and MCP server (at the app's exit).
         Commands still running are stopped too (camr_engine.agentic.shell stops them at exit in any case)."""
         for r in self.live_runs():
             r.stop()
-        if self.swarm is not None:
-            self.swarm.close()
         with self.lock:
             keeping = list(self._keeping)
         for th in keeping:
@@ -521,7 +474,7 @@ def _strip(run: dict) -> dict:
 
 
 def engine_brains(app, root: Path | None = None) -> Callable[[dict], Brain] | None:
-    """The engine for the app's Code and Swarm screens: a reach session over ``root`` (beside the app's memory) with
+    """The engine for the app's Code screen: a reach session over ``root`` (beside the app's memory) with
     the memory's own reader, or the plain model with memory off. None when the app has no model (a fixture)."""
     reader, embedder = getattr(app, "reader", None), getattr(app, "embedder", None)
     if reader is None or embedder is None:
@@ -544,7 +497,7 @@ def engine_brains(app, root: Path | None = None) -> Callable[[dict], Brain] | No
             START = dt.date(2026, 1, 5)
         s = Session(reader, embedder, root=root, name=spec.get("session"), project=spec.get("project"),
                     agent=spec.get("agent"), reads=spec["reads"], writes=spec["writes"], tiers={}, metrics=True)
-        if spec.get("pool") is not None:  # one RAM budget for every thread and swarm agent
+        if spec.get("pool") is not None:  # one RAM budget for every thread
             adopt(s, spec["pool"])
         return EngineBrain(s, day=lambda d: (d - START).days)
 

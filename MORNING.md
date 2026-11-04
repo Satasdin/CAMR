@@ -24,7 +24,7 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 - **Reach:** `reach.py`, for session, project, agent or global memory.
 - **Metrics:** `metrics.py`, every answer's speed, retrieval and bandwidth.
 
-**The app** (`python -m camr_engine.app --open`): six screens in the "Instrument" design you picked. Screenshots are in
+**The app** (`python -m camr_engine.app --open`): five screens in the "Instrument" design you picked. Screenshots are in
 `v2/docs/screens/`.
 
 | Screen | What it does |
@@ -32,7 +32,6 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 | Models | what fits this Mac (from measured speeds), Hugging Face search and download, MLX and Ollama |
 | Chat | memory on/off per session, reach picker, the stage showing SSD → RAM → desk as each answer is made |
 | Code | a Claude Code–style agent on your local model: personas, tools, MCP servers, skills, a shell that asks first |
-| Swarm | 1–8 agents, each with its own memory, sharing one RAM budget |
 | Memory | every room as a tensor tile, the bus, the RAM ruler, the vault; replays any answer |
 | Bench | every record, live: score against history, first word, peak RAM, and Claude's spend |
 
@@ -154,7 +153,6 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 
 ## What is not done
 
-- **Swarms are built but not measured.** Reach is measured (above). The app's swarm screen has no benchmark yet.
 - **No live demo with a loaded model.** The app screenshots are from a recorded memory with no model loaded, since
   the GPU was measuring all night.
 - **The engine is not run on the Hugging Face suites.** `suite_run` takes Claude and Ollama only; the engine needs

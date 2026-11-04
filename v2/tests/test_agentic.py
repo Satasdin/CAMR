@@ -1,7 +1,7 @@
 """The Code agent's parts, with no model: the workspace keeps every path inside its folder, the parser finds every
 call in a reply, nothing runs at the gate without a yes, a command runs with a cleaned environment and a time limit,
-skills load on demand, personas save and switch, and the memory gutter follows the lines. The loop and the swarm run
-on a scripted fake brain."""
+skills load on demand, personas save and switch, and the memory gutter follows the lines. The loop runs on a scripted
+fake brain."""
 
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ from camr_engine.agentic.parse import calls, prose
 from camr_engine.agentic.personas import BUILT_IN, Personas, check
 from camr_engine.agentic.shell import environment, run
 from camr_engine.agentic.skills import Skills
-from camr_engine.agentic.swarm import Swarm, tasks
 from camr_engine.agentic.tools import Toolbox
 from camr_engine.agentic.workspace import Outside, Workspace, check_root
 
@@ -309,7 +308,7 @@ class FakeBrain:
         return {"reach": reach, "moment": mid, "room": 1, "day": 3, "text": "fee() rounds up to 5 shillings"}
 
     def reaches(self):
-        return [{"reach": "agent:swarm-a1", "kind": "agent", "rooms": [{"id": 0, "tokens": 120, "bytes": 1,
+        return [{"reach": "agent:coder", "kind": "agent", "rooms": [{"id": 0, "tokens": 120, "bytes": 1,
                                                                          "hot": True, "asleep": False}]}]
 
     def close(self):
@@ -447,51 +446,6 @@ def test_runs_take_turns_on_the_model(ws):
     for r in runs:
         r.thread.join(5)
     assert most[0] == 1 and all(r.state == "done" for r in runs)
-
-
-# -- the swarm
-
-
-def test_a_swarm_gives_one_task_to_every_agent_or_shares_a_queue(ws):
-    assert tasks("1. read fees\n- write tests\n\n* run them") == ["read fees", "write tests", "run them"]
-    gate = Gate()
-    p = next(x for x in BUILT_IN if x.id == "coder")
-    made = {}
-
-    def brain(i):
-        made[i] = FakeBrain([call("list_files"), f"A{i} done."], memory=True)
-        return made[i]
-
-    s = Swarm("swarm-1", "Read the fees module", 3, brains=brain, toolbox=lambda a: Toolbox(ws, gate), persona=p,
-              gate=gate, workspace=ws.name).start()
-    for th in s.threads:
-        th.join(5)
-    time.sleep(0.05)
-    snap = s.snapshot()
-    assert snap["mode"] == "same" and snap["done"] == 3 and not snap["live"]
-    assert [a["label"] for a in snap["agents"]] == ["A1", "A2", "A3"] and all(a["done"] == 1 for a in snap["agents"])
-    a1 = snap["agents"][0]
-    assert a1["reach"] == "agent:swarm-a1" and a1["tokens"]["prompt"] == 1800 and a1["steps"] == 2
-    assert {x["kind"] for x in a1["spans"]} == {"model", "tool"} and a1["reads"]["ssd"] == 2
-    assert {"ssd", "used"} <= {t["kind"] for t in a1["ticks"]} and a1["state"] == "done"
-    assert len(snap["board"]) == 3 and snap["wells"][0]["reach"]["rooms"][0]["hot"]
-    class Slow(FakeBrain):
-        def think(self, p):
-            time.sleep(0.03)
-            return super().think(p)
-
-    s2 = Swarm("swarm-2", "task one\ntask two\ntask three\ntask four\ntask five", 2,
-               brains=lambda i: Slow(["Done."] * 5), toolbox=lambda a: Toolbox(ws, gate), persona=p,
-               gate=gate).start()
-    for th in s2.threads:
-        th.join(5)
-    snap = s2.snapshot()
-    assert snap["mode"] == "queue" and snap["total"] == 5 and snap["done"] == 5
-    assert sum(a["done"] for a in snap["agents"]) == 5
-    later = [pr.user for a in s2.agents for pr in a.brain.prompts if "The other agents posted:" in pr.user]
-    assert later  # an agent read the board before a later task
-    s2.close()
-    assert all(a.brain.closed for a in s2.agents)
 
 
 # -- review fixes: the gate shows what runs, nothing floods the prompt or the page, nothing freezes the app

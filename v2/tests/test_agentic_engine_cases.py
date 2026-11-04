@@ -1,6 +1,6 @@
 """The agent with the engine as its memory: a reach session over the fake reader of test_core (MLX arrays, no model
 loaded). A step reads the room its task is about from the SSD, then from RAM; a finished run is remembered in the
-reach its persona writes to; a swarm's agents each get their own agent reach and share one RAM budget.
+reach its persona writes to; two personas each get their own agent reach and share one RAM budget.
 
 These run in a process of their own (test_agentic_engine.py starts it), because MLX work done in the test process
 changes how later tests' MLX arrays meet their threads; run directly, they are skipped."""
@@ -90,19 +90,20 @@ def test_a_finished_run_is_remembered_where_its_persona_writes(tmp_path):
     brain.close()
 
 
-def test_a_swarms_agents_each_get_their_own_reach_and_share_one_ram_budget(tmp_path):
+def test_each_persona_gets_its_own_agent_reach_and_all_share_one_ram_budget(tmp_path):
     from camr_engine.agentic.desk import engine_brains
     from camr_engine.swap import Pool
 
     app = SimpleNamespace(reader=FakeReader(), embedder=FakeEmbedder(), memory=None, models=None)
     make = engine_brains(app, root=tmp_path / "camr")
     pool = Pool(64 << 20)
-    brains = [make({"memory": True, "session": None, "project": None, "agent": f"swarm-a{i}", "reads": ["agent"],
-                    "writes": "agent", "pool": pool}) for i in (1, 2)]
-    for i, b in enumerate(brains, 1):
-        assert [r.label for r in b.session.reaches] == [f"agent:swarm-a{i}"]
+    names = ["coder", "reviewer"]
+    brains = [make({"memory": True, "session": None, "project": None, "agent": name, "reads": ["agent"],
+                    "writes": "agent", "pool": pool}) for name in names]
+    for name, b in zip(names, brains):
+        assert [r.label for r in b.session.reaches] == [f"agent:{name}"]
         assert all(m.tiers.pool is pool for m in b.session.memories.values())
-        assert (tmp_path / "camr" / "agent" / f"swarm-a{i}").is_dir()
+        assert (tmp_path / "camr" / "agent" / name).is_dir()
     plain = make({"memory": False})
     assert not plain.memory_on and plain.reader is app.reader
     for b in brains:
@@ -130,7 +131,7 @@ def test_a_reach_already_open_stays_on_its_pool_and_a_fix_is_kept_where_asked(tm
     first, second = Pool(64 << 20), Pool(64 << 20)
     a = make({"memory": True, "session": None, "project": "kitchen", "agent": "coder", "reads": ["project"],
               "writes": "project", "pool": first})
-    b = make({"memory": True, "session": None, "project": "kitchen", "agent": "swarm-a1",
+    b = make({"memory": True, "session": None, "project": "kitchen", "agent": "reviewer",
               "reads": ["agent", "project"], "writes": "agent", "pool": second})
     shared = a.session.memory("project")
     assert b.session.memory("project") is shared and shared.tiers.pool is first  # never moved to the second

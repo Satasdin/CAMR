@@ -45,7 +45,7 @@ Each direction was scored from 1 to 5 against his taste notes (`visual-taste-col
   moves.
 - **Distinctiveness:** Living is the most original (slime-mould doors, height as latency). Instrument's lab-instrument
   metaphor is distinctive but scopes exist. Phosphor looks most like Warp, Zed and Linear.
-- **Coherence, Instrument 5:** one stage component is reused in Chat, Memory and Swarm, one trace row everywhere, and
+- **Coherence, Instrument 5:** one stage component is reused in Chat and Memory, one trace row everywhere, and
   one gauge in Models and the top strip.
 - **Coherence, Phosphor and Living 4:** Phosphor's shell is coherent, but its hero idioms change on every screen.
   Living's Models and Bench drop the organism.
@@ -61,7 +61,6 @@ Each direction was scored from 1 to 5 against his taste notes (`visual-taste-col
 | Phosphor | A bus line on every screen that flares when memory moves | Top strip |
 | Phosphor | Measured or nothing ("—"), and the view pauses while a benchmark measures | Everywhere |
 | Phosphor | Bench tabs, one per question in the plan, and a probe matrix; Claude always grey | Bench |
-| Phosphor | A shared RAM bar showing which agent holds the RAM | Swarm |
 | Living | A thick tensor beam beside a hairline thread of words: the 29,000× size gap is visible without a number | The stage |
 | Living | A copy and its home: a room on the desk keeps an amber ring on its SSD tile, and nothing flies back on eviction | The stage |
 | Living | Model anatomy: one mark per layer, filled for layers that keep KV and hollow for linear-attention layers | Models |
@@ -252,7 +251,6 @@ Rules:
 | `--r-pill` | 999 px | Toggles only |
 | `--strip-h` | 44 px | The top strip |
 | `--row-trace` | 28 px | A trace row |
-| `--row-channel` | 44 px | A Swarm channel row |
 | `--row-list` | 56 px | A Models row |
 | `--row-module` | 40 px | A rack module |
 | `--gutter-label` | 72 px | The label column of any trace strip |
@@ -321,11 +319,11 @@ b = base + (1 - base) * 2^(-(now - t_event) / half_life)
 
 **Top strip** (44 px, `--s1`, a 1 px `--hair` below):
 - **Left:** the working name `camr` in Martian Mono 13 px, `wght` 500, `--ink`.
-- **Centre:** six screen keys, `MODELS CHAT CODE SWARM MEMORY BENCH`:
-  - each is a 28 px key with a 1 px `--hair-2` border, radius 2, `--t-label`, and its number `1`–`6` in `--ink-4`
+- **Centre:** five screen keys, `MODELS CHAT CODE MEMORY BENCH`:
+  - each is a 28 px key with a 1 px `--hair-2` border, radius 2, `--t-label`, and its number `1`–`5` in `--ink-4`
     before the word;
   - the current key has `--ink` text and a 2 px white underline (selection);
-  - keys `1`–`6` switch screens when focus is not in a text field. ⌘1–⌘6 belong to the browser and are not used.
+  - keys `1`–`5` switch screens when focus is not in a text field. ⌘1–⌘5 belong to the browser and are not used.
 - **Right:** live meters, each a `--t-label` above a `--t-readout`:
   - `RAM`: a 64 px amber bar against 24 GB, with the pressure word `normal`, `tight` or `critical` (from
     `sysctl kern.memorystatus_vm_pressure_level`: 1, 2 or 4);
@@ -356,7 +354,7 @@ shows a `FIXTURE` badge in the top strip.
 
 | Component | What it is | Built on |
 | --- | --- | --- |
-| **Stage** | The regl canvas holding plates, tiles, cells, dots, beams, threads, afterglow and halo. Modes: `live`, `compact`, `path`, `vault`, `well` | regl |
+| **Stage** | The regl canvas holding plates, tiles, cells, dots, beams, threads, afterglow and halo. Modes: `live`, `compact`, `path`, `vault` | regl |
 | **Trace strip** | Stacked 28 px rows on `--void` with a 72 px label gutter. Modes: `roll` (60 s window, now at the right) and `answer` (ms from the question, broken after the first word) | uPlot for bands, Canvas 2D for tick rasters |
 | **Readout** | A `--t-label` above a value and unit. Sizes: strip, cluster, hero | DOM |
 | **Toggle** | A hardware two-position switch (`MEMORY ON/OFF`, `LIVE/VAULT`), as a pill | DOM |
@@ -515,8 +513,7 @@ redden: red never lights the specimen.
 
 - **Canvas and context:**
   - One canvas per stage, sized to its CSS box × `devicePixelRatio`, capped at 2.
-  - One regl context per canvas. Swarm draws its eight wells in one canvas with `viewport` and `scissor`, never eight
-    contexts.
+  - One regl context per canvas.
   - Extensions: `ANGLE_instanced_arrays` (required) and `OES_standard_derivatives` (optional, for edge antialiasing).
 - **Five instanced draw calls,** each a unit quad:
 
@@ -770,28 +767,7 @@ local server. The page itself never calls Hugging Face.
 Colour stays reserved for memory. A persona tile also shows its four reach rings, read or not. Choosing a persona
 sets the reach.
 
-### 4. Swarm: the multi-well plate
-
-**Plate** (top 55%): eight wells in a 2 × 4 grid.
-- Each well is a Stage in `well` mode: that agent's own memory (its agent reach), with the same tiles, beams, gaze and
-  afterglow. All eight share one canvas.
-- Wells are labelled `A1`–`A8` in `--t-label`, with the persona and model in `--t-readout` below.
-- Agents are told apart by place and label, never by colour.
-- Click a well, and it fills the plate while the others shrink to a 64 px strip.
-
-**Shared RAM bar** (28 px under the plate): the hot-shelf budget over time, sliced into labelled segments (`A3`)
-showing which agent's rooms sit in RAM. When the budget is full, the next arrival's blue read waits on its row until
-a segment frees. That is contention, made visible.
-
-**Channel rows** (the rest of the screen): one 44 px row per agent, on one time axis.
-- An amber band shows desk occupancy.
-- Above it are ticks: blue for SSD reads, green for used looks, violet for vault reads.
-- Messages between agents are thin `--ink-2` vertical connectors with small arrowheads.
-- A selected agent's label and row turn white.
-
-With no swarm run, the wells show their outlines and `no swarm run yet`.
-
-### 5. Memory: the stage
+### 4. Memory: the stage
 
 This is the full Stage (`live`):
 - the top strip;
@@ -802,14 +778,14 @@ This is the full Stage (`live`):
 
 Room, desk and note sheets open on the right. Everything in "The live memory visual" above applies.
 
-### 6. Bench: the evidence
+### 5. Bench: the evidence
 
 **Headline** (top 28%):
 - `62–68 / 85` beside `0 / 85` in `--t-hero`: Qwen 27B with memory against without;
 - each figure's record path in `--t-readout` `--ink-3` under it;
 - the line "better, never heavier" in `--t-body`.
 
-**Tabs** (one per question in the plan): `Past the window`, `How far it grows`, `Which reach`, `Swarms` and `Sleep`.
+**Tabs** (one per question in the plan): `Past the window`, `How far it grows`, `Which reach` and `Sleep`.
 Each tab has one full-width hero chart in the top 60% of its area. The run table sits below in `--t-readout`, and each
 row opens its dated record with `↵`.
 
@@ -1043,11 +1019,11 @@ v2/camr_engine/app/static/
   index.html        fonts, tokens.css, base.css, <meta camr-token>, <script type="module" src="/static/app/main.js">
   app/tokens.css    the token block below
   app/base.css      reset, type roles, component styles
-  app/main.js       router (screens 1–6), top strip, bus line, keyboard
+  app/main.js       router (screens 1–5), top strip, bus line, keyboard
   app/data.js       API client, token, polling, the event bus as signals
   app/stage/        stage.js (regl, passes, loop), shaders.js, place.js (tile placement), replay.js (event → marks)
   app/parts/        readout, trace, toggle, reach, gauge, pathstrip, lightpath, sheet, module, cursors
-  app/screens/      models.js, chat.js, code.js, swarm.js, memory.js, bench.js
+  app/screens/      models.js, chat.js, code.js, memory.js, bench.js
   vendor/           section A files, section B bundles, LOCK.json
 v2/camr_engine/app/vendor-src/   package.json, package-lock.json, entries/, build.sh (not served)
 ```
@@ -1086,7 +1062,7 @@ v2/camr_engine/app/vendor-src/   package.json, package-lock.json, entries/, buil
   /* space and shape */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
   --r-mark:2px; --r-panel:6px; --r-pill:999px;
-  --strip-h:44px; --row-trace:28px; --row-channel:44px; --row-list:56px; --row-module:40px; --gutter-label:72px;
+  --strip-h:44px; --row-trace:28px; --row-list:56px; --row-module:40px; --gutter-label:72px;
   /* motion */
   --ui-fast:120ms; --ui:160ms; --ease:cubic-bezier(0.2, 0, 0, 1);
   --hl-read:400ms; --hl-words:600ms; --hl-gaze:1200ms; --hl-write:800ms; --hl-used:4000ms;
@@ -1109,7 +1085,6 @@ The only colour literals in the app live in `tokens.css`. Everything else, shade
 | P1 | Bench: headline, the flat line, probe matrix, yardstick column | Points open their records |
 | P2 | Vault mode; sleep and wake visuals; persistence modes; cursors | — |
 | P2 | Code: editor, memory gutter, rack, transcript, run trace, read-only terminal | A recalled helper name shows a green gutter mark |
-| P2 | Swarm: plate, shared RAM bar, channel rows | — |
 | P3 | Growth scrub, the "last night" replay, lasso, ⌘K palette, Long Haul tape, small multiples | — |
 
 **Checks before calling a screen done:**

@@ -207,12 +207,13 @@ def test_no_colour_lives_outside_the_tokens():
 
 
 def test_every_screen_has_a_mount_and_the_contract_is_written_down():
-    for name in ["models", "chat", "code", "swarm", "memory", "bench"]:
+    for name in ["models", "chat", "code", "memory", "bench"]:
         text = (STATIC / "screens" / f"{name}.js").read_text()
         assert re.search(r"export (async )?function mount\(el, api\)", text), name
     readme = (STATIC / "screens" / "README.md").read_text()
     for word in ["mount(el, api)", "show()", "hide()", "key(", "api.get", "api.post", "api.on", "routes/"]:
         assert word in readme, word
     shell = (STATIC / "shell.js").read_text()
-    for name in ["models", "chat", "code", "swarm", "memory", "bench"]:
+    for name in ["models", "chat", "code", "memory", "bench"]:
         assert f'id: "{name}"' in shell
+    assert 'id: "swarm"' not in shell and not (STATIC / "screens" / "swarm.js").exists()  # the Swarm screen is gone

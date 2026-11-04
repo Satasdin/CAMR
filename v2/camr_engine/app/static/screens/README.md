@@ -1,8 +1,8 @@
 # Screens: the contract
 
 The app is one page. The shell (`/static/shell.js`) draws the top strip, owns the keyboard and the polling, and shows
-one screen at a time. Each screen is one ES module here, `screens/<id>.js`, for the six ids `models`, `chat`, `code`,
-`swarm`, `memory` and `bench` (keys `1`–`6`). The design is `v2/design/DIRECTION.md`: read it before building.
+one screen at a time. Each screen is one ES module here, `screens/<id>.js`, for the five ids `models`, `chat`, `code`,
+`memory` and `bench` (keys `1`–`5`). The design is `v2/design/DIRECTION.md`: read it before building.
 
 ## The module
 

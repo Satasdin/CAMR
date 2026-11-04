@@ -458,3 +458,7 @@ only by a clear margin; that is not built yet. Records: `195128`, `195633`, `200
   beside them.
 - **BABILong, paired (unaffected):** 20 of 100. The pairing's 512 tokens of notes miss most "where is X now"
   answers, which need the latest of many mentions.
+
+**E-50 Swarm removed: the app is Chat and Code.** The Swarm screen, its routes (`/api/swarm/*`), `agentic/swarm.py`, the
+Bench "Swarms" tab and the stage's `well` mode are gone; the shared RAM pool, `engine_brains` and the agent reach stay,
+since Code uses them.

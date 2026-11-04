@@ -631,8 +631,9 @@ def test_the_screen_keeps_the_contract_and_calls_only_routes_that_exist():
     assert called == {"/api/bench", "/api/bench/record", "/api/bench/webdev", "/api/bench/shot"} and called <= paths
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(", text)
     assert "localStorage" in text and "try {" in text  # a private window never breaks it
-    for tab in ("Past the window", "How far it grows", "Which reach", "Swarms", "Sleep", "The gap"):
+    for tab in ("Past the window", "How far it grows", "Which reach", "Sleep", "The gap"):
         assert tab in text, tab
+    assert "Swarms" not in text  # the Swarm screen is gone, and its tab with it
     # the matrix redraws when a cut is picked: it reads the pick's value, so it is subscribed to it
     matrix = text[text.index("function Matrix()"):text.index("// -- the yardstick")]
     assert "matrixCut(cutPick.value)" in matrix and "cutPick.peek()" not in matrix
