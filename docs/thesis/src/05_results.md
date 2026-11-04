@@ -274,6 +274,7 @@ Table: {#scorecard} Scorecard: each claim, its evidence and whether it was met
 | Notes and words know the same within a room | Rooms build (Section {sec:rooms-results}) | 164 against 163 facts | Met |
 | Notes are at least 10 times sooner than words | Speed bench (Section {sec:rooms-results}) | 4.6 times at 2,000 words | Not met |
 | The best reach | Reach (Section {sec:reach-results}) | Project 26 of 40; global 24; session 11 | Project reach |
+| Files remembered: PDFs, images, charts, video | Multimodal memory (Section {sec:media-results}) | 29 of 29 planted facts with CAMR, for the vision model and the 4B; 0 for the vision model alone | Met, on a small test |
 
 ### The Long Haul: Right Answers as the History Grows {#haul-results}
 
@@ -482,7 +483,20 @@ Memory as words through the pairing therefore helps where one worked example car
 
 The engine can also remember files (E-44). A PDF becomes one moment per page, an image its caption and the text written in it, and a video a frame every 2 s, each described with its time, by a vision model that turns the file into words once; the moments are then kept like any others, with the file copied into the vault. The multimodal benchmark tells 21 files of Mama Njeri's Kitchen (PDF invoices and menus, photographed receipts and notices, charts and short whiteboard videos) among about 100,000 tokens of the Long Haul's own events, all in the first 60,000 tokens, and then asks 37 questions graded by the Long Haul's rules: 29 about facts planted in the files, by kind of file, and 8 never-said questions where declining is right. The contenders are Qwen2.5-VL-3B with CAMR, alone with its newest 32K tokens, and with the file itself in the prompt as an upper bound; Qwen3 4B with CAMR and alone, reading the vision model's words; and Ollama's `qwen2.5vl:3b`, paired and bare.
 
-[[MEDIA-RESULTS]]
+Table {tab:media} gives the results for seed 1, from the records `*-media-*.json` of 4 November.
+
+Table: {#media} Multimodal memory, seed 1: right answers by kind of file (29 planted facts, 8 never-said questions)
+
+| Contender | PDF (8) | Image (9) | Chart (6) | Video (6) | Never said (8) | All (37) | First word p50 | Process RAM |
+|---|---|---|---|---|---|---|---|---|
+| Qwen2.5-VL-3B with CAMR | 8 | 9 | 6 | 6 | 4 | 33 | 0.21 s | 5.1 GB |
+| Qwen2.5-VL-3B with CAMR, looking at the image again | 8 | 9 | 6 | 6 | 3 | 32 | 0.80 s | 8.7 GB |
+| Qwen2.5-VL-3B with the file in the prompt (upper bound) | 8 | 9 | 6 | 6 | 5 | 34 | 1.23 s | 4.4 GB |
+| Qwen2.5-VL-3B alone (newest 32K) | 0 | 0 | 0 | 0 | 0 | 0 | 0.14 s | 6.3 GB |
+| **Qwen3 4B with CAMR, reading the vision model's words** | **8** | **9** | **6** | **6** | **8** | **37** | 0.34 s | 7.3 GB |
+| Qwen3 4B alone (newest 64K) | 1 | 5 | 3 | 1 | 7 | 17 | 0.32 s | 12.4 GB |
+
+With CAMR, every planted fact from every kind of file was recalled, at least 40,000 tokens after the file was told, by both the vision model and the text-only 4B: 29 of 29 each. The 4B with CAMR answered all 37, declining all 8 never-said questions, and matched or beat the vision model holding the file in its prompt (34), at a quarter of its wait. The vision model alone answered nothing: by the questions, the files had left its window, and it guessed on all 8 never-said questions. Looking at the image again added nothing on this set and cost four times the wait. The vision model's weakness was honesty, not recall: with CAMR it invented an answer to 4 of the 8 never-said questions. [[MEDIA-UPDATE: check against the "Multimodal memory" section of benchmarks.md and the seed-2 and Ollama runs when they finish.]]
 
 ### Development Evidence: the Rooms Build on Scripted Lives {#rooms-results}
 
