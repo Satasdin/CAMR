@@ -126,8 +126,8 @@ final class Engine: ObservableObject {
             Task { @MainActor in self?.note(s) }
         }
         p.terminationHandler = { [weak self] proc in
-            Task { @MainActor in
-                guard let self, !self.stopping else { return }
+            Task { @MainActor in  // only the engine running now counts: the one stopped for a new model does not
+                guard let self, !self.stopping, self.process === proc else { return }
                 let last = self.lines.suffix(3).joined(separator: " ")
                 self.phase = .failed("The engine stopped (exit \(proc.terminationStatus)). \(last)")
             }

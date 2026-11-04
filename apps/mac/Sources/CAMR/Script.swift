@@ -37,6 +37,18 @@ enum Script {
                     world.tab = "chat"
                     world.chat.draft = arg
                     await world.chat.send(remember: verb == "remember")
+                case "research":
+                    world.tab = "chat"
+                    world.chat.draft = arg
+                    await world.chat.send(.research)
+                case "model":
+                    if let m = MODELS.first(where: { $0.name.contains(arg) }) {
+                        world.pick(m)
+                        for _ in 0..<600 where world.engine.phase != .ready {
+                            try? await Task.sleep(nanoseconds: 250_000_000)
+                        }
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)  // the shelves on and warmed
+                    }
                 case "view":
                     world.expanded = arg == "large"
                 case "memory":

@@ -368,8 +368,14 @@ struct TurnView: View {
 
     /// Markdown as the model writes it (bold, code, links), line breaks kept.
     private func rendered(_ text: String) -> AttributedString {
-        (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+        var out = (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
             ?? AttributedString(text)
+        for run in out.runs {  // a model's words may carry a page's links: only plain web links stay clickable
+            if let url = run.link, !["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+                out[run.range].link = nil
+            }
+        }
+        return out
     }
 }
 
