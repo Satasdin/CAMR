@@ -34,7 +34,7 @@ No threshold was invented. Every number comes from the proposal, a design consta
 
 ### Functional Requirements
 
-The functional requirements fall into five groups:
+The functional requirements fall into five groups, listed in full in Table {tab:fr}:
 
 - **The baseline's paths (FR-01 to FR-06).** Documents become screened, embedded notes; a question's nearest notes are ranked, gated, bridged and packed into the model's prompt.
 - **Keeping memory (FR-07 to FR-11).** A moment is read once by the frozen model, placed in a room and appended to the room's file; it is also written to the vault; rooms move between tiers under budgets.
@@ -102,7 +102,7 @@ Table: {#nfr} Non-functional requirements catalogue
 
 Neither stage trains the language model, so the separation of development and test data applies to the engine's settings and to the questions. In the baseline, settings were tuned on validation questions and confirmed once on held-out ones (F13, F15). In the rooms build, the development lives (seed 0) were used to choose the room design and the proof lives (seed 1) were run only after the pass marks were written (E-19). In the final engine, no setting was tuned on the Long Haul: the room design came from the lives, and the instructions were fixed before any Long Haul result (E-32, E-37).
 
-The Long Haul is synthetic by design. A memory that grows over months cannot be tested on a public question set, while a script knows its right answer on every day, including after a fact changes. It uses Kenyan names and places, which suits the intended users but limits the results to one invented project. The public suites are the real-data complement. No personal data enters any evaluation.
+The Long Haul is synthetic by design. A memory that grows over months cannot be tested on a public question set, while a script knows its right answer on every day, including after a fact changes. It uses Kenyan names and places, which suits the intended users but limits the results to one invented project. The public suites are the real-data complement. No personal data enters any evaluation. Table {tab:dr} lists the data requirements.
 
 Table: {#dr} Data requirements catalogue
 
@@ -119,7 +119,7 @@ Table: {#dr} Data requirements catalogue
 
 ### Interface and Integration Requirements
 
-The interfaces are kept narrow so that each can be tested: the app reaches the engine only through a small JSON API on the loopback address, the models are loaded in-process through MLX, and the cloud yardstick is reached only by the benchmark runners.
+The interfaces are kept narrow so that each can be tested: the app reaches the engine only through a small JSON API on the loopback address, the models are loaded in-process through MLX, and the cloud yardstick is reached only by the benchmark runners (Table {tab:ir}).
 
 Table: {#ir} Interface and integration requirements catalogue
 

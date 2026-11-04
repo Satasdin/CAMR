@@ -34,6 +34,8 @@ Run the public suites:
 .venv/bin/python -m camr_engine.bench.suite_run math500 --contender claude-haiku-5-5 --n 50 --max-usd 10
 ```
 
+Table {tab:records} lists the records behind each result.
+
 Rebuild this report's charts and diagrams, and the report itself, from the repository root:
 
 ```

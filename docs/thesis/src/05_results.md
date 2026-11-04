@@ -41,6 +41,8 @@ The records note the power source and the one-minute load when each run started;
 
 ### Software, Services and Configuration
 
+Table {tab:software} lists the software and models as tested; their versions come from each record's `environment` and `contender` fields.
+
 Table: {#software} Software and models (versions as tested)
 
 | Component | Version | Role |
@@ -218,6 +220,8 @@ User acceptance testing and an accessibility audit were not done.
 
 ### Test Cases and Results
 
+Table {tab:testcases} gives each test case with its requirement, its expected and actual result and its verdict.
+
 Table: {#testcases} Test cases and results
 
 | Test ID | Traceability | Scenario | Expected result | Actual result and evidence | Verdict |
@@ -296,21 +300,23 @@ Table {tab:longhaul} gives every contender's right answers at every cut, with it
 
 Table: {#longhaul} Right answers on the Long Haul (questions asked: 34, 40, 69 and 73; 3M and 4M ask the 2M questions)
 
-| Contender | 64K | 256K | 1M | 2M | 3M | 4M | First word p50 | Peak RAM |
+| Contender | 64K | 256K | 1M | 2M | 3M | 4M | First word p50 | Process RAM |
 |---|---|---|---|---|---|---|---|---|
-| **CAMR, Qwen3 4B** | **25** | **26** | **25** | **29** | **29** | **29** | 0.21–0.31 s | 6.3 GB MLX peak; 7.5 GB process (capped) |
-| Qwen3 4B alone (newest 64K) | 18 | 14 | 20 | 11 | 12 | 13 | 0.32–0.38 s | 14.7 GB MLX peak; 15.2 GB process |
-| CAMR, Qwen3 8B | 26 | 26 | 24 | 27 | | | 0.32–0.54 s | 8.0 GB MLX peak; 8.1–8.8 GB process |
-| Qwen3 8B alone (newest 32K) | 15 | 11 | 15 | 11 | | | 0.22 s | 12.2 GB MLX peak; 13.6 GB process |
-| Qwen 27B, CAMR's memory as words | 24 | 21 | 24 | 27 | | | 2.2–2.4 s | 18.5 GB MLX peak; 16–17 GB process |
-| CAMR, Qwen3 1.7B, its own wording | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.5 GB |
-| CAMR, Qwen3 1.7B, the yardstick's wording | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.5 GB |
-| Qwen3 1.7B alone (newest 32K) | 8 | 13 | 14 | 7 | | | 0.13 s | 7.5 GB |
+| **CAMR, Qwen3 4B** | **25** | **26** | **25** | **29** | **29** | **29** | 0.21–0.31 s | 7.5 GB (capped, at 3M) |
+| Qwen3 4B alone (newest 64K) | 18 | 14 | 20 | 11 | 12 | 13 | 0.32–0.38 s | 15.2 GB |
+| CAMR, Qwen3 8B | 26 | 26 | 24 | 27 | | | 0.32–0.54 s | 8.1–8.8 GB |
+| Qwen3 8B alone (newest 32K) | 15 | 11 | 15 | 11 | | | 0.22 s | 13.6 GB |
+| Qwen 27B, CAMR's memory as words | 24 | 21 | 24 | 27 | | | 2.2–2.4 s | 16–17 GB |
+| CAMR, Qwen3 1.7B, its own wording | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.5 GB† |
+| CAMR, Qwen3 1.7B, the yardstick's wording | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.5 GB† |
+| Qwen3 1.7B alone (newest 32K) | 8 | 13 | 14 | 7 | | | 0.13 s | 7.5 GB† |
 | Ollama 1.7B with the pairing (words) | 16 | 17 | 16 | 16 | | | 0.38–0.40 s | 3.3 GB |
 | Ollama 1.7B alone (newest 32K) | 8 | 12 | 10 | 7 | | | | 5.7 GB |
 | Claude Haiku 5.5 alone | 22 | 21 | 17 | 10 | 10 | 10 | 2–43 s | |
 | Claude Sonnet 5.5 alone | 28 | 35 | 43 | 32 | 13 | 10 | 13–70 s | |
 | Claude Opus 5.5 alone | 24 | 33 | 42 | 31 | | | 19–105 s | |
+
+Process RAM is the process's physical footprint where it was recorded; the figures marked † are MLX's peak, measured before the buffer-cache cap, and understate the process (Section {sec:ram-results}). The Claude rows have no RAM figure, since Claude runs in the cloud.
 
 ![{#longhaul} Share of questions answered right as the history grows. CAMR (cyan) holds its level past 1M tokens; the models alone (amber) and Claude alone (grey, dashed) fall once the history outgrows their windows](figures/ch5/longhaul_share.png){width=15.9}
 
