@@ -24,6 +24,7 @@ from __future__ import annotations
 import re
 import threading
 import time
+from pathlib import Path
 from typing import Callable
 
 from camr_engine.agentic import marks as gutter
@@ -52,6 +53,8 @@ When the task is done, reply in plain words with what you did, and call no tool.
 _DEFINES = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?(?:def|class|function|const|let|var|fn|func|struct|type)\s+"
                       r"([A-Za-z_][A-Za-z0-9_]*)", re.M)
 
+
+_NAMED = re.compile(r"[\w./-]+\.[A-Za-z0-9]{1,6}\b")  # a file the task names, as money.py or src/app.ts
 
 class Run:
     def __init__(self, rid: str, task: str, *, brain: Brain, tools: Toolbox, persona: Persona, gate: Gate,
@@ -217,8 +220,21 @@ class Run:
             text += f"\nSkills you can read with load_skill:\n{self.skills}"
         return text
 
+    def named_files(self) -> list[str]:
+        """Files in the workspace that the task names (money.py, src/app.ts), in the order it names them."""
+        ws = getattr(self.tools, "workspace", None)
+        if ws is None:
+            return []
+        root = Path(ws.root)
+        found = [w for w in dict.fromkeys(_NAMED.findall(self.task)) if (root / w).is_file()]
+        return found[:4]
+
     def prompt(self, step: int) -> Prompt:
         lines = [f"Task: {self.task}"]
+        named = self.named_files() if not self.history else []
+        if named:  # small models answer from their notes instead: the notes are about earlier work, maybe other code
+            lines += ["", f"First read {', '.join(named)} with read_file: answer from the files as they are now, "
+                          "not from the notes."]
         if self.notes:
             lines += ["", self.notes_title, *[f"- {n}" for n in self.notes]]
         if self.history:

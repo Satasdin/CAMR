@@ -137,6 +137,7 @@ final class CodeModel: ObservableObject {
                 detail = calls.joined(separator: ", ")
             }
             let text = t.str("text") ?? t.str("result") ?? t.str("output") ?? ""
+            if kind == "model", detail.isEmpty { continue }  // a step with no tool call is the answer, shown next
             turns.append(CodeTurn(kind: kind, text: text, detail: detail))
         }
         turnsSeen = Int(s.num("turns_total") ?? Double(turnsSeen))
@@ -163,7 +164,7 @@ struct CodeView: View {
 
     var body: some View {
         HSplitView {
-            filesPane.frame(minWidth: 200, idealWidth: 240, maxWidth: 320)
+            filesPane.frame(width: 230)
             VStack(spacing: 0) {
                 transcript
                 if !code.waiting.isEmpty { approvals }

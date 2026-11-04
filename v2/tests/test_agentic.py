@@ -638,3 +638,11 @@ def test_a_denied_call_is_marked_as_your_choice_on_the_trace(ws):
     r.thread.join(5)
     (span,) = [s for s in r.trace if s["track"] == "shell"]
     assert span["decision"] == "denied" and span["ok"] is False and span["waited"]
+
+
+def test_a_task_that_names_a_file_is_told_to_read_it_first(ws):
+    run = make_run(ws, ["done"])
+    run.task = "What does fee() in src/fees.py return for 500? Also see missing.py."
+    assert "First read src/fees.py with read_file" in run.prompt(1).user and "missing.py with" not in run.prompt(1).user
+    run.task = "Add a helper"
+    assert "First read" not in run.prompt(1).user
