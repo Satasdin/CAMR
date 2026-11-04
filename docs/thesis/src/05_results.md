@@ -429,6 +429,10 @@ Table: {#reach} Which reach works best (`engine:qwen3-4b`, 256K tokens, 40 quest
 
 A session's memory holds only its own week, so 10 of its 11 right answers were never-said questions declined. In global memory, two mathematics answers went stale because they took the other project's look-alike rule. When both were read, the other project's room won 7 of the 40 questions and cost exactly 2 answers, a fact and a changed fact, which the 4B declined rather than answer with the other project's facts. Every set-up declined all 10 never-said questions. The app's default therefore stays project reach.
 
+### Shelves and the Warm-Up in the App {#shelves-results}
+
+On twelve test sentences, "Auto" filed all 12 on the right shelf, including all 8 that were not close to any shelf's examples (E-51). In the app, three moments told on "Auto" went to the Coding, Research and Personal shelves, and each later answer read the right shelf, with its first word in 111 to 119 ms (Figure {fig:app-shelves}). The warm-up's kernels alone took 24 ms off the 4B's first answer, from 111 to 87 ms; a room not read ahead still came off the SSD in milliseconds, the first Long Haul question reading 68 MB in 8 ms (E-52).
+
 ### The Claude Yardstick: Time and Cost {#yardstick}
 
 Claude was only a yardstick: it answered the same questions alone, with no memory. Table {tab:claude} gives what it cost on the Long Haul.

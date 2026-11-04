@@ -195,7 +195,7 @@ The gate and entity bridging made the read path capability-adaptive: on 2WikiMul
 
 ### Architecture of CAMR {#arch-section}
 
-CAMR changes what a memory is. Instead of text the model must re-read for every question, each moment is kept as the notes the model wrote while reading it: the keys and values of every layer, which a transformer normally discards after a prompt. Laid in front of the model, they let it continue as if it had just read the moment. Notes are large (Equation {eq:bytes}), so they live on the SSD in rooms of related moments that are written as one continuous page and fetched in one read. A moment joins a room by Equation {eq:room}.
+CAMR changes what a memory is. Instead of text the model must re-read for every question, each moment is kept as the notes the model wrote while reading it: the keys and values of every layer, which a transformer normally discards after a prompt. Laid in front of the model, they let it continue as if it had just read the moment. Notes are large (Equation {eq:bytes}), so they live on the SSD in rooms of related moments that are written as one continuous page and fetched in one read. A moment joins a room by Equation {eq:room}. The application calls a room a "note" and groups notes by topic on "shelves" (Section {sec:shelves}); this thesis keeps "room" for the engine's unit.
 
 $$\text{room}(m) = \text{room}\Big(\underset{k\,:\ s_{mk} \ge J,\ T_{\text{room}(k)} + t_m \le T_{\max}}{\arg\max}\ s_{mk}\Big), \ \text{ else a new room}$$ {#room}
 
@@ -285,6 +285,14 @@ Figure {fig:deployment} shows where each part of CAMR runs: one Mac, its executi
 ![{#deployment} Deployment diagram of CAMR on the Mac](diagrams/deployment.png)
 
 The Mac app is a SwiftUI process that starts the engine as a second, Python process with the chosen model and a token made at launch, and talks to it only over the loopback address (IR-04). The engine holds the reader and the embedder in unified memory through MLX on the graphics processor; each model has its own memory folder, because notes belong to the model that wrote them. Ollama, when paired, is a third process that the proxy reaches on its own port. The Hugging Face Hub is contacted only when a model or suite is missing. The Anthropic API is contacted only by the yardstick's runner, with its key read from a private file and never logged. GitHub Actions runs the tests that need no MLX on every push (NFR-16).
+
+### Shelves and the Warm-Up {#shelves}
+
+The application keeps memory on four shelves by kind of work: Projects, Coding, Research and Personal (E-51). Each shelf is a reach of its own (Section {sec:arch-section}): Projects is the global reach, which every session reads, and the other three are project reaches, each with its own folder of rooms and its own vault. A question reads every shelf, and the closest moment wins, as a session always chooses, so memory is kept apart but read as one. A new moment goes on the shelf the user picks, or, on "Auto", on the shelf whose description and three example moments it is closest to, measured by the same embedder that recall uses, so it is filed by meaning. The Code agent keeps what it learns on the Coding shelf and still reads its own workspace's reach. Figure {fig:app-shelves} shows the shelves in Chat.
+
+![{#app-shelves} Shelves in Chat (Qwen3 4B): moments told on "Auto" are filed on the Research and Personal shelves by meaning, and each answer names the note and shelf it read ("note 0 on Coding · read from the SSD")](figures/app/chat-shelves.png){width=15.9}
+
+When a session opens, the engine warms up before the first question (E-52). One one-word answer builds the model's kernels, and the newest rooms of every shelf, up to 1.5 GB in all, are read off the SSD so that the operating system holds them in RAM and the first questions fetch them at memory speed. The weights view shows the warming, with rooms lighting on their shelves.
 
 ### User Interface Design {#ui-design}
 

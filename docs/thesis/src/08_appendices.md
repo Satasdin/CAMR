@@ -105,3 +105,5 @@ Table: {#decisions} Decision log entries cited in this report
 | E-48 | One `camr` command and its installers |
 | E-49 | The landing page and the meaning of colour |
 | E-50 | Swarm removed: the app is Chat and Code |
+| E-51 | Shelves: memory kept apart by kind of work (Projects, Coding, Research, Personal), and read as one |
+| E-52 | Warm before the first question: kernels built, newest rooms read into RAM |
