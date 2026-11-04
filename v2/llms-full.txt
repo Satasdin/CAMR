@@ -1,0 +1,1435 @@
+# The lightweight memory engine
+
+> A lightweight external memory engine for small language models running locally on an Apple-silicon Mac (MLX).
+> The model reads its memory mostly as its own saved keys and values ("notes"), not as retrieved text: a question
+> opens one room of notes on the SSD, read in one burst and laid in front of the model already read, then the four
+> closest moments as words. Three layers: a core always in RAM, rooms on the SSD (hot ones kept in RAM), and a vault of
+> linked Markdown notes that opens in Obsidian. Python package `engram`; its final name is not chosen yet.
+
+- It is not a vector database. The embedder only chooses which room to open; the model reads the room's notes.
+- Everything runs on the Mac. The one outside runtime is Ollama, through a local proxy, where memory goes in as words.
+- Python entry points: `engram.memory.Memory` (one folder) and `engram.reach.Session` (several reaches, an on/off
+  switch). Both have `remember(text, day, ...)` and `answer(question, today, ...)`. Models: `engram.models.Reader`
+  (Qwen3-1.7B 4-bit) and `engram.models.Embedder` (Qwen3-Embedding-0.6B).
+- Install and run: `sh scripts/install.sh`, then `.venv/bin/python -m engram.app --open` (http://127.0.0.1:8765).
+- Benchmark results are kept as dated JSON records under `records/bench/`; the docs point there.
+
+---
+
+Source: docs/site/index.md
+
+# The lightweight memory engine
+
+Memory for a language model running on a Mac. The model reads its memory like its own working state, and the
+memory moves between the SSD and RAM as each question needs.
+
+## What it is
+
+The engine gives a small local model a memory that grows without making it slower or heavier. What you tell it is
+read once by the model. While the model reads, it writes notes to itself inside its layers: its keys and values at
+every layer. Those notes are saved to the SSD, in a room of related moments. A question opens the one room it is
+about, reads it from the SSD in one burst, and lays it in front of the model already read. The model then reads
+only the few closest moments as words, and the question. Everything runs on the Mac with Apple's MLX. Nothing leaves
+the machine.
+
+It is not a vector database. The memory is tensors the model reads directly. It has three layers: a small core that
+is always in RAM, rooms of saved notes on the SSD, and a vault of plain-text notes that a person can open in
+Obsidian. Rooms that are used often stay in RAM. Rooms that fade go to sleep and are kept as words. The app and the
+benchmarks exist only to show the engine at work and to measure it. The work is the subject of a thesis: "A
+Lightweight External Memory Engine to Bridge the Capability Gap Between On-Device and Cloud Language Models".
+
+Its name is not chosen yet. The code is the Python package `engram`. Earlier write-ups call it CAMR v2.
+
+## The pages
+
+| Page | What it covers |
+| --- | --- |
+| [Quick start](docs/site/quickstart.md) | Install with one script, then run the app |
+| [The three layers](docs/site/layers.md) | The core, the rooms and the vault, and how a desk is laid |
+| [Reach and the switch](docs/site/reach.md) | Whose memory a question reads, and turning memory off |
+| [RAM, the SSD and sleep](docs/site/swapping.md) | Where each room's notes are, and what happens when memory outgrows the disk |
+| [Python library](docs/site/library.md) | `Memory` and `Session`: `remember` and `answer`, with their real signatures |
+| [Pairing with Ollama](docs/site/ollama.md) | Memory for the `ollama` CLI through a local proxy, and the macOS app's limits |
+| [Benchmarks](docs/site/benchmarks.md) | The Long Haul, the Hugging Face suites, the Claude yardstick, and how to rerun them |
+| [Metrics](docs/site/metrics.md) | What every answer records |
+| [Limits](docs/site/limits.md) | What it does not do yet, stated plainly |
+
+## Measured so far
+
+These come from step 1, on a MacBook Pro M5 Pro with 24 GB, Qwen3-1.7B, three scripted 12-week lives
+(DECISIONS.md, E-20):
+
+| | |
+| --- | --- |
+| Time to the first word | 0.064–0.072 s in every week, flat while memory grew |
+| Peak RAM | 1.65–1.83 GB |
+| Notes on the SSD | grew from 82 MB to 963 MB |
+| Facts known at week 12 | 164 of 255 |
+
+Tonight's results (the Long Haul, the Hugging Face suites, the Claude yardstick, the Ollama pairing): see records.
+
+## For agents
+
+[llms.txt](llms.txt) lists these pages. [llms-full.txt](llms-full.txt) holds all of them in one file.
+
+---
+
+Source: docs/site/quickstart.md
+
+# Quick start
+
+## What you need
+
+- An Apple-silicon Mac (M1 or later). The engine runs on Apple's MLX. It does not run on Intel Macs, Windows or
+  Linux.
+- About 2 GB of free disk for the program and its two models, plus room for memory: notes take about 112 KiB per
+  token on the 1.7B model (see [Limits](docs/site/limits.md)).
+- An internet connection the first time, to download the models (about 1.3 GB).
+
+## Install
+
+Open Terminal in the repository's `v2` folder and run:
+
+```sh
+sh scripts/install.sh
+```
+
+The script:
+1. checks that this is an Apple-silicon Mac;
+2. installs `uv`, the Python installer, if it is missing;
+3. sets up Python 3.12 in `.venv` and installs the engine into it;
+4. runs a health check, which downloads the two models the first time;
+5. starts the app and opens it in the browser.
+
+The two models are Qwen3-1.7B (4-bit), which reads and answers, and Qwen3-Embedding-0.6B, which finds the room a
+question is about. They live in the Hugging Face cache, `~/.cache/huggingface`.
+
+The health check teaches a throwaway memory two facts and asks about one. It should end with:
+
+```
+PASS: CAMR remembered and answered.
+```
+
+Each check is kept as a record under `records/health/`.
+
+## Run the app
+
+The install script starts it the first time. After that:
+
+```sh
+.venv/bin/python -m engram.app --open
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `--memory DIR` | `~/.engram/default` | the memory folder; it reopens where it left off |
+| `--port N` | `8765` | the port; the app is at `http://127.0.0.1:N` |
+| `--open` | off | open the app in the browser once it is listening |
+| `--check` | off | run the health check instead of the app, then exit |
+
+Leave the Terminal window open while you use it. Press Ctrl+C there to stop it.
+
+The app is one local page. What each screen does is in the [user guide](docs/USER_GUIDE.md).
+
+The server listens on 127.0.0.1 only. A request must name this host. A POST must be JSON from the app's own page.
+Every API call carries a key made when the app starts, which only the served page knows. So other websites open in
+the same browser cannot reach your memory.
+
+## Where things are kept
+
+| What | Where |
+| --- | --- |
+| The app's memory | `~/.engram/default`. Delete the folder to start empty. |
+| Simulations | `~/.engram/simulations`, rebuilt each time one starts |
+| Reach folders (library sessions) | `~/.engram/session/`, `project/`, `agent/`, `global/` |
+| Models | `~/.cache/huggingface` |
+
+## If something goes wrong
+
+| Problem | Fix |
+| --- | --- |
+| `CAMR needs an Apple-silicon Mac` | This Mac cannot run it: MLX needs M1 or later. |
+| The health check says FAIL | Run `.venv/bin/python -m engram.app --check` again. If it keeps failing, delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
+| The page shows "forbidden" | Reload it. The page gets a fresh key each time the app starts. |
+| Port 8765 is busy | Start it on another port: `.venv/bin/python -m engram.app --open --port 8790`. |
+
+## For developers
+
+```sh
+uv pip install --python .venv/bin/python -e ".[dev]"     # pytest
+uv pip install --python .venv/bin/python -e ".[bench]"   # the Claude yardstick and the Hugging Face suites
+.venv/bin/python -m pytest -q                             # the tests use fakes and load no model
+```
+
+Next: use the engine from Python, in [Python library](docs/site/library.md).
+
+---
+
+Source: docs/site/layers.md
+
+# The three layers
+
+The engine keeps memory in three layers. Each answer reads the first two as notes. The third is the archive, kept
+as words.
+
+| Layer | Also called | Where it lives | What it holds | When the model reads it |
+| --- | --- | --- | --- | --- |
+| Core | the subconscious | RAM | the notes of a few standing facts, at most 256 tokens | on every answer |
+| Rooms | the conscious | the SSD; with tiers on, the most recently used also in RAM | related moments' notes, at most 512 tokens a room | one room per question |
+| Vault | the archive | the SSD, as Markdown files | every moment's words, with links between them | never on the desk: its notes tagged `core` become the core |
+
+*Notes* are what the model writes to itself inside its layers while it reads: its keys and values at every layer.
+Reading notes back is not reading text again. The model picks up where it left off.
+
+## The picture
+
+```
+  question ──► embed it ──► the closest moment, in any room ──► that moment's room
+                                                                   │
+        RAM                              SSD                       │        SSD, as words
+  ┌───────────────────┐         ┌───────────────────────┐          │   ┌──────────────────────┐
+  │ header notes      │         │ room-000000.notes     │ ◄────────┘   │ vault/               │
+  │ core notes        │         │ room-000001.notes     │              │   global-000000.md   │
+  │ hot rooms         │ ◄─────  │ room-000002.notes ... │              │   global-000001.md   │
+  └───────────────────┘  one    └───────────────────────┘              │   [[doors]] between  │
+            │            burst                                         └──────────────────────┘
+            ▼
+  the desk:  header │ core │ room │ 4 closest moments │ today's date, the question │ ──► answer
+             └──── already read: notes ────┘ └────────── read now: words ─────────┘
+```
+
+In words:
+- The question is embedded, and the moment closest to it is found among all the moments kept.
+- The room holding that moment is read from the SSD in one burst, or taken from RAM when it is hot.
+- The desk is laid left to right, already read, as notes:
+  - the header (the fixed instructions);
+  - the core;
+  - the room.
+- The model then reads, as words:
+  - the four moments closest to the question, in date order;
+  - today's date and the question.
+- It writes the answer.
+- The vault sits beside all this, and a person browses it. The engine reads its words only to build the core, and
+  its strengths to choose which rooms sleep.
+
+## The core: the subconscious
+
+The core is a small block of notes that goes on every desk, right after the header and before the room. It holds
+standing facts: who the user is, what never changes.
+
+- It is built from vault notes tagged `core`. Tag a note when you remember it (`tags=["core"]`), with
+  `Vault.tag`, or by hand in Obsidian.
+- It holds at most 256 tokens (`core_tokens`). Pinned notes go in first, then the strongest, then the oldest. What
+  does not fit is left out and listed (`Core.left_out`).
+- It is read once by the model and kept in RAM as notes, so it is not read again on each answer.
+- Before each answer the vault is looked at again, cheaply. A core note edited in Obsidian, a new note tagged
+  `core`, or a deleted one changes the core on the next answer. Only then is the core written again.
+- Rooms were written straight after the header. On a desk with the core, a room sits further along, so its keys are
+  turned by the core's length (keys hold a word's position as a rotation, called RoPE).
+
+The core is off by default. It needs the vault: `Memory(..., vault=True, core=True)`, or `Session(..., core=True)`.
+
+## The rooms: the conscious
+
+A room is a page of related moments, written together, kept as one file on the SSD.
+
+- **Joining a room.** A new moment is embedded. It joins the room of its closest moment when that moment is at
+  least 0.80 close (`join`) and the room has space. A room holds at most 512 tokens (`room_tokens`). When that room
+  is full, the next closest moment's room is tried, while it is still 0.80 close. Otherwise the moment starts a new
+  room.
+- **Written as one page.** The new moment is read with its room's earlier moments in view, and its notes are
+  appended to the room's file. Inside a room, the notes are the same computation as reading its words.
+- **Read in one burst.** A room's file is read whole, in 1 MB pieces, eight at once, with the Mac's file cache
+  bypassed. So a read is a real SSD read, never a copy already in RAM.
+- **One room on the desk, plus four closest moments as words.** Rooms written apart lose the thread when laid side
+  by side. On the scripted lives, one room plus the 4 closest moments as words knew more than three rooms' notes
+  (DECISIONS.md, E-15 and E-16).
+
+Notes are large. One token of notes on Qwen3-1.7B is 28 layers × 2 (keys and values) × 8 heads × 128 numbers × 2
+bytes: 114,688 bytes, or 112 KiB. That is about 29,000 times the text. A full room of 512 tokens is 56 MiB. This is
+why rooms can sleep and why the vault exists.
+
+The rooms are always on. Their settings are `Memory` options: `room_tokens=512`, `join=0.80`, `closest=4`.
+
+## The vault: the archive
+
+The vault is a folder of Markdown notes, one per moment. It opens in Obsidian as it is.
+
+- Each note has front matter (id, day, date, room, reach, moment, tags, strength, pinned, asleep, used, links,
+  doors), then the moment's words.
+- Links between notes are `[[note-id]]` wikilinks, called *doors*. A door gains 0.5 when its two notes share a room,
+  and 1.0 each time they are used in the same answer.
+- A note's strength fades 5% a day unless it is used. Each use adds 1.0. A note at strength 1 that goes unused for
+  about 45 days falls below 0.1 and counts as faded. Pinned notes never fade.
+- Nothing is ever deleted by the engine. A faded note keeps its words. Only a person deletes a note, by deleting its
+  file.
+- The files are the truth. A hidden index (`.engram-index.json`) only saves reading every file on opening. A note
+  changed by hand is read again because its file changed.
+
+A note as the engine writes it:
+
+```markdown
+---
+id: global-000000
+day: 0
+date: 2026-01-05
+room: 0
+reach: global
+moment: 0
+tags: []
+strength: 1.7351
+pinned: false
+asleep: false
+used: 6
+as_of: 6
+links:
+  - "[[global-000001]]"
+doors:
+  - 1.5
+---
+[2026-01-05] My sister Amina moved to Nakuru last week.
+```
+
+The vault is off by default in `Memory` (`vault=True` turns it on) and on by default in `Session`.
+
+## What a memory folder holds
+
+```
+<memory>/
+  room-000000.notes    one room's notes, token by token
+  index.json           every moment's words, day, room and place in its room
+  vectors.npy          every moment's embedding
+  events.jsonl         one line per moment kept, answer given, room put to sleep or woken
+  metrics.jsonl        one line per answer (with metrics on)
+  tiers.json           when each room was last used (with tiers on)
+  vault/               one Markdown note per moment, and .engram-index.json
+  .lock                held while a process has the folder open (reach folders)
+```
+
+The words a desk re-reads come from `index.json`, not from the vault. Editing a vault note changes the core (when it
+is tagged `core`). It does not change a room's notes or the words re-read on the desk.
+
+## What it watches while it answers
+
+While it writes each word, the engine records how hard that word looked at each moment on the desk. Attention is
+averaged over every head of layers 12, 16, 20 and 24 of 28. A moment is *used* when it draws at least 10% of the
+desk's attention over the whole answer. The others were only picked up. Watching cost 0.6% of writing speed
+(DECISIONS.md, E-21). Each answer is a line of `events.jsonl`, which the app's brain view replays.
+
+---
+
+Source: docs/site/reach.md
+
+# Reach and the switch
+
+*Reach* is how far a memory goes: one conversation's, a project's, an agent's, or one global memory shared by
+everything. The *switch* turns memory off, so the model answers alone.
+
+## The four reaches
+
+Each reach is its own folder under one root, `~/.engram` by default. Each folder holds its own rooms and its own
+vault.
+
+| Reach | Label | Folder | For |
+| --- | --- | --- | --- |
+| session | `session:<id>` | `~/.engram/session/<id>/` | one conversation; a new id each time by default |
+| project | `project:<name>` | `~/.engram/project/<name>/` | everything about one project |
+| agent | `agent:<name>` | `~/.engram/agent/<name>/` | one agent's own memory |
+| global | `global` | `~/.engram/global/` | facts that hold everywhere |
+
+A name is plain: letters, digits, `.`, `_` and `-`, at most 64 characters. A name is never a path.
+
+## Reading several, writing one
+
+A `Session` reads several reaches at once and writes to one.
+
+- `reads` names the reaches to read, in order of preference. The default is `("session", "global")`.
+- `writes` is where new moments go. The default is `"session"`. It is always read too.
+- A question is embedded once. It picks the best room over every reach read: the room of the closest moment in any
+  of them. That reach's own closest moments go on the desk as words. When two reaches are equally close, the one
+  named first wins.
+- `remember(text, day, to="global")` sends one moment to another reach the session reads.
+- A moment kept in a shared reach (project, agent or global) is saved at once, so its index is never behind its
+  files.
+- With `core=True`, one core is built from the `core` notes of every reach read, and goes on every desk.
+- The header is read once and shared by every reach.
+
+```python
+from engram.models import Embedder, Reader
+from engram.reach import Session
+
+reader, embedder = Reader(), Embedder()
+with Session(reader, embedder, project="kitchen", reads=("session", "project", "global")) as s:
+    s.remember("[2026-01-05] The fee is 1% rounded up to the next 5 shillings.", 0, to="project")
+    s.remember("[2026-01-05] My sister Amina moved to Nakuru.", 0, to="global")
+```
+
+A reach can also be given as a label, such as `"project:kitchen"`, or as a `Reach("project", "kitchen")`.
+
+## One open per folder
+
+- In one process, a reach folder is opened once. Every session reading it shares one `Memory`, which closes when the
+  last of them closes.
+- Another process cannot open the folder meanwhile. A lock on `<reach>/.lock` stops it, and the second process
+  gets `ReachBusy`. Two writers of one room file would cut each other's notes.
+- Close a session when done (`close()`, or a `with` block). That saves every reach and lets go of them.
+
+## The switch
+
+Memory can be turned off for a whole session.
+
+```python
+s = Session(reader, embedder, on=False)   # off from the start
+s.switch(True)                             # on
+s.switch(False)                            # off again
+```
+
+With memory off:
+- `answer` is the plain model: the same prompt with no notes, read whole. Pass `plain_system="..."` to `Session`
+  to use another system prompt instead.
+- `remember` keeps nothing and returns `None`.
+- Nothing is read from the SSD.
+- The answer still gets a metrics record, with no history and no disk, so on and off compare directly.
+
+The Ollama pairing has its own switches: `--no-memory` starts the proxy as a plain passthrough, and a request with
+the header `X-Engram-Memory: off` is forwarded with no notes. See [Pairing with Ollama](docs/site/ollama.md).
+
+---
+
+Source: docs/site/swapping.md
+
+# RAM, the SSD and sleep
+
+A room's notes can be in one of three places when a question needs them. The engine calls them tiers.
+
+| Tier | What sits there | What a question pays |
+| --- | --- | --- |
+| RAM | the core, and the hot rooms: the most recently used rooms that fit the RAM budget | nothing to read; the notes are already arrays the desk can take |
+| SSD | every awake room's file | one burst read of the room, then a copy into GPU memory |
+| Vault (asleep) | rooms whose notes were put away; their moments stay as words | the room's moments read as words, or the room woken |
+
+Without tiers, every answer reads its room from the SSD. That is how step 1 ran, and what its measurements used.
+Tiers are an option: `Memory(..., tiers=Tiers(...))`, or `Session(..., tiers={...})`.
+
+## The budgets
+
+```python
+Tiers(ram_bytes: int = RAM_BYTES, disk_bytes: int | None = None, *, wake: bool = False, pool: Pool | None = None)
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `ram_bytes` | 512 MiB | RAM for the core and the hot rooms together: about nine full rooms of the 1.7B's notes |
+| `disk_bytes` | `None` (no limit) | the most the awake room files may take on the SSD |
+| `wake` | `False` | wake an asleep room when a question needs it, instead of reading its words |
+| `pool` | its own | RAM shared with other memories' tiers |
+
+## RAM and the SSD
+
+- A room read from the SSD is kept hot in RAM, already turned into arrays. The next question that needs it skips
+  the SSD and the copy.
+- When RAM is full, the least recently used hot room goes first. Letting it go writes nothing: the room's file is
+  still on the SSD.
+- A room bigger than all the RAM left beside the core is not kept hot, and pushes nothing out.
+- The core always stays in RAM.
+- A new moment added to a hot room is joined onto the hot copy, so it always matches the file.
+- In a `Session`, each reach gets its own disk budget, and all of them share one RAM budget, the core counted once.
+
+Every read says where it came from. A `Recall` carries `tier` (`"ram"`, `"ssd"` or `"vault"`), `read_bytes`,
+`gbps` and `seconds` per step. `Memory.tiers.state()` shows what sits in each tier:
+
+```python
+{"ram": {"budget_bytes": ..., "used_bytes": ..., "core_bytes": ..., "rooms": [...]},
+ "ssd": {"budget_bytes": ..., "used_bytes": ..., "rooms": ...},
+ "vault": {"rooms": [...]},
+ "hits": {"ram": ..., "ssd": ..., "vault": ...}}
+```
+
+On the MacBook Pro M5 Pro, a room is read from the SSD at about 12 GB/s with the cache bypassed. The same files
+come from RAM at about 60 GB/s (DECISIONS.md, E-17).
+
+## Sleep
+
+Notes are about 29,000 times the size of their words. So when the awake room files outgrow `disk_bytes`, rooms go
+to sleep.
+
+- **Who sleeps first.** The weakest room first. A room is as strong as its strongest vault note. Among rooms of the
+  same strength, the least recently used goes first. Without a vault, all rooms are equally strong, so the least
+  recently used sleep first.
+- **What sleeping does.** The room's `.notes` file is deleted. Its moments stay in `index.json` and in the vault, as
+  words. Their vault notes are marked `asleep: true`, and `events.jsonl` gets a `sleep` line.
+- **A question about an asleep room.** The room's moments are read as words, just before the closest moments. That
+  costs reading them, as plain text would.
+- **Waking.** With `wake=True`, the room's notes are written again from its words instead. The model reads the
+  room once, the file goes back on the SSD, and the disk budget is held again with the woken room kept awake. The
+  time it took is the `wake` step of the recall.
+- **New moments.** An asleep room takes no new moments unless waking is on. A moment that would have joined it
+  starts a room of its own.
+- **Nothing is destroyed.** Sleep removes notes, never words.
+
+## Fading
+
+`Memory.fade(today)` is one pass of sleep:
+1. It picks up every edit a person made to the vault.
+2. It brings every note's strength up to day `today`: 5% less for each day unused. Pinned notes keep theirs.
+3. It holds the disk budget, putting rooms to sleep as above.
+
+It returns `(notes changed, rooms put to sleep)`.
+
+Nothing calls `fade` on a schedule yet. The program using the engine calls it, for example once a day. A `Session`
+has no `fade` of its own; call it on each of its memories:
+
+```python
+for m in s.memories.values():
+    m.fade(day)
+```
+
+## A memory with every layer on
+
+```python
+from pathlib import Path
+
+from engram.memory import Memory
+from engram.models import Embedder, Reader
+from engram.swap import Tiers
+
+reader, embedder = Reader(), Embedder()
+m = Memory(reader, embedder, Path("~/.engram/mine").expanduser(), vault=True, core=True,
+           tiers=Tiers(ram_bytes=512 * 2**20, disk_bytes=2 * 2**30, wake=True), metrics=True)
+```
+
+The same in a session:
+
+```python
+from engram.reach import Session
+
+s = Session(reader, embedder, core=True, metrics=True,
+            tiers={"ram_bytes": 512 * 2**20, "disk_bytes": 2 * 2**30, "wake": True})
+```
+
+## Not built yet
+
+The plan's sleep goes further than this. These parts are designed but not in the code:
+- naps that run on their own while the Mac is on its charger;
+- distilling what was learnt, checked by a quiz before it is kept;
+- settling unsure facts at recall.
+
+---
+
+Source: docs/site/library.md
+
+# Python library
+
+The engine is a Python package, `engram`. It is not on PyPI. Install it from the repository's `v2` folder:
+
+```sh
+uv pip install --python .venv/bin/python -e .
+```
+
+There are two ways in:
+- **`Memory`**: one memory folder. The plain engine.
+- **`Session`**: a conversation over several reaches (session, project, agent, global), with the memory switch. See
+  [Reach and the switch](docs/site/reach.md).
+
+Both have the same two calls: `remember` keeps a moment, and `answer` answers from memory. Every signature below is
+copied from the code.
+
+## The models
+
+```python
+from engram.models import Embedder, Reader
+
+reader = Reader()        # Qwen3-1.7B, 4-bit, through MLX
+embedder = Embedder()    # Qwen3-Embedding-0.6B, 4-bit, through MLX
+```
+
+```python
+Reader(repo: str = READER, max_tokens: int = MAX_ANSWER_TOKENS)
+Embedder(repo: str = EMBEDDER)
+```
+
+| Name | Value |
+| --- | --- |
+| `READER` | `mlx-community/Qwen3-1.7B-4bit` |
+| `READER_BIG` | `mlx-community/Qwen3-4B-Instruct-2507-4bit` |
+| `READER_27B` | `mlx-community/Qwen3.8-27B-4bit` (reads memory as words only: see [Limits](docs/site/limits.md)) |
+| `EMBEDDER` | `mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ` |
+| `MAX_ANSWER_TOKENS` | 40 |
+
+The reader decodes greedily with thinking off, so the same question on the same memory gets the same answer on the
+same Mac. Different chips can differ slightly (DECISIONS.md, E-17). Answers stop at 40 new tokens unless you pass `max_tokens`. Loading a model downloads it the first time.
+
+## A first memory
+
+This is the health check (`engram/app/__main__.py`), with a folder that lasts:
+
+```python
+import datetime as dt
+from pathlib import Path
+
+from engram.memory import Memory
+from engram.models import Embedder, Reader
+
+reader, embedder = Reader(), Embedder()
+m = Memory(reader, embedder, Path("~/.engram/mine").expanduser())
+m.remember("[2026-01-05] My sister Amina moved to Nakuru last week.", 0)
+m.remember("[2026-01-06] Paid the electricity bill.", 1)
+reply = m.answer("Where does my sister live?", dt.date(2026, 1, 7))
+print(reply.text, f"first word after {reply.ttft_s:.3f} s")
+m.save()
+m.close()
+```
+
+Two habits worth keeping:
+- **Start each moment with its date**, as `[2026-01-05] ...`. The app and the scripted lives do this. The model then
+  sees when each thing happened, and the Ollama pairing dates the engine's moments by it.
+- **Save before closing a plain memory.** With none of the new layers on, `close()` does not save the index (as in
+  step 1). With any layer on, `close()` saves everything first.
+
+## Memory
+
+```python
+Memory(reader, embedder, path: Path, *, room_tokens: int = ROOM_TOKENS, join: float = JOIN,
+       closest: int = CLOSEST, allowance: int = ALLOWANCE_BYTES, log: bool = True,
+       notebook: Notebook | None = None, vault: Vault | bool = False, reach: str | None = None,
+       core: Core | bool = False, core_tokens: int = CORE_TOKENS, tiers: Tiers | None = None,
+       metrics: Meter | bool = False)
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `path` | | the memory folder; made if missing, reopened if it holds a memory |
+| `room_tokens` | 512 | the most tokens a room holds |
+| `join` | 0.80 | how close a moment must be to a room's closest moment to join it |
+| `closest` | 4 | moments re-read as words after the room |
+| `allowance` | 256 MiB | a full room's notes must fit inside this |
+| `log` | `True` | write `events.jsonl`, and watch attention while answering |
+| `notebook` | its own | a header already read, shared by several memories (a session passes one) |
+| `vault` | `False` | `True` keeps the vault in `<path>/vault`; or pass a `Vault` |
+| `reach` | `None` | the reach label written on vault notes, such as `project:kitchen` |
+| `core` | `False` | `True` builds a core from the vault's `core` notes (needs `vault=True`); or pass a `Core` |
+| `core_tokens` | 256 | the core's budget |
+| `tiers` | `None` | RAM and disk budgets: a `Tiers` (see [RAM, the SSD and sleep](docs/site/swapping.md)) |
+| `metrics` | `False` | `True` appends one record per answer to `<path>/metrics.jsonl`; or pass a `Meter` |
+
+With every option at its default, the engine computes exactly what it did in step 1.
+
+### remember
+
+```python
+Memory.remember(self, text: str, day: int, *, date: dt.date | None = None,
+                tags: tuple[str, ...] | list[str] = (), pinned: bool = False)
+```
+
+Keeps one moment. It is embedded, placed in a room, read by the model with that room's earlier moments in view, and
+its notes are appended to the room's file.
+
+| Argument | What it is |
+| --- | --- |
+| `text` | the moment's words |
+| `day` | the moment's day number. Count from any start you like, the same start every time. The app counts from 5 January 2026. |
+| `date` | the moment's date, for its vault note (worked out from `day` once the vault has seen both) |
+| `tags` | tags for its vault note; `"core"` puts it in the core, when the core is on |
+| `pinned` | a pinned vault note never fades; a pinned `core` note goes into the core first |
+
+`date`, `tags` and `pinned` only matter when there is a vault.
+
+It returns the `Moment`: `mid` (its number), `room`, `day`, `text`, `start` (its first token in the room's file) and
+`tokens`.
+
+### answer
+
+```python
+Memory.answer(self, question: str, today: dt.date, *, then: str = "", tools: list | None = None,
+              max_tokens: int | None = None, kind: str = "answer", chosen: Recall | None = None,
+              day: int | None = None, started: float | None = None, core: Core | None | object = _OWN,
+              record: bool = False, among: Iterable[Memory] | None = None, **extra)
+```
+
+Answers from the desk: the room holding the moment closest to the question, then the closest moments as words, then
+the question.
+
+| Argument | What it is |
+| --- | --- |
+| `question` | what is asked |
+| `today` | today's date; the model is told it |
+| `then` | instructions for this kind of request, read after the notes |
+| `tools` | tools in the OpenAI function format, for one tool call (see Errands below) |
+| `max_tokens` | the most tokens to write (the reader's own cap, 40, when not given) |
+| `kind` | the event type in `events.jsonl` (`"answer"`; errands use `"agent"`) |
+| `day` | today's day number for the vault (worked out from `today` when not given) |
+| `chosen`, `started`, `core`, `record`, `among` | for a session: the room it chose across its reaches, when the question was asked, its core, and the memories whose history and disk the record counts |
+| `**extra` | added to the answer's line in `events.jsonl` |
+
+It returns a `Reply`:
+
+| Field | What it is |
+| --- | --- |
+| `text` | the answer |
+| `ttft_s` | seconds from the question to the first word, choosing and reading the room included |
+| `gen_tps` | tokens written per second |
+| `prompt_tokens` | every token the model saw: header, core, room, words and question |
+| `gen_tokens` | tokens written |
+| `pieces` | the text each written token added, in order |
+| `metrics` | the answer's `Record`, when `metrics` is on (or `record=True`): see [Metrics](docs/site/metrics.md) |
+
+The instructions at the top of every prompt are fixed, because their notes are read once and kept:
+
+> You are a personal assistant that remembers the user's own notes. Answer the user's question in one short
+> sentence, using only the notes below. If the notes do not contain the answer, reply exactly: I don't know.
+
+Use `then` for anything else a request needs. It is read after the notes, so the header never changes.
+
+### The other calls
+
+| Call | What it does |
+| --- | --- |
+| `choose(question, *, vec=None) -> Recall` | the room holding the closest moment, and the closest moments; reads nothing from the SSD |
+| `recall(question, *, chosen=None, core=...) -> Recall` | chooses, reads the room, and lays the desk (`Recall.desk`) |
+| `use(moments, today=None, day=None)` | marks moments as used: their vault notes gain strength |
+| `fade(today: int) -> tuple[int, list[int]]` | one pass of sleep: see [RAM, the SSD and sleep](docs/site/swapping.md) |
+| `state() -> dict` | what the memory holds and where |
+| `history_tokens() -> int` | every token the memory holds, awake or asleep |
+| `folder_bytes() -> int` | everything the memory keeps on disk |
+| `save()` | saves the index, the vault's index and the tiers' state |
+| `close()` | lets go of the rooms (saving first when any layer is on) |
+
+A `Recall` holds `room`, `closest`, `tokens`, `bytes`, `desk`, `seconds` (per step), `score` (how close the
+closest moment is), `tier`, `read_bytes`, `asleep`, `core` (core tokens on the desk) and `reach`. Its `ms` property
+gives the steps in milliseconds, and `gbps` the SSD bandwidth.
+
+With a vault, `m.vault` is the `Vault`. A moment's note id is `m.vault.moment_id(moment.mid)`. Some of its calls:
+`read(nid)`, `notes(tag=None, room=None)`, `neighbours(nid, n=None)`, `pin(nid, on=True)`, `tag(nid, *tags)`,
+`untag(nid, *tags)`.
+
+## Session
+
+```python
+Session(reader, embedder, *, root: Path = ROOT, name: str | None = None, project: str | None = None,
+        agent: str | None = None, reads: Iterable[str | Reach] = ("session", "global"),
+        writes: str | Reach = "session", on: bool = True, vault: bool = True, core: bool = False,
+        core_tokens: int = CORE_TOKENS, tiers: dict | None = None, metrics: bool = False,
+        plain_system: str | None = None, **settings)
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `root` | `~/.engram` | where the reach folders live |
+| `name` | a new id | the session's id, such as `20261104-021500-a1b2` |
+| `project`, `agent` | `None` | the names of those reaches; needed to read or write them |
+| `reads` | `("session", "global")` | the reaches read, in order of preference |
+| `writes` | `"session"` | where new moments go (read too) |
+| `on` | `True` | memory on; off is the plain model |
+| `vault` | `True` | every reach keeps a vault (on by default here) |
+| `core` | `False` | one core from the `core` notes of every reach read |
+| `core_tokens` | 256 | the core's budget |
+| `tiers` | `None` | a dict of `Tiers` options; each reach gets its own disk budget, and all share one RAM budget |
+| `metrics` | `False` | each reach writes its own `metrics.jsonl` |
+| `plain_system` | `None` | the system prompt to use with memory off, instead of the same prompt with no notes |
+| `**settings` | | other `Memory` options for every reach: `room_tokens`, `join`, `closest`, `allowance`, `log` |
+
+A reach another session in this process already has open is shared as it is, with the settings it was opened with.
+
+### remember and answer
+
+```python
+Session.remember(self, text: str, day: int, *, to: str | Reach | None = None, **kw)
+Session.answer(self, question: str, today: dt.date, **kw)
+```
+
+- `remember` keeps a moment in the session's own reach, or `to` another reach it reads. `**kw` goes to
+  `Memory.remember` (`date`, `tags`, `pinned`). It returns the `Moment`, or `None` while memory is off.
+- `answer` answers from the best room over every reach. The wait is counted from the question, choosing included.
+  `**kw` goes to `Memory.answer` (`then`, `tools`, `max_tokens`, `kind`, `day`). With memory off, it calls
+  `plain` instead. The reply always has `metrics`.
+
+### The other calls
+
+| Call | What it does |
+| --- | --- |
+| `choose(question) -> tuple[Memory, Recall]` | the best room over every reach; earlier reaches win ties |
+| `recall(question) -> Recall` | chooses and lays the desk |
+| `plain(question, today, *, then="", tools=None, max_tokens=None)` | the model with no memory |
+| `switch(on: bool)` | memory on or off |
+| `memory(reach=None) -> Memory` | one reach's memory (the session's own by default) |
+| `state() -> dict` | each reach's memory, and the core |
+| `save()` | saves every reach |
+| `close()` | saves every reach and lets go of them; a `with` block does this |
+
+`s.last` is the last answer's `Recall` (`None` after an answer with memory off). `s.meter` holds every answer's record, memory on or off, and
+`s.meter.summary()` gives medians and 90th percentiles.
+
+### A session with a project and a core
+
+```python
+import datetime as dt
+
+from engram.models import Embedder, Reader
+from engram.reach import Session
+
+reader, embedder = Reader(), Embedder()
+with Session(reader, embedder, project="kitchen", reads=("session", "project", "global"), core=True) as s:
+    s.remember("[2026-01-05] I build the site for Mama Njeri's Kitchen in Nairobi.", 0, to="global",
+               tags=["core"], pinned=True)
+    s.remember("[2026-01-05] The fee is 1% rounded up to the next 5 shillings, at least 10.", 0, to="project")
+    reply = s.answer("What is the fee rule?", dt.date(2026, 1, 6))
+    print(reply.text)
+    print(s.last.reach, s.last.room, reply.metrics.first_word_s)
+```
+
+## Errands: one tool call from memory
+
+`engram.agent.act` gives an open `Memory` one task. It answers with the ten pretend tools (`engram.agent.TOOLS`,
+from `book_ride` to `ask_user`) and returns the call:
+
+```python
+from engram.agent import act
+
+tool, args, reply = act(m, "Book me a ride to my sister's home.", dt.date(2026, 1, 7))
+print(tool, args)   # the tool it called, and the arguments it filled from memory
+```
+
+```python
+act(memory, task_text: str, today, **log) -> tuple[str | None, dict, object]
+```
+
+For your own tools, call `answer` with `then` and `tools`, and read the call with `engram.agent.parse`:
+
+```python
+from engram.agent import parse
+
+reply = m.answer(task, today, then="Do this with exactly one tool call.", tools=my_tools, max_tokens=120)
+tool, args = parse("".join(reply.pieces))
+```
+
+`parse` reads both Qwen3's JSON tool calls and the XML form that Qwen 3.5 and later write.
+
+---
+
+Source: docs/site/ollama.md
+
+# Pairing with Ollama
+
+The engine runs its own models through MLX. The one exception is a pairing with Ollama: a small local proxy that
+speaks Ollama's own HTTP API, so the `ollama` CLI gets memory from one setting.
+
+Through Ollama, memory goes in as words, not tensors. Ollama runs its own model and lets no outside code put
+tensors into it. So the pairing shows how far memory as words goes; the engine's notes need the engine.
+
+## With the ollama CLI
+
+Start the real Ollama as usual (it listens on 127.0.0.1:11434). Then start the proxy, and point the CLI at it:
+
+```sh
+.venv/bin/python -m engram.pair.ollama --memory ~/.engram/default
+OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:1.7b
+```
+
+The proxy prints the line to use once it is listening. The first start loads the embedder, so the first chat does
+not wait for it.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `--port` | 11435 | where the proxy listens, on 127.0.0.1 |
+| `--memory` | `~/.engram/default` | the memory folder: an engine memory, or a new folder |
+| `--upstream` | `127.0.0.1:11434` | where the real Ollama listens; it must be this Mac |
+| `--budget` | 512 | tokens of notes added to each chat, about one room of the engine's desk |
+| `--no-memory` | off | a plain passthrough, to measure what the proxy itself costs |
+| `--allow-origin` | none | an origin let in on paths that never touch memory; the port may be `*` (repeatable) |
+| `--max-body-mb` | 32 | the largest request body |
+| `--metrics` | `<memory>/ollama/metrics.jsonl` | where the measurements go |
+
+## What it does with a chat
+
+- Everything is forwarded to the real Ollama. Answers stream back byte for byte. Paths other than chats are passed
+  through as they are.
+- Before a chat (`/api/chat`, or the OpenAI-style `/v1/chat/completions`) is forwarded, the proxy recalls notes on
+  the last user message. They go at the front of that message, just before the question.
+- They are not a system message. Ollama's templates print every system message once, at the top of the whole
+  prompt. Notes that change each turn there would make Ollama read the whole history again every turn. The client
+  keeps its own history without the notes, so the prompt stays the same up to the previous question, and Ollama's
+  prompt cache holds.
+- For `/api/generate`, which has no history, the notes go into its `system` field, after the model's own system
+  prompt.
+- Once the answer has streamed back, the exchange is remembered on one background worker, so the connection is free
+  at once. The next recall waits for it, and that wait is counted in its `recall_ms`.
+- A request with the header `X-Engram-Memory: off` is forwarded with no notes, and nothing is remembered.
+
+## What it remembers, and where
+
+Each turn (the user's message, and the answer) is cut into pieces of at most 800 characters. A very long turn keeps
+only its first and last 8 pieces. Each piece is kept in `<memory>/ollama/` three ways:
+
+| File | What it is |
+| --- | --- |
+| `notes.jsonl` | one line per piece, append-only |
+| `vectors.f32` | one row per piece, its embedding, append-only |
+| `vault/ollama-000000.md` | one note per piece, in the vault's format, so the folder opens in Obsidian |
+
+- Recall embeds the question with the engine's embedder (Qwen3-Embedding through MLX). It takes the closest notes
+  that fit the budget, at most 8, and puts them oldest first.
+- When the folder is also an engine memory, its moments are searched too, read-only.
+- The files are the truth. A note whose file a person deleted is never recalled again. A note edited by hand is
+  recalled with its new words.
+- Notes written by one embedder are refused by another, since their vectors would mean nothing to it.
+
+## Security
+
+As in the app:
+- The proxy listens on 127.0.0.1 only, and a request must name this host.
+- What a web page sends is refused: a request with an `Origin` header, or with `Sec-Fetch-Site` "cross-site" or
+  "same-site". The CLI sends neither.
+- `--allow-origin` lets an origin in only on paths that never touch memory. An `Origin` header on a chat path or on
+  `/engram/metrics` is always refused.
+- Bodies are capped.
+- The real Ollama must be on this Mac too. Notes are personal and never leave it.
+
+## Measurements
+
+Every request is measured, with memory on or off:
+- `added_ms`: what the proxy added before the request reached Ollama;
+- `recall_ms` and `wait_ms`: finding the notes, and waiting for the previous exchange to be kept;
+- `first_byte_ms` and `upstream_first_byte_ms`: the wait for the first byte, from the client and from Ollama;
+- `total_ms`;
+- `prefill_tps` and `decode_tps`, as Ollama reported them;
+- `notes_chars` and `remember_ms`.
+
+`GET /engram/metrics` returns the latest 500. Each is also a line of `<memory>/ollama/metrics.jsonl`. A chat
+answered with memory on carries the headers `X-Engram-Added-Ms` and `X-Engram-Notes-Chars`.
+
+Results with and without memory: see records.
+
+## The macOS Ollama app: its limits
+
+These come from the pairing code's own notes (`engram/pair/ollama.py`), for the Ollama app 0.13.5. The route
+through the app was read from the app's source. It has not been tried yet.
+
+- The app has no setting for its server's address.
+- It reads `OLLAMA_HOST` from its own environment (`launchctl setenv`), both for its chat window and for the server
+  it starts.
+- "Expose Ollama to the network" makes that server listen on 0.0.0.0:11434 instead.
+- So these three steps should send its chats through the proxy:
+  1. `launchctl setenv OLLAMA_HOST 127.0.0.1:11435`;
+  2. turn Expose on;
+  3. restart the app.
+- Start the proxy with `--allow-origin 'http://127.0.0.1:*'` for the app's model list. Its `/api/tags`, `/api/show`
+  and `/api/version` come from its web view, which sends an `Origin`. Its chat comes from its Go client, which sends
+  none.
+- Expose also opens Ollama to the local network.
+- Without Expose, the app's server would fight the proxy for the port and stop every other process named `ollama`.
+
+The CLI route needs none of this.
+
+---
+
+Source: docs/site/benchmarks.md
+
+# Benchmarks
+
+The benchmarks ask one thing: does a small model on a Mac, with this memory, close the gap to a cloud model on long
+work, without getting slower or heavier as the history grows? Every answer is graded by a rule, and every answer
+records what it cost (see [Metrics](docs/site/metrics.md)).
+
+## Who is measured
+
+| Model | Runtime | Memory as |
+| --- | --- | --- |
+| Qwen3 1.7B, Qwen3 4B Instruct 2507, Qwen3 8B | MLX, 4-bit | tensors (rooms and core) and the vault |
+| Qwen 27B (`mlx-community/Qwen3.8-27B-4bit`) | MLX, 4-bit | words: its linear-attention layers keep no keys and values to save |
+| Qwen3 1.7B, 4B, 8B | Ollama, through the pairing | words |
+| Claude Haiku 5.5, Sonnet 5.5, Opus 5.5 | the Anthropic API | none: the yardstick |
+
+Claude is only a yardstick. It answers the same questions on its own, with no memory engine.
+
+## The Long Haul
+
+Our own hard test. One scripted project: a developer building the site and back office of "Mama Njeri's Kitchen",
+in Nairobi, over 110 working days. It mixes chat, meetings, decisions, code, documents, logs, a maths course and
+noise. It is fixed by its seed: the same seed always gives the same script.
+
+The built test for seed 1 has 17,786 events and 2,010,094 tokens (counted with Qwen3-1.7B's tokenizer), from 22
+September 2025 to 27 February 2026.
+
+### What it plants and asks
+
+Probes are planted early and asked late. Each has one answer a rule can check.
+
+| Family | Probes | Planted | Asked | Graded |
+| --- | --- | --- | --- | --- |
+| `fact` | 400 | facts at random depths | far past every window | exact |
+| `changed` | 80 facts, 160 questions | each changed 2 to 4 times, with dates | the value now, and the value on a past date | exact; an old value is stale |
+| `two_hop` | 40 | two halves, weeks apart | a question that needs both | exact |
+| `maths` | 40 problems, 120 questions | a hard problem, a scripted first answer with the tempting wrong method, then a step-by-step correction; some corrections state a rule invented for this project | the same problem; the same method with new numbers; the invented rule on a new case | exact number; the uncorrected method's number is stale |
+| `page` | 3 | a design system in week 1; the main colour changes on day 61 | "Build the catering page" on day 110 | HTML and CSS checks; optionally loaded in a headless browser |
+| `code` | 20 | five helper modules with exact names, units and quirks | new code that calls them | unit tests run on the answer, in a sandbox |
+| `lookalike` | 30 | two Wanjirus, prices 1 shilling apart, near-identical repo names | aimed at one of each pair | exact |
+| `never` | 60 | nothing | questions on things never told | a decline is right; a guess is a false memory |
+
+One example of an invented rule: the fee is 1% rounded up to the next 5 shillings, at least 10, and a flat 25 for
+exact multiples of 1,000. So 12,000 gives 25 and 7,321 gives 75.
+
+### The cuts and the checkpoints
+
+The script is cut at four sizes. At each cut, a checkpoint takes a stratified sample of the probes askable there:
+10 from each family (seed 0), each resolved to its right answer at that point. Every contender gets exactly these
+checkpoints, so their scores compare.
+
+| Cut | Tokens told | Events told | Last day | Questions |
+| --- | --- | --- | --- | --- |
+| 64K | 63,860 | 551 | 7 | 34 |
+| 256K | 255,952 | 2,343 | 16 | 40 |
+| 1M | 999,988 | 8,760 | 56 | 69 |
+| 2M | 1,999,743 | 17,699 | 110 | 73 |
+
+Early cuts have fewer questions because some families are not askable yet.
+
+### Verdicts
+
+| Verdict | Meaning |
+| --- | --- |
+| `right` | the expected answer; for a never-told question, a decline that does not then guess |
+| `wrong` | something else, a look-alike's value, or code or a page that fails its checks |
+| `stale` | a value an update replaced, the uncorrected method's number, or the old main colour |
+| `declined` | says it doesn't know, but the answer was told |
+| `false_memory` | answers a question about something never told, or declines and then guesses |
+
+The same answer always gets the same verdict. Grading costs nothing, and anyone can grade again.
+
+### Build it and look at it
+
+```sh
+.venv/bin/python -m engram.bench.haul build --seed 1 --out work/haul/s1
+.venv/bin/python -m engram.bench.longhaul show --dir work/haul/s1
+.venv/bin/python -m engram.bench.haul sample --n 15 --per-family --cut 1M --dir work/haul/s1
+.venv/bin/python -m engram.bench.haul grade --dir work/haul/s1 --answers answers.jsonl --cut 1M [--browser]
+```
+
+- `build` writes `script.jsonl` (one event per line), `probes.jsonl` (one probe per line) and `manifest.json`
+  (counts per family, and tokens and askable probes per cut).
+- `grade` reads lines of `{"id": ..., "answer": ...}`. `--browser` also loads page answers in a headless Chromium
+  (`$HAUL_BROWSER`, or one installed in the usual places).
+
+### Scoring any contender
+
+Two functions in `engram.bench.longhaul` are shared by every contender:
+
+```python
+checkpoints(folder: Path, cuts: dict[str, int] = CUTS, per_family: int = PER_FAMILY,
+            seed: int = SAMPLE_SEED) -> tuple[list[dict], list[dict]]
+grader(question: dict, answer: str) -> dict
+```
+
+- `checkpoints` returns the events and the checkpoints. A checkpoint is `{name, tokens, events, questions}`.
+  `events` is how many events are told by then. Each question is `{id, question, expected, family, probe}`.
+- `grader` returns `{verdict, right, reason}` for one answer.
+
+The local runners use the contender protocol in `engram.bench.contender`: a contender is told the history one event
+at a time (`tell(text, day)`) and asked questions (`ask(question, *, max_tokens, family)`). Answers get room by
+family: 1,200 tokens for a page, 600 for code, 400 for maths and 120 for the rest. Qwen3's thinking is off for every
+local model.
+
+### The contenders by name
+
+| Name | Runner | What it is |
+| --- | --- | --- |
+| `engine:<model>` | `engram.bench.local` | the engine: one `Session` on one project reach, with the vault, the core, the tiers and the metrics on; 2 GB of RAM for hot rooms and 40 GB of disk for room files; `qwen3-1.7b`, `qwen3-4b` or `qwen3-8b` |
+| `words:<model>` | `engram.bench.local` | the engine's rooms, chosen the same way, pasted in as text; for `qwen-27b` |
+| `bare:<model>` | `engram.bench.local` | no memory: the most recent part of the history that fits (32K tokens for the 1.7B and 8B, 64K for the 4B, 16K for the 27B, so their keys and values fit in 24 GB) |
+| `ollama:<model>` | `engram.bench.ollama_run` | Ollama through the pairing: memory as words |
+| `ollama-bare:<model>` | `engram.bench.ollama_run` | plain Ollama, with the most recent 32,768 tokens of the history in its prompt |
+| `claude-<model>` | `engram.bench.longhaul`, `engram.bench.suite_run` | Claude alone, the yardstick |
+
+The engine's moments carry their date and the Long Haul's day number, as `[YYYY-MM-DD, day 50] text`, since the
+Long Haul asks about days by number.
+
+### Rerun it
+
+```sh
+# the engine and the other local contenders, through MLX
+.venv/bin/python -m engram.bench.local longhaul --contender engine:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m engram.bench.local longhaul --contender bare:qwen3-1.7b --dir work/haul/s1 --cuts 64K 256K
+
+# the wait as the memory grows, during one reading of the Long Haul: points at 1K and 10K moments, and the end
+.venv/bin/python -m engram.bench.local speed --contender engine:qwen3-1.7b --dir work/haul/s1
+
+# Ollama, paired and bare
+.venv/bin/python -m engram.bench.ollama_run longhaul --contender ollama:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m engram.bench.ollama_run longhaul --contender ollama-bare:qwen3-1.7b --dir work/haul/s1
+
+# Claude, alone
+.venv/bin/python -m engram.bench.longhaul claude --model claude-haiku-5-5 --dir work/haul/s1
+.venv/bin/python -m engram.bench.longhaul claude --model claude-sonnet-5-5 --dir work/haul/s1 --cuts 64K 256K
+```
+
+For the local and Ollama runners, `--limit N` asks at most N questions per checkpoint, every family in turn: a
+quick check before a full run.
+
+Each run writes a dated record after every checkpoint, to
+`records/bench/<YYYY-MM-DD>/<HHMMSS>-<task>-<contender>.json`. Memories made by a run go under `work/memories/`.
+
+## The Claude yardstick
+
+- Claude reads the history as text: the most recent part that fits its 1M-token window, with room for the
+  questions and the reply. A long history is cut from the front.
+- All three models get the same settings: effort "medium" and adaptive thinking. Thinking cannot be turned off on
+  Opus 5.5; it is billed and recorded as output.
+- A checkpoint's questions go in one request, which asks for the answers as JSON. The history is cached where the
+  last request ended, so later checkpoints read it from the cache.
+- A reply cut off by its own `max_tokens` is not graded wrong. The questions it never reached are asked once more,
+  alone, with twice the room.
+- Every request streams, so the time to the first token is exact. A stream is one try: the SDK's own retries are
+  off for it, so no retry wait counts as time to the first word.
+- No fallback model is ever asked for, so each record names the model that answered. A refusal is recorded as a
+  refusal.
+
+**Cost.** Every call logs its tokens and its cost at list price in `records/bench/claude-ledger.jsonl`. The ledger
+holds a hard cap of $60 for the night. Before a call is sent, its worst case is held in the ledger, and the call is
+refused if that would pass the cap less $2 of headroom.
+
+| Model | Input | Output | Cache read | Cache write (5 minutes) |
+| --- | --- | --- | --- | --- |
+| `claude-opus-5-5` | $4 | $20 | $0.20 | 1.25 × input |
+| `claude-sonnet-5-5` | $2 | $10 | $0.20 | 1.25 × input |
+| `claude-haiku-5-5` | $0.10, or $0.50 past 100K | $0.50, or $2.50 past 100K | 0.1 × input | 1.25 × input |
+
+Prices are per million tokens. A Haiku prompt over 100K tokens is priced on its long card for every token of that
+call.
+
+```sh
+.venv/bin/python -m engram.bench.claude smoke    # one tiny call
+.venv/bin/python -m engram.bench.claude spent    # what the ledger has spent, against the cap
+```
+
+**The key.** It is read from `~/.config/camr/anthropic.env` when the client is made, and handed straight to it. It
+is never printed, logged or stored.
+
+## The Hugging Face suites
+
+Public benchmarks, loaded, sampled with a seed and graded by their own rules (`engram.bench.suites`).
+
+| Suite | Source | What it tests | Graded by | `--n` counts |
+| --- | --- | --- | --- | --- |
+| `babilong` | RMT-team/babilong | bAbI facts hidden in book text, qa1 to qa5, at 4k to 1M tokens | the dataset's own rule | items per task, each story at every length |
+| `memoryagentbench` | ai-hyz/MemoryAgentBench | Conflict_Resolution and Accurate_Retrieval: one long context fed in chunks, then many questions | exact match after normalising | questions per context |
+| `math500` | HuggingFaceH4/MATH-500 | 500 competition problems | the last `\boxed{}` answer, by value with sympy | problems |
+| `aime` | MathArena/aime_2025 and aime_2026 | 30 problems a year, each a whole number 0 to 999 | exact | problems per year |
+| `harp` | aadityasingh/HARP | correction pairs: problem A and its worked solution as context, then a new problem B of the same subject and level | by value, in HARP's own order of checks | pairs |
+| `longmemeval` | xiaowu0162/longmemeval-cleaned, S set | 500 questions, each over about 50 chat sessions (about 115K tokens); 30 about things never said | a judge model (Claude Haiku 5.5), by the benchmark's rules | questions per kind |
+| `webdev` | lmarena-ai/leaderboard-dataset | how models got better at building web pages: the WebDev rating history | not graded: a CSV and a summary | |
+
+Every item has `id`, `suite`, `context` (the text, or its chunks in order), `question`, `answer`, `length_tokens`
+and `meta`. A verdict is `right`, `wrong` or `declined`; for questions about things never said, `right_abstain` or
+`false_memory`.
+
+```sh
+.venv/bin/python -m engram.bench.suites list
+.venv/bin/python -m engram.bench.suites sample babilong --n 2 --seed 0 --lengths 4k,16k
+.venv/bin/python -m engram.bench.suites webdev
+```
+
+### Rerun them
+
+`engram.bench.suite_run` runs a suite against any contender: the engine, Ollama (paired or bare), or Claude with no
+memory. Each context gets a memory of its own.
+
+| Suite | How it is run |
+| --- | --- |
+| `babilong` | qa1 to qa5 at 4k, 16k, 64k and 128k, plus 512k and 1M for the engine and Claude; the story is told in chunks of about 512 tokens, then its question is asked |
+| `memoryagentbench` | Conflict_Resolution: each context's chunks in order, then its questions |
+| `math500` | 50 problems of levels 3 to 5, no memory: what the model can do on its own |
+| `aime` | AIME 2025 and 2026, no memory |
+| `harp` | memory on: problem A and its worked solution are told, then 30K tokens of Long Haul noise, then problem B and A again are asked; memory off: B and A with nothing told |
+
+```sh
+.venv/bin/python -m engram.bench.suite_run babilong --contender ollama-bare:qwen3:1.7b --n 3 --lengths 4k
+.venv/bin/python -m engram.bench.suite_run harp --contender ollama:qwen3-1.7b --n 20
+.venv/bin/python -m engram.bench.suite_run math500 --contender claude-haiku-5-5 --n 50 --max-usd 10
+```
+
+A Claude run prints its estimated cost first, and does not start when that passes `--max-usd` (10 by default).
+`--estimate` prints the estimate and stops. Every Claude call is also held in the ledger against the night's cap.
+
+`suite_run` does not run `longmemeval` or `webdev`. LongMemEval needs its judge model; its loader and judge prompts
+are in `engram.bench.suites.longmemeval`. WebDev Arena is a history, not questions.
+
+From Python:
+
+```python
+from engram.bench import suites
+
+items = suites.sample("babilong", 2, seed=0, lengths=["4k", "16k"])
+for item in items:
+    for chunk in item.chunks:
+        ...  # tell the contender
+    reply = ...  # ask it suites.prompt(item)
+    verdict = suites.grade(item, reply)
+```
+
+```python
+suites.load(suite: str, **kw) -> list[Item]
+suites.sample(suite: str, n: int, seed: int = 0, **kw) -> list[Item]
+suites.prompt(item: Item) -> str
+suites.grade(item: Item, reply: str, judge: Callable[[str], str] | None = None) -> str
+```
+
+Downloads are kept in `$ENGRAM_DATASETS`, or else in the ignored `work/datasets/`. Once a file is there, no network
+is needed.
+
+## Speed
+
+How the wait grows with memory on the desk, notes against words, with the SSD read and the cache bypassed:
+
+```sh
+.venv/bin/python -m engram.ruler speed --persona student
+```
+
+How fast each local model reads and writes on this Mac, from 512 to 32K tokens, through MLX and through Ollama:
+
+```sh
+.venv/bin/python -m engram.bench.throughput --out records/bench
+```
+
+## The ruler: the scripted lives
+
+The step 0 to step 2 measurements use three scripted 12-week lives (a student, a dairy-cooperative manager and a
+developer) and the same 100-question quiz every week.
+
+```sh
+scripts/step1.sh     # every contender through the three held-out lives
+scripts/errands.sh   # errands for every contender and life
+.venv/bin/python -m engram.ruler run --persona student --seed 1 --contender engram
+```
+
+Seed 1 is for the proof. Seed 0 is for development and tuning.
+
+## Results
+
+| Benchmark | Engine, 1.7B | Engine, 4B | Engine, 8B | 27B, words | Ollama, paired | Ollama, bare | Claude Haiku | Claude Sonnet | Claude Opus |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Long Haul, 64K | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| Long Haul, 256K | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| Long Haul, 1M | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| Long Haul, 2M | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| BABILong | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| MemoryAgentBench | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| LongMemEval S | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| HARP pairs | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| MATH-500 (no memory) | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+| AIME 2025 and 2026 (no memory) | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+
+The wait as the engine's memory grows (`engram.bench.local speed`):
+
+| Moments kept | First word, p50 | Retrieval, p50 | Read from the SSD | GB/s | Disk |
+| --- | --- | --- | --- | --- | --- |
+| 1,000 | see records | see records | see records | see records | see records |
+| 10,000 | see records | see records | see records | see records | see records |
+| the end of the Long Haul | see records | see records | see records | see records | see records |
+
+The records are under `records/bench/`. Each names the machine, how busy it was (`load_1m`), and the code that made
+it (`engram_source_sha`).
+
+## Rules for measuring
+
+- One measuring job at a time. The GPU runs one model, and anything else running skews the times.
+- A record is made by the code it names. A change to the code means a new record.
+- Claude's spending is held under the ledger's cap, call by call.
+
+---
+
+Source: docs/site/metrics.md
+
+# Metrics
+
+Every answer records what it knew and what it cost. A memory that knows more but makes a person wait longer, or
+fills the Mac's RAM, has not won.
+
+## Graded
+
+A benchmark record gives every answer a `verdict`, by rule (see [Benchmarks](docs/site/benchmarks.md)):
+
+| What | Verdict |
+| --- | --- |
+| Right | `right` |
+| Wrong | `wrong` |
+| Stale: a value an update replaced | `stale` |
+| Honest: declined what was never told | `right_abstain` in the suites and the scripted lives; `right` on a Long Haul `never` question |
+| False memory: answered something never told | `false_memory` |
+| Declined something that was told | `declined` (`missed` in the scripted lives) |
+
+## Measured
+
+The engine measures every answer itself, as an `engram.metrics.Record`:
+
+| What | Field | How it is counted |
+| --- | --- | --- |
+| Time to the first word | `first_word_s` | from the question to the first word: choosing, reading the room, laying the desk and reading the words all count |
+| Total time | `total_s` | from the question to the last word |
+| Prefill speed | `prefill_tps` | tokens read as words, per second, before the first word |
+| Decode speed | `decode_tps` | tokens written per second |
+| Retrieval time | `retrieval_ms` | per step: `choose`, `core`, `fetch` (the SSD read), `wake`, `desk`, and `total` |
+| Where the room came from | `tier` | `ram`, `ssd` or `vault` (asleep) |
+| Bandwidth | `read_bytes`, `gbps` | bytes read from the SSD for this answer, and how fast |
+| The read's share of the wait | `read_share` | SSD read time over the time to the first word |
+| Context used | `context_tokens` | every token the model saw: header, core, room, words and question |
+| The whole history | `history_tokens` | every token the memory holds, awake or asleep, over every reach read |
+| Read as words | `new_tokens` | the tokens read this answer; the rest were already notes |
+| Answer length | `answer_tokens` | tokens written |
+| Peak RAM | `peak_ram_bytes`, `peak_mlx_bytes` | the process's peak resident memory so far, and MLX's own peak |
+| Disk | `disk_bytes` | the memory folders on disk: room files, indexes, logs and vaults |
+
+Each record also has the `question`, the `room`, the `reach` and the time (`at`).
+
+Peak RAM is the process's peak so far, not this answer's alone. A run that loads a bigger model first keeps that
+peak.
+
+## Where they go
+
+- `Memory(..., metrics=True)` appends one JSON line per answer to `<memory>/metrics.jsonl`.
+- A `Session` keeps every answer's record in `s.meter`, memory on or off, and sets it on the reply as
+  `reply.metrics`.
+- Benchmark records carry one metrics dict per answer, with the same keys for every contender and `None` where a
+  contender cannot know: `ttft_s`, `total_s`, `prefill_tps`, `decode_tps`, `retrieval_ms`, `bytes_read`, `gbps`,
+  `read_share`, `context_tokens`, `history_tokens`, `peak_ram_gb`, `disk_gb` and `tier`.
+
+## Medians and the 90th percentile
+
+`summary` gives the median (`p50`) and the 90th percentile (`p90`) of each time and size over many answers, the
+largest history and peak RAM, the last disk size, and how many answers came from each tier.
+
+```python
+from pathlib import Path
+
+from engram.metrics import Meter, summary
+
+rows = Meter.read(Path("~/.engram/mine/metrics.jsonl").expanduser())
+print(summary(rows)["first_word_s"])        # {"p50": ..., "p90": ...}
+print(summary(rows)["retrieval_ms"]["fetch"])
+```
+
+```python
+Meter(path: Path | None = None)
+Meter.read(path: Path) -> list[dict]
+summary(records: list) -> dict
+```
+
+## For Claude
+
+Every Claude call records:
+- input tokens, and the tokens read from and written to the prompt cache;
+- output tokens, thinking included, and the thinking tokens apart;
+- the time to the first token and the total time;
+- the dollars it cost at list price.
+
+Each call is a line of `records/bench/claude-ledger.jsonl`. The prices are in [Benchmarks](docs/site/benchmarks.md).
+
+## For the Ollama pairing
+
+The proxy measures each request apart: what it added before Ollama saw the request, the recall time, the wait for
+the first byte, and Ollama's own speeds. See [Pairing with Ollama](docs/site/ollama.md).
+
+---
+
+Source: docs/site/limits.md
+
+# Limits
+
+What the engine does not do, or does not do well yet. Each comes from the code or from a measurement.
+
+## Where it runs
+
+- **Apple silicon only.** The engine runs on MLX, so it needs an M1 Mac or later. It does not run on Intel Macs,
+  Windows or Linux. The Ollama pairing needs MLX too, for its embedder.
+- **Local only.** It serves models running on this Mac. There is no plugin for Claude Code, Codex or LM Studio.
+  Ollama is the one pairing, and through it memory goes in as words.
+
+## Which models can read notes
+
+- **Every layer must keep keys and values, with plain RoPE.** Notes are the model's own keys and values, so the
+  engine can lay them back only for models built that way. It refuses a model with RoPE scaling. Qwen3 1.7B, 4B and
+  8B qualify.
+- **Hybrid models read words.** Qwen 27B (`Qwen3.8-27B`) keeps a running state instead of keys and values in 48 of
+  its 64 layers. It cannot use saved notes, so it reads the engine's memory as words: the same rooms, chosen the same
+  way, pasted in as text. That reading is a contender in the benchmarks (`CamrWords` in `engram.ruler.contenders`),
+  not an option of `Memory` or `Session`.
+- **Notes belong to one model.** Rooms written by one model cannot be read by another. Opening them with a model
+  whose notes are a different size fails ("these rooms were written for a different model"). A model whose notes
+  are the same size is not caught, and would read nonsense. The words are kept in the index, so the notes could be
+  written again for a new model, but there is no tool for it yet.
+
+## Size
+
+- **Notes are big.** One token of notes on Qwen3-1.7B is 112 KiB, about 29,000 times its text. A full room of 512
+  tokens is 56 MiB. One scripted 12-week life grew to 963 MB of notes (DECISIONS.md, E-20).
+- **Sleep is the answer to that, and it is partial.** Rooms over the disk budget go to sleep as words. But a
+  question about an asleep room then reads its words, which is slower, or wakes it, which costs one reading of the
+  room by the model.
+
+## What one desk holds
+
+- **One room per question.** The desk holds one room, plus the 4 closest moments as words. Rooms written apart lose
+  the thread when laid side by side (DECISIONS.md, E-15 and E-16). A question whose answer is spread over several
+  rooms gets only the room of the closest moment, and whatever of the rest is among the closest moments. Two-hop
+  questions show this.
+- **Bigger rooms did worse.** On the scripted lives, rooms of up to 1,024 or 2,048 tokens knew fewer facts than
+  rooms of up to 512 (DECISIONS.md, E-18). The settings were tuned there, on the 1.7B.
+- **Short answers by default.** The fixed instructions ask for one short sentence, and answers stop at 40 new tokens
+  unless `max_tokens` says more. Longer work needs `then` and `max_tokens`.
+
+## What a small model still does
+
+- **It guesses.** On the scripted lives, Qwen3-1.7B with the engine made up an answer to 25 of 45 questions about
+  things never told (E-20). In errands it made up 42 of 45, and never once asked the user (E-25).
+- **It is not yet a bigger model.** The old CAMR on the 4B knew 208 of 255 facts, against the engine's 164 on the
+  1.7B (E-20).
+- **The head start depends on the Mac.** The M5 Pro reads text fast: about 6,600 tokens a second, against about 800
+  on the MacBook Air M4 (E-17). At 2,000 words, notes were 4.6 times sooner than reading the words, not the 10 times
+  hoped for (E-20). The gap grows with memory: 1.9 times at 250 words, 5.8 times at 3,000.
+
+## Forgetting and privacy
+
+- **There is no way yet to make the engine forget one moment.** Deleting a vault note removes its words from the
+  archive, but the moment's notes stay in its room's file, and its words stay in `index.json`. To forget everything,
+  delete the memory folder.
+- **Memory is plain files.** Room files, the index and the vault are not encrypted. Anyone who can read your home
+  folder can read your memory.
+- **Editing the vault changes less than it seems.** An edit to a note tagged `core` changes the core. An edit to any
+  other note changes its words in the archive, not the room's notes or the words re-read on the desk.
+- **Nothing leaves the Mac**, except: the installer downloads `uv` and the models; the Hugging Face suites download
+  their data; and the Claude yardstick, when you run it, sends the Long Haul (a scripted, made-up project) to
+  Anthropic.
+
+## Sleep and the vault
+
+- **Nothing schedules sleep.** `Memory.fade` must be called by the program using the engine. Naps on the charger,
+  distilling checked by a quiz, and settling unsure facts at recall are planned, not built.
+- **The vault reads simple front matter.** Values, lists, and what Obsidian writes when a person edits a note.
+  Unusual YAML written by hand may not be read.
+
+## One writer at a time
+
+- **A reach folder is open in one process at a time.** A second process gets `ReachBusy`.
+- **A bare `Memory` takes no lock.** Open one `Memory` per folder, or use a `Session`, which locks each reach.
+- **One model job at a time.** The app answers one request at a time, and benchmarks should run alone on the GPU.
+
+## The app
+
+- As of 4 November, the app's own memory is a `Memory` with rooms only: the vault, the core and the tiers are
+  options of the library. The app was being rebuilt that night; the [user guide](docs/USER_GUIDE.md) describes it.
+
+## The Ollama pairing
+
+- **Words only.** Notes go into the prompt as text, at most 8 notes and 512 tokens by default.
+- **The macOS app route is untried.** It was read from the app's source. It needs "Expose Ollama to the network",
+  which also opens Ollama to the local network. See [Pairing with Ollama](docs/site/ollama.md).
+
+## The benchmarks
+
+- **The Long Haul is scripted.** One made-up project, fixed by its seed. It is built to be hard in known ways, not to
+  be a sample of real work.
+- **Rules can miss a right answer.** Grading by rule is the same every time, but an answer worded in an unexpected
+  way can be marked wrong. Every record keeps the raw answer, so it can be checked by hand.
+- **LongMemEval needs a judge model** (Claude Haiku 5.5), so its verdicts are not by rule.
+- **Claude reads the most recent 1M tokens.** At the 2M cut, the start of the history does not fit in its window.
+  That is the point of the test, and it is also why Claude is a yardstick, not a contender with memory.
+- **One machine.** Every number in these pages was measured on one MacBook Pro M5 Pro with 24 GB. Other Macs will
+  differ. Records note the machine and how busy it was.

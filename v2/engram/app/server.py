@@ -1,11 +1,11 @@
-"""Engram's app: talk to it, give it errands, and look inside while it works.
+"""Engram's app: talk to it, give it errands, look inside while it works, and see what models fit this Mac.
 
     python -m engram.app                      # http://127.0.0.1:8765, memory in ~/.engram/default
 
-One page, three tabs. Chat: what you tell it is remembered, and questions (ending in "?") are answered from memory.
-Errands: one tool call filled from memory. Brain: any answer or errand replayed word by word on the specimen view.
-A sample life can be loaded and quizzed, so the Brain tab can show what went wrong next to what went right.
-Everything runs on this Mac; the server listens on 127.0.0.1 only.
+One page (``static/index.html``) with six screens: Models, Chat, Code, Swarm, Memory and Bench. The shell
+(``static/shell.js``) draws the top strip and switches screens; each screen is a module in ``static/screens/`` and
+keeps its server routes in ``routes/<screen>.py``. Everything runs on this Mac; the server listens on 127.0.0.1 only
+and serves nothing but its own page, its static files and its API.
 """
 
 from __future__ import annotations
@@ -14,15 +14,25 @@ import datetime as dt
 import json
 import secrets
 import threading
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from engram.app.web import Refused, Request, Routes
+
 STATIC = Path(__file__).parent / "static"
 START = dt.date(2026, 1, 5)  # day 0 of the scripted lives; chat moments count days from here too
+MAX_BODY = 1 << 20  # a request body larger than 1 MB is refused
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+       "font-src 'self'; connect-src 'self'; worker-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'")
+TYPES = {".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
+         ".css": "text/css; charset=utf-8", ".woff2": "font/woff2", ".svg": "image/svg+xml",
+         ".json": "application/json", ".png": "image/png"}
 
 
 class App:
     def __init__(self, path: Path):
+        from engram.app.runtime import Runtime
         from engram.memory import Memory
         from engram.models import Embedder, Reader
 
@@ -32,6 +42,14 @@ class App:
         self.today = dt.date.today()
         self.sim = None
         self.sim_root = Path(path).parent / "simulations"
+        self.models = Runtime()
+        self.models.adopt(self.reader)
+
+    def paths(self) -> dict[str, Path | None]:
+        """The logs the page follows: the memory's events and its metrics."""
+        log = self.memory.log
+        return {"events": log.path if log else None, "metrics": self.memory.path / "metrics.jsonl",
+                "memory": self.memory.path}
 
     def simulate(self, persona: str, seed: int, questions: int) -> dict:
         from engram.app.sim import Simulation
@@ -123,51 +141,88 @@ class App:
             r = memory.rooms
             xy = layout[:len(r.moments)] if layout is not None else positions(r)
             events = memory.log.read()
-        verdict = {e["event"]: e for e in events if e["type"] == "verdict"}
-        tools = {}
-        for i, e in enumerate(events):
-            if e["type"] == "tool":
-                prev = max((j for j in range(i) if events[j]["type"] == "agent"), default=None)
-                if prev is not None:
-                    tools[prev] = e
-        shown = []
-        for i, e in enumerate(events):
-            if e["type"] not in ("answer", "agent") or e.get("room") is None:
-                continue
-            item = {k: e[k] for k in ("question", "room", "nodes", "share", "used", "words", "looks", "wait_s")}
-            item.update(id=i, kind=e["type"], at=e["at"], verdict=verdict.get(i, {}).get("verdict"),
-                        expected=verdict.get(i, {}).get("expected"))
-            if i in tools:
-                item.update(tool=tools[i]["tool"], args=tools[i]["args"], result=tools[i]["result"])
-            shown.append(item)
-        return {"moments": [{"room": m.room, "day": m.day, "text": m.text} for m in r.moments],
-                "rooms": [{"id": x.rid, "members": x.members} for x in r.rooms], "layout": xy, "answers": shown[-400:]}
+        return shown(events, [{"room": m.room, "day": m.day, "text": m.text} for m in r.moments],
+                     [{"id": x.rid, "members": x.members} for x in r.rooms], xy)
 
 
-def serve(app: App, port: int) -> None:
+def shown(events: list[dict], moments: list[dict], rooms: list[dict], layout) -> dict:
+    """The brain view's data: moments, rooms, layout, and the last 400 answers and errands with their verdicts."""
+    verdict = {e["event"]: e for e in events if e["type"] == "verdict"}
+    tools = {}
+    for i, e in enumerate(events):
+        if e["type"] == "tool":
+            prev = max((j for j in range(i) if events[j]["type"] == "agent"), default=None)
+            if prev is not None:
+                tools[prev] = e
+    out = []
+    for i, e in enumerate(events):
+        if e["type"] not in ("answer", "agent") or e.get("room") is None:
+            continue
+        item = {k: e.get(k) for k in ("question", "room", "nodes", "share", "used", "words", "looks", "wait_s")}
+        item.update(id=i, kind=e["type"], at=e["at"], verdict=verdict.get(i, {}).get("verdict"),
+                    expected=verdict.get(i, {}).get("expected"))
+        if i in tools:
+            item.update(tool=tools[i]["tool"], args=tools[i]["args"], result=tools[i]["result"])
+        out.append(item)
+    return {"moments": moments, "rooms": rooms, "layout": layout, "answers": out[-400:]}
+
+
+def static_file(rel: str, root: Path = STATIC) -> Path | None:
+    """The file under ``root`` that ``/static/<rel>`` names, or None for anything else: a path that leaves the
+    folder (``..``, a symlink out, an absolute path), a hidden file, or a type the app does not serve."""
+    rel = urllib.parse.unquote(rel)
+    if not rel or "\0" in rel or "\\" in rel or rel.startswith("/"):
+        return None
+    parts = rel.split("/")
+    if any(p in ("", ".", "..") or p.startswith(".") for p in parts):
+        return None
+    base = root.resolve()
+    path = (base / rel).resolve()
+    if not path.is_relative_to(base) or not path.is_file() or path.suffix.lower() not in TYPES:
+        return None
+    return path
+
+
+def make_server(app, port: int, *, routes: Routes | None = None, static: Path = STATIC
+                ) -> tuple[ThreadingHTTPServer, str]:
+    """The server (not yet serving) and its launch token."""
+    from engram.app.routes import collect
+
     # Only this page may talk to the server: other websites the user visits can reach 127.0.0.1 too. Requests must
-    # name this host (stops DNS rebinding), POSTs must be JSON from this origin, and every API call carries a secret
-    # made at launch that only the served page knows.
+    # name this host (stops DNS rebinding), must not come from another origin, POSTs must be JSON, and every API
+    # call carries a secret made at launch that only the served page knows.
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     origins = {f"http://{h}" for h in hosts}
     token = secrets.token_urlsafe(24)
+    routes = routes if routes is not None else collect()
+    app.route_errors = dict(routes.errors)
 
     class Handler(BaseHTTPRequestHandler):
+        server_version = "engram"
+        sys_version = ""
+
         def _allowed(self, api: bool, post: bool) -> bool:
             if self.headers.get("Host") not in hosts:
                 return False
             origin = self.headers.get("Origin")
             if origin is not None and origin not in origins:
                 return False
+            if api and self.headers.get("Sec-Fetch-Site", "same-origin") not in ("same-origin", "none"):
+                return False
             if post and (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json":
                 return False
             return not api or secrets.compare_digest(self.headers.get("X-Engram-Token", ""), token)
 
-        def _send(self, code: int, body: bytes, kind: str) -> None:
+        def _send(self, code: int, body: bytes, kind: str, cache: str = "no-store") -> None:
             self.send_response(code)
             self.send_header("Content-Type", kind)
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", cache)
+            self.send_header("Content-Security-Policy", CSP)
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
             self.end_headers()
             self.wfile.write(body)
 
@@ -177,49 +232,73 @@ def serve(app: App, port: int) -> None:
         def log_message(self, *args) -> None:  # keep the terminal quiet
             pass
 
+        def _drain(self, size: int) -> None:
+            """Read and drop a refused body, at most 16 MB and for at most a second."""
+            self.connection.settimeout(1.0)
+            left = min(max(size, 0), 16 * MAX_BODY)
+            try:
+                while left > 0:
+                    got = self.rfile.read(min(left, 1 << 16))
+                    if not got:
+                        break
+                    left -= len(got)
+            except OSError:
+                pass
+
+        def _route(self, method: str, path: str, query: dict, body: dict) -> None:
+            fn = routes.find(method, path)
+            if fn is None:
+                return self._json({"error": "not found"}, 404)
+            try:
+                return self._json(fn(Request(app, method, path, query, body)))
+            except Refused as e:
+                return self._json({"error": e.why}, e.code)
+            except Exception as e:  # report it to the page instead of dropping the connection
+                return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
+
         def do_GET(self) -> None:
-            if not self._allowed(api=self.path.startswith("/api/"), post=False):
+            url = urllib.parse.urlsplit(self.path)
+            path = url.path
+            if not self._allowed(api=path.startswith("/api/"), post=False):
                 return self._json({"error": "forbidden"}, 403)
-            if self.path in ("/", "/index.html"):
-                page = (STATIC / "index.html").read_text().replace("__ENGRAM_TOKEN__", token)
+            if path in ("/", "/index.html"):
+                page = (static / "index.html").read_text().replace("__ENGRAM_TOKEN__", token)
                 return self._send(200, page.encode(), "text/html; charset=utf-8")
-            if self.path == "/api/state":
-                return self._json(app.state())
-            if self.path == "/api/brain":
-                return self._json(app.brain())
-            if self.path == "/api/sim/state":
-                return self._json(app.sim.state() if app.sim else {"day": -1, "idle": True})
-            if self.path == "/api/sim/brain":
-                if not app.sim or app.sim.layout is None:
-                    return self._json({"moments": [], "rooms": [], "layout": [], "answers": []})
-                return self._json({**app.brain(app.sim.memory, app.sim.layout), "full": app.sim.layout})
+            if path.startswith("/static/"):
+                f = static_file(path[len("/static/"):], static)
+                if f is None:
+                    return self._json({"error": "not found"}, 404)
+                return self._send(200, f.read_bytes(), TYPES[f.suffix.lower()], "no-cache")
+            if path.startswith("/api/"):
+                query = {k: v[-1] for k, v in urllib.parse.parse_qs(url.query, keep_blank_values=True).items()}
+                return self._route("GET", path, query, {})
             self._json({"error": "not found"}, 404)
 
         def do_POST(self) -> None:
+            path = urllib.parse.urlsplit(self.path).path
             if not self._allowed(api=True, post=True):
                 return self._json({"error": "forbidden"}, 403)
-            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0) or 0)) or b"{}")
             try:
-                if self.path == "/api/chat":
-                    return self._json(app.chat(str(body.get("text", ""))))
-                if self.path == "/api/errand":
-                    return self._json(app.errand(str(body.get("text", ""))))
-                if self.path == "/api/life":
-                    return self._json(app.load_life(str(body.get("persona", "farmer")), int(body.get("seed", 0))))
-                if self.path == "/api/sim/start":
-                    return self._json(app.simulate(str(body.get("persona", "farmer")), int(body.get("seed", 1)),
-                                                   int(body.get("questions", 25))))
-                if self.path == "/api/sim/stop":
-                    if app.sim:
-                        app.sim.stop()
-                    return self._json({"stopped": True})
-                if self.path == "/api/quiz":
-                    return self._json(app.quiz(str(body.get("persona", "farmer")), int(body.get("seed", 0)),
-                                               bool(body.get("errands")), int(body.get("limit", 100))))
-            except Exception as e:  # report it to the page instead of dropping the connection
-                return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
-            self._json({"error": "not found"}, 404)
+                size = int(self.headers.get("Content-Length", 0) or 0)
+            except ValueError:
+                return self._json({"error": "bad length"}, 400)
+            if size > MAX_BODY or size < 0:
+                self._drain(size)  # so the client reads the refusal instead of a reset connection
+                self.close_connection = True
+                return self._json({"error": "too large"}, 413)
+            try:
+                body = json.loads(self.rfile.read(size) or b"{}")
+            except ValueError:
+                return self._json({"error": "not JSON"}, 400)
+            if not isinstance(body, dict):
+                return self._json({"error": "send a JSON object"}, 400)
+            self._route("POST", path, {}, body)
 
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"CAMR is listening on http://127.0.0.1:{port}  (memory: {app.memory.rooms.path})", flush=True)
+    return ThreadingHTTPServer(("127.0.0.1", port), Handler), token
+
+
+def serve(app, port: int) -> None:
+    httpd, _ = make_server(app, port)
+    where = getattr(getattr(getattr(app, "memory", None), "rooms", None), "path", None) or getattr(app, "folder", "—")
+    print(f"CAMR is listening on http://127.0.0.1:{port}  (memory: {where})", flush=True)
     httpd.serve_forever()

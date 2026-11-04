@@ -1,0 +1,35 @@
+# The lightweight memory engine
+
+> A lightweight external memory engine for small language models running locally on an Apple-silicon Mac (MLX).
+> The model reads its memory mostly as its own saved keys and values ("notes"), not as retrieved text: a question
+> opens one room of notes on the SSD, read in one burst and laid in front of the model already read, then the four
+> closest moments as words. Three layers: a core always in RAM, rooms on the SSD (hot ones kept in RAM), and a vault of
+> linked Markdown notes that opens in Obsidian. Python package `engram`; its final name is not chosen yet.
+
+- It is not a vector database. The embedder only chooses which room to open; the model reads the room's notes.
+- Everything runs on the Mac. The one outside runtime is Ollama, through a local proxy, where memory goes in as words.
+- Python entry points: `engram.memory.Memory` (one folder) and `engram.reach.Session` (several reaches, an on/off
+  switch). Both have `remember(text, day, ...)` and `answer(question, today, ...)`. Models: `engram.models.Reader`
+  (Qwen3-1.7B 4-bit) and `engram.models.Embedder` (Qwen3-Embedding-0.6B).
+- Install and run: `sh scripts/install.sh`, then `.venv/bin/python -m engram.app --open` (http://127.0.0.1:8765).
+- Benchmark results are kept as dated JSON records under `records/bench/`; the docs point there.
+
+## Docs
+
+- [What it is](docs/site/index.md): the engine in two paragraphs, the page list, and step 1's measurements
+- [Quick start](docs/site/quickstart.md): requirements, `scripts/install.sh`, running the app, where files live, troubleshooting
+- [The three layers](docs/site/layers.md): the core, the rooms and the vault; how a desk is laid; what a memory folder holds
+- [Reach and the switch](docs/site/reach.md): session, project, agent and global memories; reading several, writing one; memory off
+- [RAM, the SSD and sleep](docs/site/swapping.md): the tiers, their budgets, sleeping and waking rooms, fading
+- [Python library](docs/site/library.md): `Memory`, `Session`, `remember` and `answer` with their real signatures; errands with tools
+- [Pairing with Ollama](docs/site/ollama.md): the proxy for the `ollama` CLI (`OLLAMA_HOST=127.0.0.1:11435`), and the macOS app's limits
+- [Benchmarks](docs/site/benchmarks.md): the Long Haul, the Hugging Face suites, the Claude yardstick, and the commands to rerun them
+- [Metrics](docs/site/metrics.md): what every answer records, and how to summarise it
+- [Limits](docs/site/limits.md): what the engine does not do yet
+
+## Optional
+
+- [All the docs in one file](llms-full.txt): every page above, concatenated
+- [Decisions](DECISIONS.md): every technical call, with the measurement behind it
+- [User guide](docs/USER_GUIDE.md): the app, screen by screen
+- [README](README.md): the project's front page

@@ -1,6 +1,7 @@
-"""python -m engram.app [--memory DIR] [--port N] [--open] [--check]
+"""python -m engram.app [--memory DIR] [--port N] [--open] [--check] [--fixture DIR]
 
-  --open    open the app in the browser once it is listening
+  --open     open the app in the browser once it is listening
+  --fixture  serve a recorded memory folder read-only, with no model loaded (the top strip says FIXTURE)
   --check   a health check instead of the app: downloads the models if needed, teaches CAMR two facts in a
             throwaway memory, asks about one, and prints PASS or FAIL with the time to the first word
 """
@@ -80,7 +81,15 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--open", action="store_true", help="open the app in the browser")
     ap.add_argument("--check", action="store_true", help="run the health check and exit")
+    ap.add_argument("--fixture", type=Path, help="serve this recorded memory folder read-only, loading no model")
     a = ap.parse_args()
+    if a.fixture is not None:
+        from engram.app.fixture import Fixture
+        from engram.app.server import serve
+
+        if a.open:
+            threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{a.port}")).start()
+        return serve(Fixture(a.fixture), a.port)
     models_ready()
     if a.check:
         raise SystemExit(check())

@@ -1,0 +1,121 @@
+/* Models: the gauge block on --void, then the list. Colours only through tokens.css. */
+
+.models { min-height: 100%; display: flex; flex-direction: column; }
+.m-measuring { padding: var(--sp-2) var(--sp-5); color: var(--ink); background: var(--s1); border-bottom: 1px solid var(--hair); }
+
+/* the gauge block: the hero of this screen */
+.m-top { background: var(--void); border-bottom: 1px solid var(--hair); min-height: 30vh;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4); display: grid; grid-template-columns: auto 1fr;
+  grid-template-areas: "hero cluster" "gauge gauge" "rail rail"; column-gap: var(--sp-6); row-gap: var(--sp-4);
+  align-items: end; }
+.m-hero { grid-area: hero; display: flex; align-items: baseline; gap: var(--sp-3); white-space: nowrap; }
+.m-hero .v { color: var(--ink); }
+.m-cluster { grid-area: cluster; justify-self: end; display: grid; grid-template-columns: repeat(3, minmax(120px, auto));
+  gap: var(--sp-3) var(--sp-6); }
+.m-cluster .t-cluster { color: var(--ink); white-space: nowrap; }
+.m-probe { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.m-probe .btn { height: 22px; padding: 0 8px; }
+.m-gauge { grid-area: gauge; min-width: 0; }
+.m-rail { grid-area: rail; min-width: 0; }
+.m-gauge svg, .m-rail svg { display: block; overflow: visible; }
+.m-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-5); margin-top: var(--sp-2);
+  color: var(--ink-2); }
+.m-legend .t-label { color: var(--ink-3); }
+.m-ghost-line { margin-left: auto; color: var(--ink); white-space: nowrap; }
+.sw { display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 0; border-radius: 1px; }
+.sw.other { background: var(--ink-4); }
+.sw.weights { background: var(--ram); }
+.sw.engram { background: var(--ram-resident); }
+.sw.free { border: 1px solid var(--hair-2); }
+.sw.models { background: var(--ssd); }
+.sw.rooms { background: var(--ssd-resident); }
+.sw.vault { background: var(--vault-resident); }
+
+/* SVG marks */
+.g-other { fill: var(--ink-4); }
+.g-weights { fill: var(--ram); }
+.g-engram { fill: var(--ram-resident); }
+.g-free { fill: none; stroke: var(--hair-2); }
+.g-tick { stroke: var(--ink-4); }
+.g-num, .g-limit-label, .g-pressure { font: 500 10.5px var(--f-mono); font-stretch: 87.5%;
+  letter-spacing: .08em; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+.g-num.end { fill: var(--ink-2); }
+.g-pressure { text-transform: uppercase; }
+.g-pressure.fault { fill: var(--fault); }
+.g-end { stroke: var(--ink-2); }
+.g-limit { stroke: var(--ink-2); stroke-dasharray: 2 2; }
+.g-ghost { fill: none; stroke: var(--select); }
+.g-ghost.wont { stroke: var(--fault); fill: url(#m-hatch); }
+.g-over { fill: url(#m-hatch); stroke: var(--fault); }
+.g-hatch { stroke: var(--fault); stroke-width: 1; }
+.d-models { fill: var(--ssd); }
+.d-rooms { fill: var(--ssd-resident); }
+.d-vault { fill: var(--vault-resident); }
+.d-other { fill: var(--ink-4); }
+
+/* the list */
+.m-list { padding: 0 var(--sp-5) var(--sp-7); }
+.m-tools { position: sticky; top: 0; z-index: 2; background: var(--bed); display: flex; align-items: center;
+  gap: var(--sp-3); height: 56px; border-bottom: 1px solid var(--hair); }
+.m-tools > * { flex: none; }
+.m-tools .m-speeds { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.m-tools .grow { flex: 1 1 0; }
+.m-search { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--ink-3); }
+.m-search .field { width: 260px; }
+.m-head, .m-row { display: grid; align-items: center; gap: var(--sp-3);
+  grid-template-columns: minmax(180px, 1.5fr) 72px 120px 72px minmax(132px, 1fr) minmax(150px, 1fr) minmax(130px, 1fr) 112px 112px; }
+.m-head { height: 32px; padding: 0 var(--sp-2); border-bottom: 1px solid var(--hair); }
+.m-group-label { padding: var(--sp-4) var(--sp-2) var(--sp-2); }
+.m-row { min-height: var(--row-list); padding: 0 var(--sp-2); border-bottom: 1px solid var(--hair);
+  transition: background var(--ui-fast) linear; }
+.m-row:hover, .m-row.ghosted { background: var(--s1); }
+.m-empty { padding: var(--sp-3) var(--sp-2); color: var(--ink-3); font: 400 12px/16px var(--f-mono);
+  border-bottom: 1px solid var(--hair); }
+.c-name { display: flex; flex-direction: column; min-width: 0; }
+.c-name .name { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-params { display: flex; flex-direction: column; color: var(--ink); white-space: nowrap; min-width: 0; }
+.c-mem.tensors { color: var(--ssd); }
+.c-mem.words { color: var(--vault); }
+.cell-bar { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cell-bar .t-readout { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.bar { position: relative; display: block; height: 6px; width: 100%; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 1px; }
+.bar.ram i.f { background: var(--ram-rest); }
+.bar.ram.loaded i.f { background: var(--ram); }
+.bar.disk { height: 3px; }
+.bar.disk i.f { background: var(--ssd); }
+.bar.disk i.o { border: 1px solid var(--ssd-hold); }
+.c-meas .t-readout { white-space: nowrap; color: var(--ink); }
+.c-meas .est, .c-meas .dim { color: var(--ink-3); }
+.c-verdict .t-readout { white-space: nowrap; }
+.v-fits { color: var(--ink); }
+.v-slow { color: var(--ink-2); }
+.c-act { display: flex; justify-content: flex-end; min-width: 0; }
+.c-act .t-readout { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anatomy { display: block; }
+.a-kv { fill: var(--ink-2); }
+.a-sliding { fill: var(--ink-3); }
+.a-linear rect { fill: var(--ink-2); }
+.a-none { fill: var(--ink-4); }
+
+@media (max-width: 1360px) {
+  .m-head, .m-row { grid-template-columns: minmax(150px, 1.5fr) 64px 120px 64px minmax(110px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) 104px 104px; gap: var(--sp-2); }
+  .m-cluster { grid-template-columns: repeat(3, minmax(100px, auto)); gap: var(--sp-3) var(--sp-5); }
+}
+
+/* at 900 px and under: the hero first, then its strip, then the list as two-line rows */
+@media (max-width: 900px) {
+  .m-top { grid-template-columns: 1fr; grid-template-areas: "hero" "gauge" "rail" "cluster"; padding: var(--sp-4); }
+  .m-cluster { justify-self: start; grid-template-columns: repeat(2, minmax(120px, auto)); }
+  .t-hero { font-size: 56px; line-height: 56px; }
+  .m-list { padding: 0 var(--sp-4) var(--sp-6); }
+  .m-tools { flex-wrap: wrap; height: auto; padding: var(--sp-2) 0; }
+  .m-speeds { display: none; }
+  .m-search .field { width: 180px; }
+  .m-head { display: none; }
+  .m-row { grid-template-columns: 1fr 1fr; grid-template-areas: "name act" "ram disk" "meas verdict";
+    padding: var(--sp-2); row-gap: var(--sp-2); }
+  .c-name { grid-area: name; } .c-act { grid-area: act; } .c-ram { grid-area: ram; } .c-disk { grid-area: disk; }
+  .c-meas { grid-area: meas; } .c-verdict { grid-area: verdict; }
+  .c-params, .c-anat, .c-mem { display: none; }
+}
