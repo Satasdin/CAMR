@@ -307,4 +307,6 @@ def serve(app, port: int) -> None:
     httpd, _ = make_server(app, port)
     where = getattr(getattr(getattr(app, "memory", None), "rooms", None), "path", None) or getattr(app, "folder", "—")
     print(f"CAMR is listening on http://127.0.0.1:{port}  (memory: {where})", flush=True)
+    if os.environ.get("CAMR_TOKEN"):  # the Mac app sends its token only once its own engine has said this
+        print(f"CAMR-PORT {httpd.server_address[1]}", flush=True)
     httpd.serve_forever()
