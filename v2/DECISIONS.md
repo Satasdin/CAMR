@@ -623,6 +623,10 @@ else I don't know"), with no conversation.
 - **MEMORY:** the notes path as before, with conversation rules after the notes. The closest moment of every other
   shelf is read too, as words, when it is within 0.12 of the best. That near-tie read found a photographed receipt
   that 737 Long Haul notes had outscored (0.70 against 0.81).
+- **The router sees memory:** a question naming a person or business found in its five closest notes goes to
+  memory outright; otherwise the model judges with the closest note in view. Routing blind, the 8B sent "the
+  number plate of Kitengela Ventures' delivery truck" to its own knowledge. Seeing memory, it routed 13 of 14 test
+  questions right on its Long Haul memory. The miss was a never-said name, which the model then answers honestly.
 - **GENERAL:** the model answers from its own knowledge with the last six turns, and thinks aloud when it is a
   thinking build and the user wants to see it. Qwen3 1.7B and 8B can think; 4B Instruct 2507 cannot.
 - **Research:** reads the best Wikipedia page through its public API. The page goes into the user's turn as marked
