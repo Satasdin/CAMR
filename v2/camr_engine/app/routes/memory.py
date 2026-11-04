@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from camr_engine.app.web import Refused, Request, Routes, part
+from camr_engine.rooms import kept_file, room_file
 
 WATCHED = (12, 16, 20, 24)  # camr_engine.events.LAYERS, without importing MLX
 LAYERS = 28  # the 1.7B's; a recorded memory does not say
@@ -252,7 +253,7 @@ def _read_contents(app, s: Source) -> dict:
     moments = [(x["room"], x["day"], x["tokens"], x.get("start", 0), x["text"]) for x in index["moments"]]
     rooms = []
     for x in index["rooms"]:
-        f = s.folder / f"room-{x['rid']:06d}.notes"
+        f = room_file(s.folder, x["rid"], x.get("bits", 16))
         rooms.append((x["rid"], x["tokens"], list(x["members"]), bool(x["tokens"]) and not f.exists()))
     notes, vault_bytes = _recorded_notes(s.folder)
     return {"moments": moments, "rooms": rooms, "token_bytes": index.get("token_bytes"), "notes": notes,
@@ -482,7 +483,7 @@ def room(app, label: str, rid: int) -> dict:
         raise Refused(404, f"{label} has no room {rid}")
     _, tokens, members, asleep = rooms[rid]
     tb = c["token_bytes"] or 0
-    f = s.folder / f"room-{rid:06d}.notes"
+    f = kept_file(s.folder, rid)
     h = history(app, s, {r: set(ms) for r, _, ms, _ in c["rooms"]})
     shares: dict[int, float] = {}
     last = h.last_answer.get(rid)

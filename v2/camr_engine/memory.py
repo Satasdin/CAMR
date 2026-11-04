@@ -16,6 +16,9 @@ computes exactly what it did in step 1:
 - ``tiers``: RAM and disk budgets, hot rooms in RAM and asleep rooms read as words (camr_engine.swap);
 - ``metrics``: one record per answer of what it cost (camr_engine.metrics);
 - ``notebook``: a header already read, shared by several memories (camr_engine.reach).
+
+``bits`` is how new rooms keep their notes on the SSD: 16 (as the model wrote them), 8 or 4 (quantized, see
+camr_engine.notes.pack). Rooms already on the SSD keep the bits they were written at.
 """
 
 from __future__ import annotations
@@ -33,7 +36,7 @@ from camr_engine.core import CORE_TOKENS, Core
 from camr_engine.live import current
 from camr_engine.events import EventLog, Looks, used
 from camr_engine.metrics import Meter, folder_bytes, measure
-from camr_engine.notes import Notebook
+from camr_engine.notes import Notebook, pack, unpack
 from camr_engine.rooms import Rooms
 from camr_engine.swap import SSD, Tiers
 from camr_engine.vault import INDEX, SHARE, Vault
@@ -46,6 +49,7 @@ ROOM_TOKENS = 512  # at most 57 MB of notes on the 1.7B, inside the 256 MB allow
 JOIN = 0.80  # how close a moment must be to a room's closest moment to join it
 CLOSEST = 4  # moments re-read as words after the room
 ALLOWANCE_BYTES = 256 * 2**20
+BITS = 16  # new rooms' notes on the SSD
 _OWN = object()  # "this memory's own core", as against a core (or None) a session passes in
 
 
@@ -84,7 +88,7 @@ class Memory:
                  closest: int = CLOSEST, allowance: int = ALLOWANCE_BYTES, log: bool = True,
                  notebook: Notebook | None = None, vault: Vault | bool = False, reach: str | None = None,
                  core: Core | bool = False, core_tokens: int = CORE_TOKENS, tiers: Tiers | None = None,
-                 metrics: Meter | bool = False):
+                 metrics: Meter | bool = False, bits: int = BITS):
         self.reader, self.embedder, self.closest, self.allowance = reader, embedder, closest, allowance
         self.path, self.reach = Path(path), reach
         self.log = EventLog(Path(path) / "events.jsonl") if log else None
@@ -95,7 +99,7 @@ class Memory:
         self.dtype = self.notebook.core[0][0].dtype
         if room_tokens * self.notebook.shape.token_bytes > allowance:
             raise ValueError("a full room must fit the allowance")
-        self.rooms = Rooms(path, self.notebook.shape.token_bytes, room_tokens, join)
+        self.rooms = Rooms(path, self.notebook.shape.token_bytes, room_tokens, join, bits=bits)
         self.vault: Vault | None = (Vault(self.path / "vault", reach=reach) if vault is True
                                     else vault if isinstance(vault, Vault) else None)
         if core is True and self.vault is None:
@@ -123,29 +127,28 @@ class Memory:
     def ids(self, text: str) -> list[int]:
         return self.reader.tok.encode(text + "\n")
 
-    def _array(self, buf):
-        import mlx.core as mx
-
-        s = self.notebook.shape
-        x = mx.array(np.frombuffer(buf, dtype=np.uint16)).view(self.dtype)
-        return x.reshape(-1, s.layers, 2, s.kv_heads, s.head_dim)
+    def _array(self, buf, rid: int | None = None):
+        """Room ``rid``'s file as notes for the desk, read at the room's bits."""
+        return unpack(buf, self.notebook.shape, self.dtype, self.rooms.bits_of(rid))
 
     def remember(self, text: str, day: int, *, date: dt.date | None = None, tags: tuple[str, ...] | list[str] = (),
                  pinned: bool = False):
         """Keep a moment. ``date``, ``tags`` and ``pinned`` go on its vault note, when there is a vault."""
-        import mlx.core as mx
-
         ids = self.ids(text)
         vec = self.embedder.encode_one(text)
         rid = self.rooms.place(vec, len(ids))
         if self.tiers is None:
-            after = None if rid is None else self._array(self.rooms.fetch([rid])[rid])
+            after = None if rid is None else self._array(self.rooms.fetch([rid])[rid], rid)
         else:
             if rid is not None and self.tiers.is_asleep(rid) and not self.tiers.wake:
                 rid = None  # an asleep room takes no new moments: this one starts a room of its own
             after = None if rid is None else self.tiers.load(rid).data  # wakes the room when waking is on
         notes = self.notebook.write(ids, after)
-        m = self.rooms.add(text, day, vec, bytes(np.array(notes.view(mx.uint16))), rid)
+        bits = self.rooms.bits_of(rid)
+        packed = pack(notes, bits)
+        if bits != 16:  # the hot copy holds what the file holds
+            notes = unpack(packed, self.notebook.shape, self.dtype, bits)
+        m = self.rooms.add(text, day, vec, packed, rid)
         slept: list[int] = []
         try:
             note = self._note(m, date, tags, pinned) if self.vault is not None else None
@@ -169,7 +172,7 @@ class Memory:
         order = np.argsort(-sims)
         room = self.rooms.rooms[self.rooms.moments[int(order[0])].room]
         closest = sorted(int(m) for m in order[:self.closest])
-        return Recall(room.rid, closest, room.tokens, room.tokens * self.rooms.token_bytes,
+        return Recall(room.rid, closest, room.tokens, self.rooms.room_bytes(room.rid),
                       seconds={"choose": time.perf_counter() - t}, score=float(sims[int(order[0])]), reach=self.reach)
 
     def recall(self, question: str, *, chosen: Recall | None = None, core: Core | None | object = _OWN) -> Recall:
@@ -185,7 +188,7 @@ class Memory:
             if data:
                 rec.tier, rec.read_bytes = SSD, len(data[rec.room])
             t = time.perf_counter()
-            rec.desk = self.notebook.desk(core + ([self._array(data[rec.room])] if data else []))
+            rec.desk = self.notebook.desk(core + ([self._array(data[rec.room], rec.room)] if data else []))
             rec.seconds["desk"] = time.perf_counter() - t
             return rec
         got = self.tiers.load(rec.room) if rec.room is not None else None
@@ -383,11 +386,10 @@ class Memory:
         return mx.concatenate([a, b], axis=0)
 
     def _rewrite(self, rid: int) -> bytes:
-        """A room's notes written again from its words, in one pass: the same as writing its moments one by one."""
-        import mlx.core as mx
-
+        """A room's notes written again from its words, in one pass: the same as writing its moments one by one. They
+        are packed at the room's bits."""
         notes = self.notebook.write(self.room_words(rid))
-        return bytes(np.array(notes.view(mx.uint16)))
+        return pack(notes, self.rooms.bits_of(rid))
 
     def _strength(self, rid: int) -> float:
         """A room is as strong as its strongest note (all equal without a vault)."""

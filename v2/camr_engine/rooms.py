@@ -3,6 +3,11 @@
 A room's file holds its moments' notes token by token (see camr_engine.notes), so a moment joins a room by appending to
 the end of its file. What a person reads (each moment's words, its day, its embedding) stays in a small index beside
 the files. Every read and write bypasses the Mac's file cache, so a fetch is a real SSD read, never a copy in RAM.
+
+Each room keeps its notes at 16, 8 or 4 bits (camr_engine.notes.pack), said by the index and by the file's name:
+``room-000001.notes`` at 16 bits, as every room was before quantized rooms existed; ``room-000001.q8.notes`` and
+``room-000001.q4.notes`` quantized. New rooms take the memory's ``bits``; a room keeps the bits it was started with,
+so rooms on the SSD from before still read, and a moment joining one is appended at that room's bits.
 """
 
 from __future__ import annotations
@@ -15,6 +20,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import numpy as np
+
+from camr_engine.notes import stored_bytes
 
 F_NOCACHE = 48  # macOS: don't keep this file's pages in RAM
 CHUNK = 1 << 20  # reads go out as 1 MB pieces, eight at once: the SSD's fast pattern
@@ -36,6 +43,26 @@ class Room:
     rid: int
     members: list[int] = field(default_factory=list)
     tokens: int = 0
+    bits: int = 16  # how its notes are kept on the SSD (rooms saved before this was kept are all 16-bit)
+
+
+def room_file(folder: Path, rid: int, bits: int = 16) -> Path:
+    """Where room ``rid``'s notes are kept at ``bits``."""
+    return Path(folder) / (f"room-{rid:06d}.notes" if bits == 16 else f"room-{rid:06d}.q{bits}.notes")
+
+
+def kept_file(folder: Path, rid: int) -> Path:
+    """Room ``rid``'s notes file as it is on the SSD, at whatever bits (the 16-bit name when there is none)."""
+    for bits in (16, 8, 4):
+        f = room_file(folder, rid, bits)
+        if f.exists():
+            return f
+    return room_file(folder, rid)
+
+
+def room_id(path: Path) -> int:
+    """The room a notes file holds, from its name."""
+    return int(Path(path).name.split("-")[1].split(".")[0])
 
 
 def _open(path: Path, flags: int) -> int:
@@ -48,11 +75,14 @@ def _open(path: Path, flags: int) -> int:
 
 
 class Rooms:
-    """The memory on the SSD. ``token_bytes`` is the size of one token's notes; ``room_tokens`` caps a room; a moment
-    joins the room holding its closest moment when that closeness is at least ``join``, otherwise it starts a room."""
+    """The memory on the SSD. ``token_bytes`` is the size of one token's notes at 16 bits (the model's own); ``bits``
+    is how a new room keeps them; ``room_tokens`` caps a room; a moment joins the room holding its closest moment when
+    that closeness is at least ``join``, otherwise it starts a room."""
 
-    def __init__(self, path: Path, token_bytes: int, room_tokens: int, join: float):
+    def __init__(self, path: Path, token_bytes: int, room_tokens: int, join: float, *, bits: int = 16):
+        stored_bytes(token_bytes, bits)  # checks bits
         self.path, self.token_bytes, self.room_tokens, self.join = Path(path), token_bytes, room_tokens, join
+        self.bits = bits
         self.path.mkdir(parents=True, exist_ok=True)
         self.moments: list[Moment] = []
         self.rooms: list[Room] = []
@@ -67,12 +97,24 @@ class Rooms:
             self.rooms = [Room(**r) for r in saved["rooms"]]
             self.vectors = np.load(self.path / "vectors.npy")
             for room in self.rooms:  # notes appended after the last save belong to no moment: drop them
-                f, size = self.file(room.rid), room.tokens * token_bytes
+                f, size = self.file(room.rid), self.room_bytes(room.rid)
                 if f.exists() and f.stat().st_size > size:
                     os.truncate(f, size)
 
     def file(self, rid: int) -> Path:
-        return self.path / f"room-{rid:06d}.notes"
+        return room_file(self.path, rid, self.rooms[rid].bits if rid < len(self.rooms) else self.bits)
+
+    def bits_of(self, rid: int | None) -> int:
+        """The bits room ``rid`` keeps its notes at (a new room's when it is None)."""
+        return self.bits if rid is None else self.rooms[rid].bits
+
+    def token_size(self, rid: int | None) -> int:
+        """One token's notes in room ``rid``'s file (in a new room's when it is None)."""
+        return stored_bytes(self.token_bytes, self.bits_of(rid))
+
+    def room_bytes(self, rid: int) -> int:
+        """Room ``rid``'s file, as the index counts it."""
+        return self.rooms[rid].tokens * self.token_size(rid)
 
     def place(self, vec: np.ndarray, tokens: int) -> int | None:
         """The room a new moment belongs in, or None for a new room."""
@@ -88,11 +130,12 @@ class Rooms:
         return None
 
     def add(self, text: str, day: int, vec: np.ndarray, notes: bytes, rid: int | None) -> Moment:
-        """Append a moment's notes to room ``rid`` (from ``place``), or to a new room when it is None."""
-        tokens = len(notes) // self.token_bytes
+        """Append a moment's notes to room ``rid`` (from ``place``), or to a new room when it is None. ``notes`` are
+        packed at that room's bits (``bits_of(rid)``)."""
+        tokens = len(notes) // self.token_size(rid)
         if rid is None:
             rid = len(self.rooms)
-            self.rooms.append(Room(rid))
+            self.rooms.append(Room(rid, bits=self.bits))
         room = self.rooms[rid]
         fd = _open(self.file(rid), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
@@ -112,7 +155,7 @@ class Rooms:
         out, jobs = {}, []
         fds = {}
         for rid in rids:
-            size = self.rooms[rid].tokens * self.token_bytes
+            size = self.room_bytes(rid)
             out[rid] = bytearray(size)
             fds[rid] = _open(self.file(rid), os.O_RDONLY)
             view = memoryview(out[rid])
@@ -128,9 +171,11 @@ class Rooms:
         return sum(p.stat().st_size for p in self.path.glob("room-*.notes"))
 
     def save(self) -> None:
-        index = {"token_bytes": self.token_bytes, "room_tokens": self.room_tokens, "join": self.join,
+        index = {"token_bytes": self.token_bytes, "bits": self.bits, "room_tokens": self.room_tokens, "join": self.join,
                  "moments": [asdict(m) for m in self.moments], "rooms": [asdict(r) for r in self.rooms]}
-        (self.path / "index.json").write_text(json.dumps(index))
+        tmp = self.path / "index.json.tmp"
+        tmp.write_text(json.dumps(index))
+        os.replace(tmp, self.path / "index.json")
         np.save(self.path / "vectors.npy", self.vectors)
 
     def close(self) -> None:

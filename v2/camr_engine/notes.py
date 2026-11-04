@@ -11,6 +11,10 @@ thread: with 30 unrelated moments beside the right one, a 1.7B model found 2 of 
 
 Notes are kept token by token, every layer together, so a room grows by appending bytes to the end of its file:
 one token is ``layers × 2 × kv_heads × head_dim`` numbers (112 KB for Qwen3-1.7B at 16 bits).
+
+On the SSD a token's numbers can be kept at 8 or 4 bits (``pack``, ``unpack``): every 64 numbers along a head share
+one scale and one offset (MLX's affine quantization), so a token stays a fixed number of bytes, rooms still grow by
+appending, and a token at 8 bits takes 17/32 of its 16-bit size (60 KB on the 1.7B), at 4 bits 9/32.
 """
 
 from __future__ import annotations
@@ -18,6 +22,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+
+BITS = (16, 8, 4)  # how a room's notes can be kept on the SSD: as the model wrote them, or quantized
+GROUP = 64  # numbers sharing one scale and one offset when quantized
+
+
+def stored_bytes(token_bytes: int, bits: int) -> int:
+    """One token's notes on the SSD at ``bits``, from its size at 16 bits: the numbers at ``bits`` each, then a 16-bit
+    scale and offset per group of 64."""
+    if bits not in BITS:
+        raise ValueError(f"notes are kept at {', '.join(map(str, BITS))} bits, not {bits}")
+    if bits == 16:
+        return token_bytes
+    n = token_bytes // 2
+    return n * bits // 8 + n // GROUP * 4
 
 
 @dataclass(frozen=True)
@@ -30,6 +48,44 @@ class Shape:
     @property
     def token_bytes(self) -> int:
         return self.layers * 2 * self.kv_heads * self.head_dim * 2
+
+    def stored_bytes(self, bits: int) -> int:
+        return stored_bytes(self.token_bytes, bits)
+
+
+def pack(notes, bits: int = 16) -> bytes:
+    """Notes (tokens, layers, 2, kv_heads, head_dim) as they go on the SSD at ``bits``, token by token. At 8 or 4 bits
+    each token's bytes are its quantized numbers, then its scales, then its offsets, so a token's bytes stand alone
+    and a room still grows by appending."""
+    import mlx.core as mx
+
+    if bits == 16:
+        return bytes(np.array(notes.view(mx.uint16)))
+    stored_bytes(2 * GROUP, bits)  # checks bits
+    t, d = notes.shape[0], notes.shape[-1]
+    w, scales, biases = mx.quantize(notes.reshape(-1, d), group_size=GROUP, bits=bits)
+    parts = [np.array(w).view(np.uint8).reshape(t, -1)]
+    parts += [np.array(x.view(mx.uint16)).view(np.uint8).reshape(t, -1) for x in (scales, biases)]
+    return np.concatenate(parts, axis=1).tobytes()
+
+
+def unpack(buf, shape: Shape, dtype, bits: int = 16):
+    """Notes read off the SSD (``pack``'s bytes at ``bits``) as an array (tokens, layers, 2, kv_heads, head_dim) of
+    ``dtype``, the model's own."""
+    import mlx.core as mx
+
+    if bits == 16:
+        x = mx.array(np.frombuffer(buf, dtype=np.uint16)).view(dtype)
+        return x.reshape(-1, shape.layers, 2, shape.kv_heads, shape.head_dim)
+    n = shape.token_bytes // 2
+    wb, sb = n * bits // 8, n // GROUP * 2
+    raw = np.frombuffer(buf, dtype=np.uint8).reshape(-1, wb + 2 * sb)
+    d = shape.head_dim
+    w = mx.array(np.ascontiguousarray(raw[:, :wb]).view(np.uint32)).reshape(-1, d * bits // 32)
+    scales, biases = (mx.array(np.ascontiguousarray(raw[:, a:a + sb]).view(np.uint16)).view(dtype)
+                      .reshape(-1, d // GROUP) for a in (wb, wb + sb))
+    x = mx.dequantize(w, scales, biases, group_size=GROUP, bits=bits)
+    return x.reshape(-1, shape.layers, 2, shape.kv_heads, d)
 
 
 def turn(x, positions, base: float):

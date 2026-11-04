@@ -8,17 +8,23 @@ it is closest to (the embedder's own measure, the one recall uses), so "Auto" fi
 
 ``warm`` touches what a model will read first: one short answer so its kernels are built and its weights are in
 memory, then the newest notes of every shelf read off the SSD, so the operating system keeps them in RAM and the
-first questions fetch them at memory speed.
+first questions fetch them at memory speed. Then it holds each shelf's disk budget (``disk_budget``, 8 GB a reach
+unless ``CAMR_SHELF_DISK_GB`` says otherwise): the weakest, least recently used rooms beyond it go to sleep, their
+notes deleted and their moments kept as words, so a shelf stops growing on the SSD without limit. That runs on the
+session's own thread before any question; after it, each moment kept holds the budget as it is written.
 """
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
 import numpy as np
+
+from camr_engine.rooms import room_id
 
 
 @dataclass(frozen=True)
@@ -51,6 +57,16 @@ SHELVES = (
 BY_NAME = {s.name: s for s in SHELVES}
 WARM_BYTES = 1_500_000_000  # notes read ahead across all shelves when a model loads
 WARM_CHUNK = 8 << 20
+DISK_GB = 8.0  # each reach's awake notes on the SSD, at most (asleep rooms are read as words)
+
+
+def disk_budget() -> int:
+    """Each reach's disk budget in bytes: ``CAMR_SHELF_DISK_GB`` when set (a number of GB), else 8 GB."""
+    try:
+        gb = float(os.environ.get("CAMR_SHELF_DISK_GB", DISK_GB))
+    except ValueError:
+        gb = DISK_GB
+    return int(gb * 2**30)
 
 
 def shelf_of(reach: str | None) -> Shelf | None:
@@ -109,9 +125,30 @@ def warm(reader, memories: dict, *, budget: int = WARM_BYTES, report: Callable[.
                     pass
             used += size
             files += 1
-            report("warm", shelf=shelf_of(label).name, reach=label, room=int(f.stem.split("-")[1]), bytes=size)
+            report("warm", shelf=shelf_of(label).name, reach=label, room=room_id(f), bytes=size)
         total += used
     s = time.perf_counter() - t
     out = {"bytes": total, "files": files, "s": round(s, 3), "gbps": round(total / s / 1e9, 2) if s > 0 else None}
     report("warmed", **out)
+    hold(memories, report)
+    return out
+
+
+def hold(memories: dict, report: Callable[..., object] | None = None) -> dict:
+    """Hold every memory's disk budget (``memories``: reach label -> Memory; one without tiers or a budget is left as
+    it is): its weakest, least recently used rooms beyond the budget go to sleep. Returns the rooms put to sleep, by
+    reach."""
+    report = report or (lambda *a, **k: None)
+    out = {}
+    for label, m in memories.items():
+        tiers = getattr(m, "tiers", None)
+        if tiers is None or tiers.disk_budget is None:
+            continue
+        t = time.perf_counter()
+        slept = tiers.enforce()
+        if slept:
+            m.save()
+            out[label] = slept
+            report("budget", reach=label, slept=len(slept), awake_bytes=tiers.disk_bytes(),
+                   budget_bytes=tiers.disk_budget, s=round(time.perf_counter() - t, 3))
     return out

@@ -430,6 +430,7 @@ class Engine(Contender):
                 "disk_gb": round(st["folder_bytes"] / 1e9, 6), "vault_notes": st.get("vault", {}).get("notes"),
                 "core_tokens": self.memory.core.tokens if self.memory.core is not None else 0,
                 "token_bytes": self.memory.rooms.token_bytes,
+                "bits": self.memory.rooms.bits,
                 "join_hits": tiers.get("hits", {}),  # rooms read to append a moment; questions' tiers are per answer
                 "remember_s": round(self.remember_s, 3), "saves_s": round(self.saves_s, 3), "naps": dict(self.naps)}
 
@@ -733,10 +734,12 @@ def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
 
 
 def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = False, watch: bool = False,
-                   wake: bool = False, wording: str = "yardstick") -> Contender:
+                   wake: bool = False, wording: str = "yardstick", bits: int | None = None) -> Contender:
     """A contender with the Long Haul's wording. ``wording`` "yardstick": the engine and words read LONGHAUL_INTRO,
     bare reads the yardstick's own. "own": every one reads the engine's own instructions (memory.INTRO), bare with
-    its window as the notes, and the name says so ("+own"). ``learn``, ``watch`` and ``wake`` are the engine's."""
+    its window as the notes, and the name says so ("+own"). ``learn``, ``watch`` and ``wake`` are the engine's, and
+    so is ``bits``: how its rooms keep their notes on the SSD (memory.BITS when not given; the name says so,
+    "+8bit")."""
     kind, _ = parse(spec)
     if wording not in WORDINGS:
         raise ValueError(f"wording is one of {', '.join(WORDINGS)}, not {wording!r}")
@@ -744,7 +747,11 @@ def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = Fal
     kw: dict[str, Any] = {"intro": INTRO} if own else ({} if kind == "bare" else {"intro": LONGHAUL_INTRO})
     if kind == "engine":
         kw.update(learn=learn, watch=watch, wake=wake)
+        if bits is not None:
+            kw["bits"] = bits
     c = make(spec, loader, **kw)
+    if kind == "engine" and bits is not None:
+        c.name += f"+{bits}bit"
     if own:
         c.name += "+own"
     return c
@@ -792,7 +799,7 @@ def _failure(e: Exception, record: dict, where: str | None, stage: str) -> None:
 def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] | None = None, limit: int | None = None,
              memories: Path = MEMORIES, records: Path = RECORDS, loader: Loader | None = None,
              progress: Callable[[str], None] = print, learn: bool = False, watch: bool = False,
-             wake: bool = False, wording: str = "yardstick") -> list[dict]:
+             wake: bool = False, wording: str = "yardstick", bits: int | None = None) -> list[dict]:
     """Each contender through the Long Haul's checkpoints, one after another; returns their records. A contender
     that fails is recorded with ``failed`` (its checkpoints so far kept) and the next one runs."""
     from camr_engine.bench.longhaul import CUTS, checkpoints, grader
@@ -802,7 +809,7 @@ def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] |
     loader = loader or Loader()
     out = []
     for spec in specs:
-        c = haul_contender(spec, loader, learn=learn, watch=watch, wake=wake, wording=wording)
+        c = haul_contender(spec, loader, learn=learn, watch=watch, wake=wake, wording=wording, bits=bits)
         rec = run(c, events, cps, task="longhaul", grader=grader, limit=limit, records=records,
                   folder=memory_folder("longhaul", c.name, memories), progress=progress,
                   meta={"haul": haul_meta(folder), "cuts": names}, raise_failure=False)
@@ -965,6 +972,8 @@ def parser() -> argparse.ArgumentParser:
         p.add_argument("--wording", choices=("yardstick", "own"), default="yardstick",
                        help="yardstick: Claude's instructions for everyone (the default); own: the engine's own "
                             "instructions (memory.INTRO) for every local contender")
+        p.add_argument("--bits", type=int, choices=(16, 8, 4),
+                       help="how the engine's new rooms keep their notes on the SSD (default: memory.BITS)")
         p.add_argument("--wake", action="store_true",
                        help="wake an asleep room the engine asks (its notes written again from its words) instead of "
                             "reading it as words")
@@ -977,12 +986,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         parse(spec)  # every name checked before any model is loaded
     if a.cmd == "longhaul":
         for r in longhaul(a.contender, a.dir, cuts=a.cuts, limit=a.limit, memories=a.memories, records=a.records,
-                          learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording):
+                          learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits):
             print(r.get("path"))
         return 0
     loader = Loader()
     for spec in a.contender:
-        c = haul_contender(spec, loader, learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording)
+        c = haul_contender(spec, loader, learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits)
         r = speed(c, a.dir, memory=memory_folder("speed", c.name, a.memories), marks=a.marks, questions=a.questions,
                   until=cut_tokens(a.until) if a.until else None, records=a.records, raise_failure=False)
         if "failed" in r:

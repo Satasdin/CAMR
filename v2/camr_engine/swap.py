@@ -115,10 +115,11 @@ class Tiers:
         self.hits: Counter = Counter()
         self.rooms: Rooms | None = None
 
-    def bind(self, rooms: Rooms, *, convert: Callable = lambda buf: buf, join: Callable | None = None,
+    def bind(self, rooms: Rooms, *, convert: Callable = lambda buf, rid=None: buf, join: Callable | None = None,
              rewrite: Callable[[int], bytes] | None = None, strength: Callable[[int], float] | None = None,
              notify: Callable[[list[int], bool], None] | None = None) -> Tiers:
-        """Attach to ``rooms``. ``convert`` turns a file's bytes into what the desk takes; ``join`` appends new notes
+        """Attach to ``rooms``. ``convert(buf, rid)`` turns room ``rid``'s file into what the desk takes (its bytes
+        are at that room's bits); ``join`` appends new notes
         to a hot room; ``rewrite`` writes a room's notes again from its words (for waking); ``strength`` says how
         strong a room is (default: all equal, so the least recently used sleep first); ``notify`` hears of rooms
         going to sleep (True) or waking (False)."""
@@ -183,9 +184,9 @@ class Tiers:
             buf = self.wake_room(rid)
             wake_s = time.perf_counter() - t
             t = time.perf_counter()
-            data = self._convert(buf)
+            data = self._convert(buf, rid)
             got = Read(VAULT, data, convert_s=time.perf_counter() - t, woke=True, wake_s=wake_s)
-            self._keep(rid, data, len(buf))
+            self._keep(rid, data, _ram(data, buf))
             self.enforce(keep={rid})
             return got
         self.hits[SSD] += 1
@@ -193,9 +194,9 @@ class Tiers:
         buf = self.rooms.fetch([rid])[rid]
         seconds = time.perf_counter() - t
         t = time.perf_counter()
-        data = self._convert(buf)
+        data = self._convert(buf, rid)
         got = Read(SSD, data, len(buf), seconds, time.perf_counter() - t)
-        self._keep(rid, data, len(buf))
+        self._keep(rid, data, _ram(data, buf))
         return got
 
     # -- writing
@@ -221,9 +222,9 @@ class Tiers:
         awake room files fit the disk budget. Rooms in ``keep`` stay awake."""
         if self.disk_budget is None or self.rooms is None:
             return []
-        tb = self.rooms.token_bytes
+        size = self.rooms.room_bytes
         awake = [r for r in self.rooms.rooms if r.tokens and r.rid not in self.sleeping]
-        total = sum(r.tokens for r in awake) * tb
+        total = sum(size(r.rid) for r in awake)
         if total <= self.disk_budget:
             return []
         keep = set(keep)
@@ -234,7 +235,7 @@ class Tiers:
             if total <= self.disk_budget:
                 break
             self.sleep(r.rid, tell=False)
-            total -= r.tokens * tb
+            total -= size(r.rid)
             slept.append(r.rid)
         if slept and self._notify:
             self._notify(slept, True)
@@ -249,11 +250,11 @@ class Tiers:
             self._notify([rid], True)
 
     def wake_room(self, rid: int) -> bytes:
-        """Write room ``rid``'s notes again from its words, back onto the SSD. Returns them."""
+        """Write room ``rid``'s notes again from its words (at the room's bits), back onto the SSD. Returns them."""
         if self._rewrite is None:
             raise ValueError("these tiers cannot wake a room")
         data = self._rewrite(rid)
-        if len(data) != self.rooms.rooms[rid].tokens * self.rooms.token_bytes:
+        if len(data) != self.rooms.room_bytes(rid):
             raise ValueError("a woken room must come back the size it was")
         fd = _open(self.rooms.file(rid), os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
         try:
@@ -275,7 +276,7 @@ class Tiers:
         """The awake rooms' files, as the index counts them."""
         if self.rooms is None:
             return 0
-        return sum(r.tokens for r in self.rooms.rooms if r.rid not in self.sleeping) * self.rooms.token_bytes
+        return sum(self.rooms.room_bytes(r.rid) for r in self.rooms.rooms if r.rid not in self.sleeping)
 
     def state(self) -> dict:
         """What sits in each tier, for a person to look at."""
@@ -299,3 +300,8 @@ class Tiers:
 
     def _keep(self, rid: int, data, size: int) -> None:
         self.pool.put((self, rid), data, size)
+
+
+def _ram(data, buf) -> int:
+    """What a room's notes take in RAM once turned into arrays (more than its file when the file is quantized)."""
+    return int(getattr(data, "nbytes", len(buf)))
