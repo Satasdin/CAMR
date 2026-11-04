@@ -415,3 +415,15 @@ Every checkpoint and speed point now records the process's footprint (`footprint
 peak. `engram.bench.ram` measures the cap against no cap in fresh processes, with footprint over time, ingest speed
 and first word. It runs after the queue. The 8B, 27B and Ollama runs are the first measured with the cap. Every run
 before them (1.7B and 4B) ran without it; their scores are unaffected, and their RAM is now known to be understated.
+
+**E-41 The cap, measured: a third of the RAM, almost twice the speed, the same answers.** The 4B was rerun on the
+4M script with the 1 GB cap (E-40). At 3M, against the same run without the cap that morning:
+- **answers:** 29 of 73, with identical verdicts (deterministic, as it should be);
+- **footprint:** 19.2 GB down to 7.5 GB;
+- **reading the 3M history:** 99.5 min down to 53 min (503 to 938 tokens a second), since nothing swapped;
+- **first word p50:** 0.37 s down to 0.31 s;
+- **retrieval p50:** 20 ms down to 16 ms.
+
+7.5 GB is about what the parts add up to: the 4B's weights, the embedder, the 2 GB pool of hot rooms, the 1 GB
+cache and Python. Records: `100255-longhaul-engine-qwen3-4b.json` (before), `143706-longhaul-engine-qwen3-4b.json`
+(after).

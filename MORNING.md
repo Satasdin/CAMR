@@ -126,7 +126,8 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 5. **The engine's process held 19 GB, not the 5.7 GB the records showed** (E-40).
    - MLX kept freed GPU buffers up to the whole GPU limit, and swap filled.
    - The cache is now capped at 1 GB, and every record logs the process's real footprint.
-   - The before/after measurement is scripted (`engram.bench.ram`) but not run yet.
+   - Measured on the 4B at 3M (E-41): the footprint fell from 19.2 GB to 7.5 GB, reading went from 99.5 to 53 min,
+     and the first word from 0.37 to 0.31 s, with identical answers.
    - Scores are unaffected; the RAM figures of tonight's runs are understated.
 6. **Claude is honest but blind past its window.**
    - It never invented a never-said fact.
