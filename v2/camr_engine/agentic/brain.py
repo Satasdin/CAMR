@@ -139,7 +139,7 @@ CLOSEST = 8  # moments a code step re-reads as words after its room: a task need
 ENGINE_RULES = ("This request is a task in the user's project, not a question about the notes: the rules above to "
                 "answer in one sentence and to reply \"I don't know\" do not apply. Do the task with the tools. The "
                 "notes above are what you remember of this project and its people: use the names, facts, rules, "
-                "decisions and fixes they hold.")
+                "decisions and fixes they hold, and follow each rule they give exactly, in everything you write.")
 
 
 class EngineBrain:

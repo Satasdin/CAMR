@@ -55,11 +55,15 @@ class Looks:
 
         out = self._orig(queries, keys, values, cache=cache, scale=scale, mask=mask, **kw)
         layer = self.layer_of.get(id(cache))
-        if layer is not None and self.nodes:
+        # only a written word's step is looked at (per_word reads no other), and each result is worked out at once:
+        # left lazy, every one held its layer's keys, about 100 MB a word on a 3K-token desk, until the GPU ran out
+        if layer is not None and self.nodes and keys.shape[2] >= self.prompt_len:
             q = queries[0, :, -1, :]                                            # the newest word's question
             k = mx.repeat(keys[0], q.shape[0] // keys.shape[1], axis=0)
             w = mx.softmax((k @ q[:, :, None])[:, :, 0].astype(mx.float32) * scale, axis=-1).mean(axis=0)
-            self.calls[keys.shape[2]][layer] = w[self.lo:self.hi] @ self.a       # one number per node
+            got = w[self.lo:self.hi] @ self.a                                  # one number per node
+            mx.async_eval(got)
+            self.calls[keys.shape[2]][layer] = got
         return out
 
     def __enter__(self):
