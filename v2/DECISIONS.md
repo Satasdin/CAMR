@@ -511,3 +511,29 @@ is HTML, CSS and a little JS (tabs, copy buttons, the chart), with no build step
   swap for the Mac app's. Their top bar still carries the old name and the Swarm tab, so CSS keeps it out of view (`trim`).
   `swarm.png`, `chat.png` and `code.png` are not used: the last two are empty in the read-only fixture.
 - **No photography:** none in the repository has a known licence, and nothing was downloaded.
+
+**E-44 Files into memory: a vision model turns them into words once, and the notes stay words.**
+`camr_engine/media.py` is the app's way in: `ingest(path, memory, *, describe=None, day, date=None, stamp=None,
+tags=())`.
+- **What a file becomes:**
+  - a PDF, one moment a page (pypdf's layout mode, so a table row stays on one line);
+  - an image, its caption and what is written in it (two asks to the vision model);
+  - a video, a frame every 2 s, each described with its time. A frame whose 64 × 36 thumbnail barely changed is
+    read once: shake and grain change no pixel by 40 grey levels, a new line on a board changes 2–5% of them.
+- **Where it came from:** every moment's words start with the file and its page or frame, its vault note is tagged
+  `file` and its kind, and `vault/files/sources.jsonl` maps the moment to the file. The file is copied into
+  `vault/files/` (named by its hash), with the frames a video was read from.
+- **The vision model reads the notes as a 1.7B does.** mlx_lm loads Qwen2.5-VL-3B's language half without its
+  vision tower. Its M-RoPE turns a word by the same position on all three axes, which is plain RoPE (mlx_lm runs it
+  as `nn.RoPE`), so the notes need nothing new: `models.text_args` shows that half to the Notebook. The vision half
+  is loaded separately through mlx-vlm (`models.Seer`), 1.7 GB more of the same weights.
+- **Looking again is words plus the image, not notes.** An image's tokens sit at positions in three dimensions, and
+  the notes are written for words. So `media.look` (when the closest moment came from an image) gives the vision
+  model the room's and closest moments as words and the image itself. `Memory.answer` is unchanged.
+- **Gemma 3 is not an engine reader.** Its local layers slide over 1,024 tokens, its global layers scale RoPE by 8,
+  and its tokenizer puts a BOS before every encoded moment. The Notebook refuses the scaled RoPE as it should.
+  Gemma reads files (mlx-vlm) and could describe them; it does not read notes.
+- **Ollama:** `qwen2.5vl:3b` is pulled. `gemma3:4b`, and `qwen3-vl:4b-instruct` as a stand-in, need a newer Ollama
+  than 0.13.5. Ollama was not upgraded under a running queue, so (e) is the one Ollama vision model.
+- **Packages:** mlx-vlm 0.7.12, pypdf, reportlab, matplotlib and imageio-ffmpeg went into the venv. Of what was there,
+  only fsspec moved (2026.9.0 to 2026.7.0). mlx, mlx-lm and transformers are as they were.

@@ -9,6 +9,7 @@ import ctypes
 import os
 import time
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -16,6 +17,8 @@ READER = "mlx-community/Qwen3-1.7B-4bit"
 READER_BIG = "mlx-community/Qwen3-4B-Instruct-2507-4bit"
 READER_27B = "mlx-community/Qwen3.8-27B-4bit"  # 16 GB; hybrid attention, so it reads CAMR v2's memory as words
 EMBEDDER = "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
+SEER = "mlx-community/Qwen2.5-VL-3B-Instruct-4bit"  # a vision model: reads files for camr_engine.media
+DESCRIBE_TOKENS = 400  # room for what is written in an image, or its caption
 MAX_ANSWER_TOKENS = 40
 PREFILL_STEP = 2048
 # MLX keeps every freed GPU buffer for reuse, by default up to the whole GPU limit (about 18 GB on a 24 GB Mac). A
@@ -111,6 +114,60 @@ class Reader:
         extra = cache[0].offset - length
         if extra > 0:
             trim_prompt_cache(cache, extra)
+
+
+def text_args(args) -> SimpleNamespace:
+    """A vision checkpoint's language half as the notes see it. Qwen2.5-VL's M-RoPE turns a word by the same position
+    on all three of its axes, which is plain RoPE (mlx_lm runs it as nn.RoPE); any other scaling is kept, so the
+    notes refuse it. ``head_dim`` is worked out when the config leaves it out."""
+    d = dict(vars(args))
+    scaling = d.get("rope_scaling") or {}
+    if (scaling.get("type") or scaling.get("rope_type")) == "mrope":
+        d["rope_scaling"] = None
+    if not d.get("head_dim"):
+        d["head_dim"] = d["hidden_size"] // d["num_attention_heads"]
+    return SimpleNamespace(**d)
+
+
+class Seer:
+    """A vision model through mlx-vlm: it reads images and answers with them in view. Greedy, so an image always gets
+    the same words; such models have no thinking to turn off. ``describe`` is camr_engine.media's reader of images."""
+
+    def __init__(self, repo: str = SEER, max_tokens: int = MAX_ANSWER_TOKENS):
+        from mlx_vlm import load
+        from mlx_vlm.utils import load_config
+
+        limit_cache()
+        self.repo, self.max_tokens = repo, max_tokens
+        self.model, self.processor = load(repo)
+        self.config = load_config(repo)
+        self.tok = getattr(self.processor, "tokenizer", self.processor)
+
+    def prompt(self, system: str | None, user: str, images: int) -> str:
+        from mlx_vlm.prompt_utils import apply_chat_template
+
+        msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": user}]
+        return apply_chat_template(self.processor, self.config, msgs, num_images=images)
+
+    def see(self, images: list, system: str | None, user: str, max_tokens: int | None = None) -> Reply:
+        """Answer ``user`` with ``images`` (paths or PIL images) in view, after ``system``."""
+        from mlx_vlm import stream_generate
+
+        from camr_engine.media import open_image
+
+        pics = [open_image(x) if isinstance(x, (str, os.PathLike)) else x for x in images]
+        prompt = self.prompt(system, user, len(pics))
+        t0 = time.perf_counter()
+        first, pieces, r = None, [], None
+        for r in stream_generate(self.model, self.processor, prompt, image=pics or None,
+                                 max_tokens=max_tokens or self.max_tokens, temperature=0.0):
+            first = first or time.perf_counter() - t0
+            pieces.append(r.text)
+        return Reply("".join(pieces).strip(), first or 0.0, r.generation_tps if r else 0.0,
+                     r.prompt_tokens if r else 0, r.generation_tokens if r else 0, pieces)
+
+    def describe(self, image, ask: str) -> str:
+        return self.see([image], None, ask, max_tokens=DESCRIBE_TOKENS).text
 
 
 class Embedder:
