@@ -1,0 +1,2418 @@
+{
+ "kind": "bench",
+ "task": "reach",
+ "contender": {
+  "name": "engine:qwen3-4b@project",
+  "kind": "engine",
+  "model": "qwen3-4b",
+  "repo": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+  "embedder": "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
+  "reach": "writes project, reads project",
+  "drives": "one engram.memory.Memory per reach folder (reach.Session's layout), one RAM pool; a question is chosen over the reaches read, as reach.Session.choose, then answered by that memory with record=True and among=the reaches read",
+  "layers": [
+   "rooms",
+   "vault",
+   "core",
+   "tiers",
+   "metrics"
+  ],
+  "core": "off",
+  "ram_bytes": 2000000000,
+  "disk_bytes": 200000000000,
+  "wake": false,
+  "room_tokens": 512,
+  "join": 0.8,
+  "closest": 4,
+  "kv_shape": {
+   "layers": 36,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "rope_base": 5000000.0,
+   "token_bytes": 147456
+  },
+  "moment": "[YYYY-MM-DD, day N] text",
+  "day_lines_kept": false,
+  "nap_days": null,
+  "enable_thinking": false,
+  "system": "You answer questions about a project's history: one developer's log of chats, decisions, code, notes and lessons. Notes from that history come before each question. Answer from them only. When they never say, answer \"I don't know\". Keep each answer short unless the question asks for code or a page.",
+  "prompt": "system: the instructions, then \"Notes:\" with the core, the room and the closest moments, \"End of notes.\", \"Today is <date>.\" and the family's line; user: the question",
+  "today_line": true,
+  "hint_in": "system, after the notes and the date",
+  "hints": {
+   "page": "Reply with the page as one complete HTML document in a ```html block, its CSS included.",
+   "code": "Reply with the code in one ```python block.",
+   "maths": "Show the working in a few short steps, then give the final number on the last line."
+  },
+  "writes": "Memory.remember for each moment; the index is saved at each nap and before a checkpoint's first question (reach.Session.remember saves after every moment)",
+  "questions": "read-only: each question is answered from the memory as the telling left it",
+  "watch": false,
+  "event_log": true,
+  "peak_ram_gb": "MLX's peak over the answer, retrieval included",
+  "setup": "project",
+  "plan": {
+   "writes": "project",
+   "reads": [
+    "project"
+   ],
+   "other": false
+  },
+  "week_days": 5,
+  "other_project": false,
+  "other_events": 0
+ },
+ "thinking": false,
+ "max_tokens": {
+  "page": 1200,
+  "code": 600,
+  "maths": 400,
+  "other": 120
+ },
+ "limit": null,
+ "folder": "/Users/p3wrky/Desktop/camr-build-wt/work/memories/reach-engine-qwen3-4b-project-20261104-195633.nosync",
+ "started": "2026-11-04T19:56:33",
+ "environment": {
+  "machine": "Mac17,9",
+  "chip": "Apple M5 Pro",
+  "memory_gb": 24,
+  "power": "AC Power",
+  "load_1m": 5.65,
+  "python": "3.12.12",
+  "engram_commit": "ed4f170",
+  "engram_dirty": true,
+  "engram_source_sha": "054a76057a18911a",
+  "mlx": "0.32.4",
+  "mlx_lm": "0.32.2",
+  "numpy": "2.5.4"
+ },
+ "history_tokens": "the history told so far, as the task counts it (the same for every contender); extra.memory_tokens is the contender's own count of what it holds",
+ "haul": {
+  "dir": "../work/haul/s1",
+  "seed": 1,
+  "version": 2,
+  "tokens": 2010094,
+  "events": 17786,
+  "script_sha": "b3ba3aa91a4849b6"
+ },
+ "other": {
+  "dir": "../work/haul/s2",
+  "seed": 2,
+  "version": 2,
+  "tokens": 2010046,
+  "events": 17833,
+  "script_sha": "9f7ff164b05c5aab"
+ },
+ "cuts": [
+  "256K"
+ ],
+ "setup": "project",
+ "checkpoints": [
+  {
+   "name": "256K",
+   "tokens": 255952,
+   "events": 2343,
+   "ingest": {
+    "events": 2343,
+    "tokens": 255952,
+    "seconds": 262.876,
+    "tell_s": 262.857,
+    "read_s": 0.018,
+    "events_per_s": 8.91,
+    "tokens_per_s": 973.7
+   },
+   "status": {
+    "reaches": {
+     "project:longhaul": {
+      "moments": 2327,
+      "rooms": 737,
+      "history_tokens": 299072,
+      "disk_gb": 44.113487
+     }
+    },
+    "moments": 2327,
+    "read": [
+     "project:longhaul"
+    ],
+    "remember_s": 262.833,
+    "saves_s": 0.018
+   },
+   "footprint_gb": 8.068,
+   "summary": {
+    "fact": {
+     "questions": 10,
+     "right": 8,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "declined": 2,
+      "right": 8
+     },
+     "ttft_s": {
+      "p50": 0.1898,
+      "p90": 0.2318
+     },
+     "total_s": {
+      "p50": 0.2893,
+      "p90": 0.3982
+     },
+     "prefill_tps": {
+      "p50": 2102.35,
+      "p90": 2241.84
+     },
+     "decode_tps": {
+      "p50": 91.65,
+      "p90": 96.16
+     },
+     "retrieval_ms": {
+      "p50": 29.149,
+      "p90": 30.6411
+     },
+     "bytes_read": {
+      "p50": 71147520.0,
+      "p90": 72843264.0
+     },
+     "gbps": {
+      "p50": 11.775,
+      "p90": 12.446
+     },
+     "read_share": {
+      "p50": 0.0309,
+      "p90": 0.0357
+     },
+     "context_tokens": {
+      "p50": 881.0,
+      "p90": 932.0
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.573,
+     "disk_gb": 44.113471,
+     "tiers": {
+      "ssd": 10
+     }
+    },
+    "changed": {
+     "questions": 4,
+     "right": 2,
+     "graded": 4,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 2,
+      "declined": 2
+     },
+     "ttft_s": {
+      "p50": 0.171,
+      "p90": 0.2085
+     },
+     "total_s": {
+      "p50": 0.324,
+      "p90": 0.6758
+     },
+     "prefill_tps": {
+      "p50": 1923.45,
+      "p90": 2160.49
+     },
+     "decode_tps": {
+      "p50": 95.6,
+      "p90": 98.77
+     },
+     "retrieval_ms": {
+      "p50": 30.0065,
+      "p90": 31.0467
+     },
+     "bytes_read": {
+      "p50": 71663616.0,
+      "p90": 74524262.4
+     },
+     "gbps": {
+      "p50": 11.69,
+      "p90": 12.138
+     },
+     "read_share": {
+      "p50": 0.0322,
+      "p90": 0.0396
+     },
+     "context_tokens": {
+      "p50": 791.5,
+      "p90": 915.4
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.562,
+     "disk_gb": 44.113473,
+     "tiers": {
+      "ssd": 3,
+      "ram": 1
+     }
+    },
+    "two_hop": {
+     "questions": 1,
+     "right": 0,
+     "graded": 1,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "declined": 1
+     },
+     "ttft_s": {
+      "p50": 0.2894,
+      "p90": 0.2894
+     },
+     "total_s": {
+      "p50": 0.3473,
+      "p90": 0.3473
+     },
+     "prefill_tps": {
+      "p50": 2458.6,
+      "p90": 2458.6
+     },
+     "decode_tps": {
+      "p50": 86.4,
+      "p90": 86.4
+     },
+     "retrieval_ms": {
+      "p50": 30.07,
+      "p90": 30.07
+     },
+     "bytes_read": {
+      "p50": 71663616.0,
+      "p90": 71663616.0
+     },
+     "gbps": {
+      "p50": 11.73,
+      "p90": 11.73
+     },
+     "read_share": {
+      "p50": 0.0211,
+      "p90": 0.0211
+     },
+     "context_tokens": {
+      "p50": 1190.0,
+      "p90": 1190.0
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.679,
+     "disk_gb": 44.113473,
+     "tiers": {
+      "ssd": 1
+     }
+    },
+    "maths": {
+     "questions": 10,
+     "right": 4,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 5,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 4,
+      "declined": 1,
+      "wrong": 5
+     },
+     "ttft_s": {
+      "p50": 0.3294,
+      "p90": 0.42
+     },
+     "total_s": {
+      "p50": 4.1704,
+      "p90": 4.5453
+     },
+     "prefill_tps": {
+      "p50": 2446.35,
+      "p90": 2575.42
+     },
+     "decode_tps": {
+      "p50": 97.25,
+      "p90": 99.95
+     },
+     "retrieval_ms": {
+      "p50": 27.745,
+      "p90": 30.3435
+     },
+     "bytes_read": {
+      "p50": 58834944.0,
+      "p90": 69053644.8
+     },
+     "gbps": {
+      "p50": 11.105,
+      "p90": 11.866
+     },
+     "read_share": {
+      "p50": 0.016,
+      "p90": 0.0212
+     },
+     "context_tokens": {
+      "p50": 1227.5,
+      "p90": 1448.2
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.865,
+     "disk_gb": 44.113479,
+     "tiers": {
+      "ssd": 10
+     }
+    },
+    "page": {
+     "questions": 3,
+     "right": 0,
+     "graded": 3,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "declined": 3
+     },
+     "ttft_s": {
+      "p50": 0.1593,
+      "p90": 0.207
+     },
+     "total_s": {
+      "p50": 0.2067,
+      "p90": 0.2549
+     },
+     "prefill_tps": {
+      "p50": 1787.8,
+      "p90": 2040.28
+     },
+     "decode_tps": {
+      "p50": 84.4,
+      "p90": 84.64
+     },
+     "retrieval_ms": {
+      "p50": 29.474,
+      "p90": 30.09
+     },
+     "bytes_read": {
+      "p50": 71958528.0,
+      "p90": 73963929.6
+     },
+     "gbps": {
+      "p50": 11.95,
+      "p90": 12.03
+     },
+     "read_share": {
+      "p50": 0.0376,
+      "p90": 0.0427
+     },
+     "context_tokens": {
+      "p50": 785.0,
+      "p90": 932.2
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.575,
+     "disk_gb": 44.11348,
+     "tiers": {
+      "ssd": 3
+     }
+    },
+    "code": {
+     "questions": 2,
+     "right": 2,
+     "graded": 2,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 2
+     },
+     "ttft_s": {
+      "p50": 0.3579,
+      "p90": 0.3619
+     },
+     "total_s": {
+      "p50": 0.9392,
+      "p90": 0.988
+     },
+     "prefill_tps": {
+      "p50": 2544.7,
+      "p90": 2546.54
+     },
+     "decode_tps": {
+      "p50": 97.2,
+      "p90": 97.28
+     },
+     "retrieval_ms": {
+      "p50": 33.856,
+      "p90": 37.7088
+     },
+     "bytes_read": {
+      "p50": 64585728.0,
+      "p90": 64585728.0
+     },
+     "gbps": {
+      "p50": 10.0,
+      "p90": 11.448
+     },
+     "read_share": {
+      "p50": 0.0186,
+      "p90": 0.0211
+     },
+     "context_tokens": {
+      "p50": 1327.5,
+      "p90": 1327.9
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.752,
+     "disk_gb": 44.113482,
+     "tiers": {
+      "ssd": 2
+     }
+    },
+    "never": {
+     "questions": 10,
+     "right": 10,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 10
+     },
+     "ttft_s": {
+      "p50": 0.193,
+      "p90": 0.2403
+     },
+     "total_s": {
+      "p50": 0.2509,
+      "p90": 0.2989
+     },
+     "prefill_tps": {
+      "p50": 2192.0,
+      "p90": 2302.84
+     },
+     "decode_tps": {
+      "p50": 86.45,
+      "p90": 90.43
+     },
+     "retrieval_ms": {
+      "p50": 28.9325,
+      "p90": 31.2927
+     },
+     "bytes_read": {
+      "p50": 70705152.0,
+      "p90": 73978675.2
+     },
+     "gbps": {
+      "p50": 11.625,
+      "p90": 12.018
+     },
+     "read_share": {
+      "p50": 0.0297,
+      "p90": 0.0352
+     },
+     "context_tokens": {
+      "p50": 911.0,
+      "p90": 1043.5
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.616,
+     "disk_gb": 44.113487,
+     "tiers": {
+      "ssd": 10
+     }
+    },
+    "all": {
+     "questions": 40,
+     "right": 26,
+     "graded": 40,
+     "errors": 0,
+     "truncated": 5,
+     "asked_before": 0,
+     "verdicts": {
+      "declined": 9,
+      "right": 26,
+      "wrong": 5
+     },
+     "ttft_s": {
+      "p50": 0.1939,
+      "p90": 0.3659
+     },
+     "total_s": {
+      "p50": 0.2989,
+      "p90": 4.212
+     },
+     "prefill_tps": {
+      "p50": 2190.0,
+      "p90": 2541.5
+     },
+     "decode_tps": {
+      "p50": 91.05,
+      "p90": 98.23
+     },
+     "retrieval_ms": {
+      "p50": 29.0055,
+      "p90": 30.7926
+     },
+     "bytes_read": {
+      "p50": 69746688.0,
+      "p90": 74494771.2
+     },
+     "gbps": {
+      "p50": 11.71,
+      "p90": 12.202
+     },
+     "read_share": {
+      "p50": 0.0273,
+      "p90": 0.0382
+     },
+     "context_tokens": {
+      "p50": 911.0,
+      "p90": 1351.3
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 7.865,
+     "disk_gb": 44.113487,
+     "tiers": {
+      "ssd": 39,
+      "ram": 1
+     }
+    }
+   },
+   "answers": [
+    {
+     "id": "fact-141",
+     "family": "fact",
+     "question": "What is the Docker base image?",
+     "expected": "python:3.12-bookworm",
+     "answer": "I don't know",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3558,
+      "total_s": 0.401,
+      "prefill_tps": 499.1,
+      "decode_tps": 88.5,
+      "retrieval_ms": 12.589,
+      "bytes_read": 5455872,
+      "gbps": 8.05,
+      "read_share": 0.0019,
+      "context_tokens": 277,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.184,
+      "disk_gb": 44.113466,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 10.429,
+       "fetch": 0.678,
+       "desk": 1.482,
+       "total": 12.589
+      },
+      "room": 579,
+      "new_tokens": 171,
+      "answer_tokens": 5,
+      "mlx_decode_tps": 132.0,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8258,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-306",
+     "family": "fact",
+     "question": "On which day of the month is the Karen rent due?",
+     "expected": "28th",
+     "answer": "The Karen rent is due on the 28th of every month.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 28",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1953,
+      "total_s": 0.3541,
+      "prefill_tps": 2259.3,
+      "decode_tps": 94.5,
+      "retrieval_ms": 30.627,
+      "bytes_read": 72548352,
+      "gbps": 11.67,
+      "read_share": 0.0318,
+      "context_tokens": 931,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.573,
+      "disk_gb": 44.113467,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.338,
+       "fetch": 6.218,
+       "desk": 10.071,
+       "total": 30.627
+      },
+      "room": 454,
+      "new_tokens": 370,
+      "answer_tokens": 16,
+      "mlx_decode_tps": 105.9,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8106,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-193",
+     "family": "fact",
+     "question": "What is Iten Traders' minimum order, in shillings?",
+     "expected": "48,500",
+     "answer": "KES 48,500",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 48,500",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.174,
+      "total_s": 0.2719,
+      "prefill_tps": 2113.3,
+      "decode_tps": 91.9,
+      "retrieval_ms": 30.768,
+      "bytes_read": 75497472,
+      "gbps": 12.25,
+      "read_share": 0.0354,
+      "context_tokens": 882,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.479,
+      "disk_gb": 44.113467,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.37,
+       "fetch": 6.163,
+       "desk": 10.235,
+       "total": 30.768
+      },
+      "room": 162,
+      "new_tokens": 301,
+      "answer_tokens": 10,
+      "mlx_decode_tps": 110.8,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7397,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-065",
+     "family": "fact",
+     "question": "Which laptop does Muthoni Wafula use?",
+     "expected": "Lenovo Yoga 7",
+     "answer": "Muthoni Wafula uses a Lenovo Yoga 7.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names Lenovo Yoga 7",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1463,
+      "total_s": 0.2795,
+      "prefill_tps": 1935.6,
+      "decode_tps": 97.6,
+      "retrieval_ms": 16.531,
+      "bytes_read": 6340608,
+      "gbps": 6.75,
+      "read_share": 0.0064,
+      "context_tokens": 362,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.321,
+      "disk_gb": 44.113468,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.21,
+       "fetch": 0.94,
+       "desk": 1.381,
+       "total": 16.531
+      },
+      "room": 648,
+      "new_tokens": 250,
+      "answer_tokens": 14,
+      "mlx_decode_tps": 111.3,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8434,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-010",
+     "family": "fact",
+     "question": "What locker number does Ndinda Kerubo have?",
+     "expected": "51",
+     "answer": "Ndinda Kerubo has locker 51.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 51",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1912,
+      "total_s": 0.299,
+      "prefill_tps": 2032.5,
+      "decode_tps": 92.8,
+      "retrieval_ms": 28.97,
+      "bytes_read": 71221248,
+      "gbps": 12.43,
+      "read_share": 0.03,
+      "context_tokens": 880,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.512,
+      "disk_gb": 44.113468,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.295,
+       "fetch": 5.732,
+       "desk": 8.944,
+       "total": 28.97
+      },
+      "room": 407,
+      "new_tokens": 328,
+      "answer_tokens": 11,
+      "mlx_decode_tps": 109.8,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.762,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-050",
+     "family": "fact",
+     "question": "What is the number plate of Kitengela Ventures' delivery truck?",
+     "expected": "KDS 711Z",
+     "answer": "The number plate of Kitengela Ventures' delivery truck is KDS 711Z.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names KDS 711Z",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1896,
+      "total_s": 0.3979,
+      "prefill_tps": 2239.9,
+      "decode_tps": 96.0,
+      "retrieval_ms": 28.971,
+      "bytes_read": 67977216,
+      "gbps": 12.59,
+      "read_share": 0.0285,
+      "context_tokens": 888,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.548,
+      "disk_gb": 44.113469,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.374,
+       "fetch": 5.399,
+       "desk": 9.198,
+       "total": 28.971
+      },
+      "room": 609,
+      "new_tokens": 358,
+      "answer_tokens": 21,
+      "mlx_decode_tps": 104.7,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8754,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-075",
+     "family": "fact",
+     "question": "Which day of the week is Elijah Lagat off?",
+     "expected": "Monday",
+     "answer": "Elijah Lagat is off on Mondays.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names Mondays",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.218,
+      "total_s": 0.3165,
+      "prefill_tps": 2091.4,
+      "decode_tps": 91.4,
+      "retrieval_ms": 30.621,
+      "bytes_read": 71073792,
+      "gbps": 11.45,
+      "read_share": 0.0285,
+      "context_tokens": 941,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.559,
+      "disk_gb": 44.113469,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.216,
+       "fetch": 6.207,
+       "desk": 10.199,
+       "total": 30.621
+      },
+      "room": 49,
+      "new_tokens": 390,
+      "answer_tokens": 10,
+      "mlx_decode_tps": 110.2,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8368,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-255",
+     "family": "fact",
+     "question": "What is Caroline Mwita's staff badge number?",
+     "expected": "MNK-7158",
+     "answer": "MNK-7158",
+     "verdict": "right",
+     "right": true,
+     "reason": "names MNK-7158",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1719,
+      "total_s": 0.2494,
+      "prefill_tps": 2143.9,
+      "decode_tps": 90.3,
+      "retrieval_ms": 29.327,
+      "bytes_read": 68861952,
+      "gbps": 11.78,
+      "read_share": 0.034,
+      "context_tokens": 840,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.467,
+      "disk_gb": 44.11347,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.216,
+       "fetch": 5.845,
+       "desk": 9.266,
+       "total": 29.327
+      },
+      "room": 219,
+      "new_tokens": 304,
+      "answer_tokens": 8,
+      "mlx_decode_tps": 114.4,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8007,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-081",
+     "family": "fact",
+     "question": "Which branch does Sharon Mwiti work at?",
+     "expected": "Upper Hill",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.161,
+      "total_s": 0.2183,
+      "prefill_tps": 1673.8,
+      "decode_tps": 87.3,
+      "retrieval_ms": 30.133,
+      "bytes_read": 72548352,
+      "gbps": 11.77,
+      "read_share": 0.0383,
+      "context_tokens": 779,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.423,
+      "disk_gb": 44.11347,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.268,
+       "fetch": 6.165,
+       "desk": 9.7,
+       "total": 30.133
+      },
+      "room": 389,
+      "new_tokens": 218,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 120.8,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7977,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-129",
+     "family": "fact",
+     "question": "Who is the landlord of the Karen branch?",
+     "expected": "Patrick Chacha",
+     "answer": "Patrick Chacha",
+     "verdict": "right",
+     "right": true,
+     "reason": "names Patrick Chacha",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1901,
+      "total_s": 0.228,
+      "prefill_tps": 2213.3,
+      "decode_tps": 79.2,
+      "retrieval_ms": 27.559,
+      "bytes_read": 72548352,
+      "gbps": 11.82,
+      "read_share": 0.0323,
+      "context_tokens": 919,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.559,
+      "disk_gb": 44.113471,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.133,
+       "fetch": 6.139,
+       "desk": 7.286,
+       "total": 27.559
+      },
+      "room": 454,
+      "new_tokens": 358,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 132.6,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7489,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-07-past",
+     "family": "changed",
+     "question": "What was the nightly backup time on day 13?",
+     "expected": "03:40",
+     "answer": "The nightly backup time was 03:40.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 03:40",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1617,
+      "total_s": 0.2885,
+      "prefill_tps": 1700.9,
+      "decode_tps": 94.6,
+      "retrieval_ms": 30.493,
+      "bytes_read": 72253440,
+      "gbps": 11.69,
+      "read_share": 0.0382,
+      "context_tokens": 781,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.43,
+      "disk_gb": 44.113471,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.276,
+       "fetch": 6.18,
+       "desk": 10.037,
+       "total": 30.493
+      },
+      "room": 140,
+      "new_tokens": 222,
+      "answer_tokens": 13,
+      "mlx_decode_tps": 109.0,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8135,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-21-past",
+     "family": "changed",
+     "question": "What was the WhatsApp orders cut-off time on day 12?",
+     "expected": "21:30",
+     "answer": "The WhatsApp orders cut-off time on day 12 was 21:30.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 21:30",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1629,
+      "total_s": 0.3596,
+      "prefill_tps": 1687.7,
+      "decode_tps": 96.6,
+      "retrieval_ms": 31.284,
+      "bytes_read": 75497472,
+      "gbps": 11.53,
+      "read_share": 0.0402,
+      "context_tokens": 802,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.435,
+      "disk_gb": 44.113472,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.347,
+       "fetch": 6.549,
+       "desk": 10.388,
+       "total": 31.284
+      },
+      "room": 225,
+      "new_tokens": 221,
+      "answer_tokens": 20,
+      "mlx_decode_tps": 105.8,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9089,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-31-past",
+     "family": "changed",
+     "question": "What was the number of gunicorn threads on day 15?",
+     "expected": "3",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2211,
+      "total_s": 0.2804,
+      "prefill_tps": 2166.7,
+      "decode_tps": 84.3,
+      "retrieval_ms": 29.52,
+      "bytes_read": 71073792,
+      "gbps": 12.25,
+      "read_share": 0.0262,
+      "context_tokens": 964,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.562,
+      "disk_gb": 44.113472,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.321,
+       "fetch": 5.802,
+       "desk": 9.398,
+       "total": 29.52
+      },
+      "room": 178,
+      "new_tokens": 413,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 117.0,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8183,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-74-past",
+     "family": "changed",
+     "question": "How many guests was the Chui Motors event for on day 9?",
+     "expected": "345",
+     "answer": "The notes mention \"The Zuri Interiors event is for 185 guests\" on day 15, and no event for Chui Motors is specified on day 9. There is no mention of the number of guests for the Chui Motors event on day 9.\n\nI don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1791,
+      "total_s": 0.8113,
+      "prefill_tps": 2146.0,
+      "decode_tps": 99.7,
+      "retrieval_ms": 17.047,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 717,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.43,
+      "disk_gb": 44.113473,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.324,
+       "fetch": 0.0,
+       "desk": 2.723,
+       "total": 17.047
+      },
+      "room": 448,
+      "new_tokens": 346,
+      "answer_tokens": 64,
+      "mlx_decode_tps": 102.5,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8009,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "hop-26",
+     "family": "two_hop",
+     "question": "How many days' notice do we have to give for lemons?",
+     "expected": "5",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2894,
+      "total_s": 0.3473,
+      "prefill_tps": 2458.6,
+      "decode_tps": 86.4,
+      "retrieval_ms": 30.07,
+      "bytes_read": 71663616,
+      "gbps": 11.73,
+      "read_share": 0.0211,
+      "context_tokens": 1190,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.679,
+      "disk_gb": 44.113473,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.916,
+       "fetch": 6.108,
+       "desk": 9.046,
+       "total": 30.07
+      },
+      "room": 112,
+      "new_tokens": 635,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 118.5,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7068,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-01-rule",
+     "family": "maths",
+     "question": "Fee on 12,000?",
+     "expected": "25",
+     "answer": "Step 1: 1% of 12,000 = 120  \nStep 2: Next multiple of 5 above 120 is 125  \nStep 3: 12,000 is a multiple of 1,000 \u2192 flat fee of 25 applies  \nBut 12,000 is exactly divisible by 1,000 \u2192 flat fee of 25  \n\nFinal fee: 25",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 25",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1808,
+      "total_s": 1.2063,
+      "prefill_tps": 2251.3,
+      "decode_tps": 100.4,
+      "retrieval_ms": 22.806,
+      "bytes_read": 36421632,
+      "gbps": 10.45,
+      "read_share": 0.0193,
+      "context_tokens": 670,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.464,
+      "disk_gb": 44.113474,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.267,
+       "fetch": 3.485,
+       "desk": 5.055,
+       "total": 22.806
+      },
+      "room": 101,
+      "new_tokens": 354,
+      "answer_tokens": 104,
+      "mlx_decode_tps": 102.2,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8237,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-02-new",
+     "family": "maths",
+     "question": "Same question as before, now for divisibility by 13 with n up to 25,000: how many n from 1 to 25,000 make n\u00b2 + 1 divisible by 13?",
+     "expected": "3846",
+     "answer": "Step 1: Solve $ n^2 \\equiv -1 \\pmod{13} $  \nTry residues 0 to 12:  \n$ n = 6 $: $ 6^2 + 1 = 37 $, not divisible by 13  \n$ n = 7 $: $ 7^2 + 1 = 50 $, not divisible  \nWait \u2014 check $ n^2 \\equiv -1 \\pmod{13} $ \u2192 $ n^2 \\equiv 12 \\pmod{13} $  \nTry:  \n$ 5^2 = 25 \\equiv 12 \\pmod{13} $ \u2192 yes  \n$ 8^2 = 64 \\equiv 12 \\pmod{13} $ \u2192 yes  \nSo $ n \\equiv 5 $ or $ 8 \\pmod{13} $  \n\nStep 2: In every block of 13 numbers, 2 values work (n \u2261 5 or 8 mod 13)  \n\nStep 3: $ 25,000 \\div 13 = 1923 \\times 13 + 1 $ \u2192 $ 13 \\times 1923 = 24,999 $, remainder 1  \nSo 1923 full blocks \u2192 $ 1923 \\times 2 = 3846 $  \nRemainder: 1 to 1 \u2192 check if any of these qualify: n=1 to 1 \u2192 neither 5 nor 8 \u2192 0 extra  \n\nTotal: $ 3846 $\n\n3846",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 3846",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.4117,
+      "total_s": 4.14,
+      "prefill_tps": 2541.4,
+      "decode_tps": 96.8,
+      "retrieval_ms": 27.398,
+      "bytes_read": 49987584,
+      "gbps": 9.03,
+      "read_share": 0.0134,
+      "context_tokens": 1381,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.69,
+      "disk_gb": 44.113474,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.66,
+       "fetch": 5.535,
+       "desk": 6.204,
+       "total": 27.398
+      },
+      "room": 345,
+      "new_tokens": 973,
+      "answer_tokens": 362,
+      "mlx_decode_tps": 97.3,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8464,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-01-new",
+     "family": "maths",
+     "question": "Fee on 7,321?",
+     "expected": "75",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the method was taught",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1924,
+      "total_s": 0.25,
+      "prefill_tps": 2325.2,
+      "decode_tps": 86.8,
+      "retrieval_ms": 27.655,
+      "bytes_read": 58834944,
+      "gbps": 10.68,
+      "read_share": 0.0286,
+      "context_tokens": 849,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.554,
+      "disk_gb": 44.113475,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.335,
+       "fetch": 5.51,
+       "desk": 7.811,
+       "total": 27.655
+      },
+      "room": 455,
+      "new_tokens": 381,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 120.1,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7966,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-03-new",
+     "family": "maths",
+     "question": "Mama Njeri counts the chapatis: a number leaves 2 over in piles of 7, 1 over in piles of 9 and 1 over in piles of 11. What is the smallest positive number that fits?",
+     "expected": "100",
+     "answer": "We are solving a system of congruences using the Chinese Remainder Theorem:\n\n- $ x \\equiv 2 \\pmod{7} $\n- $ x \\equiv 1 \\pmod{9} $\n- $ x \\equiv 1 \\pmod{11} $\n\n### Step 1: Note that 9 and 11 are coprime, and 7 is coprime to both.\n\nSince 9 and 11 are both involved in congruence to 1, we can combine the last two.\n\nNote: $ x \\equiv 1 \\pmod{9} $ and $ x \\equiv 1 \\pmod{11} $ \u2192 $ x \\equiv 1 \\pmod{\\text{lcm}(9,11)} = \\pmod{99} $\n\nSo now we have:\n- $ x \\equiv 1 \\pmod{99} $\n- $ x \\equiv 2 \\pmod{7} $\n\n### Step 2: Solve $ x \\equiv 1 \\pmod{99} $, $ x \\equiv 2 \\pmod{7} $\n\nLet $ x = 99k + 1 $. Plug into second congruence:\n\n$ 99k + 1 \\equiv 2 \\pmod{7} $\n\n$ 99 \\mod 7 = 99 - 14\u00d77 = 99 - 98 = 1 $, so:\n\n$ 1k + 1 \\equiv 2 \\pmod{7} $ \u2192 $ k \\equiv 1 \\pmod{7} $\n\nSo $ k = 7m + 1 $\n\nThen $ x = 99(7m + 1) + 1 = 693m + 100 $\n\nSmallest positive: $ x = 100 $\n\n### Check:\n- $",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 100",
+     "max_tokens": 400,
+     "truncated": true,
+     "metrics": {
+      "ttft_s": 0.4944,
+      "total_s": 4.6965,
+      "prefill_tps": 2606.2,
+      "decode_tps": 95.0,
+      "retrieval_ms": 30.269,
+      "bytes_read": 68419584,
+      "gbps": 11.35,
+      "read_share": 0.0122,
+      "context_tokens": 1738,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.724,
+      "disk_gb": 44.113475,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.566,
+       "fetch": 6.026,
+       "desk": 8.677,
+       "total": 30.269
+      },
+      "room": 125,
+      "new_tokens": 1205,
+      "answer_tokens": 400,
+      "mlx_decode_tps": 95.4,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9427,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-08-same",
+     "family": "maths",
+     "question": "We sell packs of 4 and of 9. How many ways can a customer buy exactly 210?",
+     "expected": "6",
+     "answer": "We need non-negative integers $ x, y $ such that:\n\n$$\n4x + 9y = 210\n$$\n\nStep 1: GCD(4, 9) = 1, which divides 210 \u2192 solutions exist.\n\nStep 2: Find one solution.  \nTry small $ y $:  \n$ 9y \\leq 210 $ \u2192 $ y \\leq 23.3 $, so $ y \\leq 23 $\n\nTry $ y = 22 $: $ 9 \\times 22 = 198 $, $ 210 - 198 = 12 $, not divisible by 4 \u2192 no  \nTry $ y = 21 $: $ 9 \\times 21 = 189 $, $ 210 - 189 = 21 $ \u2192 not divisible  \nTry $ y = 20 $: $ 180 $, $ 30 $ \u2192 30 \u00f7 4 = 7.5 \u2192 no  \nTry $ y = 18 $: $ 162 $, $ 48 $ \u2192 48 \u00f7 4 = 12 \u2192 $ x = 12 $ \u2192 valid: (12, 18)  \n\nSo one solution: $ (x, y) = (12, 18) $\n\nGeneral solution: since GCD(4,9)=1, the homogeneous solution is:  \n$ x = 12 + 9t $, $ y = 18 - 4t $  \n\nWe need $ x \\geq 0 $, $ y \\geq 0 $:  \n$ 12 + 9t \\geq 0 $ \u2192 $ t \\geq 0 $ (since 9t \u2265",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 9, not 6",
+     "max_tokens": 400,
+     "truncated": true,
+     "metrics": {
+      "ttft_s": 0.2615,
+      "total_s": 4.3124,
+      "prefill_tps": 2379.3,
+      "decode_tps": 98.5,
+      "retrieval_ms": 28.412,
+      "bytes_read": 64880640,
+      "gbps": 12.19,
+      "read_share": 0.0204,
+      "context_tokens": 1061,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.593,
+      "disk_gb": 44.113476,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.079,
+       "fetch": 5.323,
+       "desk": 8.011,
+       "total": 28.412
+      },
+      "room": 286,
+      "new_tokens": 552,
+      "answer_tokens": 400,
+      "mlx_decode_tps": 98.9,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9692,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-02-rule",
+     "family": "maths",
+     "question": "Among the order numbers from 1 to 6,000, how many n make n\u00b2 + 1 divisible by 13?",
+     "expected": "831",
+     "answer": "We want to find how many $ n $ from 1 to 6,000 satisfy $ n^2 + 1 \\equiv 0 \\pmod{13} $, i.e., $ n^2 \\equiv -1 \\pmod{13} $.\n\nStep 1: Solve $ n^2 \\equiv -1 \\pmod{13} $  \nTry residues $ n = 0 $ to $ 12 $:  \n$ n = 5 $: $ 25 \\equiv 12 \\pmod{13} $ \u2192 no  \n$ n = 6 $: $ 36 \\equiv 10 $ \u2192 no  \n$ n = 7 $: $ 49 \\equiv 10 $ \u2192 no  \n$ n = 8 $: $ 64 \\equiv 12 $ \u2192 no  \n$ n = 9 $: $ 81 \\equiv 3 $ \u2192 no  \n$ n = 10 $: $ 100 \\equiv 9 $ \u2192 no  \n$ n = 11 $: $ 121 \\equiv 4 $ \u2192 no  \n$ n = 12 $: $ 144 \\equiv 1 $ \u2192 no  \n\nWait \u2014 better check known values:  \n$ 5^2 = 25 \\equiv 12 \\equiv -1 $? No, $ -1 \\mod 13 = 12 $, so check if any square is 12.  \nTry $ n = 5 $: 25 mod 13 = 12 \u2192 yes! $ 5^2 = 25 \\equiv 12 \\equiv -1 \\pmod{13} $  \nAlso $ (-5) \\equiv 8 \\pmod{13} $, $ 8^2 = 64 \\equiv",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 64, not 831",
+     "max_tokens": 400,
+     "truncated": true,
+     "metrics": {
+      "ttft_s": 0.3062,
+      "total_s": 4.3694,
+      "prefill_tps": 2521.9,
+      "decode_tps": 98.2,
+      "retrieval_ms": 27.835,
+      "bytes_read": 49987584,
+      "gbps": 9.04,
+      "read_share": 0.0181,
+      "context_tokens": 1107,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.686,
+      "disk_gb": 44.113477,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.092,
+       "fetch": 5.53,
+       "desk": 7.213,
+       "total": 27.835
+      },
+      "room": 345,
+      "new_tokens": 699,
+      "answer_tokens": 400,
+      "mlx_decode_tps": 98.6,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8318,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-04-new",
+     "family": "maths",
+     "question": "How many ways are there to choose 5 of 19 chairs in a row so that no two chosen chairs are next to each other?",
+     "expected": "3003",
+     "answer": "Step 1: Place the 5 chosen chairs with one empty chair between each pair. This uses 5 + 4 = 9 chairs.  \nStep 2: The remaining 19 \u2212 9 = 10 chairs are empty and can be distributed freely into the 6 gaps (before, between, after the chosen chairs).  \nStep 3: This is equivalent to choosing 5 positions from (19 \u2212 5 + 1) = 15, which is C(15, 5).  \n\nC(15, 5) = 3003  \n\n3003",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 3003",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3525,
+      "total_s": 1.6747,
+      "prefill_tps": 2411.0,
+      "decode_tps": 97.6,
+      "retrieval_ms": 31.014,
+      "bytes_read": 74760192,
+      "gbps": 10.99,
+      "read_share": 0.0193,
+      "context_tokens": 1348,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.865,
+      "disk_gb": 44.113477,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.019,
+       "fetch": 6.799,
+       "desk": 9.195,
+       "total": 31.014
+      },
+      "room": 393,
+      "new_tokens": 772,
+      "answer_tokens": 130,
+      "mlx_decode_tps": 98.9,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9052,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-08-rule",
+     "family": "maths",
+     "question": "With juice bottles of 4 and 15, in how many ways can we make up an order of exactly 232?",
+     "expected": "1",
+     "answer": "We need non-negative integers $ x $ and $ y $ such that:\n\n$$\n4x + 15y = 232\n$$\n\nStep 1: Check if solutions exist.  \n$ \\gcd(4, 15) = 1 $, and 1 divides 232 \u2192 solutions exist.\n\nStep 2: Find one solution.  \nSolve $ 4x + 15y = 232 $.  \nTry small values of $ y $:\n\n- $ y = 0 $: $ 4x = 232 $ \u2192 $ x = 58 $\n- So one solution is $ (x, y) = (58, 0) $\n\nStep 3: General solution:  \nSince $ \\gcd(4,15)=1 $, the coefficients of the homogeneous solution are:  \n$ x $ increases by 15, $ y $ decreases by 4 (because $ 4(15) + 15(-4) = 60 - 60 = 0 $)\n\nSo the general solution is:  \n$ x = 58 + 15t $, $ y = 0 - 4t = -4t $, for integer $ t $\n\nWe need $ x \\geq 0 $, $ y \\geq 0 $\n\nSo $ -4t \\geq 0 $ \u2192 $ t \\leq 0 $\n\nAlso $ x = 58 + 15t \\geq 0 $ \u2192 $ 15t \\geq -58 $ \u2192 $ t \\geq -\\frac{58}{15} \\approx -3.87 $ \u2192 $ t \\geq -3 $\n\nSo $ t = -3, -2, -1, 0 $\n\nCheck each:\n\n- $ t = 0 $: $ (58,",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 58, not 1",
+     "max_tokens": 400,
+     "truncated": true,
+     "metrics": {
+      "ttft_s": 0.2056,
+      "total_s": 4.2008,
+      "prefill_tps": 2112.9,
+      "decode_tps": 99.9,
+      "retrieval_ms": 21.18,
+      "bytes_read": 28311552,
+      "gbps": 11.22,
+      "read_share": 0.0123,
+      "context_tokens": 649,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.496,
+      "disk_gb": 44.113478,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.923,
+       "fetch": 2.524,
+       "desk": 3.733,
+       "total": 21.18
+      },
+      "room": 591,
+      "new_tokens": 388,
+      "answer_tokens": 400,
+      "mlx_decode_tps": 100.3,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8115,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-07-new",
+     "family": "maths",
+     "question": "A starter starts at 74 g. Each day it doubles, then 10 g is taken out. What does it weigh after 10 days?",
+     "expected": "65546",
+     "answer": "Step 1: Write the recurrence: a(i) = 2\u00b7a(i\u22121) \u2212 10.  \nStep 2: The initial amount grows to 2\u00b9\u2070 \u00d7 74 = 1024 \u00d7 74 = 75,936 g.  \nThe total discards are 10 \u00d7 (2\u2079 + 2\u2078 + \u2026 + 2 + 1) = 10 \u00d7 (2\u00b9\u2070 \u2212 1) = 10 \u00d7 1023 = 10,230 g.  \nStep 3: Final weight = 75,936 \u2212 10,230 = 65,706 g.\n\n65,706",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 65706, not 65546",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.393,
+      "total_s": 2.0952,
+      "prefill_tps": 2572.0,
+      "decode_tps": 96.9,
+      "retrieval_ms": 27.614,
+      "bytes_read": 58834944,
+      "gbps": 11.83,
+      "read_share": 0.0127,
+      "context_tokens": 1404,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.759,
+      "disk_gb": 44.113478,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.137,
+       "fetch": 4.973,
+       "desk": 7.504,
+       "total": 27.614
+      },
+      "room": 455,
+      "new_tokens": 936,
+      "answer_tokens": 166,
+      "mlx_decode_tps": 97.9,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9415,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-08-new",
+     "family": "maths",
+     "question": "We sell packs of 5 and of 7. How many ways can a customer buy exactly 154?",
+     "expected": "5",
+     "answer": "We need whole numbers $ x, y \\geq 0 $ such that:\n\n$$\n5x + 7y = 154\n$$\n\nStep 1: $ \\gcd(5, 7) = 1 $, which divides 154, so solutions exist.\n\nStep 2: Find one solution.  \nSolve $ 5x + 7y = 154 $.  \nTry small values of $ y $:  \n\nTry $ y = 0 $: $ 5x = 154 $ \u2192 not divisible  \n$ y = 1 $: $ 5x = 154 - 7 = 147 $ \u2192 not divisible  \n$ y = 2 $: $ 5x = 140 $ \u2192 $ x = 28 $ \u2192 valid!  \nSo one solution: $ (x, y) = (28, 2) $\n\nGeneral solution: since $ \\gcd(5,7)=1 $, the coefficients change by step:  \n$ x $ increases by 7, $ y $ decreases by 5.\n\nSo the solutions are:  \n$ (28, 2), (35, -3), (42, -8), \\dots $ \u2014 but we need $ x, y \\geq 0 $\n\nSo we go down in $ y $ by 5 until $ y \\geq 0 $:\n\n- $ y = 2 $\n- $ y = 2 - 5 = -3 $ \u2192 invalid\n\nSo only $ y = 2 $ is valid? Wait \u2014 check if other $ y $ values work.\n\nTry $ y = 7 $: $ 7y = 49 $, $ 5x = 105 $ \u2192 $ x = 21 $ \u2192 valid \u2192 $ (21, 7) $\n\nWait \u2014 better to find all non",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 7, not 5",
+     "max_tokens": 400,
+     "truncated": true,
+     "metrics": {
+      "ttft_s": 0.3953,
+      "total_s": 4.5285,
+      "prefill_tps": 2481.7,
+      "decode_tps": 96.5,
+      "retrieval_ms": 28.472,
+      "bytes_read": 64880640,
+      "gbps": 11.79,
+      "read_share": 0.0139,
+      "context_tokens": 1416,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.747,
+      "disk_gb": 44.113479,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.737,
+       "fetch": 5.501,
+       "desk": 8.234,
+       "total": 28.472
+      },
+      "room": 286,
+      "new_tokens": 907,
+      "answer_tokens": 400,
+      "mlx_decode_tps": 97.0,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8652,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "page-catering",
+     "family": "page",
+     "question": "Build the catering page.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "I don't know",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the design system was told",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1358,
+      "total_s": 0.183,
+      "prefill_tps": 1736.2,
+      "decode_tps": 84.7,
+      "retrieval_ms": 24.656,
+      "bytes_read": 71958528,
+      "gbps": 12.05,
+      "read_share": 0.044,
+      "context_tokens": 749,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.388,
+      "disk_gb": 44.113479,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 9.975,
+       "fetch": 5.972,
+       "desk": 8.709,
+       "total": 24.656
+      },
+      "room": 620,
+      "new_tokens": 192,
+      "answer_tokens": 5,
+      "mlx_decode_tps": 126.3,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8463,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "page-contact",
+     "family": "page",
+     "question": "Build the contact page: the four branches with a map link each, and a short message form.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "I don't know",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the design system was told",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2189,
+      "total_s": 0.267,
+      "prefill_tps": 2103.4,
+      "decode_tps": 83.2,
+      "retrieval_ms": 30.244,
+      "bytes_read": 74465280,
+      "gbps": 11.72,
+      "read_share": 0.029,
+      "context_tokens": 969,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.575,
+      "disk_gb": 44.11348,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.565,
+       "fetch": 6.356,
+       "desk": 9.323,
+       "total": 30.244
+      },
+      "room": 37,
+      "new_tokens": 395,
+      "answer_tokens": 5,
+      "mlx_decode_tps": 123.7,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.797,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "page-about",
+     "family": "page",
+     "question": "Build the about page: Mama Njeri's story, the kitchen team, and photos of the Westlands kitchen.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "I don't know",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the design system was told",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1593,
+      "total_s": 0.2067,
+      "prefill_tps": 1787.8,
+      "decode_tps": 84.4,
+      "retrieval_ms": 29.474,
+      "bytes_read": 71516160,
+      "gbps": 11.95,
+      "read_share": 0.0376,
+      "context_tokens": 785,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.433,
+      "disk_gb": 44.11348,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.65,
+       "fetch": 5.982,
+       "desk": 8.841,
+       "total": 29.474
+      },
+      "room": 212,
+      "new_tokens": 231,
+      "answer_tokens": 5,
+      "mlx_decode_tps": 125.8,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8366,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "code-14",
+     "family": "code",
+     "question": "Write `vat_part_cents(net_items: list[int]) -> int`: the total VAT in cents on a receipt whose lines have these net amounts in cents. VAT is worked out line by line, the way our money helpers do it.",
+     "expected": "a function vat_part_cents that passes 4 tests",
+     "answer": "```python\ndef vat_part_cents(net_items: list[int]) -> int:\n    \"\"\"Total VAT in cents on a receipt with net amounts in cents.\"\"\"\n    return sum(item * VAT_PERCENT // 100 for item in net_items)\n```",
+     "verdict": "right",
+     "right": true,
+     "reason": "passes all 4 tests",
+     "max_tokens": 600,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3528,
+      "total_s": 0.8783,
+      "prefill_tps": 2547.0,
+      "decode_tps": 97.1,
+      "retrieval_ms": 29.04,
+      "bytes_read": 64585728,
+      "gbps": 11.81,
+      "read_share": 0.0155,
+      "context_tokens": 1328,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.752,
+      "disk_gb": 44.113481,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.483,
+       "fetch": 5.469,
+       "desk": 8.088,
+       "total": 29.04
+      },
+      "room": 146,
+      "new_tokens": 821,
+      "answer_tokens": 52,
+      "mlx_decode_tps": 100.4,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8112,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "code-20",
+     "family": "code",
+     "question": "Write `split_labels(total_cents: int, people: int) -> list[str]`: split a bill exactly the way our money helpers split bills, and give each share as a price label.",
+     "expected": "a function split_labels that passes 3 tests",
+     "answer": "```python\ndef split_labels(total_cents: int, people: int) -> list[str]:\n    \"\"\"Split a bill exactly and return each share as a price label.\"\"\"\n    shares = split_bill(total_cents, people)\n    return [cents_to_kes(share) for share in shares]\n```",
+     "verdict": "right",
+     "right": true,
+     "reason": "passes all 3 tests",
+     "max_tokens": 600,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3629,
+      "total_s": 1.0002,
+      "prefill_tps": 2542.4,
+      "decode_tps": 97.3,
+      "retrieval_ms": 38.672,
+      "bytes_read": 64585728,
+      "gbps": 8.19,
+      "read_share": 0.0217,
+      "context_tokens": 1327,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.751,
+      "disk_gb": 44.113482,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 25.462,
+       "fetch": 7.882,
+       "desk": 5.329,
+       "total": 38.672
+      },
+      "room": 146,
+      "new_tokens": 820,
+      "answer_tokens": 63,
+      "mlx_decode_tps": 100.0,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8477,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-01",
+     "family": "never",
+     "question": "What is Otieno's surname?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1891,
+      "total_s": 0.2468,
+      "prefill_tps": 2134.3,
+      "decode_tps": 86.7,
+      "retrieval_ms": 43.674,
+      "bytes_read": 71663616,
+      "gbps": 7.71,
+      "read_share": 0.0492,
+      "context_tokens": 863,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.481,
+      "disk_gb": 44.113482,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 24.243,
+       "fetch": 9.3,
+       "desk": 10.131,
+       "total": 43.674
+      },
+      "room": 112,
+      "new_tokens": 308,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 120.0,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7198,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-60",
+     "family": "never",
+     "question": "What is Sharon Mwiti's job at the kitchen?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2433,
+      "total_s": 0.3005,
+      "prefill_tps": 2370.7,
+      "decode_tps": 87.4,
+      "retrieval_ms": 29.287,
+      "bytes_read": 72548352,
+      "gbps": 11.85,
+      "read_share": 0.0252,
+      "context_tokens": 1066,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.616,
+      "disk_gb": 44.113483,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.297,
+       "fetch": 6.121,
+       "desk": 8.869,
+       "total": 29.287
+      },
+      "room": 389,
+      "new_tokens": 505,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 120.0,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7735,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-55",
+     "family": "never",
+     "question": "What is Diana Ondieki's staff badge number?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.24,
+      "total_s": 0.2987,
+      "prefill_tps": 2295.3,
+      "decode_tps": 85.2,
+      "retrieval_ms": 29.043,
+      "bytes_read": 72253440,
+      "gbps": 12.0,
+      "read_share": 0.0251,
+      "context_tokens": 1041,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.539,
+      "disk_gb": 44.113483,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.269,
+       "fetch": 6.021,
+       "desk": 8.753,
+       "total": 29.043
+      },
+      "room": 30,
+      "new_tokens": 482,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 116.9,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7306,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-48",
+     "family": "never",
+     "question": "Who is the landlord of the Embakasi branch?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2168,
+      "total_s": 0.2753,
+      "prefill_tps": 2249.7,
+      "decode_tps": 85.5,
+      "retrieval_ms": 28.354,
+      "bytes_read": 73875456,
+      "gbps": 11.54,
+      "read_share": 0.0295,
+      "context_tokens": 992,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.583,
+      "disk_gb": 44.113484,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.23,
+       "fetch": 6.402,
+       "desk": 7.722,
+       "total": 28.354
+      },
+      "room": 269,
+      "new_tokens": 422,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 118.5,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7883,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-32",
+     "family": "never",
+     "question": "How many seats does the Lavington branch have?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1566,
+      "total_s": 0.2119,
+      "prefill_tps": 2041.8,
+      "decode_tps": 90.4,
+      "retrieval_ms": 17.241,
+      "bytes_read": 7225344,
+      "gbps": 5.18,
+      "read_share": 0.0089,
+      "context_tokens": 401,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.36,
+      "disk_gb": 44.113484,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.247,
+       "fetch": 1.396,
+       "desk": 1.598,
+       "total": 17.241
+      },
+      "room": 218,
+      "new_tokens": 283,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 125.3,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7807,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-04",
+     "family": "never",
+     "question": "What is the Wi-Fi password at the Westlands branch?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1527,
+      "total_s": 0.2078,
+      "prefill_tps": 1992.1,
+      "decode_tps": 90.7,
+      "retrieval_ms": 16.919,
+      "bytes_read": 6488064,
+      "gbps": 5.72,
+      "read_share": 0.0074,
+      "context_tokens": 382,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.345,
+      "disk_gb": 44.113485,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.242,
+       "fetch": 1.134,
+       "desk": 1.544,
+       "total": 16.919
+      },
+      "room": 549,
+      "new_tokens": 269,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 125.6,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8101,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-42",
+     "family": "never",
+     "question": "What is Hawa Biwott's staff badge number?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.192,
+      "total_s": 0.2498,
+      "prefill_tps": 2068.8,
+      "decode_tps": 86.5,
+      "retrieval_ms": 28.34,
+      "bytes_read": 68861952,
+      "gbps": 12.01,
+      "read_share": 0.0299,
+      "context_tokens": 873,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.514,
+      "disk_gb": 44.113485,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.229,
+       "fetch": 5.735,
+       "desk": 8.377,
+       "total": 28.34
+      },
+      "room": 219,
+      "new_tokens": 337,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 119.8,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7435,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-40",
+     "family": "never",
+     "question": "Which matatu route does Adhiambo Ruto take to work?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1936,
+      "total_s": 0.2516,
+      "prefill_tps": 2258.9,
+      "decode_tps": 86.2,
+      "retrieval_ms": 29.044,
+      "bytes_read": 69746688,
+      "gbps": 11.71,
+      "read_share": 0.0308,
+      "context_tokens": 912,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.571,
+      "disk_gb": 44.113486,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.351,
+       "fetch": 5.958,
+       "desk": 8.735,
+       "total": 29.044
+      },
+      "room": 416,
+      "new_tokens": 370,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 119.5,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.79,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-35",
+     "family": "never",
+     "question": "What is Moses Tanui's staff badge number?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1942,
+      "total_s": 0.2523,
+      "prefill_tps": 2091.7,
+      "decode_tps": 86.1,
+      "retrieval_ms": 29.917,
+      "bytes_read": 74907648,
+      "gbps": 11.45,
+      "read_share": 0.0337,
+      "context_tokens": 919,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.541,
+      "disk_gb": 44.113486,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.185,
+       "fetch": 6.542,
+       "desk": 9.19,
+       "total": 29.917
+      },
+      "room": 248,
+      "new_tokens": 342,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 119.3,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7492,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-45",
+     "family": "never",
+     "question": "Which matatu route does Mumbua Oduya take to work?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1923,
+      "total_s": 0.2502,
+      "prefill_tps": 2261.5,
+      "decode_tps": 86.4,
+      "retrieval_ms": 28.822,
+      "bytes_read": 69746688,
+      "gbps": 12.09,
+      "read_share": 0.03,
+      "context_tokens": 910,
+      "history_tokens": 255952,
+      "peak_ram_gb": 7.566,
+      "disk_gb": 44.113487,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.341,
+       "fetch": 5.767,
+       "desk": 8.713,
+       "total": 28.822
+      },
+      "room": 416,
+      "new_tokens": 368,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 119.5,
+      "rss_peak_gb": 6.878,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8347,
+      "reach": "project:longhaul",
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    }
+   ]
+  }
+ ],
+ "finished": "2026-11-04T20:01:37"
+}
