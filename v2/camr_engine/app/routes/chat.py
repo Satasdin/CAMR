@@ -412,7 +412,7 @@ def _size(memory, folder: Path | None) -> dict:
         awake = tiers.disk_bytes() if tiers is not None else r.disk_bytes()
         return {"notes": len(memory.vault) if getattr(memory, "vault", None) is not None else None,
                 "room_bytes": int(awake), "moments": len(r.moments), "history_tokens": sum(x.tokens for x in r.rooms),
-                "exists": True}
+                "rooms": len(r.rooms), "exists": True}
     if folder is None or not folder.is_dir():
         return {"notes": 0 if folder is not None else None, "room_bytes": 0 if folder is not None else None,
                 "moments": 0 if folder is not None else None, "history_tokens": 0 if folder is not None else None,

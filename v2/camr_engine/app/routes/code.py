@@ -11,7 +11,8 @@ each shell command and MCP call run.
 - ``POST /api/code/thread`` ``{title, persona}``; ``GET /api/code/thread?id=``;
 - ``POST /api/code/run`` ``{thread, task, memory, persona}`` (the persona runs, whatever the thread ran as
   before); ``GET /api/code/run?id=&term=N``;
-  ``POST /api/code/stop`` ``{run}``;
+  ``GET /api/code/live?id=&from=N``: the run's live events (camr_engine.live: each word with its layers' activity,
+  and the room each step read); ``POST /api/code/stop`` ``{run}``;
 - ``POST /api/code/approve`` ``{id, allow}``: ``allow`` must be ``true`` exactly to run the action;
 - ``GET /api/code/moment?reach=&id=``: a moment's words, for the gutter;
 - ``POST /api/code/settings`` ``{memory, persona, skills}``; ``POST /api/code/persona``,
@@ -137,6 +138,11 @@ def register(routes: Routes) -> None:
     @guard
     def run_get(req: Request) -> dict:
         return desk(req.app).run(req.str("id", limit=80)).snapshot(req.int("term", 0, lo=0), req.int("turns", 0, lo=0))
+
+    @routes.get("/api/code/live")
+    @guard
+    def run_live(req: Request) -> dict:
+        return desk(req.app).run(req.str("id", limit=80)).watch.since(req.int("from", 0, lo=0) or 0)
 
     @routes.post("/api/code/stop")
     @guard

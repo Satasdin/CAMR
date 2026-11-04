@@ -31,6 +31,7 @@ from camr_engine.agentic.brain import Brain, Prompt, Thought
 from camr_engine.agentic.gate import Gate
 from camr_engine.agentic.parse import calls, prose
 from camr_engine.agentic.personas import Persona
+from camr_engine.live import Live, reporting
 from camr_engine.agentic.tools import Done, Toolbox, short
 
 MAX_STEPS = 12
@@ -85,6 +86,7 @@ class Run:
         self.ended: float | None = None
         self._t0 = time.perf_counter()
         self.cancel = threading.Event()
+        self.watch = Live("code")  # each word and the room each step read, for GET /api/code/live
         self.lock = threading.Lock()
         self.thread: threading.Thread | None = None  # where it runs
         self.thread_id: str | None = None  # the Code screen's thread it belongs to
@@ -110,7 +112,8 @@ class Run:
 
     def execute(self) -> None:
         try:
-            self._loop()
+            with reporting(self.watch):
+                self._loop()
         except Exception as e:  # noqa: BLE001 (shown in the transcript)
             self.error = f"{type(e).__name__}: {e}"[:600]
             self._set("failed")

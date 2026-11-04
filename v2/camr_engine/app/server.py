@@ -38,6 +38,9 @@ class App:
         from camr_engine.models import Embedder, Reader
 
         self.reader, self.embedder = (Reader(reader) if reader else Reader()), Embedder()
+        from camr_engine.live import probe
+
+        probe(self.reader.model)  # each layer's activity can be watched (camr_engine.live), in Chat and Code alike
         self.memory = Memory(self.reader, self.embedder, path)
         self.lock = threading.Lock()  # one model, one job at a time
         self.today = dt.date.today()
