@@ -569,6 +569,60 @@ class Talk:
     def _keep(self, turn: dict) -> None:
         self.turns.append(turn)
         del self.turns[:-TURNS]
+        self._save_chat()
+
+    # -- conversations, kept as files beside the memory (chats/<id>.json), each with its turns
+
+    def _chats(self) -> Path | None:
+        try:
+            return self.root / "chats"
+        except AttributeError:  # an app with no folder
+            return None
+
+    def _save_chat(self) -> None:
+        folder = self._chats()
+        if folder is None or not self.turns:
+            return
+        if getattr(self, "chat_id", None) is None:
+            import secrets
+
+            self.chat_id = f"{dt.datetime.now():%Y%m%d-%H%M%S}-{secrets.token_hex(2)}"
+        first = next((t.get("text", "") for t in self.turns if t.get("who") == "you"), "")
+        folder.mkdir(parents=True, exist_ok=True)
+        tmp = folder / f"{self.chat_id}.tmp"
+        tmp.write_text(json.dumps({"id": self.chat_id, "title": " ".join(first.split())[:60] or "New chat",
+                                   "updated": _now(), "turns": self.turns}, default=str))
+        tmp.replace(folder / f"{self.chat_id}.json")
+
+    def chats(self, n: int = 30) -> list[dict]:
+        """The saved conversations, newest first: id, title, when last changed, how many turns."""
+        folder = self._chats()
+        if folder is None or not folder.is_dir():
+            return []
+        out = []
+        for f in sorted(folder.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)[:n]:
+            try:
+                c = json.loads(f.read_text())
+            except (OSError, ValueError):
+                continue
+            out.append({"id": c.get("id"), "title": c.get("title"), "updated": c.get("updated"),
+                        "turns": len(c.get("turns") or []), "current": c.get("id") == getattr(self, "chat_id", None)})
+        return out
+
+    def open_chat(self, cid: str) -> list[dict]:
+        """Go back to a saved conversation: its turns are read again by the assistant."""
+        folder = self._chats()
+        f = folder / f"{cid}.json" if folder is not None else None
+        import re
+
+        if f is None or not re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{4}", cid or "") or not f.is_file():
+            raise Refused(404, "no such chat")
+        self.turns = json.loads(f.read_text()).get("turns") or []
+        self.chat_id = cid
+        return self.turns
+
+    def new_chat(self) -> None:
+        self.turns, self.chat_id = [], None
 
     # -- what the composer shows
 
@@ -808,8 +862,20 @@ def register(routes: Routes) -> None:
         """A new conversation: the turns the assistant reads start again (memory keeps everything it learned)."""
         t = talk(req.app)
         if t is not None:
-            t.turns = []
+            t.new_chat()
         return {"turns": 0}
+
+    @routes.get("/api/chats")
+    def chats(req: Request) -> dict:
+        t = talk(req.app)
+        return {"chats": t.chats() if t is not None else []}
+
+    @routes.post("/api/chats/open")
+    def open_chat(req: Request) -> dict:
+        t = talk(req.app)
+        if t is None:
+            raise Refused(409, "no chats in a recorded memory")
+        return {"turns": t.open_chat(req.str("id", limit=40))}
 
     @routes.get("/api/live")
     def live(req: Request) -> dict:

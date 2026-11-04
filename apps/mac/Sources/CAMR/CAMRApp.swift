@@ -120,7 +120,7 @@ struct RootView: View {
         .background(Theme.ink)
         .onChange(of: engine.phase) { _, p in
             if p == .ready {
-                Task { await chat.useShelves(); await code.refresh() }
+                Task { await chat.useShelves(); await chat.loadChats(); await code.refresh() }
                 if !world.played { world.played = true; Script.play(world) }
             }
         }
@@ -172,6 +172,27 @@ struct RootView: View {
                 .background(RoundedRectangle(cornerRadius: 9).fill(Theme.panel))
             }
             .disabled(engine.phase != .ready)
+
+            if world.tab == "chat" {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("CHATS").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
+                        Spacer()
+                        Button { Task { await chat.newChat() } } label: {
+                            Label("New  ⌘N", systemImage: "square.and.pencil").font(Theme.mono(10))
+                        }
+                        .buttonStyle(.plain).foregroundStyle(Theme.dim)
+                    }
+                    ForEach(chat.chats.prefix(world.showTensors ? 3 : 7), id: \.id) { c in
+                        Button { Task { await chat.openChat(c.id) } } label: {
+                            Text(c.title).font(Theme.ui(12)).foregroundStyle(Theme.dim).lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 3)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
 
             Toggle(isOn: Binding(get: { world.tab == "chat" ? chat.memoryOn : code.memoryOn }, set: { on in
                 if world.tab == "chat" { Task { await chat.setMemory(on) } } else { code.memoryOn = on; weights.memoryOn = on }

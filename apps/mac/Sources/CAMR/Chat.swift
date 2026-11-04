@@ -35,6 +35,7 @@ final class ChatModel: ObservableObject {
     @Published var thinks = false  // the model is a thinking build
     @Published var reasoning = true  // let a thinking model think aloud
     private var job: String?  // the answer being written now, for Stop
+    @Published var chats: [(id: String, title: String)] = []
 
     let engine: Engine
     let weights: WeightsModel
@@ -136,6 +137,27 @@ final class ChatModel: ObservableObject {
         guard !busy else { return }
         turns = []
         _ = try? await engine.post("/api/chat/new", [:])
+        await loadChats()
+    }
+
+    func loadChats() async {
+        guard let got = try? await engine.get("/api/chats") else { return }
+        chats = got.list("chats").compactMap { c in c.str("id").map { ($0, c.str("title") ?? "Chat") } }
+    }
+
+    /// Back to a saved conversation, as it was.
+    func openChat(_ id: String) async {
+        guard !busy, let got = try? await engine.post("/api/chats/open", ["id": id]) else { return }
+        turns = got.list("turns").map { t in
+            if t.str("who") == "you" {
+                return Turn(who: .you, text: t.str("text") ?? "", meta: t.str("intent") == "tell" ? "remember" : "")
+            }
+            var turn = Turn(who: .camr, text: t.str("reply") ?? "")
+            turn.thinking = t.str("thinking") ?? ""
+            turn.route = t.str("route")
+            if let src = t.dict("source"), let ti = src.str("title"), let u = src.str("url") { turn.source = (ti, u) }
+            return turn
+        }
     }
 
     func ask(_ text: String, _ mode: Mode = .ask) async {
@@ -246,6 +268,7 @@ final class ChatModel: ObservableObject {
                 }
             }
             turns[k].meta = parts.joined(separator: " · ")
+            Task { await loadChats() }
         default:
             break
         }

@@ -511,3 +511,17 @@ def test_a_new_chat_forgets_the_conversation_not_the_memory(chat):
     assert call("/api/chat/new", {})[1] == {"turns": 0} and call("/api/chat/thread")[1]["turns"] == []
     assert len(app.session.memory("session").rooms.moments) == 1
     assert call("/api/live/stop", {"id": "nope"})[0] == 404
+
+
+def test_conversations_are_kept_listed_and_opened_again(chat):
+    app, call = chat
+    call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})
+    first = call("/api/chats")[1]["chats"]
+    assert len(first) == 1 and first[0]["title"] == "Amina moved to Nakuru." and first[0]["current"]
+    call("/api/chat/new", {})
+    call("/api/chat", {"text": "The invoice template is the blue one.", "intent": "tell"})
+    listed = call("/api/chats")[1]["chats"]
+    assert len(listed) == 2 and listed[0]["title"].startswith("The invoice")
+    turns = call("/api/chats/open", {"id": first[0]["id"]})[1]["turns"]
+    assert turns[0]["text"] == "Amina moved to Nakuru." and call("/api/chat/thread")[1]["turns"] == turns
+    assert call("/api/chats/open", {"id": "../../etc"})[0] == 404
