@@ -49,6 +49,8 @@ TERM_FILED = 8_000  # characters of a run's terminal kept in its thread's file (
 _THREAD = re.compile(r"^\d{8}-\d{6}-[0-9a-f]{4}$")
 
 
+CODING_SHELF = "project:coding"  # where Code keeps what it learns; its workspace's own reach is read too
+
 class Busy(RuntimeError):
     """Something already running stands in the way."""
 
@@ -253,6 +255,9 @@ class Desk:
         writes = persona.writes if persona.writes in reads else (reads[0] if reads else "agent")
         if not reads:
             reads, writes = ["agent"], "agent"
+        if "project" in reads:  # the Coding shelf (camr_engine.shelves) holds code work from every workspace
+            reads = [*reads, CODING_SHELF]
+            writes = CODING_SHELF if writes == "project" else writes
         spec = {"memory": memory, "session": thread, "project": project, "agent": persona.id, "reads": reads,
                 "writes": writes, "pool": self._pool() if memory else None}
         key = (memory, thread, project, persona.id, tuple(reads), writes)

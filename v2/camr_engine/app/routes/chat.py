@@ -8,7 +8,10 @@
   Without an intent, text ending in a question mark is asked and anything else is told;
 - ``POST /api/errand`` ``{text}``: the same as an errand intent;
 - ``GET /api/chat/thread``: this run's turns, so a reload shows the conversation again;
-- ``POST /api/chat/message`` ``{text, intent}``: the same as ``POST /api/chat``, started at once and answered with
+- shelves (camr_engine.shelves): every chat reads the Projects, Coding, Research and Personal shelves too, and a
+  remembered moment goes on the shelf the settings name (``{shelf}``: a shelf's name, or ``auto`` to file it by
+  meaning); once a session opens, its model and the newest notes of every shelf are warmed (``GET /api/live?id=warm``);
+- ``POST /api/chat/message`` ``{text, intent, shelf}``: the same as ``POST /api/chat``, started at once and answered with
   ``{id}``; ``GET /api/live?id=&from=N`` then gives the job's events as they happen (camr_engine.live): the room
   read, each word with every layer's activity, and the reply (``done``). The Mac app draws its weights view from
   these.
@@ -35,6 +38,8 @@ from pathlib import Path
 
 from camr_engine.app.web import Refused, Request, Routes, part
 from camr_engine.live import Live, current, probe, reporting
+from camr_engine.shelves import BY_NAME, SHELVES, Sorter, shelf_of, warm
+from camr_engine.shelves import reaches as shelf_reaches
 
 INTENTS = ("tell", "ask", "errand")
 DEFAULT_READS = ("session", "global")
@@ -79,6 +84,9 @@ class Talk:
         # notes), which another request's thread could not evaluate.
         self.worker = ThreadPoolExecutor(1, thread_name_prefix="camr-session")
         self.jobs: dict[str, Live] = {}
+        self.shelf: str | None = None  # where a remembered moment goes: a shelf, auto (by meaning), or None: the
+        # session's own reach (the Mac app picks auto)
+        self.sorter: Sorter | None = None
 
     # -- the session
 
@@ -94,8 +102,11 @@ class Talk:
 
         settings = {"vault": True, "core": True, "tiers": {}, "metrics": True,
                     **(getattr(self.app, "session_settings", None) or {})}
+        reads = list(self.reads)
+        if self.shelf is not None:  # shelves on: every shelf is read too
+            reads += [r for r in shelf_reaches() if r not in reads]
         return Session(self.app.reader, self.app.embedder, root=self.root, name=self.name, project=self.project,
-                       agent=self.agent, reads=self.reads, writes=self.writes, on=self.on, **settings)
+                       agent=self.agent, reads=reads, writes=self.writes, on=self.on, **settings)
 
     def ensure(self, *, wait: bool = True):
         """The session, opened now if it is not yet, under the app's lock. With ``wait=False``, None when the model is
@@ -139,6 +150,17 @@ class Talk:
             probe(self.app.reader.model)
         except (AttributeError, ValueError):  # a stand-in reader has no layers
             pass
+        live = self.jobs["warm"] = Live("warm")
+        session = self.session
+
+        def warming():
+            with reporting(live):
+                try:
+                    warm(self.app.reader, {r.label: m for r, m in session.memories.items()}, report=live.add)
+                finally:
+                    live.finish()
+
+        self.worker.submit(warming)  # before any question, on the session's own thread
         return self.session
 
     def configure(self, *, on: bool | None = None, reads: list[str] | None = None, writes: str | None = None,
@@ -189,6 +211,19 @@ class Talk:
                     raise
         return self.state()
 
+    def use_shelf(self, shelf: str | None) -> None:
+        """Where remembered moments go: a shelf, auto, or None (shelves off: the session's own reach, and only the
+        reaches picked are read). Turning shelves on or off opens the session again over its new reaches."""
+        with self.lock:
+            changed = (shelf is None) != (self.shelf is None)
+            self.shelf = shelf
+            if changed and self.session is not None:
+                _not_measuring()
+                self.run(self.session.close)
+                self.session = None
+                self.app.session = None
+                self._open()
+
     def close(self) -> None:
         with self.lock:
             if self.session is not None:
@@ -206,7 +241,7 @@ class Talk:
 
         return self.worker.submit(within).result()
 
-    def start(self, text: str, intent: str | None = None) -> dict:
+    def start(self, text: str, intent: str | None = None, shelf: str | None = None) -> dict:
         """``say`` on a thread of its own, reporting to a new Live: ``{id}`` names it for ``GET /api/live``."""
         import secrets
 
@@ -220,14 +255,15 @@ class Talk:
             with reporting(live):
                 live.add("start", text=" ".join(text.split()), intent=intent, on=self.on)
                 try:
-                    out = self.say(text, intent)
+                    out = self.say(text, intent, shelf)
                 except Refused as e:
                     live.finish(error=e.why, code=e.code)
                 except Exception as e:  # noqa: BLE001 (shown in the chat)
                     live.finish(error=f"{type(e).__name__}: {e}"[:300])
                 else:
-                    live.finish(**{k: out.get(k) for k in ("intent", "on", "reply", "reach", "wait_s", "metric",
-                                                          "kept", "room", "moment", "tokens", "seconds")})
+                    live.finish(**{k: out.get(k) for k in ("intent", "on", "reply", "reach", "shelf", "sorted",
+                                                          "wait_s", "metric", "kept", "room", "moment", "tokens",
+                                                          "seconds")})
 
         threading.Thread(target=work, daemon=True, name="camr-message").start()
         return {"id": jid}
@@ -239,7 +275,7 @@ class Talk:
         day = self.app._day(today) if hasattr(self.app, "_day") else 0
         return today, day
 
-    def say(self, text: str, intent: str | None = None) -> dict:
+    def say(self, text: str, intent: str | None = None, shelf: str | None = None) -> dict:
         text = " ".join(text.split())
         if not text:
             return {"reply": "", "intent": None}
@@ -252,20 +288,29 @@ class Talk:
         with self.lock:  # the session is taken under the lock: a settings change may have closed the one before
             session = self._open()
             t = time.perf_counter()
-            out = self.run(step, session, text, today, day)
+            out = (self.run(step, session, text, today, day, shelf) if intent == "tell"
+                   else self.run(step, session, text, today, day))
             out["seconds"] = round(time.perf_counter() - t, 4)
         self._keep({"who": "you", "text": text, "intent": intent, "at": _now()})
         self._keep({"who": "camr", **out, "at": _now()})
         return out
 
-    def _tell(self, session, text: str, today: dt.date, day: int) -> dict:
-        reach = session.home
-        m = session.remember(f"[{today.isoformat()}] {text}", day, date=today)
-        if m is None:
+    def _tell(self, session, text: str, today: dt.date, day: int, shelf: str | None = None) -> dict:
+        if not session.on:
             return {"intent": "tell", "on": False, "reply": "Memory is off, so nothing was kept.", "kept": False}
+        target, sorted_ = shelf or self.shelf, None
+        if target == "auto":
+            if self.sorter is None:
+                self.sorter = Sorter(session.embedder)
+            sorted_ = self.sorter.sort(text)
+            target = sorted_.name
+        reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
+        m = session.remember(f"[{today.isoformat()}] {text}", day, date=today, to=reach)
         session.memory(reach).save()
-        return {"intent": "tell", "on": True, "reply": "Noted. I'll remember that.", "kept": True,
-                "reach": reach.label, "moment": m.mid, "room": m.room, "tokens": m.tokens,
+        on = shelf_of(reach.label)
+        return {"intent": "tell", "on": True, "reply": f"Noted, on the {on.label} shelf." if on else "Noted.",
+                "kept": True, "reach": reach.label, "shelf": on.name if on else None, "sorted": sorted_ is not None,
+                "moment": m.mid, "room": m.room, "tokens": m.tokens,
                 "event": self._event(session.memory(reach), ("remember",))}
 
     def _ask(self, session, text: str, today: dt.date, day: int) -> dict:
@@ -354,7 +399,16 @@ class Talk:
             r = session.meter.last
             last = {"context_tokens": r.context_tokens, "history_tokens": r.history_tokens,
                     "first_word_s": r.first_word_s, "total_s": r.total_s}
+        shelves = []
+        for sh in SHELVES:
+            m = None
+            if session is not None:
+                m = next((mem for rr, mem in session.memories.items() if rr.label == sh.reach), None)
+            size = _size(m, None) if m is not None else {}
+            shelves.append({"name": sh.name, "label": sh.label, "reach": sh.reach, "rooms": size.get("rooms", 0),
+                            "moments": size.get("moments", 0), "room_bytes": size.get("room_bytes", 0)})
         return {"ready": session is not None, "can": self.can(), "why": self.error, "measuring": _measuring(),
+                "shelf": self.shelf, "shelves": shelves,
                 "on": self.on, "session": self.name, "reads": list(self.reads), "writes": self.writes,
                 "project": self.project, "agent": self.agent, "reaches": reaches,
                 "projects": self._names("project"), "agents": self._names("agent"),
@@ -471,6 +525,11 @@ def register(routes: Routes) -> None:
         if reads is not None and (not isinstance(reads, list) or not all(isinstance(x, str) for x in reads)):
             raise Refused(400, "reads is a list of reaches")
         on = req.body.get("on")
+        if "shelf" in req.body:
+            shelf = req.str("shelf", limit=20) or None
+            if shelf is not None and shelf != "auto" and shelf not in BY_NAME:
+                raise Refused(400, f"a shelf is auto or one of {', '.join(BY_NAME)}")
+            t.use_shelf(shelf)
         return t.configure(on=None if on is None else bool(on), reads=reads,
                            writes=req.str("writes", limit=20) or None,
                            project=req.str("project", limit=64) if "project" in req.body else None,
@@ -505,7 +564,10 @@ def register(routes: Routes) -> None:
         t = talk(req.app)
         if t is None:
             raise Refused(409, "this app has no memory to talk to (a fixture is read-only)")
-        return t.start(text, req.str("intent", limit=10) or None)
+        shelf = req.str("shelf", limit=20) or None
+        if shelf is not None and shelf != "auto" and shelf not in BY_NAME:
+            raise Refused(400, f"a shelf is auto or one of {', '.join(BY_NAME)}")
+        return t.start(text, req.str("intent", limit=10) or None, shelf)
 
     @routes.get("/api/live")
     def live(req: Request) -> dict:

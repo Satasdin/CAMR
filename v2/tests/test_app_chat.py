@@ -396,3 +396,38 @@ def test_a_layer_probe_measures_only_while_a_live_listens():
             m(x)
             rows = taken()
     assert len(rows) == 3 and len(rows[0]) == BINS and rows[0][0] == 2.0 and rows[2][0] == 8.0
+
+
+def test_shelves_keep_kinds_of_work_apart_and_a_question_reads_them_all(chat, tmp_path):
+    import time
+
+    app, call = chat
+    call("/api/chat/state")  # the session opens
+    st = call("/api/chat/settings", {"shelf": "auto"})[1]
+    assert st["shelf"] == "auto" and [s["name"] for s in st["shelves"]] == ["projects", "coding", "research",
+                                                                              "personal"]
+    assert "project:coding" in [r.label for r in app.session.reaches]
+    told = call("/api/chat", {"text": "Fixed the bugs in the tests: split_bill errors on floats.",
+                              "intent": "tell"})[1]
+    assert told["shelf"] == "coding" and told["sorted"] and told["reach"] == "project:coding"
+    told = call("/api/chat", {"text": "My family plans: birthdays and travel home.", "intent": "tell"})[1]
+    assert told["shelf"] == "personal"
+    job = call("/api/chat/message", {"text": "Amina's paper found memory beats long windows past 1M tokens.",
+                                     "intent": "tell", "shelf": "research"})[1]
+    for _ in range(200):
+        got = call(f"/api/live?id={job['id']}")[1]
+        if got["done"]:
+            break
+        time.sleep(0.02)
+    assert got["events"][-1]["shelf"] == "research" and got["events"][-1]["sorted"] is False
+    assert call("/api/chat/message", {"text": "x", "shelf": "kitchen"})[0] == 400
+    asked = call("/api/chat", {"text": "Which errors did split_bill have?", "intent": "ask"})[1]
+    assert asked["reach"] == "project:coding"  # read across every shelf: the closest note wins
+    shelves = {s["name"]: s for s in call("/api/chat/state")[1]["shelves"]}
+    assert shelves["coding"]["moments"] == 1 and shelves["personal"]["moments"] == 1
+    assert (tmp_path / "camr" / "project" / "research" / "index.json").exists()
+    warm = call("/api/live?id=warm")[1]
+    assert warm["done"] and warm["events"][-1]["kind"] == "done"
+    assert any(e["kind"] == "warmed" for e in warm["events"])
+    call("/api/chat/settings", {"shelf": None})
+    assert "project:coding" not in [r.label for r in app.session.reaches]  # shelves off: only the reaches picked
