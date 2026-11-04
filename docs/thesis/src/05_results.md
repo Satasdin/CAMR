@@ -12,6 +12,7 @@
 - Without CAMR, the same 4B answered 11 to 13 and needed a 15.2 GB process; with CAMR the process needed 5.4 to 7.5 GB once a graphics buffer cache was capped.
 - The first word came in 0.2 to 0.3 seconds with CAMR, against 13 to 105 seconds for Sonnet and Opus.
 - As memory grew from 112 thousand to 2 million tokens, the wait for the first word stayed at about 0.1 s and the RAM at about 4.3 GB (1.7B model); the SSD was held at its 40 GB budget by putting old rooms to sleep.
+- Past 1M tokens most rooms were asleep, so most answers read their room as words; the saved notes bought speed where rooms were awake, not accuracy.
 - CAMR helped most on facts told far back and declined almost every question about things never told. It did not help with joining two facts, or with building a page from a design decided weeks earlier; no contender, Claude included, managed that.
 - Project memory was the best way to share memory (26 of 40); mixing in a second project cost 2 answers.
 
@@ -287,14 +288,14 @@ Table: {#scorecard} Scorecard: each claim, its evidence and whether it was met
 | No slower as memory grows | Speed as memory grows (Section {sec:speed-results}) | First word 0.11 → 0.08 s and RAM 4.26 → 4.23 GB from 112K to 2.01M tokens | Met |
 | Faster than the cloud | First word (Section {sec:yardstick}) | 0.2–0.3 s against 13–105 s for Sonnet and Opus | Met |
 | Honest about what was never said | Never-said family | 4B declined 9 of 10 at 2M and 10 of 10 past it; Claude 10 of 10 | Met for the 4B; not for the 1.7B with its own wording |
-| Memory recovers knowledge, not reasoning | Families at 2M (Section {sec:families}) | Facts 6 of 10 (Claude 4); two hops 0; the growing page 0 for everyone | Met as predicted |
+| Memory recovers knowledge, not reasoning | Families at 2M (Section {sec:families}) | Facts 6 of 10 (Sonnet and Opus 4, Haiku 0); two hops 0; the growing page 0 for everyone | Met as predicted |
 | Notes and words know the same within a room | Rooms build (Section {sec:rooms-results}) | 164 against 163 facts | Met |
 | Notes are at least 10 times sooner than words | Speed bench (Section {sec:rooms-results}) | 4.6 times at 2,000 words | Not met |
 | The best reach | Reach (Section {sec:reach-results}) | Project 26 of 40; global 24; session 11 | Project reach |
 
 ### The Long Haul: Right Answers as the History Grows {#haul-results}
 
-**In plain words.** Up to a million tokens Claude Sonnet sees the whole history and answers the most. At 2 million the 4B with CAMR is three answers behind it. Without memory, the same 4B falls to 11.
+**In plain words.** Up to a million tokens Claude Sonnet sees most of the history and answers the most. At 2 million the 4B with CAMR is three answers behind it. Without memory, the same 4B falls to 11.
 
 Table {tab:longhaul} gives every contender's right answers at every cut, with its median wait for the first word and its peak RAM, and Figure {fig:longhaul} plots them as shares, since the cuts ask different numbers of questions.
 
@@ -310,23 +311,36 @@ Table: {#longhaul} Right answers on the Long Haul (questions asked: 34, 40, 69 a
 | CAMR, Qwen3 1.7B, its own wording | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.5 GB† |
 | CAMR, Qwen3 1.7B, the yardstick's wording | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.5 GB† |
 | Qwen3 1.7B alone (newest 32K) | 8 | 13 | 14 | 7 | | | 0.13 s | 7.5 GB† |
-| Ollama 1.7B with the pairing (words) | 16 | 17 | 16 | 16 | | | 0.38–0.40 s | 3.3 GB |
-| Ollama 1.7B alone (newest 32K) | 8 | 12 | 10 | 7 | | | | 5.7 GB |
+| Ollama 1.7B with the pairing (words) | 16 | 17 | 16 | 16 | | | 0.38–0.40 s | 3.3 GB† |
+| Ollama 1.7B alone (newest 32K) | 8 | 12 | 10 | 7 | | | | 5.7 GB† |
 | Claude Haiku 5.5 alone | 22 | 21 | 17 | 10 | 10 | 10 | 2–43 s | |
 | Claude Sonnet 5.5 alone | 28 | 35 | 43 | 32 | 13 | 10 | 13–70 s | |
 | Claude Opus 5.5 alone | 24 | 33 | 42 | 31 | | | 19–105 s | |
 
-Process RAM is the process's physical footprint where it was recorded; the figures marked † are MLX's peak, measured before the buffer-cache cap, and understate the process (Section {sec:ram-results}). The Claude rows have no RAM figure, since Claude runs in the cloud.
+Process RAM is the process's physical footprint where it was recorded; the figures marked † are peaks measured before the buffer-cache cap (MLX's own peak for the engine, the peak resident memory for Ollama), not process footprints, and may understate the process (Section {sec:ram-results}). The Claude rows have no RAM figure, since Claude runs in the cloud.
 
 ![{#longhaul} Share of questions answered right as the history grows. CAMR (cyan) holds its level past 1M tokens; the models alone (amber) and Claude alone (grey, dashed) fall once the history outgrows their windows](figures/ch5/longhaul_share.png){width=15.9}
 
-Four patterns stand out. First, memory roughly doubles what a local model answers once the history outgrows its window: at 2M, the 4B with CAMR answered 29 against 11 for the same model alone, and the 8B 27 against 11. Second, while the whole history fits in Claude's window, Claude answers more: up to 1M, Sonnet and Opus answered 28 to 43, against CAMR's 25 to 26 at the same cuts. Already at 1M the history (counted with Claude's own tokenizer) no longer fitted whole, and Claude's request was cut from the front. Third, at 2M the gap between the 4B with CAMR and Sonnet alone is 3 answers of 73. Fourth, the larger readers did not do better with CAMR's memory than the 4B: the 8B answered 27 at 2M and the 27B, reading the memory as words, 27. On this test the memory, not the reader, sets the ceiling.
+Four patterns stand out. First, memory roughly doubles what a local model answers once the history outgrows its window: at 2M, the 4B with CAMR answered 29 against 11 for the same model alone, and the 8B 27 against 11. Second, while most of the history fits in Claude's window, Sonnet and Opus answer more: up to 1M, Sonnet answered 28 to 43 and Opus 24 to 42, against CAMR's 25 to 26 at the same cuts, while Haiku (22, 21 and 17) trailed CAMR throughout. Already at 1M the history (counted with Claude's own tokenizer) no longer fitted whole, and Claude's request was cut from the front. Third, at 2M the gap between the 4B with CAMR and Sonnet alone is 3 answers of 73. Fourth, the larger readers did not do better with CAMR's memory than the 4B: the 8B answered 27 at 2M and the 27B, reading the memory as words, 27. On this test the memory, not the reader, sets the ceiling.
+
+Where each answer's room came from matters for reading these results (Table {tab:tiers}). Up to 256K tokens almost every answer read its room as saved notes, from the SSD or from RAM. By 1M tokens the room files had reached their 40 GB disk budget, sleep had put most rooms away as words, and most answers read their room as words: 47 of 69 at 1M, 68 of 73 at 2M, and 71 and 72 of 73 at 3M and 4M. The engine's results past 1M are therefore the results of its memory's organisation (rooms chosen by similarity, the closest moments, dates on every moment) read mostly as words, with the saved notes doing the work only for the rooms that were still awake.
+
+Table: {#tiers} Where the 4B's room came from at each cut (`summary.all.tiers` and `status` in the records)
+
+| Cut | Notes from RAM | Notes from the SSD | Asleep: read as words | Rooms awake / asleep |
+|---|---|---|---|---|
+| 64K | 6 | 28 | 0 | 237 / 0 |
+| 256K | 1 | 34 | 5 | 676 / 61 |
+| 1M | 2 | 20 | 47 | 703 / 1,994 |
+| 2M | 3 | 2 | 68 | 807 / 4,932 |
+| 3M | 0 | 2 | 71 | 987 / 8,368 |
+| 4M | 0 | 1 | 72 | 1,152 / 12,669 |
 
 ### Past the Window: 3M and 4M {#past-window}
 
-**In plain words.** Pushed to 3 and 4 million tokens, Claude can only see the last days, which have nothing planted, and it answers only the questions about things never said. CAMR answers exactly as it did at 2 million.
+**In plain words.** Pushed to 3 and 4 million tokens, Claude can only see the last days, which have nothing planted, and it answers little beyond the questions about things never said. CAMR answers exactly as it did at 2 million.
 
-At 3M and 4M the same 73 questions were asked under one and two million more tokens of noise (E-39). The 4B with CAMR answered 29 both times, as at 2M, and declined all 10 never-said questions, with a median first word of 0.31 s. Claude Sonnet answered 13 and then 10, and Haiku 10 and 10: their windows held only the newest days, so they declined almost every question, and what they scored were the never-said questions, which a decline answers right. The 4B alone answered 12 and 13, from the newest 64K tokens. A memory that lives outside the window therefore keeps its answers however long the history grows, while a window, however large, forgets the beginning.
+At 3M and 4M the same 73 questions were asked under one and two million more tokens of noise (E-39). The 4B with CAMR answered 29 both times, as at 2M, and declined all 10 never-said questions, with a median first word of 0.31 s. Claude Sonnet answered 13 and then 10, and Haiku 10 and 10: their windows held only the newest days, so they declined almost every question, and what they scored was mostly the never-said questions, which a decline answers right (Sonnet also answered 3 corrected-maths questions at 3M). The 4B alone answered 12 and 13, from the newest 64K tokens. A memory that lives outside the window therefore keeps its answers however long the history grows, while a window, however large, forgets the beginning.
 
 ### What Was Answered: Knowledge Against Reasoning {#families}
 
@@ -353,7 +367,7 @@ The pattern repeats the baseline's finding on public benchmarks (Section {sec:ba
 
 ### Larger Readers: 8B and 27B {#bigger}
 
-The 8B with CAMR answered 26, 26, 24 and 27, level with the 4B, with a slower first word (0.32 to 0.54 s) and a larger process (8.1 to 8.8 GB). The 8B alone answered 15, 11, 15 and 11 from its newest 32K tokens, in a 13.6 GB process. The 27B cannot use saved notes, because 48 of its 64 layers keep a running state instead of keys and values (E-26); given the same rooms as words, it answered 24, 21, 24 and 27, at 2.2 to 2.4 s to the first word in a 16 to 17 GB process. A reader four or sixteen times larger, given the same memory, did not answer more. The memory sets the ceiling here, and the 4B is the best trade of answers against time and RAM on this Mac.
+The 8B with CAMR answered 26, 26, 24 and 27, level with the 4B, with a slower first word (0.32 to 0.54 s) and a larger process (8.1 to 8.8 GB). The 8B alone answered 15, 11, 15 and 11 from its newest 32K tokens, in a 13.6 GB process. The 27B cannot use saved notes, because 48 of its 64 layers keep a running state instead of keys and values (E-26); given the same rooms as words, it answered 24, 21, 24 and 27, at 2.2 to 2.4 s to the first word in a 16 to 17 GB process. A reader twice or about seven times the 4B's size, given the same memory, did not answer more. The memory sets the ceiling here, and the 4B is the best trade of answers against time and RAM on this Mac.
 
 ### The 1.7B: Its Wording, Not Its Memory {#wording}
 
@@ -373,13 +387,13 @@ With the engine's own wording, written for the scripted lives before any Long Ha
 
 ### Notes Against Words: What the Tensors Buy {#notes-words}
 
-The same 1.7B, with the same wording, can be given its memory two ways: as notes through the engine, or as words through Ollama and the pairing. As notes it answered 14, 20, 17 and 15; as words, 16, 17, 16 and 16. The first word came three times sooner as notes (0.10 to 0.14 s against 0.38 to 0.40 s), but the notes took 40 GB of disk against 0.1 GB for the pairing's words. On this test the tensors buy speed, not accuracy; the rooms build had found the same within one room, where notes and words knew 164 and 163 facts (Section {sec:rooms-results}).
+The same 1.7B, with the same wording, can be given its memory two ways: as notes through the engine, or as words through Ollama and the pairing. As notes it answered 14, 20, 17 and 15; as words, 16, 17, 16 and 16. The first word came three times sooner as notes (0.10 to 0.14 s against 0.38 to 0.40 s), but the notes took 40 GB of disk against 0.1 GB for the pairing's words. On this test the tensors buy speed, not accuracy, though the comparison is clean only at 64K and 256K: at 1M and 2M most of the engine's rooms were asleep, and 41 and 69 of its answers read their room as words (Table {tab:tiers}). The rooms build had found the same within one room, where notes and words knew 164 and 163 facts (Section {sec:rooms-results}).
 
 ### Speed as Memory Grows {#speed-results}
 
-**In plain words.** The wait for the first word did not grow as the memory grew twentyfold. RAM stayed flat. Only the disk filled, and sleep held it at its budget.
+**In plain words.** The wait for the first word did not grow as the memory grew eighteenfold. RAM stayed flat. Only the disk filled, and sleep held it at its budget.
 
-The 1.7B was told the whole Long Haul and measured at 1,000, 10,000 and 17,676 moments (Table {tab:speed}, Figure {fig:speed}).
+The 1.7B was told the whole Long Haul and measured at 1,000, 10,000 and 17,676 moments, with 5 questions at each point (Table {tab:speed}, Figure {fig:speed}).
 
 Table: {#speed} The wait as memory grows (`engine:qwen3-1.7b`; E-38)
 
@@ -391,7 +405,7 @@ Table: {#speed} The wait as memory grows (`engine:qwen3-1.7b`; E-38)
 
 ![{#speed} The wait, retrieval time, RAM and disk as the 1.7B's memory grows from 1,000 to 17,676 moments](figures/ch5/speed.png){width=15.9}
 
-The first word stays at about 0.1 s because the desk is always one room of at most 512 tokens plus four moments, however large the memory grows. Retrieval, one product of the question with every moment's embedding and one read of a room, took 17 to 24 ms. Reading the history in took about 1,100 tokens a second throughout. The 90th-percentile first word (2 to 5 s) is a question whose room is asleep or whose answer is long, read as words. Rooms not hot were read off the SSD at 6 to 12 GB/s. On the same 2.01M tokens, Claude waited 13 to 105 s before its first token.
+The first word stays at about 0.1 s because the desk is always one room of at most 512 tokens plus four moments, however large the memory grows. Retrieval, one product of the question with every moment's embedding and one read of a room, took 17 to 24 ms. Reading the history in took about 1,100 tokens a second throughout. The 90th-percentile first word (2 to 5 s) is a question whose room is asleep or whose answer is long, read as words. Rooms not hot were read off the SSD at 6 to 12 GB/s. At the 2M cut, Claude waited 16 to 105 s for its first token (Haiku 15.9 s, Sonnet 53.5 s, Opus 105.2 s).
 
 ### RAM: the Cap on the Buffer Cache {#ram-results}
 
@@ -411,7 +425,7 @@ Table: {#cap} The 4B at 3M, before and after the 1 GB cap (E-41)
 
 ![{#ram} Process footprint: the models alone (amber) against CAMR (cyan), before and after the cap](figures/ch5/ram.png){width=15.9}
 
-The 7.5 GB is about what the parts add up to: the 4B's weights, the embedder, the 2 GB pool of hot rooms, the 1 GB cache and Python. At 4M the footprint was 5.4 GB. The 8B, the 27B and the Ollama runs were the first measured with the cap. Every run before them (the 1.7B and the 4B up to 2M) ran without it; their scores are unaffected, but their RAM figures are understated.
+The 7.5 GB is about what the parts add up to: the 4B's weights, the embedder, the 2 GB pool of hot rooms, the 1 GB cache and Python. At 4M the footprint was 5.4 GB. The 8B, the 27B and the Ollama suite runs were the first measured with the cap. Every run before them (the 1.7B and the 4B up to 2M) ran without it; their scores are unaffected, but their RAM figures are understated.
 
 ### Which Reach Works Best {#reach-results}
 
@@ -446,7 +460,7 @@ Table: {#claude} The Claude yardstick on the Long Haul (from the records)
 
 ![{#firstword} The wait for the first word as the history grows: CAMR's median (cyan) against the model alone (amber) and Claude's first token per request (grey, dashed); note the logarithmic scale](figures/ch5/first_word.png){width=15.9}
 
-Figure {fig:firstword} sets the waits side by side. For comparison, the 4B with CAMR answered 105 of the same 216 questions from 64K to 2M and 58 of 146 at 3M and 4M. Sonnet answered more within its window, and less beyond it. Opus scored no better than Sonnet on the Long Haul (130 against 138) at twice the price, so it sat out the suites and the longer cuts (E-36). Claude was honest: it never invented a never-said fact. Sonnet's and Opus's first token came after 13 to 105 seconds on a history this long, because it reads up to a million tokens per request; the engine's first word came in under a third of a second. Spending for the night, suites included, was $28.71 of the $60 cap, every call logged.
+Figure {fig:firstword} sets the waits side by side. For comparison, the 4B with CAMR answered 105 of the same 216 questions from 64K to 2M and 58 of 146 at 3M and 4M. Sonnet answered more within its window, and less beyond it. Opus scored no better than Sonnet on the Long Haul (130 against 138) at twice the price, so it sat out the suites (E-36) and the longer cuts (E-39). Claude was honest: it never invented a never-said fact. Sonnet's and Opus's first token came after 13 s at 64K and up to 105 s at 2M, because each request reads up to a million tokens; the engine's first word came in under a third of a second. Spending for the night, suites included, was $28.71 of the $60 cap, every call logged.
 
 ### The Public Suites {#suites-results}
 
@@ -542,7 +556,7 @@ Table: {#baseline} The baseline's main results on public benchmarks (CAMR v1)
 | Memory beats fine-tuning on facts | The same documents | 71.7% against 13.3% | Met |
 | Retrieval at most 10% of answer time | Device profile | 56% for the 0.5B under contention; met only from 1.5B | Not met for 0.5B |
 
-Three findings carried into the engine's design. Memory helps when the gap is knowledge and not when it is reasoning, which the Long Haul's families confirmed. More text distracts a small reader, so the budget should be small, which the room size confirmed. And recency and importance weighting lowered recall on independent questions (from 72.0% to 67.4% full-support recall), so the engine chooses rooms by similarity alone.
+Three findings carried into the engine's design. Memory helps when the gap is knowledge and not when it is reasoning, which the Long Haul's families confirmed. More text distracts a small reader, so the budget should be small, which the room size confirmed. And recency and importance weighting lowered full-support recall on independent questions (by 1.2 points on 2WikiMultiHopQA and 5.4 on HotpotQA), so the engine chooses rooms by similarity alone.
 
 ### What Failed, and Why {#failures}
 
@@ -558,7 +572,7 @@ Table: {#failures} Weaknesses found
 | The 1.7B's honesty depends on its wording | Never said 3 of 10 at 2M (own wording) against 7 (yardstick's) | A small reader follows its instructions too literally either way | Bounded: both reported; the 4B is honest |
 | RAM was understated | 19.2 GB footprint against 5.7 GB reported (E-40) | MLX's unbounded buffer cache | Fixed: 1 GB cap, footprint logged |
 | Notes are 10 times sooner than words | 4.6 times (E-20) | The mark was set on a slower machine | Not met, kept |
-| Notes are large | 40 GB for 2M tokens before sleep; 147,456 bytes per token for the 4B | Keys and values are about 29,000 times their text | Bounded by sleep; distilling not built |
+| Notes are large | The room files reached the 40 GB budget by 1M tokens and were held there by sleep; 147,456 bytes per token for the 4B | Keys and values are about 29,000 times their text for the 1.7B, and more for the 4B | Bounded by sleep; distilling not built |
 | Swarm was not measured | No benchmark | Built late, then removed from the app (E-50) | Removed |
 
 ### Limitations, Delimitations and Threats to Validity {#limitations}
@@ -566,10 +580,10 @@ Table: {#failures} Weaknesses found
 Limitations are weaknesses of the evidence; each is stated with its likely effect.
 
 1. **A scripted test.** The Long Haul is one invented project, fixed by its seed and built to be hard in known ways. It is not a sample of real work, and its results compare memories fairly on such a history but do not show how CAMR would serve a real user.
-2. **Small samples.** Each checkpoint asks 34 to 73 questions, 10 per family, so a difference of one or two answers is within noise; the 3-answer gap at 2M between CAMR and Sonnet is not a reliable ranking. No run was repeated for variance; only the 4B's 3M checkpoint was run twice, with identical verdicts.
+2. **Small samples.** Each checkpoint asks 34 to 73 questions, 10 per family (3 for the page), so a difference of one or two answers is within noise; the 3-answer gap at 2M between CAMR and Sonnet is not a reliable ranking. No run was repeated for variance; only the 4B's 3M checkpoint was run twice, with identical verdicts.
 3. **Claude is a yardstick, not an opponent.** Claude answered with no memory, reading the newest part of the history that fits its window. A cloud model with its own memory would do better past its window; the comparison shows what a window alone does, not the best a cloud service could do.
 4. **RAM before the cap is understated.** The 1.7B's and the 4B's RAM figures up to 2M were measured as MLX's peak, before the buffer-cache cap; the process held more (E-40). Their scores are unaffected.
-5. **One machine.** Every number was measured on one MacBook Pro M5 Pro with 24 GB; answers also differ slightly between chips (158 facts on the Air and 164 on the Pro for the same design; E-17).
+5. **One machine.** Every Long Haul, suite and speed number was measured on one MacBook Pro M5 Pro with 24 GB (the desk design on the MacBook Air, and the baseline on CPU-only machines); answers also differ slightly between chips (158 facts on the Air and 164 on the Pro for the same design; E-17).
 6. **Grading by rule.** A rule can miss a right answer worded in an unexpected way. Every raw answer is kept in the records, so any verdict can be checked by hand, but no hand audit was done for this report.
 7. **What was not measured.** The engine's own contenders were not run on the public suites (E-36); LongMemEval and two further suites have loaders but no runs; the Code agent has no benchmark; no user study and no accessibility audit were done; the app's screenshots come from one session.
 

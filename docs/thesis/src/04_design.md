@@ -67,10 +67,10 @@ Table: {#fr} Functional requirements catalogue
 | FR-19 | The application shall show, as the engine measures them, the model's layers loading, the room an answer reads and where it came from, and each layer's activity for each word. | Should | ii; E; `live.py` | D, T |
 | FR-20 | A pairing proxy shall give Ollama, and any OpenAI-compatible local server, memory as words: the closest notes in front of the last user message. | Should | iii; E; E-33, E-47 | T |
 | FR-21 | The engine shall log each remember, answer, sleep and wake as one line, with each written word's attention over the moments on the desk. | Should | ii; E; E-21 | T |
-| FR-22 | The Long Haul shall be generated deterministically from its seed and cut at fixed sizes, each cut asking a stratified sample of 10 questions per family. | Must | iv; E; E-30 | T |
+| FR-22 | The Long Haul shall be generated deterministically from its seed and cut at fixed sizes, each cut asking a stratified sample of 10 questions per family (all 3 for the page). | Must | iv; E; E-30 | T |
 | FR-23 | Every contender shall be told the history one event at a time and asked the same questions with the same instructions; asking shall never teach. | Must | iv; E; E-31, E-32 | T, I |
 | FR-24 | Every answer shall be graded by rule into one of five verdicts (Table {tab:verdicts}). | Must | iv; E; `haul/grade.py` | T |
-| FR-25 | Every call to the cloud yardstick shall be logged with its tokens and cost, and refused if its worst case would pass the night's cap. | Must | iv; E; `bench/cost.py` | T |
+| FR-25 | Every call to the cloud yardstick shall be logged with its tokens and cost, and refused if its worst case would pass the night's cap. | Must | iv; E; `bench/claude.py`, `bench/cost.py` | T |
 | FR-26 | Every run shall write a dated record after every checkpoint, naming the machine, its load, the code fingerprint and every answer. | Must | iv; E; E-12, E-40 | T, I |
 
 ### Non-Functional Requirements
@@ -84,17 +84,17 @@ Table: {#nfr} Non-functional requirements catalogue
 | NFR-01 | Performance: time | With 2,000 words in the room on the desk, read from the SSD with the cache bypassed, the median time to the first word shall be under 0.5 s. | Must | iii, v; E; E-19 mark 1 | M |
 | NFR-02 | Performance: time | At 2,000 words, answering from notes shall be at least 10 times sooner than reading the same desk as words. | Should | iii; E; E-19 mark 3 | M |
 | NFR-03 | Performance: capacity | As the memory grows, the median time to the first word and the peak RAM shall not climb. | Must | iii, iv; E; E-20, E-38 | M |
-| NFR-04 | Performance: resources | The room files shall stay within a disk budget (40 GB in the benchmarks) and the hot rooms within a RAM budget (2 GB in the benchmarks). | Must | iii; E; `swap.py` | M |
+| NFR-04 | Performance: resources | The room files shall stay within a disk budget (40 GB in the benchmarks) and the hot rooms within a RAM budget (2 GB in the benchmarks; 512 MiB by default). | Must | iii; E; `swap.py`, `bench/local.py` | M |
 | NFR-05 | Performance: resources | MLX's cache of freed graphics buffers shall be capped (1 GB by default), and every record shall log the process's real footprint. | Must | iii; E; E-40, E-41 | M |
 | NFR-06 | Performance: time | Retrieval shall take at most 10% of answer time on the target device. | Should | iii, v; v1; F8 | M |
 | NFR-07 | Model quality | Within one room, notes shall know at least 95% as many facts as the same desk read as words, with at most 3 extra false memories of 45. | Must | ii, iv; E; E-19 mark 2 | M |
 | NFR-08 | Honesty | Answers about things never told shall be graded separately; a decline is right and a guess is a false memory. | Must | iv; E; E-08, E-30 | T |
 | NFR-09 | Reliability | Local contenders shall decode greedily with thinking off, so that re-runs give the same verdicts. | Must | iv; E; E-10, E-41 | I, M |
 | NFR-10 | Security: privacy | All local inference and memory shall stay on the Mac once the models are downloaded; only the yardstick's benchmark runs send scripted text to a cloud service. | Must | iii; E; P §1.6 | I |
-| NFR-11 | Security: integrity | The engine's server and proxies shall listen on 127.0.0.1 only, answer only requests that name the local host, and refuse requests from web pages; the app's server shall require the token made at launch. | Must | iii; E; E-24, E-33 | T |
+| NFR-11 | Security: integrity | The engine's server and proxies shall listen on 127.0.0.1 only, answer only requests that name the local host, and refuse requests from web pages; the app's server shall require the token made at launch. | Must | iii; E; `app/server.py`, `pair/ollama.py`, `Engine.swift` | T |
 | NFR-12 | Security: integrity | A reach folder shall be opened by one process at a time, and rooms written for one model shall not open with another. | Must | ii; E; `reach.py`, `rooms.py` | T |
 | NFR-13 | Reliability: measurement | Only one measuring job shall use the graphics processor at a time, and the app shall pause while a benchmark measures. | Must | iv; E; E-35 | I |
-| NFR-14 | Cost | The yardstick's spending shall stay under $60 a night, with $2 of headroom held for the worst case of the next call. | Must | iv; E; E-29 | T, M |
+| NFR-14 | Cost | The yardstick's spending shall stay under $60 a night, with $2 of headroom held for the worst case of the next call. | Must | iv; E; E-29; `bench/claude.py` | T, M |
 | NFR-15 | Maintainability: testability | Every reported number shall be regenerable from records that carry a fingerprint of the code that made them. | Must | iv; both; P §3.7.2; E-12 | T, I |
 | NFR-16 | Flexibility: adaptability | The tests that need no MLX shall run on Linux on every push. | Should | iv; E; `tests.yml` | T |
 
@@ -126,7 +126,7 @@ Table: {#ir} Interface and integration requirements catalogue
 | ID | Requirement | Priority | Source | Verification |
 |---|---|---|---|---|
 | IR-01 | The baseline shall reach local models only through Ollama on the loopback address, and the cloud model under one pinned, logged identifier. | Must | iii, iv; v1; P §3.6 | T |
-| IR-02 | The engine shall load its models through MLX and refuse a reader whose layers do not all keep keys and values with plain rotary positions. | Must | iii; E; E-02 | I |
+| IR-02 | The engine shall load its models through MLX and refuse a reader whose layers do not all keep keys and values with plain rotary positions. | Must | iii; E; E-26, E-44; `notes.py` | I |
 | IR-03 | The engine shall read and write room files with the file cache bypassed (`F_NOCACHE`), in 1 MB pieces eight at a time. | Must | iii; E; E-14 | T, I |
 | IR-04 | The Mac app shall start the engine as a local process on a free port with a token only it knows, and use only `POST /api/chat/message`, `GET /api/live` and the engine's other JSON routes. | Must | iii; E; `Engine.swift` | D |
 | IR-05 | The engine's server shall return failures as JSON (403, 404, or 500 with the error) instead of dropping the connection. | Should | iii; E; `server.py` | I |
@@ -302,7 +302,7 @@ Table: {#changes} Changes from the proposed design
 | Short structured notes of the text (P §3.5.1) | The model's own keys and values, read back as if just read | Reading notes back skips re-reading the text; within one room, notes answered as the words did (164 against 163 facts, E-20) |
 | A 16 GB laptop with no dedicated graphics card, CPU inference (P §1.6) | The baseline on CPU-only 16 GB machines; the engine on a MacBook Air M4 (16 GB), then a MacBook Pro M5 Pro (24 GB) | MLX needs Apple silicon and uses its integrated graphics processor, not a dedicated card; the Pro was adopted for speed, with the Air's results kept (E-17) |
 | Qwen2.5, Llama 3.2, Phi-3 through Ollama; a BGE embedder (P §3.6) | The baseline as proposed; the engine on Qwen3 1.7B, 4B and 8B and Qwen3-Embedding through MLX | The engine must read and write the reader's cache in its own process; one embedder serves every contender (E-02) |
-| Ranking by similarity, recency and importance (P §3.5.1) | The baseline defaults to similarity, gate and bridging; the engine chooses the closest moment's room | The composite lowered full-support recall from 72.0% to 67.4% (F1) |
+| Ranking by similarity, recency and importance (P §3.5.1) | The baseline defaults to similarity, gate and bridging; the engine chooses the closest moment's room | The composite lowered full-support recall by 1.2 points on 2WikiMultiHopQA and 5.4 on HotpotQA (F1) |
 | A fixed token budget (P §3.5.1) | Rooms capped at 512 tokens plus four moments re-read | Larger rooms knew fewer facts at every setting tried (E-18) |
 | A pinned hosted reference model as the ceiling (P §3.6.3) | Kimi K3 for the baseline; Claude Haiku, Sonnet and Opus 5.5 as a yardstick for the engine | A cloud model with a one-million-token window sees the whole history early and only its end later, so it is reported beside the engine, not as a fixed ceiling |
 | Public benchmarks only; "not an end-user application" (P §1.6) | The Long Haul, the Hugging Face suites, and a Mac app with Chat and Code | The claim is about a memory that grows over months, which no public set tests; the final project also needs a usable release |
