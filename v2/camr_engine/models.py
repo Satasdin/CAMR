@@ -54,6 +54,8 @@ class Reader:
         else:  # read in layer by layer, so whoever watches sees the weights arrive
             self.model, self.tok = load(repo, lazy=True)
             load_layers(self.model, live, repo)
+        if hasattr(self.model, "language_model"):  # a vision model's checkpoint: mlx_lm loads its language half
+            self.model.args = text_args(self.model.language_model.args)
 
     def chat_ids(self, system: str, user: str, tools: list | None = None) -> list[int]:
         msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -140,6 +142,11 @@ class Seer:
         limit_cache()
         self.repo, self.max_tokens = repo, max_tokens
         self.model, self.processor = load(repo)
+        tower = getattr(self.model, "vision_tower", None)
+        if tower is not None:  # in float16 Qwen2.5-VL's tower overflows on some photos, and every word comes out "!"
+            import mlx.core as mx
+
+            tower.set_dtype(mx.bfloat16)
         self.config = load_config(repo)
         self.tok = getattr(self.processor, "tokenizer", self.processor)
 

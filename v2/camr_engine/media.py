@@ -90,6 +90,13 @@ def _clean(text: str) -> str:
     return "\n".join(x for x in lines if x).strip()
 
 
+def _said(text: str) -> str:
+    """A vision model's words, cleaned; nothing when it wrote one character over and over (a model that overflowed
+    writes "!!!!...")."""
+    t = _clean(text)
+    return "" if len(t) >= 8 and len(set(t.replace("\n", ""))) <= 2 else t
+
+
 def open_image(path: Path | str):
     """An image as a model should see it: turned upright by its EXIF, in RGB, at most ``MAX_SIDE`` pixels a side."""
     from PIL import Image, ImageOps
@@ -109,8 +116,7 @@ def open_image(path: Path | str):
 
 def image_words(name: str, image: Path, describe: Describe, where: str = "an image") -> str:
     """An image's moment: what it is, then what is written in it."""
-    caption = _clean(describe(image, CAPTION))
-    written = _clean(describe(image, READ_TEXT))
+    caption, written = (_said(describe(image, ask)) for ask in (CAPTION, READ_TEXT))
     text = f"File {name}, {where}. {caption}"
     if written and not NO_TEXT.match(written):
         text += f"\nWritten in it:\n{written}"
