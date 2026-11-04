@@ -447,8 +447,10 @@ def words_for(spec: str, override: str | None = None) -> str:
     return f"mlx:{base}" if base in VISION else DESCRIBER
 
 
-def make(spec: str, folder: Path, plan: dict, *, loader: Loader, seers: dict, words: str) -> Contender:
-    """A contender by name (see the module's docstring)."""
+def make(spec: str, folder: Path, plan: dict, *, loader: Loader, seers: dict, words: str,
+         disk_bytes: int | None = None) -> Contender:
+    """A contender by name (see the module's docstring). ``disk_bytes`` is the engine's disk budget for room files
+    (local.DISK_BYTES when None): past it, the weakest rooms sleep and are read as words."""
     kind, _, model = spec.partition(":")
     if kind.startswith("ollama"):
         return ollama_contender(spec)
@@ -475,7 +477,7 @@ def make(spec: str, folder: Path, plan: dict, *, loader: Loader, seers: dict, wo
     if kind == "engine":
         return MediaEngine(model, reader=reader, embedder=loader.embedder(), describer_name=words,
                            describe=Cached(Path(folder) / f"cache-{slug(words)}.json"),
-                           seer=seer() if look else None)
+                           seer=seer() if look else None, **({} if disk_bytes is None else {"disk_bytes": disk_bytes}))
     if kind == "bare":
         return Bare(model, reader=reader, window=VISION_WINDOWS.get(model) or WINDOWS[model])
     raise ValueError(f"a contender is engine:, bare:, file:, ollama: or ollama-bare:<model>, not {spec!r}")
@@ -496,8 +498,10 @@ def media_meta(folder: Path, plan: dict, words: dict | None, events: list[dict])
 
 def run_one(spec: str, folder: Path, *, loader: Loader | None = None, seers: dict | None = None,
             words: str | None = None, limit: int | None = None, memories: Path = MEMORIES, records: Path = RECORDS,
-            progress: Callable[[str], None] = print, count: Callable[[str], int] | None = None) -> dict:
-    """One contender through the media run; returns its record."""
+            progress: Callable[[str], None] = print, count: Callable[[str], int] | None = None,
+            disk_bytes: int | None = None, keep: bool = True) -> dict:
+    """One contender through the media run; returns its record. Without ``keep``, its memory folder is deleted once
+    the record is written (a run's memory is scratch)."""
     from camr_engine.bench.local import memory_folder
     from camr_engine.bench.longhaul import grader
 
@@ -509,12 +513,20 @@ def run_one(spec: str, folder: Path, *, loader: Loader | None = None, seers: dic
     used = words_for(spec, words)
     got = json.loads(words_path(folder, used).read_text())
     events = told_events(folder, got, count)
-    c = make(spec, folder, plan, loader=loader or Loader(), seers={} if seers is None else seers, words=used)
+    c = make(spec, folder, plan, loader=loader or Loader(), seers={} if seers is None else seers, words=used,
+             disk_bytes=disk_bytes)
     if used != words_for(spec) and not spec.startswith("file:"):
         c.name += f"@{used}"  # another describer's words than its own: the name says whose
-    return run(c, events, [checkpoint(plan, events)], task=TASK, grader=grader, folder=memory_folder(TASK, c.name,
-               memories), text=text_of, limit=limit, records=records, progress=progress,
-               meta=media_meta(folder, plan, got, events), raise_failure=False)
+    where = memory_folder(TASK, c.name, memories)
+    try:
+        return run(c, events, [checkpoint(plan, events)], task=TASK, grader=grader, folder=where, text=text_of,
+                   limit=limit, records=records, progress=progress, meta=media_meta(folder, plan, got, events),
+                   raise_failure=False)
+    finally:
+        if not keep:
+            import shutil
+
+            shutil.rmtree(where, ignore_errors=True)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -532,6 +544,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     r.add_argument("--contender", action="append", required=True)
     r.add_argument("--words", help="the describer whose words are told (default: see words_for)")
     r.add_argument("--limit", type=int)
+    r.add_argument("--disk-gb", type=float, help="the engine's disk budget for room files (default 40)")
+    r.add_argument("--keep", action="store_true", help="keep each run's memory folder (default: deleted after)")
     r.add_argument("--memories", type=Path, default=MEMORIES)
     r.add_argument("--records", type=Path, default=RECORDS)
     a = ap.parse_args(argv)
@@ -550,7 +564,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     for spec in a.contender:
         try:
             rec = run_one(spec, a.dir, loader=loader, seers=seers, words=a.words, limit=a.limit,
-                          memories=a.memories, records=a.records)
+                          memories=a.memories, records=a.records, keep=a.keep,
+                          disk_bytes=None if a.disk_gb is None else int(a.disk_gb * 1e9))
         except Exception as e:  # noqa: BLE001: a contender that cannot start is reported, and the next one runs
             print(f"{spec} did not start: {type(e).__name__}: {e}")
             failed += 1
