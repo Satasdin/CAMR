@@ -106,7 +106,7 @@ local model.
 
 | Name | Runner | What it is |
 | --- | --- | --- |
-| `engine:<model>` | `engram.bench.local` | the engine: one `Session` on one project reach, with the vault, the core, the tiers and the metrics on; 2 GB of RAM for hot rooms and 40 GB of disk for room files; `qwen3-1.7b`, `qwen3-4b` or `qwen3-8b` |
+| `engine:<model>` | `engram.bench.local` | the engine: one project reach's memory, driven as `Session` drives it, with the vault, the core, the tiers and the metrics on; 2 GB of RAM for hot rooms and 40 GB of disk for room files; `qwen3-1.7b`, `qwen3-4b` or `qwen3-8b`. Questions are read-only (`--learn` to change that); `--wake` wakes an asleep room instead of reading it as words; `--wording own` gives every local contender the engine's own instructions (names end `+own`) |
 | `words:<model>` | `engram.bench.local` | the engine's rooms, chosen the same way, pasted in as text; for `qwen-27b` |
 | `bare:<model>` | `engram.bench.local` | no memory: the most recent part of the history that fits (32K tokens for the 1.7B and 8B, 64K for the 4B, 16K for the 27B, so their keys and values fit in 24 GB) |
 | `ollama:<model>` | `engram.bench.ollama_run` | Ollama through the pairing: memory as words |
@@ -208,7 +208,7 @@ memory. Each context gets a memory of its own.
 
 | Suite | How it is run |
 | --- | --- |
-| `babilong` | qa1 to qa5 at 4k, 16k, 64k and 128k, plus 512k and 1M for the engine and Claude; the story is told in chunks of about 512 tokens, then its question is asked |
+| `babilong` | qa1 to qa5 at 4k, 16k, 64k and 128k, plus 256k, 512k and 1M for Claude; the story is told in chunks of about 512 tokens, then its question is asked |
 | `memoryagentbench` | Conflict_Resolution: each context's chunks in order, then its questions |
 | `math500` | 50 problems of levels 3 to 5, no memory: what the model can do on its own |
 | `aime` | AIME 2025 and 2026, no memory |
@@ -219,6 +219,8 @@ memory. Each context gets a memory of its own.
 .venv/bin/python -m engram.bench.suite_run harp --contender ollama:qwen3-1.7b --n 20
 .venv/bin/python -m engram.bench.suite_run math500 --contender claude-haiku-5-5 --n 50 --max-usd 10
 ```
+
+The suites run Claude and Ollama contenders. The engine's MLX contenders are not run on them yet: their instructions are the Long Haul's, and a suite needs its own.
 
 A Claude run prints its estimated cost first, and does not start when that passes `--max-usd` (10 by default).
 `--estimate` prints the estimate and stops. Every Claude call is also held in the ledger against the night's cap.
