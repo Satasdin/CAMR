@@ -149,7 +149,7 @@ struct RootView: View {
                 Text("MODEL").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
                 Menu {
                     ForEach(MODELS) { m in
-                        Button("\(m.name) · \(m.size)") { world.pick(m) }
+                        Button("\(m.name) · \(m.size) · \(m.note)") { world.pick(m) }
                     }
                 } label: {
                     HStack {
@@ -161,6 +161,13 @@ struct RootView: View {
                 .menuStyle(.borderlessButton)
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
+                HStack(spacing: 6) {
+                    Text(engine.model.note).font(Theme.mono(10)).foregroundStyle(Theme.faint)
+                    Spacer()
+                    Label("eyes: Qwen3-VL 4B Thinking", systemImage: "eye").font(Theme.mono(9))
+                        .foregroundStyle(Theme.faint)
+                        .help("Images and videos dropped on the chat are read by a vision model that reasons")
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
