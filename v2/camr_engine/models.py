@@ -19,6 +19,7 @@ READER_27B = "mlx-community/Qwen3.8-27B-4bit"  # 16 GB; hybrid attention, so it 
 EMBEDDER = "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 SEER = "mlx-community/Qwen2.5-VL-3B-Instruct-4bit"  # a vision model: reads files for camr_engine.media
 DESCRIBE_TOKENS = 400  # room for what is written in an image, or its caption
+THINK_DESCRIBE_TOKENS = 1600  # a thinking vision model reasons before it describes
 MAX_ANSWER_TOKENS = 40
 PREFILL_STEP = 2048
 # MLX keeps every freed GPU buffer for reuse, by default up to the whole GPU limit (about 18 GB on a 24 GB Mac). A
@@ -174,7 +175,10 @@ class Seer:
                      r.prompt_tokens if r else 0, r.generation_tokens if r else 0, pieces)
 
     def describe(self, image, ask: str) -> str:
-        return self.see([image], None, ask, max_tokens=DESCRIBE_TOKENS).text
+        """What is in ``image``, as ``ask`` asks; a thinking model's reasoning is left out."""
+        thinks = "Thinking" in (self.repo or "")
+        text = self.see([image], None, ask, max_tokens=THINK_DESCRIBE_TOKENS if thinks else DESCRIBE_TOKENS).text
+        return text.split("</think>", 1)[1].strip() if "</think>" in text else text
 
 
 class Embedder:

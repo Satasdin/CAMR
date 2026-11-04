@@ -53,6 +53,7 @@ final class World: ObservableObject {
     let code: CodeModel
     @Published var tab = "chat"
     @Published var expanded = false  // the weights view large, beside the chat, for a projector
+    @Published var showTensors = false  // the weights view in the sidebar; it also shows itself while a model loads
     var played = false
 
     init() {
@@ -185,19 +186,29 @@ struct RootView: View {
             .tint(Theme.memory)
             .disabled(engine.phase != .ready)
 
-            if world.expanded {
-                Spacer()
-            } else {
+            if !world.expanded && (world.showTensors || engine.phase != .ready) {  // shown firing up, or when chosen
                 WeightsView(w: weights)
                     .frame(maxHeight: .infinity)
                     .padding(.bottom, 4)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            } else {
+                Spacer()
             }
-            Button { withAnimation(.easeInOut(duration: 0.25)) { world.expanded.toggle() } } label: {
-                Label(world.expanded ? "Weights in the sidebar" : "Weights large  ⌘E",
-                      systemImage: world.expanded ? "sidebar.left" : "arrow.up.left.and.arrow.down.right")
-                    .font(Theme.mono(10)).foregroundStyle(Theme.faint)
+            HStack(spacing: 14) {
+                Button { withAnimation(.easeInOut(duration: 0.25)) { world.showTensors.toggle() } } label: {
+                    Label(world.showTensors ? "Hide tensors" : "Show tensors  ⌘T",
+                          systemImage: world.showTensors ? "eye.slash" : "cpu")
+                        .font(Theme.mono(10)).foregroundStyle(world.showTensors ? Theme.faint : Theme.memory)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("t", modifiers: .command)
+                Button { withAnimation(.easeInOut(duration: 0.25)) { world.expanded.toggle() } } label: {
+                    Label(world.expanded ? "Sidebar" : "Large  ⌘E",
+                          systemImage: world.expanded ? "sidebar.left" : "arrow.up.left.and.arrow.down.right")
+                        .font(Theme.mono(10)).foregroundStyle(Theme.faint)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             .padding(.bottom, 14)
         }
         .padding(.horizontal, 18)

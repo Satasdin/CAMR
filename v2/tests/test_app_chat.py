@@ -485,7 +485,10 @@ def test_the_assistant_routes_thinks_researches_and_learns(tmp_path, looks, monk
         app.talk.close()
 
 
-def test_a_text_file_is_read_onto_a_shelf_and_an_image_is_refused_by_a_text_model(chat, tmp_path):
+def test_a_text_file_is_read_onto_a_shelf_and_an_image_is_refused_by_a_text_model(chat, tmp_path, monkeypatch):
+    from camr_engine.app.routes import chat as routes
+
+    monkeypatch.setattr(routes, "eyes_ready", lambda: False)  # no vision model on this Mac
     app, call = chat
     call("/api/chat/state")
     call("/api/chat/settings", {"shelf": "research"})

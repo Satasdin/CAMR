@@ -51,6 +51,7 @@ enum Script {
                     }
                 case "view":
                     world.expanded = arg == "large"
+                    world.showTensors = arg != "off"
                 case "memory":
                     await world.chat.setMemory(arg != "off")
                 case "wait":

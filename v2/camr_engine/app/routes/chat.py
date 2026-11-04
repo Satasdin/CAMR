@@ -52,6 +52,18 @@ TURNS = 400  # turns kept for the thread
 TEXT_MAX = 4000  # characters in one message; a longer one is refused, never cut
 RETRY_S = 30.0  # after a failed open, a poll tries again at most this often
 JOBS = 30  # live jobs kept for GET /api/live
+EYES = "mlx-community/Qwen3-VL-4B-Thinking-4bit"  # sees and reasons: reads images and video frames into memory
+
+
+def eyes_ready() -> bool:
+    """Whether the vision model is on this Mac (never a download from here)."""
+    try:
+        from huggingface_hub import snapshot_download
+
+        snapshot_download(EYES, local_files_only=True)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _measuring() -> dict | None:
@@ -396,11 +408,12 @@ class Talk:
         if not f.is_file():
             raise Refused(404, "no such file")
         kind = f.suffix.lower()
-        if kind in (".png", ".jpg", ".jpeg", ".webp", ".heic", ".mp4", ".mov", ".m4v"):
-            raise Refused(409, f"{f.name} needs a model that can see; {getattr(self.app.reader, 'repo', 'this model')} "
-                               "reads text only. PDFs, text and Markdown files can be read.")
-        if kind not in (".pdf", ".txt", ".md", ".markdown"):
-            raise Refused(415, "a PDF, text or Markdown file")
+        seen = kind in (".png", ".jpg", ".jpeg", ".webp", ".heic", ".mp4", ".mov", ".m4v")
+        if seen and not eyes_ready():
+            raise Refused(409, f"{f.name} needs a model that can see: download {EYES} (about 3 GB) to read images "
+                               "and videos. PDFs, text and Markdown files can be read now.")
+        if not seen and kind not in (".pdf", ".txt", ".md", ".markdown"):
+            raise Refused(415, "a PDF, image, video, text or Markdown file")
         _not_measuring()
         today, day = self._today()
         with self.lock:
@@ -417,8 +430,9 @@ class Talk:
                     target = self.sorter.sort(f"{f.stem} {head}").name
                 reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
                 m = session.memory(reach)
-                if kind == ".pdf":
-                    kept = media.ingest(f, m, day=day, date=today, stamp=lambda t: f"[{today.isoformat()}] {t}")
+                if kind == ".pdf" or seen:  # the vision model reads images and video frames; a PDF its text, at once
+                    kept = media.ingest(f, m, day=day, date=today, describe=self._eyes() if seen else None,
+                                        stamp=lambda t: f"[{today.isoformat()}] {t}")
                 else:
                     words = f.read_text(errors="ignore").split()
                     kept = []
@@ -434,6 +448,14 @@ class Talk:
         self._keep({"who": "you", "text": f"(attached {f.name})", "intent": "attach", "at": _now()})
         self._keep({"who": "camr", "reply": f"Read {f.name}: {out['moments']} pieces kept.", **out, "at": _now()})
         return out
+
+    def _eyes(self):
+        """The vision model that reads images for memory, loaded the first time a file needs it."""
+        if getattr(self, "seer", None) is None:
+            from camr_engine.models import Seer
+
+            self.seer = Seer(EYES)
+        return self.seer.describe
 
     def _tell(self, session, text: str, today: dt.date, day: int, shelf: str | None = None) -> dict:
         if not session.on:
