@@ -525,3 +525,13 @@ def test_conversations_are_kept_listed_and_opened_again(chat):
     turns = call("/api/chats/open", {"id": first[0]["id"]})[1]["turns"]
     assert turns[0]["text"] == "Amina moved to Nakuru." and call("/api/chat/thread")[1]["turns"] == turns
     assert call("/api/chats/open", {"id": "../../etc"})[0] == 404
+
+
+def test_a_question_naming_someone_in_the_closest_notes_goes_to_memory():
+    from camr_engine.assistant import named_in, names
+
+    assert names("What is the number plate of Kitengela Ventures' delivery truck?") == ["Kitengela Ventures"]
+    assert names("What is Otieno's surname?") == ["Otieno"] and names("What is 17 times 23?") == []
+    notes = ["[2025-10-02] Kitengela Ventures' truck KDS 711Z brought the flour."]
+    assert named_in("What is the number plate of Kitengela Ventures' delivery truck?", notes)
+    assert not named_in("Who wrote Things Fall Apart?", notes)

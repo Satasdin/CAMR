@@ -357,7 +357,10 @@ class Talk:
             else:
                 system = f"{SYSTEM}\n\nNo source was found online for this question: say so, then answer if you can."
         elif session.on:
-            way = route(reader, text, turns)
+            from camr_engine.assistant import named_in
+
+            top = self._top(session, text)
+            way = "memory" if named_in(text, top) else route(reader, text, turns, top[0] if top else None)
             if live is not None:
                 live.add("route", route=way)
         if way == "memory":
@@ -390,6 +393,21 @@ class Talk:
         if session.on and way != "memory":  # it learns: what it was asked and answered (and its source) is kept
             out["learned"] = self._learn(session, text, answer, today, day, source, "research" if web else shelf)
         return out
+
+    def _top(self, session, text: str, k: int = 5) -> list[str]:
+        """The ``k`` moments closest to ``text`` over every memory the session reads, closest first."""
+        import numpy as np
+
+        vec = np.asarray(session.embedder.encode_one(text, is_query=True), dtype=np.float32)
+        scored = []
+        for m in session.memories.values():
+            v = m.rooms.vectors
+            if v.size and m.rooms.moments:
+                sims = v @ vec
+                for i in np.argsort(-sims)[:k]:
+                    scored.append((float(sims[i]), m.rooms.moments[int(i)].text))
+        scored.sort(key=lambda x: -x[0])
+        return [t for _, t in scored[:k]]
 
     def _near(self, session, text: str, spread: float = 0.12, most: int = 3) -> list[str]:
         """The closest moment of each memory the session reads, kept when within ``spread`` of the best of them."""
