@@ -472,19 +472,35 @@ Table: {#suites-results} Right answers on the public suites
 |---|---|---|---|---|
 | MATH-500, levels 3 to 5 (50) | 44 | 47 | | |
 | AIME 2025 and 2026 (60) | 54 | 56 | | |
-| HARP pairs, correction told (60) | 55 | 58 | [[OLLAMA-HARP-BARE-ON]] | [[OLLAMA-HARP-PAIRED-ON]] |
-| HARP pairs, nothing told (60) | 48 | 52 | [[OLLAMA-HARP-BARE-OFF]] | [[OLLAMA-HARP-PAIRED-OFF]] |
-| BABILong qa1–qa5, 4k to 128k (100) | 78 | | [[OLLAMA-BABILONG-BARE]] | [[OLLAMA-BABILONG-PAIRED]] |
+| HARP pairs, correction told (60) | 55 | 58 | 28 | 34 |
+| HARP pairs, nothing told (60) | 48 | 52 | 21 | 21 |
+| BABILong qa1–qa5, 4k to 128k (100) | 78 | | 39 | 20 |
 
 For Claude, the told correction raised HARP from 48 to 55 (Haiku) and from 52 to 58 (Sonnet): a worked solution in the context carries to a new problem of the same kind. Haiku answered 78 of 100 BABILong items from 4k to 128k tokens.
 
 ### The Ollama Pairing on the Suites {#ollama-suites}
 
-[[OLLAMA-SUITES-TEXT]]
+The Ollama 1.7B answers with its thinking off, so on HARP it was given the same room to work in words that Claude has to think in (8,192 tokens; E-43). With that room, a told correction helped it, and the pairing carried the correction better than the model's own window did: with the correction told, the paired model answered 34 of 60 and the bare one 28; with nothing told, both answered 21. At the shared 400-token limit, 82 of the bare model's 120 answers and 95 of the paired one's had been cut off mid-working, and both had scored 10 or 11 either way; those records are kept beside the reruns (D-04).
+
+On BABILong the pairing lost: 20 of 100 against 39 for the bare model reading the newest 32,768 tokens (Table {tab:babilong}). Its questions ask where something is now, which needs the latest of many mentions, and the pairing's 512 tokens of notes hold too few of them (E-43). At 4k and 16k tokens the bare model sees the whole story, and it answered 16 and 10 of 25 against the pairing's 6 and 6; at 64k and 128k both fell. Claude Haiku, reading every story whole, answered 18 to 21 of 25 at every length. The bare runs' 58 answers lost to the empty-thinking check (D-03) were resumed before these counts were taken.
+
+Table: {#babilong} BABILong by story length (25 items each; qa1 to qa5)
+
+| Length | Ollama 1.7B alone (newest 32K) | Ollama 1.7B with the pairing | Claude Haiku 5.5 |
+|---|---|---|---|
+| 4k | 16 | 6 | 20 |
+| 16k | 10 | 6 | 21 |
+| 64k | 5 | 3 | 19 |
+| 128k | 8 | 5 | 18 |
+| All (100) | 39 | 20 | 78 |
+
+Memory as words through the pairing therefore helps where one worked example carries to the next problem, and hurts where the answer is the newest of many similar mentions. The engine's own contenders, which read whole rooms with dates, were not run on these suites (E-36).
 
 ### Multimodal Memory {#media-results}
 
-[[MEDIA-TEXT]]
+The engine can also remember files (E-44). A PDF becomes one moment per page, an image its caption and the text written in it, and a video a frame every 2 s, each described with its time, by a vision model that turns the file into words once; the moments are then kept like any others, with the file copied into the vault. The multimodal benchmark tells 21 files of Mama Njeri's Kitchen (PDF invoices and menus, photographed receipts and notices, charts and short whiteboard videos) among about 100,000 tokens of the Long Haul's own events, all in the first 60,000 tokens, and then asks 37 questions graded by the Long Haul's rules: 29 about facts planted in the files, by kind of file, and 8 never-said questions where declining is right. The contenders are Qwen2.5-VL-3B with CAMR, alone with its newest 32K tokens, and with the file itself in the prompt as an upper bound; Qwen3 4B with CAMR and alone, reading the vision model's words; and Ollama's `qwen2.5vl:3b`, paired and bare.
+
+[[MEDIA-RESULTS]]
 
 ### Development Evidence: the Rooms Build on Scripted Lives {#rooms-results}
 
