@@ -2,6 +2,16 @@
 
 ## For the 8am presentation
 
+- **Shelves (new at midnight):** memory is now kept on four shelves: Projects (the Long Haul), Coding, Research
+  and Personal.
+  - "Remember on" Auto files each moment by meaning; or pick a shelf.
+  - Every question reads all of them, and the answer names the note and shelf it read, e.g. "note 0 on Coding".
+  - When a model loads, its kernels are built and the newest notes are warmed into RAM.
+  - Screens: `apps/mac/screens/chat-shelves.png`.
+- **Models:** Qwen3 1.7B, 4B and 8B only. The rest are in the Trash, and their records are kept. The 1.7B and 4B
+  memories are seeded with the Long Haul. The 8B's is not: there was no disk space. Once the Trash is emptied:
+  `cd ~/Desktop/camr-build-wt/v2 && .venv/bin/python -m camr_engine.app.seed --model mlx-community/Qwen3-8B-4bit`
+  (about 7 minutes, about 37 GB).
 - **The app:** `dist/CAMR.app`, a native Mac app with Chat and Code, plus the weights view. Double-click it; it
   starts the engine with Qwen3 4B, whose memory already holds the Long Haul's first 256K tokens (737 rooms).
 - **The demo:** type the questions from `apps/mac/demo.txt`, or let the app play them:
@@ -220,10 +230,9 @@ Haul, then asked about after more than 40K tokens of other work (`v2/camr_engine
 
 ## Your calls (taste and vision only)
 
-0. **The disk is nearly full (12 GB free at 23:30).** The finished benchmarks left 516 GB of memory folders in
-   `work/memories/`. Their results are all in `v2/records/`; the folders only let the Memory screen replay old
-   answers. I did not delete them. If you agree, run `rm -rf ~/Desktop/camr-build-wt/work/memories/*.nosync`. Keep
-   `~/.camr/app/` (73 GB): it is the demo's memory for the 4B and the 1.7B.
+0. **Empty the Trash.** 511 GB of finished benchmarks' memory folders and the models you dropped are there
+   (`~/.Trash/camr-cleared-2026-11-05`), with their records kept in `v2/records/`. Free space comes back once it is
+   emptied; I can only move to the Trash, not empty it. `ollama rm qwen2.5vl:3b` frees 3.2 GB more.
 1. **The name** is now CAMR everywhere, as you chose. The engine's package is `camr_engine`, because `camr` is the
    old baseline's.
 2. **Three small design choices** at the end of `v2/design/DIRECTION.md`:

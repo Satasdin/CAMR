@@ -588,3 +588,27 @@ never-said questions) among 99K tokens of the Long Haul's events, all told by 60
   - audio;
   - videos longer than 12 s.
   The bare Ollama runs' first word is not reported, since Ollama read the whole window again for every question.
+
+**E-51 Shelves: memory kept apart by kind of work, and read as one.** Ibrahim asked for compartments the app can
+show: Projects, Coding, Research and Personal (`camr_engine.shelves`). Each shelf is a reach of its own. Projects is
+the global reach, so the Long Haul seeded there needed no move, and the other three are project reaches.
+- **Reading:** with shelves on, a chat reads every shelf and the closest note wins, as a session always chose.
+- **Remembering:** a moment goes on the shelf picked. "Auto" puts it on the shelf whose description and three
+  example moments it is closest to, using the embedder's own measure. On twelve test sentences it filed all 12
+  right, 8 of 8 among those not close to the examples. In the app, three moments went to Coding, Research and
+  Personal, and each answer read the right one.
+- **Code:** it keeps what it learns on the Coding shelf and still reads its workspace's own reach.
+- **Names:** the app calls a room a note, and a group of notes by topic a shelf. The engine's code keeps `rooms`.
+- **The web app:** shelves stay off unless a client turns them on, so its reach picker reads exactly what is picked.
+
+**E-52 Warm before the first question.** Once a session opens, a one-word answer builds the model's kernels, and the
+newest notes of every shelf are read off the SSD (1.5 GB shared between shelves), so the operating system holds
+them in RAM. On the 4B the kernels alone save 24 ms of the first answer's wait (111 to 87 ms). Notes read ahead are
+fetched from RAM instead of the SSD. A note not read ahead still comes off the SSD in milliseconds: the first Long
+Haul question read 68 MB in 8 ms, and its first word came at 230 ms. The app shows the warming, notes lighting on
+their shelves.
+
+**E-53 Three models for the demo: Qwen3 1.7B, 4B and 8B.** At Ibrahim's request the rest were moved to the Trash,
+with their records kept: the 27B, Qwen2.5-0.5B, Qwen2.5-VL 3B (once the multimodal benchmark ended), a partial
+Gemma 3 download, and 511 GB of finished benchmarks' memory folders. Emptying the Trash is his to do. The Ollama
+vision model (`qwen2.5vl:3b`) is left for him to remove: `ollama rm qwen2.5vl:3b`.
