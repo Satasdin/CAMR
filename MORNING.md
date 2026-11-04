@@ -62,6 +62,7 @@ questions again.
 | Bare 4B (newest 64K) | 18 | 14 | 20 | 11 | 12 | 13 | 0.32–0.38 s | 15.2 GB (process) |
 | Engine, Qwen3 8B | 26 | 26 | 24 | 27 | | | 0.3–0.54 s | 8.1–8.8 GB (process) |
 | Bare 8B (newest 32K) | 15 | 11 | 15 | 11 | | | 0.22 s | 13.6 GB (process) |
+| Qwen 27B, the engine's memory as words | 24 | 21 | 24 | 27 | | | 2.2–2.4 s | 16–17 GB (process) |
 | Engine, Qwen3 1.7B, its own wording | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.4 GB |
 | Engine, Qwen3 1.7B, the yardstick's wording | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.4 GB |
 | Bare 1.7B (newest 32K) | 8 | 13 | 14 | 7 | | | 0.13 s | 7.4 GB |
@@ -144,7 +145,7 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 - **The engine is not run on the Hugging Face suites.** `suite_run` takes Claude and Ollama only; the engine needs
   a suite wording.
 - **LongMemEval, MemoryAgentBench and Web-Bench** have loaders but no runs.
-- **Running since 16:12 (queue8):** the 27B, Ollama on the suites and the reach benchmark. The 8B is done.
+- **Running since 16:12 (queue8):** Ollama on the suites and the reach benchmark. The 8B and 27B are done.
 - **4M:** rerun on power with the cache cap: 29 of 73 at 3M and at 4M.
 
 ## Your calls (taste and vision only)

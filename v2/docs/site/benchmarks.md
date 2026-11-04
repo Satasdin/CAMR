@@ -291,6 +291,7 @@ on the longer script):
 | `bare:qwen3-4b` | 18 | 14 | 20 | 11 | 12 | 13 | 0.32–0.38 s | 14.7 GB MLX peak; 15.2 GB process |
 | `engine:qwen3-8b` | 26 | 26 | 24 | 27 | | | 0.32–0.54 s | 8.0 GB MLX peak; 8.1–8.8 GB process |
 | `bare:qwen3-8b` | 15 | 11 | 15 | 11 | | | 0.22 s | 12.2 GB MLX peak; 13.6 GB process |
+| `words:qwen-27b` | 24 | 21 | 24 | 27 | | | 2.2–2.4 s | 18.5 GB MLX peak; 16–17 GB process |
 | `engine:qwen3-1.7b+own` | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.5 GB |
 | `engine:qwen3-1.7b` | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.5 GB |
 | `bare:qwen3-1.7b+own` | 7 | 7 | 14 | 9 | | | 0.13 s | 7.5 GB |
@@ -300,8 +301,6 @@ on the longer script):
 | `claude-haiku-5-5` | 22 | 21 | 17 | 10 | 10 | 10 | 13–43 s | |
 | `claude-sonnet-5-5` | 28 | 35 | 43 | 32 | 13 | 10 | 13–53 s | |
 | `claude-opus-5-5` | 24 | 33 | 42 | 31 | | | 19–105 s | |
-
-The 8B and the 27B are in the records once their runs finish.
 
 The Hugging Face suites (right answers):
 
