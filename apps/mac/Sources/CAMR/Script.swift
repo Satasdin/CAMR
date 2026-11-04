@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// A rehearsal: CAMR_SCRIPT names a file of lines, played into Chat once the engine is ready ("remember: …" keeps
-/// a moment, "ask: …" asks, "memory: off" / "memory: on" switches memory, "wait: 2" pauses, "code: /path" opens
+/// a moment, "ask: …" asks, "memory: off" / "memory: on" switches memory, "wait: 2" pauses, "view: large" shows the weights large, "code: /path" opens
 /// that folder in Code, "task: …" runs a Code task there). With CAMR_SNAPSHOT_DIR set, the window is saved as a PNG
 /// every half second while it plays, for screenshots of the real app.
 @MainActor
@@ -37,6 +37,8 @@ enum Script {
                     world.tab = "chat"
                     world.chat.draft = arg
                     await world.chat.send(remember: verb == "remember")
+                case "view":
+                    world.expanded = arg == "large"
                 case "memory":
                     await world.chat.setMemory(arg != "off")
                 case "wait":

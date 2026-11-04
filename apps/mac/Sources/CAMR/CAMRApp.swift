@@ -16,6 +16,10 @@ struct CAMRApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandMenu("View") {
+                Button(world.expanded ? "Weights in the Sidebar" : "Weights Large") { world.expanded.toggle() }
+                    .keyboardShortcut("e", modifiers: [.command])
+            }
             CommandMenu("Memory") {
                 Button("Memory On") { Task { await world.chat.setMemory(true) } }.keyboardShortcut("m", modifiers: [.command])
                 Button("Memory Off") { Task { await world.chat.setMemory(false) } }
@@ -48,6 +52,7 @@ final class World: ObservableObject {
     let chat: ChatModel
     let code: CodeModel
     @Published var tab = "chat"
+    @Published var expanded = false  // the weights view large, beside the chat, for a projector
     var played = false
 
     init() {
@@ -76,8 +81,10 @@ struct RootView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            sidebar.frame(width: 330)
-            Rectangle().fill(Theme.line).frame(width: 1)
+            if !world.expanded {
+                sidebar.frame(width: 330)
+                Rectangle().fill(Theme.line).frame(width: 1)
+            }
             ZStack {
                 if world.tab == "chat" {
                     ChatView(chat: chat, engine: engine)
@@ -85,6 +92,27 @@ struct RootView: View {
                     CodeView(code: code, engine: engine)
                 }
                 if case .failed(let why) = engine.phase { failure(why) }
+            }
+            .frame(minWidth: 480)
+            if world.expanded {
+                Rectangle().fill(Theme.line).frame(width: 1)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("CAMR · \(engine.model.name)").font(Theme.mono(12, .semibold)).foregroundStyle(Theme.text)
+                        Spacer()
+                        Button { withAnimation(.easeInOut(duration: 0.25)) { world.expanded = false } } label: {
+                            Label("Sidebar  ⌘E", systemImage: "sidebar.left").font(Theme.mono(10))
+                                .foregroundStyle(Theme.faint)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.top, 20)
+                    WeightsView(w: weights)
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 24)
+                .frame(minWidth: 520, maxWidth: .infinity)
+                .background(Theme.ink)
             }
         }
         .background(Theme.ink)
@@ -146,9 +174,20 @@ struct RootView: View {
             .tint(Theme.memory)
             .disabled(engine.phase != .ready)
 
-            WeightsView(w: weights)
-                .frame(maxHeight: .infinity)
-                .padding(.bottom, 16)
+            if world.expanded {
+                Spacer()
+            } else {
+                WeightsView(w: weights)
+                    .frame(maxHeight: .infinity)
+                    .padding(.bottom, 4)
+            }
+            Button { withAnimation(.easeInOut(duration: 0.25)) { world.expanded.toggle() } } label: {
+                Label(world.expanded ? "Weights in the sidebar" : "Weights large  ⌘E",
+                      systemImage: world.expanded ? "sidebar.left" : "arrow.up.left.and.arrow.down.right")
+                    .font(Theme.mono(10)).foregroundStyle(Theme.faint)
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 14)
         }
         .padding(.horizontal, 18)
         .background(Theme.panel.opacity(0.6))
