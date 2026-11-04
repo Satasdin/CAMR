@@ -25,6 +25,8 @@ The text lives in docs/thesis/src/*.md, in a small Markdown dialect:
 from __future__ import annotations
 
 import copy
+import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -34,7 +36,7 @@ import latex2mathml.converter
 import mathml2omml
 from docx.enum.section import WD_ORIENT, WD_SECTION
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_COLOR_INDEX, WD_TAB_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_COLOR_INDEX, WD_TAB_ALIGNMENT, WD_TAB_LEADER
 from docx.image.image import Image as Picture
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -245,6 +247,10 @@ class Thesis:
         self.ch = self.fig = self.tab = self.eq = 0
         self.chlabel = "0"
         self.bib = False
+        self.sec = [0, 0]
+        self.outline: list[tuple[str, int, str]] = []  # (kind, level, printed text) for the lists' entries
+        pages = os.environ.get("THESIS_PAGES")
+        self.pages = json.loads(Path(pages).read_text()) if pages and Path(pages).exists() else None
         self.in_front = True
         self.fresh = False
 
@@ -303,9 +309,21 @@ class Thesis:
             self.fig = self.tab = self.eq = 0
             if self.ch > 1 or not self.in_front:
                 self.page_break()
+            self.sec = [0, 0]
+            label = f"Chapter {self.ch}:"
+        elif level == 2:
+            self.sec = [self.sec[0] + 1, 0]
+            label = f"{self.ch}.{self.sec[0]}"
+        else:
+            self.sec[1] += 1
+            label = f"{self.ch}.{self.sec[0]}.{self.sec[1]}"
+        self.outline.append(("toc", level, f"{label} {self.plain(title)}"))
         p = self.doc.add_paragraph(style=style)
         self.runs(p, title)
         return p
+
+    def plain(self, text: str) -> str:
+        return re.sub(r"\*\*|\[\[|\]\]|`|(?<!\w)\*|\*(?!\w)", "", self.resolve(text))
 
     def heading_unnumbered(self, title: str, toc: bool = True):
         p = self.doc.add_paragraph(style="Heading 1")
@@ -320,6 +338,8 @@ class Thesis:
         p.paragraph_format.left_indent = Cm(0)
         p.paragraph_format.first_line_indent = Cm(0)
         p.paragraph_format.space_after = Pt(12)
+        if toc:
+            self.outline.append(("toc", 1, self.plain(title)))
         if not toc:  # front-matter headings stay out of the table of contents
             ol = OxmlElement("w:outlineLvl")
             ol.set(qn("w:val"), "9")
@@ -373,6 +393,7 @@ class Thesis:
         self.tab += 1
         cap = self.doc.add_paragraph(style="TabCaption")
         self.runs(cap, f"Table {self.chlabel}.{self.tab}: {caption}")
+        self.outline.append(("lot", 1, self.plain(f"Table {self.chlabel}.{self.tab}: {caption}")))
         ncol = max(len(r) for r in rows)
         rows = [r + [""] * (ncol - len(r)) for r in rows]
         size = 10 if ncol <= 3 else 9.5 if ncol <= 5 else 9
@@ -442,6 +463,7 @@ class Thesis:
         p.add_run().add_picture(str(path), width=Cm(width))
         cap = self.doc.add_paragraph(style="FigCaption")
         self.runs(cap, f"Figure {self.chlabel}.{self.fig}: {caption}")
+        self.outline.append(("lof", 1, self.plain(f"Figure {self.chlabel}.{self.fig}: {caption}")))
         if landscape:
             self.orient(False)
             self.fresh = True
@@ -453,6 +475,37 @@ class Thesis:
         p = self.doc.add_paragraph(style="Normal")
         p.paragraph_format.space_after = Pt(0)
         p.add_run().add_break(WD_BREAK.PAGE)
+
+    def field_list(self, instr: str, kind: str, placeholder: str):
+        """A TOC field whose result is already filled with entries and pages (Word refreshes it on opening)."""
+        entries = (self.pages or {}).get(kind)
+        if not entries:
+            return self.field(instr, placeholder)
+        styles = {1: "toc 1", 2: "toc 2", 3: "toc 3"}
+        paras = []
+        for level, text, page in entries:
+            st = styles[level] if kind == "toc" else "table of figures"
+            p = self.doc.add_paragraph(style=st)
+            if kind != "toc":
+                p.paragraph_format.tab_stops.add_tab_stop(Cm(TEXT_WIDTH_CM), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
+                p.paragraph_format.left_indent, p.paragraph_format.first_line_indent = Cm(1.5), Cm(-1.5)
+                p.paragraph_format.space_after = Pt(4)
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            paras.append((p, text, page))
+        def fld(p, typ):
+            r = OxmlElement("w:r"); c = OxmlElement("w:fldChar"); c.set(qn("w:fldCharType"), typ)
+            if typ == "begin":
+                c.set(qn("w:dirty"), "true")
+            r.append(c); p._p.append(r)
+        first = paras[0][0]
+        fld(first, "begin")
+        r = OxmlElement("w:r"); it = OxmlElement("w:instrText"); it.set(qn("xml:space"), "preserve")
+        it.text = f" {instr} "; r.append(it); first._p.append(r)
+        fld(first, "separate")
+        for p, text, page in paras:
+            p.add_run(text)
+            p.add_run("\t" + str(page))
+        fld(paras[-1][0], "end")
 
     def field(self, instr: str, placeholder: str):
         p = self.doc.add_paragraph(style="Normal")
@@ -550,11 +603,11 @@ class Thesis:
             elif k == "pagebreak":
                 self.page_break()
             elif k == "toc":
-                self.field('TOC \\o "1-3" \\h \\z \\u', "Right-click and choose Update Field to build the table of contents.")
+                self.field_list('TOC \\o "1-3" \\h \\z \\u', "toc", "Right-click and choose Update Field to build the table of contents.")
             elif k == "lof":
-                self.field('TOC \\h \\z \\t "FigCaption,1"', "Right-click and choose Update Field to build the list of figures.")
+                self.field_list('TOC \\h \\z \\t "FigCaption,1"', "lof", "Right-click and choose Update Field to build the list of figures.")
             elif k == "lot":
-                self.field('TOC \\h \\z \\t "TabCaption,1"', "Right-click and choose Update Field to build the list of tables.")
+                self.field_list('TOC \\h \\z \\t "TabCaption,1"', "lot", "Right-click and choose Update Field to build the list of tables.")
             elif k == "frontmatter-end":
                 self.end_front_matter()
             elif k.startswith("title"):
@@ -602,6 +655,8 @@ def main() -> None:
     th.render(blocks)
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else OUT
     th.finish(out)
+    if os.environ.get("THESIS_OUTLINE"):
+        Path(os.environ["THESIS_OUTLINE"]).write_text(json.dumps(th.outline, ensure_ascii=False, indent=0))
     if th.unresolved:
         print("unresolved references:", ", ".join(sorted(th.unresolved)))
     old_name = "en" + "gram"  # the code name the system had until 4 November; it must not appear

@@ -1,10 +1,7 @@
 ::title::
 
 
-
 !A Lightweight External Memory Engine to Bridge the Capability Gap Between On-Device and Cloud Language Models
-
-
 
 
 Ibrahim Sudheysi Ali
@@ -14,17 +11,12 @@ Ibrahim Sudheysi Ali
 ICS 4C
 
 
-
-
 Supervisor Name
 
 Tiberius Tabulu
 
 
-
-
 An Informatics and Computer Science Project Submitted to the School of Computing and Engineering Sciences in Partial Fulfillment of the Requirements for the Award of a Degree in Bachelor of Science in Informatics and Computer Science
-
 
 
 School of Computing and Engineering Sciences
@@ -32,7 +24,6 @@ School of Computing and Engineering Sciences
 Strathmore University
 
 Nairobi, Kenya
-
 
 
 November 2026
