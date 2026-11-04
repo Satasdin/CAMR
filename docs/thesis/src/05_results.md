@@ -459,6 +459,10 @@ A session's memory holds only its own week, so 10 of its 11 right answers were n
 
 On twelve test sentences, "Auto" filed all 12 on the right shelf, including all 8 that were not close to any shelf's examples (E-51). In the app, three moments told on "Auto" went to the Coding, Research and Personal shelves, and each later answer read the right shelf, with its first word in 111 to 119 ms (Figure {fig:app-shelves}). The warm-up's kernels alone took 24 ms off the 4B's first answer, from 111 to 87 ms; a room not read ahead still came off the SSD in milliseconds, the first Long Haul question reading 68 MB in 8 ms (E-52).
 
+### The Assistant in the App {#assistant-results}
+
+The assistant's parts were checked in the app on the night of 4 November (E-55 to E-57). The router adds about 0.1 s to a question. Reading the closest moment of every other shelf when it is within 0.12 of the best found a photographed receipt that the 737 Long Haul notes had outscored (closeness 0.70 against 0.81). Revision judged five test moments on the 4B correctly, 5 of 5: a raised minimum order and new opening hours as updates, a repeat as the same, and a birthday and another branch's hours as new. The eyes read a photographed receipt line by line (a total of KES 730.00, paid by M-Pesa) in about 25 s including loading the vision model, and the 8B then answered both questions about it from memory. These are demonstrations on a handful of cases, not benchmarks.
+
 ### The Claude Yardstick: Time and Cost {#yardstick}
 
 Claude was only a yardstick: it answered the same questions alone, with no memory. Table {tab:claude} gives what it cost on the Long Haul.

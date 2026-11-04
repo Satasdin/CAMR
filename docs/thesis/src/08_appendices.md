@@ -107,3 +107,6 @@ Table: {#decisions} Decision log entries cited in this report
 | E-50 | Swarm removed: the app is Chat and Code |
 | E-51 | Shelves: memory kept apart by kind of work (Projects, Coding, Research, Personal), and read as one |
 | E-52 | Warm before the first question: kernels built, newest rooms read into RAM |
+| E-55 | The chat is an assistant, and the model decides when to reach into memory |
+| E-56 | Memory that revises itself, never by deleting |
+| E-57 | Eyes: a vision model that also reasons (Qwen3-VL-4B-Thinking) |
