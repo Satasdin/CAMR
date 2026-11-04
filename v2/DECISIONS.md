@@ -612,3 +612,37 @@ their shelves.
 with their records kept: the 27B, Qwen2.5-0.5B, Qwen2.5-VL 3B (once the multimodal benchmark ended), a partial
 Gemma 3 download, and 511 GB of finished benchmarks' memory folders. Emptying the Trash is his to do. The Ollama
 vision model (`qwen2.5vl:3b`) is left for him to remove: `ollama rm qwen2.5vl:3b`.
+
+**E-55 The chat is an assistant, and the model decides when to reach into memory.** Ibrahim found the chat answering
+"show me step by step" with "I don't know": every question went through memory's strict answer ("only the notes,
+else I don't know"), with no conversation.
+- **Why not a closeness threshold:** in the Long Haul memory, "hello" sits at 0.81 from its nearest moment and "What
+  is Otieno's surname?" at 0.72, so closeness cannot separate the two kinds of question.
+- **The router:** the model routes each message with a one-word answer (MEMORY or GENERAL) that reads the last two
+  turns, so follow-ups stay with the conversation. It adds about 0.1 s, and its word is never shown.
+- **MEMORY:** the notes path as before, with conversation rules after the notes. The closest moment of every other
+  shelf is read too, as words, when it is within 0.12 of the best. That near-tie read found a photographed receipt
+  that 737 Long Haul notes had outscored (0.70 against 0.81).
+- **GENERAL:** the model answers from its own knowledge with the last six turns, and thinks aloud when it is a
+  thinking build and the user wants to see it. Qwen3 1.7B and 8B can think; 4B Instruct 2507 cannot.
+- **Research:** reads the best Wikipedia page through its public API. The page goes into the user's turn as marked
+  data, never into the system prompt.
+- **Learning:** what was asked and answered is kept on a shelf, the source with it. Web moments are tagged web, and
+  general knowledge goes on Research.
+
+**E-56 Memory that revises itself, never by deleting.** Before a moment is kept, it is compared with the closest
+moment of the same source (user, file or web, by the vault tags it was kept with).
+- **Only close pairs are judged:** below 0.78 closeness a moment is simply kept. A close pair gets a one-word judge:
+  SAME, UPDATE or NEW.
+- **UPDATE:** keeps the new moment, saying which note it updates, and tags the old note superseded and links the
+  two.
+- **SAME:** leaves a repeat out only when it is also 0.95 close and the judge said exactly SAME. Nothing the user
+  says is lost on the judge's word alone.
+- **On the 4B:** a raised minimum order and new opening hours were judged updates, a repeat the same, and a
+  birthday and another branch's hours new: 5 of 5.
+
+**E-57 Eyes: a vision model that also reasons.** Images and videos dropped into the chat are read into memory by
+Qwen3-VL-4B-Thinking (mlx-community, 4-bit, 3.1 GB), loaded the first time a picture needs it. It read a
+photographed receipt line by line (total KES 730.00, paid by M-Pesa) in about 25 s with the load, and the 8B then
+answered both questions about it from memory. PDFs are read as text at once; describing their pictures with a
+thinking model would take minutes. A file's moments say they are not the user's words.
