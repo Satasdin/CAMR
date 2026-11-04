@@ -1,32 +1,74 @@
-# CAMR
+# The lightweight memory engine (code name `engram`; the name is still to be picked)
 
-**Better, never heavier.** A small language model on a Mac whose memory lives on the SSD and grows. It keeps getting
-better at your life without getting slower or bigger.
+**Memory a local model reads like its own weights.** A small model on a Mac keeps a memory that lives on the SSD and
+grows past any context window, without getting slower or heavier. It is not a vector database. The memory is the
+model's own keys and values, saved once and read straight back onto its desk. People browse the same memory as a
+vault of linked notes.
 
-The plan, with every design decision and the build order:
-https://claude.ai/artifact/9ZeFGovgtQHjGfKw7CJ8AN. Technical calls are logged in [DECISIONS.md](DECISIONS.md).
+This is the thesis project "A Lightweight External Memory Engine to Bridge the Capability Gap Between On-Device and
+Cloud Language Models". Technical calls are logged in [DECISIONS.md](DECISIONS.md) (E-29 onward for the engine as it
+stands). The overnight summary of 4 November is in [../MORNING.md](../MORNING.md).
 
-## Where it is
+## Three layers, swapped by what the task needs
 
-| Step | | Status |
-|---|---|---|
-| 0 | The ruler: scripted lives, weekly quiz, test records, baselines | done |
-| 1 | Rooms and notes | done (2 of 3 marks passed, E-20) |
-| 2 | Event log and first brain view | done: the log, and the brain view inside the app |
-| 3–6 | Translation layer, sleep, full brain view, proof run | future work (E-22) |
+| Layer | Lives in | What it holds | Module |
+|---|---|---|---|
+| Subconscious | RAM, always on | a small core of facts every answer starts from | `engram/core.py` |
+| Conscious | SSD, burst-read into RAM | rooms of saved notes (keys and values); hot rooms stay in RAM, cold ones sleep under a disk budget | `engram/rooms.py`, `engram/swap.py` |
+| Archive | SSD, as text | every moment as a linked note, browsable like an Obsidian vault | `engram/vault.py` |
 
-## How CAMR v2 remembers
+**Reach** decides who shares a memory: one session, a project, an agent, or everyone (`engram/reach.py`). Every
+answer records its speed, retrieval time and SSD bandwidth (`engram/metrics.py`).
 
-Every moment it is told is read by the model once, the day it happens, with related moments in view. What the model
-writes to itself inside its layers while reading (its *notes*: keys and values at every layer) is saved to the SSD,
-in a *room* of related moments. A room is one continuous page of up to 512 tokens.
+## The app
 
-A question opens the one room holding the moment closest to it. That room is read from the SSD in one burst and laid
-in front of the model already read. The four closest moments are re-read as words, just before the question. The
-model then reads only those few words and the question.
+`python -m engram.app --open` serves one local page with six screens. Screenshots are in [docs/screens](docs/screens).
 
-Why one room and not several: notes written apart don't read well side by side for a 1.7B model. DECISIONS.md E-15
-and E-16 have the measurements.
+| Screen | What it does |
+|---|---|
+| Models | what fits this Mac, from measured speeds; Hugging Face search and download; MLX and Ollama models side by side |
+| Chat | memory on or off per session, a reach picker, and the stage: SSD → RAM → desk as each answer is made |
+| Code | a coding agent on a local model: personas, tools, MCP servers, skills, and a shell that asks first |
+| Swarm | one to eight agents, each with its own memory, sharing one RAM budget |
+| Memory | every room drawn as a tensor tile, the bus, the RAM ruler and the vault; any answer replayed |
+| Bench | every benchmark record, live, against Claude alone |
+
+## Pairing with Ollama
+
+Ollama cannot load saved keys and values, so the engine gives it memory as words through a proxy that speaks
+Ollama's API:
+
+```sh
+python -m engram.pair.ollama --port 11435 --memory ~/.engram/ollama
+```
+
+Then run `OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:1.7b`. See [docs/site/ollama.md](docs/site/ollama.md).
+
+## The proof
+
+Run on the MacBook Pro M5 Pro, 4 November 2026:
+- [docs/site/benchmarks.md](docs/site/benchmarks.md) explains how;
+- `records/bench/` holds the records;
+- [../MORNING.md](../MORNING.md) has the numbers.
+
+The main test is the **Long Haul**: one scripted project of 110 working days and 2.01M tokens, cut at 64K, 256K, 1M
+and 2M, with 216 questions graded by rule. Claude Haiku, Sonnet and Opus 5.5 answer the same questions alone, with
+no memory, as the yardstick.
+
+| Right answers | 64K (34) | 256K (40) | 1M (69) | 2M (73) | First word |
+|---|---|---|---|---|---|
+| Engine, Qwen3 1.7B | 19 | 20 | 21 | 21 | 0.10–0.14 s |
+| The same 1.7B, bare | 7 | 7 | 14 | 9 | 0.13 s |
+| Claude Haiku 5.5, alone | 22 | 21 | 17 | 10 | 13–16 s |
+| Claude Sonnet 5.5, alone | 28 | 35 | 43 | 32 | 13–53 s |
+
+From 112K to 2.01M tokens of history, the engine's first word stays at 0.08–0.15 s, retrieval at 17–24 ms and peak
+RAM at about 4.3 GB.
+
+## Docs for agents
+
+[llms.txt](llms.txt) and [llms-full.txt](llms-full.txt) describe the engine for coding agents. The pages they come
+from are in [docs/site](docs/site).
 
 ## Install and run (Apple-silicon Mac)
 
@@ -34,30 +76,9 @@ and E-16 have the measurements.
 sh scripts/install.sh
 ```
 
-The script:
-- sets up Python;
-- installs CAMR;
-- downloads its two models (about 1.3 GB, first run only);
-- runs a health check that should end in `PASS`;
-- opens the app at http://127.0.0.1:8765.
+After that, `.venv/bin/python -m engram.app --open` starts it again.
 
-After that, `.venv/bin/python -m engram.app --open` starts it again. The [user guide](docs/USER_GUIDE.md) covers each tab, a five-minute demonstration, and troubleshooting.
-
-## Use it: the app
-
-One local page, four tabs:
-- **Simulation:** a 12-week scripted life arrives day by day in its own memory, quizzed every week. Charts show facts known climbing while the wait and the memory in use stay flat; it takes about 90 seconds.
-
-- **Chat:** tell it things and it remembers them; ask with a question mark and it answers from memory.
-- **Errands:** an agent with ten tools. CAMR fills each tool's details from memory ("Set a reminder for my
-  neighbour's birthday" becomes `set_reminder(date = "10 October")`).
-- **Brain:** any answer or errand replayed word by word. Memory is drawn as a glowing specimen: each moment a red
-  cell, each room a lobe. The moments each written word leaned on flare green; the ones only picked up get a white
-  ring. A traces strip underneath has one row per moment. "Went wrong" and "Went right" sort a quizzed life's
-  answers, for assessing what went wrong or just watching it work.
-
-To see it on a whole life, load one in the Chat tab (about 330 moments) and press "Ask its 100 questions" or
-"Give it 100 errands".
+# History: CAMR v2 before the rethink (2–3 November 2026)
 
 ## The agent use case: errands (3 November 2026)
 
