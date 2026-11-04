@@ -200,6 +200,10 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 
 ## Your calls (taste and vision only)
 
+0. **The disk is nearly full (12 GB free at 23:30).** The finished benchmarks left 516 GB of memory folders in
+   `work/memories/`. Their results are all in `v2/records/`; the folders only let the Memory screen replay old
+   answers. I did not delete them. If you agree, run `rm -rf ~/Desktop/camr-build-wt/work/memories/*.nosync`. Keep
+   `~/.camr/app/` (73 GB): it is the demo's memory for the 4B and the 1.7B.
 1. **The name** is now CAMR everywhere, as you chose. The engine's package is `camr_engine`, because `camr` is the
    old baseline's.
 2. **Three small design choices** at the end of `v2/design/DIRECTION.md`:
