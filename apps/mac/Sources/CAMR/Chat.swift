@@ -480,6 +480,29 @@ struct TurnView: View {
             .overlay(alignment: .leading) { Rectangle().fill(Theme.model.opacity(0.35)).frame(width: 2) }
     }
 
+    /// LaTeX as the model writes maths, made readable: √, ×, ≈, ², fractions; $ and $$ fences dropped.
+    private func mathText(_ text: String) -> String {
+        var t = text
+        let words: [(String, String)] = [("\\times", "×"), ("\\cdot", "·"), ("\\approx", "≈"), ("\\neq", "≠"),
+                                         ("\\leq", "≤"), ("\\geq", "≥"), ("\\le ", "≤ "), ("\\ge ", "≥ "),
+                                         ("\\pm", "±"), ("\\div", "÷"), ("\\pi", "π"), ("\\infty", "∞"),
+                                         ("\\quad", "  "), ("\\,", " "), ("\\left", ""), ("\\right", ""),
+                                         ("\\boxed", ""), ("\\displaystyle", "")]
+        for (a, b) in words { t = t.replacingOccurrences(of: a, with: b) }
+        let rules: [(String, String)] = [(#"\\sqrt\{([^{}]*)\}"#, "√($1)"), (#"\\frac\{([^{}]*)\}\{([^{}]*)\}"#, "($1)/($2)"),
+                                         (#"\\text\{([^{}]*)\}"#, "$1"), (#"\\mathrm\{([^{}]*)\}"#, "$1"),
+                                         (#"\^2(?![0-9])"#, "²"), (#"\^3(?![0-9])"#, "³"), (#"\^\{([^{}]*)\}"#, "^$1"),
+                                         (#"√\(([0-9a-z.]+)\)"#, "√$1")]
+        for (pattern, with) in rules {
+            t = t.replacingOccurrences(of: pattern, with: with, options: .regularExpression)
+        }
+        t = t.replacingOccurrences(of: "$$", with: "").replacingOccurrences(of: "\\[", with: "")
+            .replacingOccurrences(of: "\\]", with: "").replacingOccurrences(of: "\\(", with: "")
+            .replacingOccurrences(of: "\\)", with: "")
+        t = t.replacingOccurrences(of: #"\$([^$\n]+)\$"#, with: "$1", options: .regularExpression)
+        return t.replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
+    }
+
     /// The answer split at its fenced code blocks: prose and code in turn.
     private func blocks(_ text: String) -> [(code: Bool, text: String)] {
         var out: [(Bool, String)] = []
@@ -498,8 +521,8 @@ struct TurnView: View {
 
     /// Markdown as the model writes it (bold, code, links), line breaks kept.
     private func rendered(_ text: String) -> AttributedString {
-        // headings and bullets, as the model writes them: a heading bold, a "- " item a bullet
-        let lines = text.components(separatedBy: "\n").map { line -> String in
+        // headings and bullets, as the model writes them: a heading bold, a "- " item a bullet; maths readable
+        let lines = mathText(text).components(separatedBy: "\n").map { line -> String in
             let t = line.trimmingCharacters(in: .whitespaces)
             if t.hasPrefix("#") {
                 let h = t.drop(while: { $0 == "#" }).trimmingCharacters(in: .whitespaces)
