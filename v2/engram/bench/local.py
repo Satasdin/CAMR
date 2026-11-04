@@ -395,6 +395,10 @@ class Engine(Contender):
                       wait_s=round(reply.ttft_s, 4), seconds={k: round(v, 4) for k, v in rec.seconds.items()},
                       tier=rec.tier, asleep=rec.asleep, read_bytes=rec.read_bytes, core_tokens=rec.core,
                       reach=rec.reach, family=family, watched=False)
+        return self._answer(rec, reply, peak)
+
+    def _answer(self, rec, reply, peak: float | None) -> Answer:
+        """One answer as the bench records it, from the room chosen and the reply."""
         r = reply.metrics
         m = metrics(ttft_s=r.first_word_s, total_s=r.total_s, prefill_tps=r.prefill_tps,
                     decode_tps=decode_tps(r.answer_tokens, r.total_s, r.first_word_s),
