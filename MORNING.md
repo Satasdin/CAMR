@@ -1,5 +1,28 @@
 # What happened overnight (4 Nov 2026)
 
+## For the 8am presentation
+
+- **The app:** `dist/CAMR.app`, a native Mac app with Chat and Code, plus the weights view. Double-click it; it
+  starts the engine with Qwen3 4B, whose memory already holds the Long Haul's first 256K tokens (737 rooms).
+- **The demo:** type the questions from `apps/mac/demo.txt`, or let the app play them:
+  `CAMR_SCRIPT=apps/mac/demo.txt dist/CAMR.app/Contents/MacOS/CAMR`.
+  - Who is the Karen landlord? Patrick Chacha.
+  - The truck's plate? KDS 711Z, read from room 609 on the SSD, first word in 231 ms.
+  - A never-said surname? "I don't know."
+  - Remember a new fact, then ask it back.
+  - Memory off, the same plate question: "I don't know."
+- **The weights view:** ⌘E shows it large beside the chat, for the projector.
+  - When the model loads, its 36 layers arrive one by one.
+  - With memory on, each answer's room glows, and its notes flow into every layer.
+  - Every layer's measured activity moves word by word.
+  - With memory off, only the model's layers move.
+- **Code:** open `work/demo/kitchen`, then ask "What does vat_cents return for 10,000 cents, and why? Look at
+  money.py." It lists the files, reads `money.py`, and answers 1,600 with the half-up rounding.
+- **Screens:** `apps/mac/screens/`.
+- **Landing page:** `site/`. Preview it with
+  `python3 -m http.server 8077 --directory ~/Desktop/camr-build-wt`, then open http://127.0.0.1:8077/site/.
+  Nothing is published.
+
 Branch `camr-build` on Satasdin/CAMR. Everything here is committed and pushed. Nothing is merged into the default
 branch. The plan doc's Benchmarks tab has the same numbers: https://claude.ai/artifact/4EsHPLGikBK8A6chtqbQLj
 
@@ -24,7 +47,13 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 - **Reach:** `reach.py`, for session, project, agent or global memory.
 - **Metrics:** `metrics.py`, every answer's speed, retrieval and bandwidth.
 
-**The app** (`python -m camr_engine.app --open`): five screens in the "Instrument" design you picked. Screenshots are in
+**The Mac app** (`apps/mac`, built by `apps/mac/build.sh` into `dist/CAMR.app` with only the command-line tools):
+Chat and Code, the weights view, and a model picker (1.7B, 4B or 8B). Each model has its own memory under
+`~/.camr/app/<model>/`. `camr_engine.live` reports what the app draws: the weights arriving, the room each answer
+reads, and each layer's activity for every word. Swarm is removed. iPhone needs Xcode, which is not installed; the
+SwiftUI code is written to carry over.
+
+**The web app** (`python -m camr_engine.app --open`) still has five screens, kept as a fallback; screenshots are in
 `v2/docs/screens/`.
 
 | Screen | What it does |
@@ -35,8 +64,12 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 | Memory | every room as a tensor tile, the bus, the RAM ruler, the vault; replays any answer |
 | Bench | every record, live: score against history, first word, peak RAM, and Claude's spend |
 
-**The pairing:** `camr_engine.pair.ollama` is a proxy that gives Ollama's CLI memory as words
-(`OLLAMA_HOST=127.0.0.1:11435`).
+**The pairing:**
+- `camr_engine.pair.ollama` is a proxy that gives Ollama's CLI memory as words (`OLLAMA_HOST=127.0.0.1:11435`).
+- `camr serve` is an OpenAI-compatible endpoint with memory (`http://127.0.0.1:11436/v1`), for Ollama, LM Studio,
+  OpenCode, curl or any OpenAI SDK.
+- Installers are in `packaging/`: `curl | sh`, `uv tool`, npm `camr-memory`, and a Homebrew formula (untested: no
+  Homebrew here). See `v2/docs/site/install.md`.
 
 **The proof:**
 - `camr_engine/bench/`: the Long Haul (our own test, now extendable to 4M tokens), the local, Ollama and Claude runners,
@@ -116,9 +149,14 @@ On the same 2.01M tokens, Claude waits 13–105 s before its first token.
 |---|---|---|---|---|
 | MATH-500, levels 3–5 (50) | 44 | 47 | | |
 | AIME 2025 + 2026 (60) | 54 | 56 | | |
-| HARP pairs, correction told (60) | 55 | 58 | not run | not run |
-| HARP pairs, nothing told (60) | 48 | 52 | | |
-| BABILong 4k–128k (100) | 78 | — | not run | not run |
+| HARP pairs, correction told (60) | 55 | 58 | running | **34** |
+| HARP pairs, nothing told (60) | 48 | 52 | running | 21 |
+| BABILong 4k–128k (100) | 78 | — | 39 | 20 |
+
+The Ollama 1.7B has its thinking off, so on HARP it gets the room Claude has to think in (8,192 tokens) to work in
+its words (E-43); at 400 tokens 80% of its answers were cut off. With that room, a correction told through the
+pairing is worth 13 more right answers (34 against 21); for Claude it is worth 6 or 7. On BABILong the pairing
+hurts (20 against 39): its 512 tokens of notes miss "where is X now", which needs the latest of many mentions.
 
 Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/records/bench/claude-ledger.jsonl`.
 
@@ -153,18 +191,18 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 
 ## What is not done
 
-- **No live demo with a loaded model.** The app screenshots are from a recorded memory with no model loaded, since
-  the GPU was measuring all night.
 - **The engine is not run on the Hugging Face suites.** `suite_run` takes Claude and Ollama only; the engine needs
   a suite wording.
 - **LongMemEval, MemoryAgentBench and Web-Bench** have loaders but no runs.
-- **Running now (queue9):** the Ollama suite runs redone (E-43). The bare BABILong lost 58 answers to a too-strict
-  thinking check, and HARP's 400-token limit cut off 80% of the 1.7B's working. Paired BABILong (20 of 100) stands.
+- **Running now:** the bare Ollama 1.7B on HARP with room to work; then the multimodal memory benchmark (PDFs,
+  images, charts, short videos).
+- **The thesis document:** being assembled at `docs/thesis/CAMR_Thesis.docx`, chapters 1–6.
 - **4M:** rerun on power with the cache cap: 29 of 73 at 3M and at 4M.
 
 ## Your calls (taste and vision only)
 
-1. **The name.** The code still says `camr` and the repo says CAMR. Pick one and I'll rename both.
+1. **The name** is now CAMR everywhere, as you chose. The engine's package is `camr_engine`, because `camr` is the
+   old baseline's.
 2. **Three small design choices** at the end of `v2/design/DIRECTION.md`:
    - amber or ember for RAM;
    - a flat or a layered stage;
@@ -176,8 +214,7 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 ## Look at it
 
 ```bash
-cd ~/Desktop/camr-build-wt/v2 && .venv/bin/python -m camr_engine.app --open
+open ~/Desktop/camr-build-wt/dist/CAMR.app
 ```
 
-That loads the 1.7B. Ask something in Chat (key `2`), then watch Memory (key `5`). Bench (key `6`) has these numbers
-live.
+The web app is still there: `cd ~/Desktop/camr-build-wt/v2 && .venv/bin/python -m camr_engine.app --open`.
