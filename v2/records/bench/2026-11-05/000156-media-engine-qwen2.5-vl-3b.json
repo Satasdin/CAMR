@@ -1,0 +1,2221 @@
+{
+ "kind": "bench",
+ "task": "media",
+ "contender": {
+  "name": "engine:qwen2.5-vl-3b",
+  "kind": "engine",
+  "model": "qwen2.5-vl-3b",
+  "repo": null,
+  "embedder": "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
+  "reach": "project:longhaul",
+  "drives": "camr_engine.memory.Memory at <folder>/project/<project>, as reach.Session drives one reach: choose, then answer with record=True",
+  "layers": [
+   "rooms",
+   "vault",
+   "core",
+   "tiers",
+   "metrics"
+  ],
+  "core": "on, empty: every moment is told untagged, and the core holds only notes tagged core",
+  "ram_bytes": 2000000000,
+  "disk_bytes": 500000000,
+  "wake": false,
+  "room_tokens": 512,
+  "join": 0.8,
+  "closest": 4,
+  "kv_shape": {
+   "layers": 36,
+   "kv_heads": 2,
+   "head_dim": 128,
+   "rope_base": 1000000.0,
+   "token_bytes": 36864
+  },
+  "moment": "[YYYY-MM-DD, day N] text",
+  "day_lines_kept": false,
+  "nap_days": 5,
+  "enable_thinking": false,
+  "system": "You answer questions about a project's history: one developer's log of chats, decisions, code, notes and lessons. Notes from that history come before each question. Answer from them only. When they never say, answer \"I don't know\". Keep each answer short unless the question asks for code or a page.",
+  "prompt": "system: the instructions, then \"Notes:\" with the core, the room and the closest moments, \"End of notes.\", \"Today is <date>.\" and the family's line; user: the question",
+  "today_line": true,
+  "hint_in": "system, after the notes and the date",
+  "hints": {
+   "page": "Reply with the page as one complete HTML document in a ```html block, its CSS included.",
+   "code": "Reply with the code in one ```python block.",
+   "maths": "Show the working in a few short steps, then give the final number on the last line."
+  },
+  "writes": "Memory.remember for each moment; the index is saved at each nap and before a checkpoint's first question (reach.Session.remember saves after every moment)",
+  "questions": "read-only: each question is answered from the memory as the telling left it",
+  "watch": false,
+  "event_log": true,
+  "peak_ram_gb": "MLX's peak over the answer, retrieval included",
+  "files": "media.ingest: copied into the vault's files/, one moment a PDF page, an image or a video frame, each dated as the Long Haul's moments",
+  "describer": "mlx:qwen2.5-vl-3b",
+  "look": null,
+  "seer": null
+ },
+ "thinking": false,
+ "max_tokens": {
+  "page": 1200,
+  "code": 600,
+  "maths": 400,
+  "other": 120
+ },
+ "limit": null,
+ "folder": "/Users/p3wrky/Desktop/camr-build-wt/work/memories/media-engine-qwen2.5-vl-3b-20261105-000156.nosync",
+ "started": "2026-11-05T00:01:56",
+ "environment": {
+  "machine": "Mac17,9",
+  "chip": "Apple M5 Pro",
+  "memory_gb": 24,
+  "power": "AC Power",
+  "load_1m": 2.41,
+  "python": "3.12.12",
+  "camr_commit": "be27c01",
+  "camr_dirty": false,
+  "camr_source_sha": "e3b0c44298fc1c14",
+  "mlx": "0.32.4",
+  "mlx_lm": "0.32.2",
+  "numpy": "2.5.4"
+ },
+ "history_tokens": "the history told so far, as the task counts it (the same for every contender); extra.memory_tokens is the contender's own count of what it holds",
+ "media": {
+  "dir": "/Users/p3wrky/Desktop/camr-build-wt/work/media/s1",
+  "seed": 1,
+  "haul": "../work/haul/s1",
+  "files": {
+   "pdf": 5,
+   "image": 8,
+   "chart": 5,
+   "video": 3
+  },
+  "questions": {
+   "pdf": 8,
+   "image": 9,
+   "chart": 6,
+   "video": 6,
+   "never": 8
+  },
+  "noise_tokens": 98960,
+  "file_tokens": 3684,
+  "history_tokens": 102644,
+  "first_file_at": 4000,
+  "last_file_at": 60000
+ },
+ "words": {
+  "describer": "mlx:qwen2.5-vl-3b",
+  "describe_s": 74.742,
+  "model_calls": 44,
+  "moments": 29
+ },
+ "checkpoints": [
+  {
+   "name": "all",
+   "tokens": 102644,
+   "events": 905,
+   "ingest": {
+    "events": 905,
+    "tokens": 102644,
+    "seconds": 78.742,
+    "tell_s": 78.735,
+    "read_s": 0.007,
+    "events_per_s": 11.49,
+    "tokens_per_s": 1303.5
+   },
+   "status": {
+    "moments": 904,
+    "rooms": 623,
+    "history_tokens": 118850,
+    "awake_rooms": 64,
+    "asleep_rooms": 559,
+    "hot_rooms": 18,
+    "ram_used_bytes": 204816384,
+    "disk_awake_bytes": 487526400,
+    "folder_bytes": 492817807,
+    "disk_gb": 0.502621,
+    "vault_notes": 904,
+    "core_tokens": 0,
+    "token_bytes": 36864,
+    "join_hits": {
+     "ssd": 150,
+     "ram": 131
+    },
+    "remember_s": 78.649,
+    "saves_s": 0.007,
+    "naps": {
+     "count": 1,
+     "seconds": 0.076,
+     "faded_notes": 317,
+     "slept_rooms": 0
+    },
+    "files": 21,
+    "files_bytes": 9803452,
+    "looked": 0
+   },
+   "footprint_gb": 3.299,
+   "summary": {
+    "pdf": {
+     "questions": 8,
+     "right": 8,
+     "graded": 8,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 8
+     },
+     "ttft_s": {
+      "p50": 0.3303,
+      "p90": 0.3908
+     },
+     "total_s": {
+      "p50": 0.3955,
+      "p90": 0.4335
+     },
+     "prefill_tps": {
+      "p50": 3357.25,
+      "p90": 3542.67
+     },
+     "decode_tps": {
+      "p50": 112.5,
+      "p90": 117.62
+     },
+     "retrieval_ms": {
+      "p50": 14.622,
+      "p90": 14.7855
+     },
+     "bytes_read": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "gbps": {
+      "p50": null,
+      "p90": null
+     },
+     "read_share": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "context_tokens": {
+      "p50": 1155.0,
+      "p90": 1355.9
+     },
+     "history_tokens": 102644,
+     "peak_ram_gb": 3.196,
+     "disk_gb": 0.502593,
+     "tiers": {
+      "vault": 8
+     }
+    },
+    "image": {
+     "questions": 9,
+     "right": 9,
+     "graded": 9,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 9
+     },
+     "ttft_s": {
+      "p50": 0.2641,
+      "p90": 0.3649
+     },
+     "total_s": {
+      "p50": 0.3319,
+      "p90": 0.4138
+     },
+     "prefill_tps": {
+      "p50": 3280.1,
+      "p90": 3440.7
+     },
+     "decode_tps": {
+      "p50": 111.3,
+      "p90": 118.7
+     },
+     "retrieval_ms": {
+      "p50": 14.404,
+      "p90": 14.5298
+     },
+     "bytes_read": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "gbps": {
+      "p50": null,
+      "p90": null
+     },
+     "read_share": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "context_tokens": {
+      "p50": 890.0,
+      "p90": 1270.6
+     },
+     "history_tokens": 102644,
+     "peak_ram_gb": 3.186,
+     "disk_gb": 0.502602,
+     "tiers": {
+      "vault": 9
+     }
+    },
+    "chart": {
+     "questions": 6,
+     "right": 6,
+     "graded": 6,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 6
+     },
+     "ttft_s": {
+      "p50": 0.2185,
+      "p90": 0.236
+     },
+     "total_s": {
+      "p50": 0.2436,
+      "p90": 0.265
+     },
+     "prefill_tps": {
+      "p50": 3160.2,
+      "p90": 3298.8
+     },
+     "decode_tps": {
+      "p50": 104.2,
+      "p90": 104.9
+     },
+     "retrieval_ms": {
+      "p50": 14.408,
+      "p90": 14.565
+     },
+     "bytes_read": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "gbps": {
+      "p50": null,
+      "p90": null
+     },
+     "read_share": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "context_tokens": {
+      "p50": 706.0,
+      "p90": 796.5
+     },
+     "history_tokens": 102644,
+     "peak_ram_gb": 3.044,
+     "disk_gb": 0.502608,
+     "tiers": {
+      "vault": 6
+     }
+    },
+    "video": {
+     "questions": 6,
+     "right": 6,
+     "graded": 6,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 6
+     },
+     "ttft_s": {
+      "p50": 0.2111,
+      "p90": 0.2363
+     },
+     "total_s": {
+      "p50": 0.2474,
+      "p90": 0.2728
+     },
+     "prefill_tps": {
+      "p50": 3168.8,
+      "p90": 3287.85
+     },
+     "decode_tps": {
+      "p50": 108.6,
+      "p90": 114.65
+     },
+     "retrieval_ms": {
+      "p50": 14.4015,
+      "p90": 14.525
+     },
+     "bytes_read": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "gbps": {
+      "p50": null,
+      "p90": null
+     },
+     "read_share": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "context_tokens": {
+      "p50": 690.5,
+      "p90": 795.0
+     },
+     "history_tokens": 102644,
+     "peak_ram_gb": 3.018,
+     "disk_gb": 0.502614,
+     "tiers": {
+      "vault": 6
+     }
+    },
+    "never": {
+     "questions": 8,
+     "right": 4,
+     "graded": 8,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "false_memory": 4,
+      "right": 4
+     },
+     "ttft_s": {
+      "p50": 0.252,
+      "p90": 0.3923
+     },
+     "total_s": {
+      "p50": 0.2897,
+      "p90": 0.4376
+     },
+     "prefill_tps": {
+      "p50": 3241.45,
+      "p90": 3465.3
+     },
+     "decode_tps": {
+      "p50": 112.85,
+      "p90": 115.17
+     },
+     "retrieval_ms": {
+      "p50": 14.4195,
+      "p90": 14.5856
+     },
+     "bytes_read": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "gbps": {
+      "p50": null,
+      "p90": null
+     },
+     "read_share": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "context_tokens": {
+      "p50": 839.0,
+      "p90": 1375.0
+     },
+     "history_tokens": 102644,
+     "peak_ram_gb": 3.111,
+     "disk_gb": 0.502621,
+     "tiers": {
+      "vault": 8
+     }
+    },
+    "all": {
+     "questions": 37,
+     "right": 33,
+     "graded": 37,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 33,
+      "false_memory": 4
+     },
+     "ttft_s": {
+      "p50": 0.2421,
+      "p90": 0.39
+     },
+     "total_s": {
+      "p50": 0.275,
+      "p90": 0.431
+     },
+     "prefill_tps": {
+      "p50": 3274.1,
+      "p90": 3505.42
+     },
+     "decode_tps": {
+      "p50": 111.3,
+      "p90": 116.24
+     },
+     "retrieval_ms": {
+      "p50": 14.417,
+      "p90": 14.648
+     },
+     "bytes_read": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "gbps": {
+      "p50": null,
+      "p90": null
+     },
+     "read_share": {
+      "p50": 0.0,
+      "p90": 0.0
+     },
+     "context_tokens": {
+      "p50": 794.0,
+      "p90": 1351.0
+     },
+     "history_tokens": 102644,
+     "peak_ram_gb": 3.196,
+     "disk_gb": 0.502621,
+     "tiers": {
+      "vault": 37
+     }
+    }
+   },
+   "answers": [
+    {
+     "id": "pdf-invoice-1-total",
+     "family": "pdf",
+     "question": "What was the total, VAT included, on the invoice Garden Estate Yeast Ventures sent us, in shillings?",
+     "expected": "14042",
+     "answer": "14,042",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 14042",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3956,
+      "total_s": 0.4494,
+      "prefill_tps": 3342.9,
+      "decode_tps": 111.5,
+      "retrieval_ms": 14.734,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1337,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.166,
+      "disk_gb": 0.502587,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.671,
+       "core": 0.051,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.734
+      },
+      "room": 22,
+      "new_tokens": 1268,
+      "answer_tokens": 7,
+      "mlx_decode_tps": 145.4,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8522,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "pdf-invoice-1-price",
+     "family": "pdf",
+     "question": "On the invoice from Garden Estate Yeast Ventures, what was the unit price of mangoes, in shillings?",
+     "expected": "280",
+     "answer": "280",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 280",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3887,
+      "total_s": 0.4186,
+      "prefill_tps": 3573.4,
+      "decode_tps": 100.3,
+      "retrieval_ms": 14.751,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1400,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.133,
+      "disk_gb": 0.502588,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.695,
+       "core": 0.044,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.751
+      },
+      "room": 22,
+      "new_tokens": 1331,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 165.7,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8673,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "pdf-invoice-2-total",
+     "family": "pdf",
+     "question": "What was the total, VAT included, on the invoice Eastleigh Millers sent us, in shillings?",
+     "expected": "31088",
+     "answer": "31,088",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 31088",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3407,
+      "total_s": 0.3941,
+      "prefill_tps": 3527.8,
+      "decode_tps": 112.4,
+      "retrieval_ms": 14.569,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1215,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.169,
+      "disk_gb": 0.502589,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.544,
+       "core": 0.014,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.569
+      },
+      "room": 169,
+      "new_tokens": 1146,
+      "answer_tokens": 7,
+      "mlx_decode_tps": 146.5,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8122,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "pdf-invoice-3-total",
+     "family": "pdf",
+     "question": "What was the total, VAT included, on the invoice Garissa Carrots Agencies sent us, in shillings?",
+     "expected": "15358",
+     "answer": "15,358",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 15358",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3734,
+      "total_s": 0.4267,
+      "prefill_tps": 3529.5,
+      "decode_tps": 112.6,
+      "retrieval_ms": 14.675,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1330,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.159,
+      "disk_gb": 0.50259,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.65,
+       "core": 0.014,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.675
+      },
+      "room": 169,
+      "new_tokens": 1261,
+      "answer_tokens": 7,
+      "mlx_decode_tps": 146.9,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8784,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "pdf-menu-package",
+     "family": "pdf",
+     "question": "On the catering menu PDF, how much per guest is the Harusi Gold package, in shillings?",
+     "expected": "2000",
+     "answer": "KSh 2,000 per guest",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 2000",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2942,
+      "total_s": 0.378,
+      "prefill_tps": 3277.2,
+      "decode_tps": 119.3,
+      "retrieval_ms": 14.866,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 980,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.15,
+      "disk_gb": 0.502591,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.813,
+       "core": 0.039,
+       "fetch": 0.0,
+       "desk": 0.014,
+       "total": 14.866
+      },
+      "room": 69,
+      "new_tokens": 911,
+      "answer_tokens": 11,
+      "mlx_decode_tps": 141.4,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8364,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "pdf-menu-extra",
+     "family": "pdf",
+     "question": "On the catering menu PDF, how much does a chocolate fountain cost, in shillings?",
+     "expected": "16500",
+     "answer": "KSh 16,500",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 16500",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3199,
+      "total_s": 0.3969,
+      "prefill_tps": 3371.6,
+      "decode_tps": 116.9,
+      "retrieval_ms": 14.39,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1095,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.196,
+      "disk_gb": 0.502592,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.354,
+       "core": 0.024,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.39
+      },
+      "room": 69,
+      "new_tokens": 1026,
+      "answer_tokens": 10,
+      "mlx_decode_tps": 140.1,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.818,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "pdf-menu-minimum",
+     "family": "pdf",
+     "question": "What is the smallest number of guests the catering menu PDF takes a booking for?",
+     "expected": "35",
+     "answer": "35",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 35",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2421,
+      "total_s": 0.2638,
+      "prefill_tps": 3194.9,
+      "decode_tps": 92.2,
+      "retrieval_ms": 14.313,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 794,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.985,
+      "disk_gb": 0.502592,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.281,
+       "core": 0.019,
+       "fetch": 0.0,
+       "desk": 0.013,
+       "total": 14.313
+      },
+      "room": 69,
+      "new_tokens": 725,
+      "answer_tokens": 3,
+      "mlx_decode_tps": 189.5,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.846,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "pdf-schedule-time",
+     "family": "pdf",
+     "question": "According to the delivery schedule PDF, at what time does Ngong Rice Suppliers deliver?",
+     "expected": "5:00 am",
+     "answer": "Monday at 5:00 am",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 5:00 am",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2452,
+      "total_s": 0.3146,
+      "prefill_tps": 3322.9,
+      "decode_tps": 115.3,
+      "retrieval_ms": 14.391,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 832,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.02,
+      "disk_gb": 0.502593,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.366,
+       "core": 0.013,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.391
+      },
+      "room": 207,
+      "new_tokens": 763,
+      "answer_tokens": 9,
+      "mlx_decode_tps": 142.1,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8025,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-receipt-1-total",
+     "family": "image",
+     "question": "What was the total on the receipt from Kisumu Wheat Packers, in shillings?",
+     "expected": "14910",
+     "answer": "14,910",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 14910",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3922,
+      "total_s": 0.4461,
+      "prefill_tps": 3530.7,
+      "decode_tps": 111.3,
+      "retrieval_ms": 14.553,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1397,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.12,
+      "disk_gb": 0.502594,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.528,
+       "core": 0.012,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.553
+      },
+      "room": 22,
+      "new_tokens": 1328,
+      "answer_tokens": 7,
+      "mlx_decode_tps": 145.0,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8557,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-receipt-2-total",
+     "family": "image",
+     "question": "What was the total on the receipt from Marsabit Cream Packers, in shillings?",
+     "expected": "3340",
+     "answer": "3,340",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 3340",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3581,
+      "total_s": 0.4057,
+      "prefill_tps": 3418.2,
+      "decode_tps": 105.0,
+      "retrieval_ms": 14.476,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1239,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.186,
+      "disk_gb": 0.502595,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.45,
+       "core": 0.014,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.476
+      },
+      "room": 285,
+      "new_tokens": 1170,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 143.7,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8367,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-receipt-2-code",
+     "family": "image",
+     "question": "What was the M-Pesa reference on the receipt from Marsabit Cream Packers?",
+     "expected": "QL7LSLJ73S",
+     "answer": "QL7LSLJ73S",
+     "verdict": "right",
+     "right": true,
+     "reason": "names QL7LSLJ73S",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2641,
+      "total_s": 0.3319,
+      "prefill_tps": 3304.4,
+      "decode_tps": 118.0,
+      "retrieval_ms": 14.524,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 890,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.069,
+      "disk_gb": 0.502596,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.486,
+       "core": 0.026,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.524
+      },
+      "room": 285,
+      "new_tokens": 821,
+      "answer_tokens": 9,
+      "mlx_decode_tps": 145.3,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8362,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-receipt-3-total",
+     "family": "image",
+     "question": "What was the total on the receipt from Kitengela Bottled Wholesalers, in shillings?",
+     "expected": "5160",
+     "answer": "5,160",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 5160",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3554,
+      "total_s": 0.4004,
+      "prefill_tps": 3401.7,
+      "decode_tps": 111.1,
+      "retrieval_ms": 14.479,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1224,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.175,
+      "disk_gb": 0.502597,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.443,
+       "core": 0.024,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.479
+      },
+      "room": 299,
+      "new_tokens": 1155,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 151.9,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8255,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-receipt-4-total",
+     "family": "image",
+     "question": "What was the total on the receipt from Buruburu Ventures, in shillings?",
+     "expected": "12360",
+     "answer": "12,360",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 12360",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2951,
+      "total_s": 0.3476,
+      "prefill_tps": 3221.6,
+      "decode_tps": 114.3,
+      "retrieval_ms": 14.339,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 970,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.141,
+      "disk_gb": 0.502598,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.306,
+       "core": 0.022,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.339
+      },
+      "room": 76,
+      "new_tokens": 901,
+      "answer_tokens": 7,
+      "mlx_decode_tps": 150.4,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7879,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-notice-meeting",
+     "family": "image",
+     "question": "At what time is the Kilimani staff meeting on the notice?",
+     "expected": "2:00 pm",
+     "answer": "2:00 pm",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 2:00 pm",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2115,
+      "total_s": 0.2556,
+      "prefill_tps": 3179.7,
+      "decode_tps": 113.4,
+      "retrieval_ms": 14.286,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 693,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.065,
+      "disk_gb": 0.502599,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.236,
+       "core": 0.039,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.286
+      },
+      "room": 123,
+      "new_tokens": 624,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 156.6,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8682,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-notice-fumigation",
+     "family": "image",
+     "question": "On which date does the Ruaka kitchen close for fumigation, according to the notice?",
+     "expected": "6 December",
+     "answer": "December 6th",
+     "verdict": "right",
+     "right": true,
+     "reason": "names December 6",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2249,
+      "total_s": 0.2615,
+      "prefill_tps": 3280.1,
+      "decode_tps": 109.3,
+      "retrieval_ms": 14.404,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 756,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.951,
+      "disk_gb": 0.5026,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.371,
+       "core": 0.021,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.404
+      },
+      "room": 308,
+      "new_tokens": 687,
+      "answer_tokens": 5,
+      "mlx_decode_tps": 162.6,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.9076,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-notice-gas",
+     "family": "image",
+     "question": "On which day of the week do the LPG gas cylinders come now, by the notice?",
+     "expected": "Thursday",
+     "answer": "Thursday",
+     "verdict": "right",
+     "right": true,
+     "reason": "names Thursday",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1751,
+      "total_s": 0.1885,
+      "prefill_tps": 3113.8,
+      "decode_tps": 74.6,
+      "retrieval_ms": 14.355,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 567,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.015,
+      "disk_gb": 0.502601,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.309,
+       "core": 0.035,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.355
+      },
+      "room": 305,
+      "new_tokens": 498,
+      "answer_tokens": 2,
+      "mlx_decode_tps": 258.2,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.9018,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "image-notice-wifi",
+     "family": "image",
+     "question": "What is the staff Wi-Fi password on the notice?",
+     "expected": "chapati21",
+     "answer": "The password on the notice is \"chapati21\".",
+     "verdict": "right",
+     "right": true,
+     "reason": "names chapati21",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1718,
+      "total_s": 0.2706,
+      "prefill_tps": 2899.5,
+      "decode_tps": 121.5,
+      "retrieval_ms": 14.107,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 524,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.945,
+      "disk_gb": 0.502602,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.066,
+       "core": 0.03,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.107
+      },
+      "room": 99,
+      "new_tokens": 455,
+      "answer_tokens": 13,
+      "mlx_decode_tps": 141.2,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8599,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "chart-charcoal",
+     "family": "chart",
+     "question": "In the chart of charcoal used per branch, how many kilograms did Kasarani use?",
+     "expected": "270",
+     "answer": "270",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 270",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1963,
+      "total_s": 0.225,
+      "prefill_tps": 3140.7,
+      "decode_tps": 104.5,
+      "retrieval_ms": 14.63,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 636,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.037,
+      "disk_gb": 0.502603,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.59,
+       "core": 0.027,
+       "fetch": 0.0,
+       "desk": 0.013,
+       "total": 14.63
+      },
+      "room": 300,
+      "new_tokens": 567,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 174.8,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8716,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "chart-catering-week",
+     "family": "chart",
+     "question": "In the chart of catering orders per week, how many orders were there in week 4?",
+     "expected": "55",
+     "answer": "55",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 55",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2257,
+      "total_s": 0.247,
+      "prefill_tps": 3292.0,
+      "decode_tps": 93.9,
+      "retrieval_ms": 14.5,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 761,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.956,
+      "disk_gb": 0.502604,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.454,
+       "core": 0.034,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.5
+      },
+      "room": 206,
+      "new_tokens": 692,
+      "answer_tokens": 3,
+      "mlx_decode_tps": 195.0,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.879,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "chart-sales-share",
+     "family": "chart",
+     "question": "In the pie chart of sales by channel, what share of sales came through M-Pesa online, in percent?",
+     "expected": "23",
+     "answer": "23%",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 23",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2256,
+      "total_s": 0.2548,
+      "prefill_tps": 3179.7,
+      "decode_tps": 102.7,
+      "retrieval_ms": 14.456,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 737,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.933,
+      "disk_gb": 0.502605,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.408,
+       "core": 0.037,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.456
+      },
+      "room": 258,
+      "new_tokens": 668,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 171.6,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8508,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "chart-top-dish",
+     "family": "chart",
+     "question": "Which dish was ordered most in the chart of the most ordered dishes?",
+     "expected": "chicken curry",
+     "answer": "chicken curry",
+     "verdict": "right",
+     "right": true,
+     "reason": "names chicken curry",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1929,
+      "total_s": 0.2214,
+      "prefill_tps": 2925.0,
+      "decode_tps": 105.3,
+      "retrieval_ms": 14.296,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 589,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.019,
+      "disk_gb": 0.502606,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.251,
+       "core": 0.033,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.296
+      },
+      "room": 194,
+      "new_tokens": 520,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 175.4,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8507,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "chart-dish-count",
+     "family": "chart",
+     "question": "In the chart of the most ordered dishes, how many orders did chapati rolls have?",
+     "expected": "271",
+     "answer": "271",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 271",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2463,
+      "total_s": 0.2751,
+      "prefill_tps": 3305.6,
+      "decode_tps": 104.2,
+      "retrieval_ms": 14.36,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 832,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.02,
+      "disk_gb": 0.502607,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.328,
+       "core": 0.02,
+       "fetch": 0.0,
+       "desk": 0.013,
+       "total": 14.36
+      },
+      "room": 194,
+      "new_tokens": 763,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 173.2,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8474,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "chart-delivery-zone",
+     "family": "chart",
+     "question": "In the chart of average delivery time by zone, how many minutes does Zone A take?",
+     "expected": "68",
+     "answer": "68 minutes",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 68",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2114,
+      "total_s": 0.2402,
+      "prefill_tps": 3089.3,
+      "decode_tps": 104.2,
+      "retrieval_ms": 14.332,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 675,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.044,
+      "disk_gb": 0.502608,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.289,
+       "core": 0.032,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.332
+      },
+      "room": 132,
+      "new_tokens": 606,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 173.1,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8858,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "video-drink-1",
+     "family": "video",
+     "question": "On the whiteboard in the video, how much was a glass of passion juice for events, in shillings?",
+     "expected": "340",
+     "answer": "340",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 340",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2261,
+      "total_s": 0.255,
+      "prefill_tps": 3261.6,
+      "decode_tps": 103.8,
+      "retrieval_ms": 14.507,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 756,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.951,
+      "disk_gb": 0.502609,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.474,
+       "core": 0.022,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.507
+      },
+      "room": 136,
+      "new_tokens": 687,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 173.5,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.838,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "video-drink-2",
+     "family": "video",
+     "question": "On the whiteboard in the video, how much was a glass of ginger tea for events, in shillings?",
+     "expected": "200",
+     "answer": "200",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 200",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2461,
+      "total_s": 0.275,
+      "prefill_tps": 3301.6,
+      "decode_tps": 103.8,
+      "retrieval_ms": 14.543,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 830,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.018,
+      "disk_gb": 0.50261,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.5,
+       "core": 0.032,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.543
+      },
+      "room": 136,
+      "new_tokens": 761,
+      "answer_tokens": 4,
+      "mlx_decode_tps": 172.5,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7848,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "video-rider-shift",
+     "family": "video",
+     "question": "In the video of the riders' whiteboard, at what time does the morning shift start?",
+     "expected": "5:15 am",
+     "answer": "5:15 am",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 5:15 am",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.196,
+      "total_s": 0.2397,
+      "prefill_tps": 3076.0,
+      "decode_tps": 114.4,
+      "retrieval_ms": 14.331,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 625,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.013,
+      "disk_gb": 0.502611,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.286,
+       "core": 0.033,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.331
+      },
+      "room": 252,
+      "new_tokens": 556,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 157.6,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8336,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "video-tasting",
+     "family": "video",
+     "question": "In the video of the riders' whiteboard, at what time is the Saturday tasting?",
+     "expected": "11:00",
+     "answer": "11:00",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 11:00",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2265,
+      "total_s": 0.2706,
+      "prefill_tps": 3274.1,
+      "decode_tps": 113.4,
+      "retrieval_ms": 14.4,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 760,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.955,
+      "disk_gb": 0.502612,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.356,
+       "core": 0.032,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.4
+      },
+      "room": 253,
+      "new_tokens": 691,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 157.0,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8436,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "video-cylinders",
+     "family": "video",
+     "question": "In the stock-take whiteboard video, how many gas cylinders were left?",
+     "expected": "8",
+     "answer": "8",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 8",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1547,
+      "total_s": 0.1681,
+      "prefill_tps": 2870.4,
+      "decode_tps": 74.6,
+      "retrieval_ms": 14.292,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 470,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.932,
+      "disk_gb": 0.502613,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.248,
+       "core": 0.032,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.292
+      },
+      "room": 171,
+      "new_tokens": 401,
+      "answer_tokens": 2,
+      "mlx_decode_tps": 259.8,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8998,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "video-eggs",
+     "family": "video",
+     "question": "In the stock-take whiteboard video, how many trays of eggs were to be ordered?",
+     "expected": "16",
+     "answer": "16 trays of eggs",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 16",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1555,
+      "total_s": 0.199,
+      "prefill_tps": 2863.4,
+      "decode_tps": 114.9,
+      "retrieval_ms": 14.403,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 471,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.936,
+      "disk_gb": 0.502614,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.36,
+       "core": 0.031,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.403
+      },
+      "room": 172,
+      "new_tokens": 402,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 159.0,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8701,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-invoice-item",
+     "family": "never",
+     "question": "On the invoice from Garden Estate Yeast Ventures, what was the unit price of potatoes, in shillings?",
+     "expected": "I don't know",
+     "answer": "4,205",
+     "verdict": "false_memory",
+     "right": false,
+     "reason": "answers something that was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.392,
+      "total_s": 0.4374,
+      "prefill_tps": 3490.5,
+      "decode_tps": 110.1,
+      "retrieval_ms": 14.422,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1382,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.111,
+      "disk_gb": 0.502615,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.382,
+       "core": 0.028,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.422
+      },
+      "room": 22,
+      "new_tokens": 1313,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 151.2,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8295,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-invoice-supplier",
+     "family": "never",
+     "question": "What was the total, VAT included, on the invoice Hurlingham Traders sent us, in shillings?",
+     "expected": "I don't know",
+     "answer": "31,088",
+     "verdict": "false_memory",
+     "right": false,
+     "reason": "answers something that was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2274,
+      "total_s": 0.2792,
+      "prefill_tps": 3242.8,
+      "decode_tps": 115.8,
+      "retrieval_ms": 14.582,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 756,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.951,
+      "disk_gb": 0.502616,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.547,
+       "core": 0.025,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.582
+      },
+      "room": 515,
+      "new_tokens": 687,
+      "answer_tokens": 7,
+      "mlx_decode_tps": 152.2,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7292,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-menu-package",
+     "family": "never",
+     "question": "On the catering menu PDF, how much per guest is the Jioni Light package, in shillings?",
+     "expected": "I don't know",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2767,
+      "total_s": 0.3213,
+      "prefill_tps": 3311.8,
+      "decode_tps": 112.1,
+      "retrieval_ms": 14.436,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 934,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.108,
+      "disk_gb": 0.502616,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.391,
+       "core": 0.034,
+       "fetch": 0.0,
+       "desk": 0.012,
+       "total": 14.436
+      },
+      "room": 69,
+      "new_tokens": 865,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 154.4,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8134,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-receipt",
+     "family": "never",
+     "question": "What was the total on the receipt from Lamu Ventures, in shillings?",
+     "expected": "I don't know",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3929,
+      "total_s": 0.4382,
+      "prefill_tps": 3454.5,
+      "decode_tps": 110.4,
+      "retrieval_ms": 14.294,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1372,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.111,
+      "disk_gb": 0.502617,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.262,
+       "core": 0.021,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.294
+      },
+      "room": 22,
+      "new_tokens": 1303,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 151.3,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7506,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-notice-meeting",
+     "family": "never",
+     "question": "At what time is the Langata staff meeting on the notice?",
+     "expected": "I don't know",
+     "answer": "2:00 pm",
+     "verdict": "false_memory",
+     "right": false,
+     "reason": "answers something that was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1408,
+      "total_s": 0.1843,
+      "prefill_tps": 3033.0,
+      "decode_tps": 114.9,
+      "retrieval_ms": 14.162,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 451,
+      "history_tokens": 102644,
+      "peak_ram_gb": 2.916,
+      "disk_gb": 0.502618,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.13,
+       "core": 0.021,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.162
+      },
+      "room": 49,
+      "new_tokens": 382,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 159.2,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7923,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-chart-branch",
+     "family": "never",
+     "question": "In the chart of charcoal used per branch, how many kilograms did Upper Hill use?",
+     "expected": "I don't know",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2107,
+      "total_s": 0.2547,
+      "prefill_tps": 3070.1,
+      "decode_tps": 113.6,
+      "retrieval_ms": 14.332,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 669,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.036,
+      "disk_gb": 0.502619,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.293,
+       "core": 0.028,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.332
+      },
+      "room": 300,
+      "new_tokens": 600,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 156.8,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8725,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-video-drink",
+     "family": "never",
+     "question": "On the whiteboard in the video, how much was a glass of lemonade for events, in shillings?",
+     "expected": "I don't know",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2085,
+      "total_s": 0.2524,
+      "prefill_tps": 3067.1,
+      "decode_tps": 113.9,
+      "retrieval_ms": 14.594,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 661,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.027,
+      "disk_gb": 0.50262,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.553,
+       "core": 0.03,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.594
+      },
+      "room": 136,
+      "new_tokens": 592,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 157.2,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7693,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-video-flour",
+     "family": "never",
+     "question": "In the stock-take whiteboard video, how many bags of maize flour were to be ordered?",
+     "expected": "I don't know",
+     "answer": "2 bags",
+     "verdict": "false_memory",
+     "right": false,
+     "reason": "answers something that was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2788,
+      "total_s": 0.3002,
+      "prefill_tps": 3240.1,
+      "decode_tps": 93.5,
+      "retrieval_ms": 14.417,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 922,
+      "history_tokens": 102644,
+      "peak_ram_gb": 3.098,
+      "disk_gb": 0.502621,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.384,
+       "core": 0.022,
+       "fetch": 0.0,
+       "desk": 0.011,
+       "total": 14.417
+      },
+      "room": 172,
+      "new_tokens": 853,
+      "answer_tokens": 3,
+      "mlx_decode_tps": 193.0,
+      "rss_peak_gb": 3.262,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7999,
+      "looked": false,
+      "memory_tokens": 118850
+     },
+     "asked_before": false
+    }
+   ]
+  }
+ ],
+ "finished": "2026-11-05T00:03:26"
+}
