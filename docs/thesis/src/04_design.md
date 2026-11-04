@@ -187,10 +187,10 @@ The script is built once from its seed and cut at fixed sizes; at each cut, a ch
 CAMR v1 has a write path and a read path that meet at one SQLite file (Figure {fig:arch-v1}). Ranking follows Park et al. (2023), with similarity and importance normalised over the candidates, and recency counted in question steps. The gate then decides how much of the ranked list the model sees.
 
 $$\text{score}(n) = w_s\,\hat{s}(n) + w_r\,\gamma^{\Delta t(n)} + w_i\,\hat{\imath}(n)$$ {#composite} [Composite score of a note (baseline)]
-Equation {eq:composite} is the composite score of note n (defaults w_s = 0.60, w_r = 0.15, w_i = 0.25, γ = 0.99; similarity only sets w_s = 1, w_r = w_i = 0).
+Equation {eq:composite} is the composite score of note n (defaults \(w_s = 0.60\), \(w_r = 0.15\), \(w_i = 0.25\), \(\gamma = 0.99\); similarity only sets \(w_s = 1\), \(w_r = w_i = 0\)).
 
 $$n \text{ is admitted} \iff s_{\max} \ge \tau \ \text{ and } \ s(n) \ge s_{\max} - \delta$$ {#gate} [The gate (baseline)]
-Equation {eq:gate} is the gate, where s_max is the best candidate's similarity (defaults τ = 0.50, δ = 0.15).
+Equation {eq:gate} is the gate, where \(s_{\max}\) is the best candidate's similarity (defaults \(\tau = 0.50\), \(\delta = 0.15\)).
 
 ![{#arch-v1} Architecture of the baseline, CAMR v1](diagrams/architecture_v1.png){width=13.5}
 
@@ -200,18 +200,18 @@ The gate and entity bridging made the read path capability-adaptive: on 2WikiMul
 
 CAMR changes what a memory is. Instead of text the model must re-read for every question, each moment is kept as the notes the model wrote while reading it: the keys and values of every layer, which a transformer normally discards after a prompt. Laid in front of the model, they let it continue as if it had just read the moment. Notes are large (Equation {eq:bytes}), so they live on the SSD in rooms of related moments that are written as one continuous page and fetched in one read. A moment joins a room by Equation {eq:room}. The application calls a room a "note" and groups notes by topic on "shelves" (Section {sec:shelves}); this thesis keeps "room" for the engine's unit.
 
-$$\text{room}(m) = \text{room}\Big(\underset{k\,:\ s_{mk} \ge J,\ T_{\text{room}(k)} + t_m \le T_{\max}}{\arg\max}\ s_{mk}\Big), \ \text{ else a new room}$$ {#room} [Room placement of a new moment]
-In Equation {eq:room}, m is the new moment with t_m tokens, s_mk is its similarity to an earlier moment k, and T is a room's tokens (J = 0.80, T_max = 512; E-18).
+$$\text{room}(m) = \text{room}\Big(\underset{k\,:\ s_{mk} \ge J,\ T_{\text{room}(k)} + t_m \le T_{\max}}{\mathrm{arg\,max}}\ s_{mk}\Big), \ \text{ else a new room}$$ {#room} [Room placement of a new moment]
+In Equation {eq:room}, \(m\) is the new moment with \(t_m\) tokens, \(s_{mk}\) is its similarity to an earlier moment \(k\), and \(T\) is a room's tokens (\(J = 0.80\), \(T_{\max} = 512\); E-18).
 
 $$b_{\text{token}} = L \times 2 \times H_{kv} \times d_h \times 2 \text{ bytes}$$ {#bytes} [Notes per token]
-Equation {eq:bytes} gives the notes per token, for L layers, H_kv key–value heads, head size d_h and 16-bit values: 28 × 2 × 8 × 128 × 2 = 114,688 bytes for Qwen3-1.7B and 36 × 2 × 8 × 128 × 2 = 147,456 bytes for Qwen3 4B and 8B (from the records' `kv_shape`). A full room of 512 tokens is therefore 56 MiB for the 1.7B, about 29,000 times its text.
+Equation {eq:bytes} gives the notes per token, for \(L\) layers, \(H_{kv}\) key–value heads, head size \(d_h\) and 16-bit values: 28 × 2 × 8 × 128 × 2 = 114,688 bytes for Qwen3-1.7B and 36 × 2 × 8 × 128 × 2 = 147,456 bytes for Qwen3 4B and 8B (from the records' `kv_shape`). A full room of 512 tokens is therefore 56 MiB for the 1.7B, about 29,000 times its text. To keep the SSD smaller, a room can also be stored at 8 or 4 bits, quantized in groups of 64 values, which takes 17/32 or 9/32 of its 16-bit size; rooms kept at 16 bits are still read as before, and each room's precision is recorded in the index.
 
 ![{#arch} Component diagram of CAMR, the final engine](diagrams/architecture.png)
 
 Each part has one job (Figure {fig:arch}). Rooms owns the room files and the index and knows nothing about models. The Notebook turns tokens into notes and notes into a desk, and is the only part that touches the reader's cache. The Tiers decide where each room's notes are: hot in RAM, awake on the SSD, or asleep as words. The Vault keeps every moment as a Markdown note that a person can open in Obsidian, with links between notes that are used together and a strength that fades (Equation {eq:fade}). The Core holds a few standing facts as notes in RAM. The Event log watches attention without changing it, Metrics times every step, and Live reports what a person can watch. Memory composes them into remember, choose, recall, answer and fade, and a Session composes one Memory per reach. The app, the Code agent, the pairing and every benchmark runner call the same Session or Memory, so the measured read path is the one the user meets.
 
 $$s_{n}(d) = s_{n}(d_0)\times 0.95^{\,d-d_0} + u_n$$ {#fade} [Strength of a vault note]
-In Equation {eq:fade}, a vault note's strength s_n on day d is its strength on the day d_0 it was last brought up to date, reduced by 5% for each day unused, plus 1.0 for each of its u_n uses since then; a note at strength 1 that goes unused for about 45 days falls below 0.1 and counts as faded. Pinned notes never fade, and nothing is ever deleted by the engine. A room is as strong as its strongest note, and when the room files outgrow the disk budget the weakest room sleeps first.
+In Equation {eq:fade}, a vault note's strength \(s_n\) on day \(d\) is its strength on the day \(d_0\) it was last brought up to date, reduced by 5% for each day unused, plus 1.0 for each of its \(u_n\) uses since then; a note at strength 1 that goes unused for about 45 days falls below 0.1 and counts as faded. Pinned notes never fade, and nothing is ever deleted by the engine. A room is as strong as its strongest note, and when the room files outgrow the disk budget the weakest room sleeps first.
 
 Two measurements on the MacBook Air shaped this design. Moments written alone and laid side by side lost the thread: with 30 unrelated moments beside the right one, the reader found 2 of 46 facts from such notes against 32 from the words (E-15). So a room is written as one page, each moment read with the room's earlier moments in view. And one room plus the four closest moments as words knew 158 facts, against 120 for the room alone and 135 for the moments alone (E-16). A single room sits where it was written, so its keys need no turning; with the core before it, a room sits further along the desk and its keys are turned by the core's length (Su et al., 2024).
 
@@ -228,7 +228,7 @@ The order of steps keeps the wait short. The question is embedded once, and the 
 A moment and its room have coupled life cycles: placing a moment changes its room, a question moves a room onto the desk, and the disk budget can put a room to sleep. Figure {fig:states} shows the three state machines; its guards are Equations {eq:room}, {eq:share} and {eq:fade}.
 
 $$\text{share}_j = \frac{\sum_w a_{wj}}{\sum_w \sum_k a_{wk}}, \qquad j \text{ is used} \iff \text{share}_j \ge 0.10$$ {#share} [Share of the desk's attention drawn by a moment]
-Equation {eq:share} is the share of the desk's attention drawn by moment j over an answer, where a_wj is the attention from written word w to j's tokens, averaged over every head of layers 12, 16, 20 and 24 (E-21).
+Equation {eq:share} is the share of the desk's attention drawn by moment \(j\) over an answer, where \(a_{wj}\) is the attention from written word \(w\) to \(j\)'s tokens, averaged over every head of layers 12, 16, 20 and 24 (E-21).
 
 ![{#states} State machines of a moment, a room and a vault note's strength](diagrams/state_room.png){width=13.5}
 
@@ -287,7 +287,7 @@ The Mac app is a SwiftUI process that starts the engine as a second, Python proc
 
 ### Shelves and the Warm-Up {#shelves}
 
-The application keeps memory on four shelves by kind of work: Projects, Coding, Research and Personal (E-51). Each shelf is a reach of its own (Section {sec:arch-section}): Projects is the global reach, which every session reads, and the other three are project reaches, each with its own folder of rooms and its own vault. A question reads every shelf, and the closest moment wins, as a session always chooses, so memory is kept apart but read as one. A new moment goes on the shelf the user picks, or, on "Auto", on the shelf whose description and three example moments it is closest to, measured by the same embedder that recall uses, so it is filed by meaning. The Code agent keeps what it learns on the Coding shelf and still reads its own workspace's reach. Figure {fig:app-shelves} shows the shelves in Chat.
+The application keeps memory on four shelves by kind of work: Projects, Coding, Research and Personal (E-51). Each shelf is a reach of its own (Section {sec:arch-section}): Projects is the global reach, which every session reads, and the other three are project reaches, each with its own folder of rooms and its own vault. A question reads every shelf, and the closest moment wins, as a session always chooses; when another shelf's closest moment is nearly as close, it is read as well. Memory is therefore kept apart but read as one. A new moment goes on the shelf the user picks, or, on "Auto", on the shelf whose description and three example moments it is closest to, measured by the same embedder that recall uses, so it is filed by meaning. The Code agent keeps what it learns on the Coding shelf and still reads its own workspace's reach. Figure {fig:app-shelves} shows the shelves in Chat.
 
 ![{#app-shelves} Shelves in Chat (Qwen3 4B): moments told on "Auto" are filed on the Research and Personal shelves by meaning, and each answer names the note and shelf it read ("note 0 on Coding · read from the SSD")](figures/app/chat-shelves.png){width=15.9}
 

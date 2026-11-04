@@ -100,7 +100,7 @@ Every answer receives one of five verdicts (Table {tab:verdicts}). The same answ
 
 $$\text{accuracy}_c = \frac{R_c}{Q_c}$$ {#accuracy} [Accuracy at a cut]
 
-In Equation {eq:accuracy}, R_c is the number of answers graded right at cut c and Q_c the number of questions asked there (34, 40, 69 or 73).
+In Equation {eq:accuracy}, \(R_c\) is the number of answers graded right at cut \(c\) and \(Q_c\) the number of questions asked there (34, 40, 69 or 73).
 
 Table: {#verdicts} The verdicts
 
@@ -161,19 +161,19 @@ Table: {#modules} The engine's main modules (`v2/camr_engine/`)
 
 Every choice of memory rests on one closeness measure, the cosine of two embeddings (Equation {eq:closeness}). Embeddings are stored as unit vectors, so the cosine is a single dot product, and a question is compared with every moment in one matrix product; the moment with the highest closeness gives the room that is read, and a new moment joins a room only when its closeness to a moment there is at least 0.80 (Equation {eq:room}).
 
-$$s(a,b) = \hat{e}_a \cdot \hat{e}_b = \cos\theta_{ab}, \qquad m^{*} = \underset{m}{\arg\max}\ s(q,m)$$ {#closeness} [Closeness of two moments, and the moment a question reads]
+$$s(a,b) = \hat{e}_a \cdot \hat{e}_b = \cos\theta_{ab}, \qquad m^{*} = \underset{m}{\mathrm{arg\,max}}\ s(q,m)$$ {#closeness} [Closeness of two moments, and the moment a question reads]
 
-Here ê_a and ê_b are the unit embeddings of a and b, q is the question and m ranges over every moment kept. The notes a room holds take the size given by Equation {eq:notes}, which is Equation {eq:bytes} multiplied by the room's tokens.
+Here \(\hat{e}_a\) and \(\hat{e}_b\) are the unit embeddings of moments \(a\) and \(b\), \(q\) is the question and \(m\) ranges over every moment kept. The notes a room holds take the size given by Equation {eq:notes}, which is Equation {eq:bytes} multiplied by the room's tokens.
 
 $$S_{\text{notes}} = n \times L \times 2 \times H_{kv} \times d_h \times b$$ {#notes} [Size of a room's notes]
 
-For n tokens, L layers, H_kv key–value heads of size d_h and b bytes per value (2 at 16 bits), a full 512-token room is 512 × 28 × 2 × 8 × 128 × 2 = 58.7 MB on the 1.7B and 512 × 36 × 2 × 8 × 128 × 2 = 75.5 MB on the 4B and 8B.
+For \(n\) tokens, \(L\) layers, \(H_{kv}\) key–value heads of size \(d_h\) and \(b\) bytes per value (2 at 16 bits), a full 512-token room is 512 × 28 × 2 × 8 × 128 × 2 = 58.7 MB on the 1.7B and 512 × 36 × 2 × 8 × 128 × 2 = 75.5 MB on the 4B and 8B.
 
 Two implementation choices from the rooms build matter for every result. Each room is written as one continuous page, so a new moment is read with its room's earlier moments in view (E-15). A single room is laid on the desk without turning its keys, which cut laying the desk from 55 ms to 15 ms at 2,000 words (E-18). The final engine added three things to that path. Every moment carries its date and day number, as `[YYYY-MM-DD, day N] text`, since the Long Haul asks about days by number. Rooms move between tiers: in the benchmarks, 2 GB of RAM held the hot rooms and 40 GB of disk the awake room files, and at the end of the 2M-token history 920 rooms were awake and 4,471 asleep (E-38). The disk budget is kept by the rule of Equation {eq:budget}: while the awake room files outgrow the budget, the weakest room goes to sleep, ties going to the room used least recently.
 
-$$\text{while}\ \sum_{r \in A} S_r > B_{\text{disk}}:\quad r^{*} = \underset{r \in A}{\arg\min}\ \left(\sigma_r,\ \tau_r\right)\ \text{sleeps}$$ {#budget} [The disk budget rule]
+$$\text{while}\ \sum_{r \in A} S_r > B_{\text{disk}}:\quad r^{*} = \underset{r \in A}{\mathrm{arg\,min}}\ \left(\sigma_r,\ \tau_r\right)\ \text{sleeps}$$ {#budget} [The disk budget rule]
 
-In Equation {eq:budget}, A is the set of awake rooms, S_r the size of room r's notes file, B_disk the disk budget (40 GB in the benchmarks), σ_r the room's strength (that of its strongest vault note, Equation {eq:fade}) and τ_r the time it was last used; sleeping deletes the room's notes file and keeps its words. A question whose room is asleep reads that room's moments as words, which costs reading them as plain text would; waking was off in the benchmarks. Finally, the benchmark's questions were read-only: the hot rooms, the least-recently-used clock and the vault strengths were restored after every answer, so that asking never teaches (E-31).
+In Equation {eq:budget}, \(A\) is the set of awake rooms, \(S_r\) the size of room \(r\)'s notes file, \(B_{\text{disk}}\) the disk budget (40 GB in the benchmarks), \(\sigma_r\) the room's strength (that of its strongest vault note, Equation {eq:fade}) and \(\tau_r\) the time it was last used; sleeping deletes the room's notes file and keeps its words. A question whose room is asleep reads that room's moments as words, which costs reading them as plain text would; waking was off in the benchmarks. Finally, the benchmark's questions were read-only: the hot rooms, the least-recently-used clock and the vault strengths were restored after every answer, so that asking never teaches (E-31).
 
 ### The Vault, the Core, Reach and the Switch
 
@@ -410,7 +410,7 @@ The wait for the first word is the sum of the steps an answer takes before it wr
 
 $$t_{\text{first}} = t_{\text{choose}} + t_{\text{core}} + t_{\text{fetch}} + t_{\text{wake}} + t_{\text{desk}} + t_{\text{prefill}} + t_{\text{token}}$$ {#latency} [Time to the first word]
 
-The first five terms are the retrieval time of Table {tab:metrics} (choosing the room, building the core, reading the room, waking it when asleep, laying the desk); t_prefill is reading the closest moments, the date and the question as words, and t_token is writing the first token. When a room is read from the SSD, its read bandwidth is the bytes read over the fetch time (Equation {eq:bandwidth}).
+The first five terms are the retrieval time of Table {tab:metrics} (choosing the room, building the core, reading the room, waking it when asleep, laying the desk); \(t_{\text{prefill}}\) is reading the closest moments, the date and the question as words, and \(t_{\text{token}}\) is writing the first token. When a room is read from the SSD, its read bandwidth is the bytes read over the fetch time (Equation {eq:bandwidth}).
 
 $$\text{bandwidth} = \frac{\text{read bytes}}{t_{\text{fetch}}}$$ {#bandwidth} [Read bandwidth of a room fetched from the SSD]
 

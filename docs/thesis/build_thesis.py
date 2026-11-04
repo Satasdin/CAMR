@@ -283,8 +283,11 @@ class Thesis:
 
     def runs(self, p, text: str, size: float | None = None, bold_all: bool = False) -> None:
         text = self.resolve(text)
-        for part in re.split(r"(\*\*.+?\*\*|\*[^*\s][^*]*?\*|`[^`]+`|\[\[.+?\]\])", text):
+        for part in re.split(r"(\\\(.+?\\\)|\*\*.+?\*\*|\*[^*\s][^*]*?\*|`[^`]+`|\[\[.+?\]\])", text):
             if not part:
+                continue
+            if part.startswith("\\(") and part.endswith("\\)"):  # inline maths \( ... \), as a Word equation
+                p._p.append(omath(part[2:-2].strip()))
                 continue
             if part.startswith("**") and part.endswith("**") and len(part) > 4:
                 r = p.add_run(part[2:-2])
@@ -330,7 +333,7 @@ class Thesis:
         return p
 
     def plain(self, text: str) -> str:
-        return re.sub(r"\*\*|\[\[|\]\]|`|(?<!\w)\*|\*(?!\w)", "", self.resolve(text))
+        return re.sub(r"\*\*|\[\[|\]\]|`|\\\(|\\\)|(?<!\w)\*|\*(?!\w)", "", self.resolve(text))
 
     def heading_unnumbered(self, title: str, toc: bool = True):
         p = self.doc.add_paragraph(style="Heading 1")
