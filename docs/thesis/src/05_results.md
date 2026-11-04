@@ -171,21 +171,7 @@ Ollama runs its own model and lets no outside code put keys and values into it, 
 
 ### The Application {#app-impl}
 
-The application is a native Mac app with two parts, Chat and Code (Figures {fig:app-chat} to {fig:app-onoff}). It starts the engine as a local process with the chosen model (Qwen3 1.7B, 4B or 8B) and a token only it knows, waits for the engine to say it holds its port, and then talks to it over the loopback address. Each model has its own memory folder, since notes belong to the model that wrote them.
-
-![{#app-chat} Chat in the CAMR Mac app (Qwen3 4B): with memory on, a fact told earlier is answered from the room it was kept in ("room 609 · read from the SSD"); with memory off, the same question gets "I don't know"](figures/app/chat-memory-on-off.png){width=15.9}
-
-In Chat, the user tells the model something with Remember and asks with Ask. Under each answer the app shows the time to the first word, the room read and where it came from. A switch turns memory off, and the panel on the left draws the memory as tiles of rooms over the model's layers, lit by what the engine measured (Figure {fig:app-chat}).
-
-![{#app-weights} The weights view, large beside the chat: the room an answer reads travels from the memory (rooms, top) into the model's 36 layers (bottom), whose activity for each word is measured, not drawn](figures/app/weights-large.png){width=15.9}
-
-The weights view draws only measured events (Figure {fig:app-weights}). While the model loads, its layers fill as their weights arrive. While it answers, the room it reads is marked, a read from the SSD or a hit in RAM is shown as such, and each layer's row lights with how strongly that layer fired for each word: 32 numbers per layer per word, sent by the engine only while the app listens, so the benchmarks pay nothing for it.
-
-![{#app-code} Code in the CAMR Mac app: the agent lists the files of a project folder, reads `money.py`, and answers from what it read; the answer is kept in memory](figures/app/code-reads-then-answers.png){width=15.9}
-
-Code is a coding agent on the same local model (Figure {fig:app-code}). The user picks a folder; the agent can list, search, read and edit files and run commands there, and every shell command waits for an explicit Allow. Its turns, tool calls and the files it opened are shown as it works, and with memory on what it learns about the project is kept in memory for the next question.
-
-![{#app-onoff} Memory on (left): the room read lights in the memory and its notes flow into the model; memory off (right): the model answers alone and the memory stays dark](figures/app/weights-on-off.png){width=12}
+The application described in Section {sec:ui-design} is a Swift package of seven source files (about 1,500 lines) that builds into `CAMR.app`, signed for the Mac it was built on. It starts the engine as a local process with the chosen model (Qwen3 1.7B, 4B or 8B), a free port and a token only it knows, waits for the engine's line saying it holds that port before it sends the token, and then talks to it over the loopback address. Each model has its own memory folder, since notes belong to the model that wrote them. The screenshots in Figures {fig:app-load} to {fig:app-onoff} were captured from the running app with Qwen3 4B and a real memory of 737 rooms.
 
 ### The Benchmark Harness and the Contenders {#contenders-section}
 

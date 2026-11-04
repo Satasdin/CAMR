@@ -288,7 +288,27 @@ The Mac app is a SwiftUI process that starts the engine as a second, Python proc
 
 ### User Interface Design {#ui-design}
 
-The application has two parts (E-50). Chat is a conversation with the local model in which memory can be switched on or off with a switch in the window and the reach the conversation writes to is shown; the reach itself is chosen through the engine's library and web app; beside the conversation, a weights view draws only what the engine measures: the model's layers as their weights load, the room an answer reads and whether it came from RAM or the SSD, and for each word how strongly each layer fired (FR-19). Code is a coding agent on the same local model: the user picks a folder, the agent reads, searches, edits and runs commands there with the model's memory on or off, and every shell command waits for an explicit Allow (FR-18). An earlier Swarm screen, which ran several agents with their own memories, was removed so that the app does two things well. The visual direction ("Instrument") draws memory as an instrument would: rooms as tiles of layer rows by token columns, RAM to scale on the Mac's 24 GB, and colour used only to mean something, with memory in one colour, the model in another and the cloud yardstick always grey (E-34, E-49). Screenshots of the application are in Section {sec:app-impl}.
+The application is a native Mac app written in SwiftUI, with two parts, Chat and Code (E-50). An earlier Swarm screen, which ran several agents with their own memories, was removed so that the app does two things well. The visual direction ("Instrument") draws memory as an instrument would: rooms as tiles, the model's layers as rows, and colour used only to mean something, with memory in cyan, the model in amber and the cloud yardstick always grey (E-34, E-49). A panel beside the conversation, the weights view, draws only what the engine measures (FR-19). Figures {fig:app-load} to {fig:app-onoff} show the app with Qwen3 4B.
+
+![{#app-load} Starting the app: the model's 36 layers fill as their weights arrive ("loading 14/36"), before the first question](figures/app/loading-weights.png){width=15.9}
+
+When the app starts, it starts the engine with the chosen model and draws the model's layers filling as their weights load (Figure {fig:app-load}). The memory panel above them shows how many rooms the memory holds.
+
+![{#app-chat} Chat with memory on and off: a fact told earlier is answered from the room it was kept in ("room 609 · read from the SSD"); with memory off, the same question gets "I don't know"](figures/app/chat-memory-on-off.png){width=15.9}
+
+In Chat (Figure {fig:app-chat}), the user tells the model something with Remember and asks with Ask. Under each answer the app shows the time to the first word, the room read and whether it came from RAM or the SSD; under each remembered fact, the reach it was kept in. A switch in the window turns memory off, so the same question can be asked of the model alone.
+
+![{#app-weights} The weights view, large beside the chat for a projector: the room an answer reads travels from the memory (rooms, top) into the model's 36 layers (bottom)](figures/app/weights-large.png){width=15.9}
+
+The weights view can be shown large beside the chat (Figure {fig:app-weights}). While the model answers, the room it reads is marked and travels into the model, and each layer's row lights with how strongly that layer fired for each word: 32 measured numbers per layer per word, sent by the engine only while the app listens, so the benchmarks pay nothing for it. With no events, nothing moves.
+
+![{#app-code} Code: the agent lists the files of a project folder, reads `money.py` and answers from what it read; the answer is kept in memory](figures/app/code-reads-then-answers.png){width=15.9}
+
+Code is a coding agent on the same local model (Figure {fig:app-code}). The user picks a folder; the agent can list, search, read and edit files and run commands there, and every shell command waits for an explicit Allow. Its turns, tool calls and the files it opened are shown as it works, and with memory on what it learns about the project is kept for the next question.
+
+![{#app-onoff} The weights view with memory on (left), where the room read lights and flows into the model, and off (right), where the model answers alone and the memory stays dark](figures/app/weights-on-off.png){width=12}
+
+Figure {fig:app-onoff} sets the two states side by side. The difference is the design's main idea made visible: with memory on, an answer reads one room from the SSD or RAM; with it off, nothing outside the model is read.
 
 ## Design Changes Since the Proposal {#changes}
 
