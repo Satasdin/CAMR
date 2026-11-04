@@ -289,6 +289,8 @@ on the longer script):
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `engine:qwen3-4b` | 25 | 26 | 25 | 29 | 29 | 29 | 0.21–0.31 s | 6.3 GB MLX peak; 7.5 GB process, capped |
 | `bare:qwen3-4b` | 18 | 14 | 20 | 11 | 12 | 13 | 0.32–0.38 s | 14.7 GB MLX peak; 15.2 GB process |
+| `engine:qwen3-8b` | 26 | 26 | 24 | 27 | | | 0.32–0.54 s | 8.0 GB MLX peak; 8.1–8.8 GB process |
+| `bare:qwen3-8b` | 15 | 11 | 15 | 11 | | | 0.22 s | 12.2 GB MLX peak; 13.6 GB process |
 | `engine:qwen3-1.7b+own` | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.5 GB |
 | `engine:qwen3-1.7b` | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.5 GB |
 | `bare:qwen3-1.7b+own` | 7 | 7 | 14 | 9 | | | 0.13 s | 7.5 GB |
