@@ -12,7 +12,7 @@ Opus alone: 29 of 73, against 32 and 31.
 - Its first word comes in about 0.3 s, against Claude's 13–105 s.
 
 The same 4B without memory gets 11 and needs 14.7 GB of RAM; with the engine it needs 5.7 GB. Past 2M, Claude
-alone recalls nothing planted (Sonnet 13 and 10 of 73 at 3M and 4M). <!--4M-->
+alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M the 4B with the engine still gets 29**, declines all 10 never-said questions, and answers in 0.37 s.
 
 ## What exists now
 
@@ -43,12 +43,12 @@ alone recalls nothing planted (Sonnet 13 and 10 of 73 at 3M and 4M). <!--4M-->
 - `engram/bench/`: the Long Haul (our own test, now extendable to 4M tokens), the local, Ollama and Claude runners,
   and the Hugging Face suites.
 - Records: `v2/records/bench/2026-11-04/`.
-- Decisions: `v2/DECISIONS.md` E-29 to E-39.
+- Decisions: `v2/DECISIONS.md` E-29 to E-40.
 
 **The docs:** `v2/docs/site/` for people, and `v2/llms.txt` / `llms-full.txt` for agents. The README is rewritten
 for the engine as it stands.
 
-**Tests:** 723 pass.
+**Tests:** 728 pass.
 
 ## The Long Haul
 
@@ -58,15 +58,13 @@ questions again.
 
 | Right answers | 64K (34) | 256K (40) | 1M (69) | 2M (73) | 3M (73) | 4M (73) | First word | Peak RAM |
 |---|---|---|---|---|---|---|---|---|
-| **Engine, Qwen3 4B** | **25** | **26** | **25** | **29** | <!--4B3M--> | <!--4B4M--> | 0.2–0.3 s | 5.7 GB |
-| Bare 4B (newest 64K) | 18 | 14 | 20 | 11 | <!--B3M--> | <!--B4M--> | 0.34–0.38 s | 14.7 GB |
+| **Engine, Qwen3 4B** | **25** | **26** | **25** | **29** | **29** | stopped | 0.2–0.37 s | 6.0 GB (MLX peak) |
+| Bare 4B (newest 64K) | 18 | 14 | 20 | 11 | not run | | 0.34–0.38 s | 14.7 GB |
 | Engine, Qwen3 1.7B, its own wording | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.4 GB |
 | Engine, Qwen3 1.7B, the yardstick's wording | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.4 GB |
 | Bare 1.7B (newest 32K) | 8 | 13 | 14 | 7 | | | 0.13 s | 7.4 GB |
 | Ollama 1.7B + pairing (memory as words) | 16 | 17 | 16 | 16 | | | 0.38–0.40 s | 3.3 GB |
 | Ollama 1.7B bare | 8 | 12 | 10 | 7 | | | — | 5.7 GB |
-| <!--8B--> | | | | | | | | |
-| <!--27B--> | | | | | | | | |
 | Claude Haiku 5.5 alone | 22 | 21 | 17 | 10 | 10 | 10 | 13–43 s | — |
 | Claude Sonnet 5.5 alone | 28 | 35 | 43 | 32 | 13 | 10 | 13–53 s | — |
 | Claude Opus 5.5 alone | 24 | 33 | 42 | 31 | | | 19–105 s | — |
@@ -100,11 +98,11 @@ On the same 2.01M tokens, Claude waits 13–105 s before its first token.
 |---|---|---|---|---|
 | MATH-500, levels 3–5 (50) | 44 | 47 | | |
 | AIME 2025 + 2026 (60) | 54 | 56 | | |
-| HARP pairs, correction told (60) | 55 | 58 | <!--HB--> | <!--HP--> |
+| HARP pairs, correction told (60) | 55 | 58 | not run | not run |
 | HARP pairs, nothing told (60) | 48 | 52 | | |
-| BABILong 4k–128k (100) | 78 | — | <!--BB--> | <!--BP--> |
+| BABILong 4k–128k (100) | 78 | — | not run | not run |
 
-Claude spend for the night: <!--SPEND--> of the $60 cap, logged per call in `v2/records/bench/claude-ledger.jsonl`.
+Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/records/bench/claude-ledger.jsonl`.
 
 ## What I found that you should know
 
@@ -125,7 +123,12 @@ Claude spend for the night: <!--SPEND--> of the $60 cap, logged per call in `v2/
    - disk is held at its budget by putting cold rooms to sleep (4,471 of 5,391 asleep at the end).
 4. **Nobody builds the growing page.** Every model, Claude included, failed all three catering-page checks at 2M. It
    is the hardest probe: it needs the week-1 design system and the day-61 colour change.
-5. **Claude is honest but blind past its window.**
+5. **The engine's process held 19 GB, not the 5.7 GB the records showed** (E-40).
+   - MLX kept freed GPU buffers up to the whole GPU limit, and swap filled.
+   - The cache is now capped at 1 GB, and every record logs the process's real footprint.
+   - The before/after measurement is scripted (`engram.bench.ram`) but not run yet.
+   - Scores are unaffected; the RAM figures of tonight's runs are understated.
+6. **Claude is honest but blind past its window.**
    - It never invented a never-said fact.
    - At 3M and 4M it recalls nothing planted: its 1M window holds only the last days.
 
@@ -138,7 +141,10 @@ Claude spend for the night: <!--SPEND--> of the $60 cap, logged per call in `v2/
 - **The engine is not run on the Hugging Face suites.** `suite_run` takes Claude and Ollama only; the engine needs
   a suite wording.
 - **LongMemEval, MemoryAgentBench and Web-Bench** have loaders but no runs.
-- **The 8B and 27B Long Haul runs** <!--8B27BSTATUS-->
+- **Not run: the 8B, the 27B, Ollama on the suites, the reach benchmark and the RAM before/after.** You stopped
+  the queue at 11:26 to save the battery. They are scripted and ready: `work/queue7.sh` lists them in order (from
+  `ram-1.7b` on).
+- **4M:** stopped after 3M at your request; the bare 4B at 3M did not run.
 
 ## Your calls (taste and vision only)
 
