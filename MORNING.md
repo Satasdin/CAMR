@@ -12,7 +12,7 @@ Opus alone: 29 of 73, against 32 and 31.
 - Its first word comes in about 0.3 s, against Claude's 13–105 s.
 
 The same 4B without memory gets 11 and needs 14.7 GB of RAM; with the engine it needs 5.7 GB. Past 2M, Claude
-alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M the 4B with the engine still gets 29**, declines all 10 never-said questions, and answers in 0.37 s.
+alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 4M the 4B with the engine still gets 29** (Sonnet alone: 13, then 10), declines all 10 never-said questions, and answers in 0.31 s, in a 5.4–7.5 GB process.
 
 ## What exists now
 
@@ -58,7 +58,7 @@ questions again.
 
 | Right answers | 64K (34) | 256K (40) | 1M (69) | 2M (73) | 3M (73) | 4M (73) | First word | Peak RAM |
 |---|---|---|---|---|---|---|---|---|
-| **Engine, Qwen3 4B** | **25** | **26** | **25** | **29** | **29** | stopped | 0.2–0.37 s | 6.0 GB (MLX peak) |
+| **Engine, Qwen3 4B** | **25** | **26** | **25** | **29** | **29** | **29** | 0.2–0.31 s | 7.5 GB (process) |
 | Bare 4B (newest 64K) | 18 | 14 | 20 | 11 | not run | | 0.34–0.38 s | 14.7 GB |
 | Engine, Qwen3 1.7B, its own wording | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.4 GB |
 | Engine, Qwen3 1.7B, the yardstick's wording | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.4 GB |
@@ -145,7 +145,7 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 - **Not run: the 8B, the 27B, Ollama on the suites, the reach benchmark and the RAM before/after.** You stopped
   the queue at 11:26 to save the battery. They are scripted and ready: `work/queue7.sh` lists them in order (from
   `ram-1.7b` on).
-- **4M:** stopped after 3M at your request; the bare 4B at 3M did not run.
+- **4M:** rerun on power with the cache cap: 29 of 73 at 3M and at 4M.
 
 ## Your calls (taste and vision only)
 

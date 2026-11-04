@@ -55,12 +55,14 @@ The main test is the **Long Haul**: one scripted project of 110 working days and
 and 2M, with 216 questions graded by rule. Claude Haiku, Sonnet and Opus 5.5 answer the same questions alone, with
 no memory, as the yardstick.
 
-| Right answers | 64K (34) | 256K (40) | 1M (69) | 2M (73) | First word |
-|---|---|---|---|---|---|
-| Engine, Qwen3 1.7B | 19 | 20 | 21 | 21 | 0.10–0.14 s |
-| The same 1.7B, bare | 7 | 7 | 14 | 9 | 0.13 s |
-| Claude Haiku 5.5, alone | 22 | 21 | 17 | 10 | 13–16 s |
-| Claude Sonnet 5.5, alone | 28 | 35 | 43 | 32 | 13–53 s |
+| Right answers | 64K (34) | 256K (40) | 1M (69) | 2M (73) | 3M (73) | 4M (73) | First word |
+|---|---|---|---|---|---|---|---|
+| **Engine, Qwen3 4B** | 25 | 26 | 25 | **29** | **29** | **29** | 0.2–0.31 s |
+| The same 4B, bare | 18 | 14 | 20 | 11 | | | 0.34–0.38 s |
+| Engine, Qwen3 1.7B | 19 | 20 | 21 | 21 | | | 0.10–0.14 s |
+| The same 1.7B, bare | 7 | 7 | 14 | 9 | | | 0.13 s |
+| Claude Haiku 5.5, alone | 22 | 21 | 17 | 10 | 10 | 10 | 13–43 s |
+| Claude Sonnet 5.5, alone | 28 | 35 | 43 | 32 | 13 | 10 | 13–53 s |
 
 From 112K to 2.01M tokens of history, the engine's first word stays at 0.08–0.15 s, retrieval at 17–24 ms and peak
 RAM at about 4.3 GB.

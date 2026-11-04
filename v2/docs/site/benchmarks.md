@@ -287,7 +287,7 @@ on the longer script):
 
 | Contender | 64K | 256K | 1M | 2M | 3M | 4M | First word p50 | Peak RAM |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `engine:qwen3-4b` | 25 | 26 | 25 | 29 | see records | see records | 0.21–0.31 s | 5.8 GB |
+| `engine:qwen3-4b` | 25 | 26 | 25 | 29 | 29 | 29 | 0.21–0.31 s | 6.3 GB MLX peak; 7.5 GB process, capped |
 | `bare:qwen3-4b` | 18 | 14 | 20 | 11 | see records | see records | 0.34–0.38 s | 14.7 GB |
 | `engine:qwen3-1.7b+own` | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.5 GB |
 | `engine:qwen3-1.7b` | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.5 GB |
