@@ -14,6 +14,7 @@ struct CAMRApp: App {
                 .onAppear { delegate.world = world }
         }
         .windowStyle(.hiddenTitleBar)
+        Settings { SettingsView(engine: world.engine) }
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Chat") { Task { await world.chat.newChat() } }.keyboardShortcut("n", modifiers: .command)

@@ -33,7 +33,7 @@ final class ChatModel: ObservableObject {
     @Published var shelf = "auto"  // where Remember puts a moment: a shelf, or auto (by meaning)
     @Published var shelves: [ShelfInfo] = []
     @Published var thinks = false  // the model is a thinking build
-    @Published var reasoning = true  // let a thinking model think aloud
+    @Published var reasoning = Prefs.shared.reasoning  // let a thinking model think aloud
     private var job: String?  // the answer being written now, for Stop
     @Published var chats: [(id: String, title: String)] = []
 
@@ -103,8 +103,10 @@ final class ChatModel: ObservableObject {
         weights.beginAnswer(memory: memoryOn)
         let intent = mode == .remember ? "tell" : mode == .research ? "research" : "chat"
         do {
+            let prefs = Prefs.shared
             let job = try await engine.post("/api/chat/message", ["text": text, "intent": intent, "shelf": shelf,
-                                                                 "thinking": thinks && reasoning])
+                                                                 "thinking": thinks && reasoning,
+                                                                 "turns": prefs.turns, "max_tokens": prefs.maxTokens])
             guard let id = job.str("id") else { throw Engine.Failure(message: "no job id") }
             self.job = id
             defer { self.job = nil }
