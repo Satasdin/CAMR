@@ -7,9 +7,8 @@
 <meta name="description" content="CAMR is a lightweight memory engine for language models on your Mac. A 4B model with CAMR answers a 4M-token project history 29 of 73 right; Claude Sonnet alone gets 10.">
 <link rel="stylesheet" href="style.css">
 <!--
-  Images: each screenshot is one <img> line below, with src="screens/<name>.png".
-  To swap in the Mac app's screenshots (apps/mac/screens/), copy them into site/screens/mac/ and change that one
-  line's src to "screens/mac/<name>.png", dropping the "trim" class (it hides the web app's top bar).
+  Images: each screenshot is one <img> line below, from the native Mac app (apps/mac/screens/, copied into
+  site/screens/mac/). To swap one, change that line's src.
 -->
 </head>
 <body>
@@ -41,9 +40,9 @@
       <a class="btn" href="#install">Install the engine</a>
     </div>
   </div>
-  <figure class="hero-shot glow">
-    <img class="trim" src="screens/memory-answer.png" alt="CAMR's memory view: 237 rooms of saved keys and values on the SSD, one room lit as it answers in 0.10 s" width="1512" height="945">
-    <figcaption><span class="mem">237 rooms</span> of saved keys and values on the SSD. One lights up; the first word comes 0.10 s later.</figcaption>
+  <figure class="hero-shot">
+    <img src="screens/mac/weights-memory-flow.png" alt="CAMR's weights view: room 609 of 737, read from the SSD, glows cyan, and its notes flow into all 36 layers of Qwen3 4B, which light amber" width="660" height="976">
+    <figcaption><span class="mem">Memory</span>: room 609 of 737, read from the SSD, flowing into every layer of the <span class="model">model</span>, Qwen3 4B.</figcaption>
   </figure>
 </section>
 
@@ -87,6 +86,10 @@
     <div><b class="mem">29</b><span>right at 2M, 3M and 4M: it does not fade</span><em>Sonnet alone: 32, 13, 10</em></div>
     <div><b class="mem">0.08 s</b><span>first word with 2.01M tokens told, on the 1.7B</span><em>112K told: 0.11 s</em></div>
   </div>
+  <figure class="shot glow">
+    <img src="screens/mac/chat-memory-on-off.png" alt="The CAMR app: with memory on, Qwen3 4B answers that the truck's plate is KDS 711Z, first word in 231 ms; with memory off, the same question gets I don't know" width="2200" height="1456" loading="lazy">
+    <figcaption>The same question twice. <span class="mem">Memory on</span>: "KDS 711Z", first word in 231 ms, from room 609. <span class="model">Memory off</span>: "I don't know."</figcaption>
+  </figure>
 </section>
 
 <section class="how">
@@ -94,10 +97,16 @@
     <p class="eyebrow">How it works</p>
     <h2>Memory as the model's own <span class="mem">keys and values</span>, on the SSD.</h2>
   </div>
-  <figure class="shot glow">
-    <div class="frame"><img class="zoom-rooms" src="screens/memory-answer.png" alt="Close up: every room of saved notes drawn as a tile; the room this answer read is lit" width="1512" height="945" loading="lazy"></div>
-    <figcaption><span class="mem">Rooms</span> of saved keys and values on the SSD. A question opens one (<span class="model">lit</span>) and reads it in one burst. Hot rooms stay in RAM; cold ones sleep.</figcaption>
-  </figure>
+  <div class="how-grid">
+    <figure class="shot glow">
+      <img src="screens/mac/chat-answering.png" alt="The CAMR app mid-answer: the chosen room glows in the sidebar's memory grid and the model's 36 layers fire below it" width="2200" height="1456" loading="lazy">
+      <figcaption>Mid-answer. A question opens the one <span class="mem">room</span> it is about, read from the SSD in one burst, and the <span class="model">model</span> reads it as its own keys and values.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screens/mac/weights-memory-off.png" alt="The weights view with memory off: no room is read, and only the model's own layers light" width="660" height="976" loading="lazy">
+      <figcaption>Memory off: the model alone.</figcaption>
+    </figure>
+  </div>
 </section>
 
 <section id="download" class="download">
@@ -105,11 +114,11 @@
     <div class="dl-copy">
       <p class="eyebrow">CAMR for Mac</p>
       <h2>The app</h2>
-      <p class="fine">For Apple-silicon Macs (M1 or later). Unzip, then open CAMR.</p>
+      <p class="fine">Chat and Code on your own model, with memory you can switch off. For Apple-silicon Macs (M1 or later): unzip, then open CAMR.</p>
       <a id="dl" class="btn primary big" href="../dist/CAMR.app.zip" download>Download CAMR.app.zip</a>
     </div>
     <figure class="dl-shot">
-      <img class="trim" src="screens/bench.png" alt="The CAMR app's Bench screen: every benchmark record against Claude alone" width="1512" height="945" loading="lazy">
+      <img src="screens/mac/code-reads-then-answers.png" alt="The CAMR app's Code tab: the agent lists and reads money.py, answers why vat_cents returns 1600, and keeps it in memory" width="2200" height="1456" loading="lazy">
     </figure>
   </div>
 </section>
@@ -157,52 +166,46 @@ camr-memory serve --backend ollama</code></pre>
     <h2><span class="model">Your model</span>, <span class="mem">CAMR's memory</span>, one URL.</h2>
     <p class="url"><code>http://127.0.0.1:11436/v1</code><span>OpenAI-compatible · <code>/v1/chat/completions</code> · <code>/v1/models</code></span></p>
   </div>
-  <div class="use-grid">
-    <div class="tabs" data-tabs>
-      <div class="tablist" role="tablist">
-        <button role="tab" aria-selected="true" aria-controls="u-ollama" id="ut-ollama">Ollama</button>
-        <button role="tab" aria-selected="false" aria-controls="u-lms" id="ut-lms">LM Studio</button>
-        <button role="tab" aria-selected="false" aria-controls="u-oc" id="ut-oc">OpenCode</button>
-        <button role="tab" aria-selected="false" aria-controls="u-curl" id="ut-curl">curl</button>
-      </div>
-      <div class="panel" role="tabpanel" id="u-ollama" aria-labelledby="ut-ollama">
+  <div class="tabs" data-tabs>
+    <div class="tablist" role="tablist">
+      <button role="tab" aria-selected="true" aria-controls="u-ollama" id="ut-ollama">Ollama</button>
+      <button role="tab" aria-selected="false" aria-controls="u-lms" id="ut-lms">LM Studio</button>
+      <button role="tab" aria-selected="false" aria-controls="u-oc" id="ut-oc">OpenCode</button>
+      <button role="tab" aria-selected="false" aria-controls="u-curl" id="ut-curl">curl</button>
+    </div>
+    <div class="panel" role="tabpanel" id="u-ollama" aria-labelledby="ut-ollama">
 <pre><code>camr serve --backend ollama        # for any OpenAI client
 
 camr ollama                        # or the ollama CLI itself:
 OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:4b</code></pre>
-      </div>
-      <div class="panel" role="tabpanel" id="u-lms" aria-labelledby="ut-lms" hidden>
+    </div>
+    <div class="panel" role="tabpanel" id="u-lms" aria-labelledby="ut-lms" hidden>
 <pre><code>lms server start                   # LM Studio's server, on :1234
 camr serve --backend lmstudio      # CAMR in front of it, on :11436
 
 # in your client: http://localhost:1234/v1  ->  http://127.0.0.1:11436/v1</code></pre>
-      </div>
-      <div class="panel" role="tabpanel" id="u-oc" aria-labelledby="ut-oc" hidden>
-<pre><code>{
-    "$schema": "https://opencode.ai/config.json",
-    "provider": {
-      "camr": {
-        "npm": "@ai-sdk/openai-compatible",
-        "name": "CAMR (local model with memory)",
-        "options": { "baseURL": "http://127.0.0.1:11436/v1", "apiKey": "camr" },
-        "models": { "qwen3:4b": { "name": "Qwen3 4B with CAMR memory" } }
-      }
-    },
-    "model": "camr/qwen3:4b"
-}</code></pre>
-        <p class="fine"><code>opencode.json</code>, in your project or <code>~/.config/opencode/</code>. A copy is in <code>packaging/configs/</code>.</p>
-      </div>
-      <div class="panel" role="tabpanel" id="u-curl" aria-labelledby="ut-curl" hidden>
-<pre><code>curl http://127.0.0.1:11436/v1/chat/completions -H 'Content-Type: application/json' -d '{
-    "model": "qwen3:4b", "stream": true,
-    "messages": [{"role": "user", "content": "What main colour did the client pick?"}]
-}'</code></pre>
-      </div>
     </div>
-    <figure class="shot glow">
-      <img class="trim-models" src="screens/models.png" alt="The Models screen: which models fit this Mac, measured, and whether each reads memory as tensors or as words" width="1512" height="945" loading="lazy">
-      <figcaption>MLX models read memory as <span class="mem">tensors</span>; <span class="model">Ollama</span> and LM Studio models, as words.</figcaption>
-    </figure>
+    <div class="panel" role="tabpanel" id="u-oc" aria-labelledby="ut-oc" hidden>
+<pre><code>{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "camr": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "CAMR (local model with memory)",
+      "options": { "baseURL": "http://127.0.0.1:11436/v1", "apiKey": "camr" },
+      "models": { "qwen3:4b": { "name": "Qwen3 4B with CAMR memory" } }
+    }
+  },
+  "model": "camr/qwen3:4b"
+}</code></pre>
+      <p class="fine"><code>opencode.json</code>, in your project or <code>~/.config/opencode/</code>. A copy is in <code>packaging/configs/</code>.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="u-curl" aria-labelledby="ut-curl" hidden>
+<pre><code>curl http://127.0.0.1:11436/v1/chat/completions -H 'Content-Type: application/json' -d '{
+  "model": "qwen3:4b", "stream": true,
+  "messages": [{"role": "user", "content": "What main colour did the client pick?"}]
+}'</code></pre>
+    </div>
   </div>
 </section>
 

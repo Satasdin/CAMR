@@ -83,17 +83,7 @@ section { padding: clamp(64px, 10vw, 140px) var(--gutter) 0; max-width: 1440px; 
 /* --- screenshots */
 figure { margin: 0; }
 .glow img, .glow.dl-card { box-shadow: var(--glow); }
-.shot img, .hero-shot img { border-radius: 14px; border: 1px solid var(--line); background: #000; width: 100%; }
-/* the web app's screenshots carry its old top bar: keep it out of view (drop the class for new screenshots) */
-img.trim { aspect-ratio: 1512 / 900; object-fit: cover; object-position: 50% 100%; }
-/* a close-up of the memory view's rooms (x 0-700, y 100-590 of the 1512 x 945 screenshot) */
-.frame { overflow: hidden; border-radius: 14px; border: 1px solid var(--line); background: #000; }
-.frame:has(img.zoom-rooms) { aspect-ratio: 700 / 490; }
-.shot .frame img { border: 0; border-radius: 0; }
-.shot .frame img.zoom-rooms { width: 216%; max-width: none; margin-top: -14.3%; }
-.glow .frame { box-shadow: var(--glow); }
-.glow .frame img { box-shadow: none; }
-img.trim-models { aspect-ratio: 1512 / 580; object-fit: cover; object-position: 50% 100%; }
+.shot img { border-radius: 14px; border: 1px solid var(--line); background: #000; width: 100%; }
 figcaption { margin-top: 14px; color: var(--ink-3); font: 13px/1.5 var(--mono); }
 
 /* --- hero */
@@ -157,6 +147,15 @@ tbody th { color: var(--ink); }
 .shot.wide { margin-top: 8px; }
 
 
+/* --- the hero's weights view, and how it works */
+.hero-shot { justify-self: center; }
+.hero-shot img { width: auto; max-height: min(84vh, 976px); border-radius: 22px; border: 1px solid var(--line);
+  box-shadow: 0 0 0 1px rgba(63, 227, 234, .14), 0 0 120px -10px rgba(63, 227, 234, .22), 0 60px 160px -40px rgba(255, 179, 71, .28); }
+.hero-shot figcaption { max-width: 44ch; }
+.how-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); align-items: end; }
+.how-grid .shot:last-child img { opacity: .9; }
+.results > .shot { margin-top: 0; }
+
 /* --- download */
 .dl-card {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 28px;
@@ -200,6 +199,9 @@ tbody th { color: var(--ink); }
 @media (max-width: 860px) {
   .strip { grid-template-columns: 1fr 1fr; }
   .dl-card, .use-grid { grid-template-columns: 1fr; }
+  .how-grid { grid-template-columns: 1fr; }
+  .how-grid .shot:last-child { max-width: 240px; }
+  .hero-shot img { max-height: none; width: 100%; max-width: 440px; }
   .dl-card { padding-right: clamp(28px, 5vw, 64px); }
   .dl-shot img { border-radius: 12px; border-right: 1px solid var(--line); }
   .facts { grid-template-columns: 1fr; }
@@ -212,11 +214,9 @@ tbody th { color: var(--ink); }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-/* --- wide screens: the copy on the left, the memory view large on the right, running off the edge */
+/* --- wide screens: the copy on the left, the weights view tall on the right */
 @media (min-width: 1100px) {
-  .hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; max-width: none; padding-right: 0; }
-  .hero h1 { font-size: clamp(44px, 4.4vw, 76px); }
-  .vs b { font-size: clamp(110px, 10vw, 190px); }
-  .hero-shot img { border-radius: 14px 0 0 14px; border-right: 0; }
-  .hero-shot figcaption { padding-right: var(--gutter); }
+  .hero { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: center; }
+  .hero h1 { font-size: clamp(44px, 4.6vw, 80px); }
+  .vs b { font-size: clamp(110px, 10.5vw, 200px); }
 }

@@ -507,9 +507,11 @@ is HTML, CSS and a little JS (tabs, copy buttons, the chart), with no build step
 - **The chart plots the share right**, since the cuts ask 34, 40, 69 and 73 questions; the counts are in its tooltip
   and its table. It shows the whole story: Sonnet leads up to 2M, then falls to 13 and 10 past its window, while the
   engine stays at 29.
-- **Screenshots:** the web app's (`v2/docs/screens/`), copied into `site/screens/`. Each is one `<img>` line, to
-  swap for the Mac app's. Their top bar still carries the old name and the Swarm tab, so CSS keeps it out of view (`trim`).
-  `swarm.png`, `chat.png` and `code.png` are not used: the last two are empty in the read-only fixture.
+- **Screenshots:** the native Mac app's (`apps/mac/screens/`, the 4B with 256K tokens of the Long Haul in memory),
+  copied into `site/screens/mac/`. Each is one `<img>` line, so a new one is a one-line swap. The hero is the weights
+  view: the chosen room (cyan) flowing into all 36 layers (amber), the same two colours as the page. The results
+  carry the app's own memory-on/off demo ("KDS 711Z" in 231 ms, then "I don't know"). The web app's screenshots and
+  `swarm.png` are not used.
 - **No photography:** none in the repository has a known licence, and nothing was downloaded.
 
 **E-44 Files into memory: a vision model turns them into words once, and the notes stay words.**
