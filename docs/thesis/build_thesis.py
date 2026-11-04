@@ -473,6 +473,11 @@ class Thesis:
                 self.runs(p, v, size, bold_all=(ri == 0))
         for col, w in zip(t.columns, widths):
             col.width = Cm(w)
+        if len(rows) <= 14:  # a short table is kept on one page, with its caption
+            for row in t.rows[:-1]:
+                for cell in row.cells:
+                    for cp in cell.paragraphs:
+                        cp.paragraph_format.keep_with_next = True
         trpr = t.rows[0]._tr.get_or_add_trPr()
         trpr.append(trpr.makeelement(qn("w:tblHeader"), {}))
         for row in t.rows:  # a row is never split across pages
