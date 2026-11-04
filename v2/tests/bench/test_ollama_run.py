@@ -639,7 +639,7 @@ def test_the_command_line_runs_against_the_ollama_it_is_given(tmp_path, capsys):
     saved = json.loads(open(path).read())
     assert saved["contender"]["token_counter"] == "mlx-community/Qwen3-1.7B-4bit"  # the real tokenizer
     with pytest.raises(SystemExit):
-        orun.main(["longhaul", "--contender", "ollama:qwen3-1.7b", "--cuts", "3M"])
+        orun.main(["longhaul", "--contender", "ollama:qwen3-1.7b", "--cuts", "5M"])
 
 
 def test_the_models_command_reads_each_build_and_loads_nothing(capsys):

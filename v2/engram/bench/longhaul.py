@@ -15,10 +15,10 @@ import json
 from pathlib import Path
 
 from engram.bench.haul.grade import grade
-from engram.bench.haul.sample import sample
+from engram.bench.haul.sample import askable, sample
 from engram.bench.haul.script import load_events, load_probes
 
-CUTS = {"64K": 64_000, "256K": 256_000, "1M": 1_000_000, "2M": 2_000_000}
+CUTS = {"64K": 64_000, "256K": 256_000, "1M": 1_000_000, "2M": 2_000_000, "3M": 3_000_000, "4M": 4_000_000}
 PER_FAMILY = 10
 SAMPLE_SEED = 0
 RIGHT = {"right", "right_abstain"}
@@ -34,13 +34,21 @@ def line(event: dict) -> str:
 def checkpoints(folder: Path, cuts: dict[str, int] = CUTS, per_family: int = PER_FAMILY,
                 seed: int = SAMPLE_SEED) -> tuple[list[dict], list[dict]]:
     """(events, checkpoints) for a built Long Haul. A checkpoint is {name, tokens, events, questions}: ``events`` is
-    how many events are told by then, and each question is {id, question, expected, family, probe}."""
+    how many events are told by then, and each question is {id, question, expected, family, probe}. A cut longer
+    than the script is left out once an earlier cut is kept (3M and 4M on the 2M Long Haul);
+    ``engram.bench.haul.extend`` makes a script that has them."""
     events, probes = load_events(folder), load_probes(folder)
     out = []
+    key, pool = 0, None  # a cut where nothing new became askable asks the cut before's questions again
     for name, limit in cuts.items():
+        if out and limit > events[-1]["cum_tokens"]:
+            continue
         told = sum(1 for e in events if e["cum_tokens"] <= limit)
         tokens = events[told - 1]["cum_tokens"] if told else 0
-        picked = sample(probes, tokens, per_family, per_family=True, seed=seed)
+        now = {p["id"] for p in askable(probes, tokens)}
+        if now != pool:
+            key, pool = tokens, now
+        picked = sample(probes, key, per_family, per_family=True, seed=seed)
         out.append({"name": name, "tokens": tokens, "events": told,
                     "questions": [{"id": q["id"], "question": q["ask"], "expected": q["answer"], "family": q["family"],
                                    "probe": q} for q in picked]})

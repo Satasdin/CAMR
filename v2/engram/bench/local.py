@@ -146,9 +146,9 @@ def config_of(repo: str) -> dict | None:
 
 def haul_dates() -> Callable[[int], dt.date]:
     """The Long Haul's working days: day 1 is its first."""
-    from engram.bench.haul.script import calendar
+    from engram.bench.haul.script import LONGEST, calendar
 
-    days = calendar()
+    days = calendar(LONGEST)  # the 110 days, and the days a longer script adds after them
     return lambda day: days[min(max(day, 1), len(days)) - 1]
 
 

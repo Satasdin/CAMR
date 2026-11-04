@@ -581,7 +581,7 @@ class OllamaPaired(_OllamaContender):
 
     def __init__(self, model: str, *, port: int = PROXY_PORT, budget: int | None = None, num_ctx: int = PAIRED_CTX,
                  embedder: Callable[[], Any] | None = None, remember_questions: bool = False, **kw: Any):
-        from engram.bench.haul.script import calendar
+        from engram.bench.haul.script import LONGEST, calendar
         from engram.pair.ollama import BUDGET
 
         super().__init__(model, num_ctx=num_ctx, **kw)
@@ -599,7 +599,7 @@ class OllamaPaired(_OllamaContender):
         self.gate: _Gate | None = None
         self.day, self._seq, self.left_out, self.notes_told = 0, 0, 0, 0
         self._disk: float | None = None
-        self._dates = calendar()
+        self._dates = calendar(LONGEST)  # the 110 days, and the days a longer script adds after them
 
     def _embedder(self) -> Any:
         if self._emb is None:

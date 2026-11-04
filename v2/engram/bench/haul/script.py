@@ -37,6 +37,7 @@ HOLIDAYS = {dt.date(2025, 10, 20), dt.date(2025, 12, 12), dt.date(2025, 12, 25),
             dt.date(2026, 1, 1)}
 CUTS = {"64K": 64_000, "256K": 256_000, "1M": 1_000_000, "2M": 2_000_000}
 TARGET = 2_010_000  # a little past the 2M cut, so everything planted sits inside it
+LONGEST = 400  # working days in the longest script (engram.bench.haul.extend); the first 110 are these
 VERSION = 2  # 2: no config value in the noise, renamed values that clashed with their questions
 NOISE_MIX = [("chat", 13), ("log", 3.2), ("code", 9), ("doc", 10), ("notes", 6.5), ("whatsapp", 4),
              ("decision", 5), ("lesson", 3.2)]  # calls, weighted so chat is about 30% of the tokens and logs 18%
