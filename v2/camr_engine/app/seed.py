@@ -19,7 +19,8 @@ def app_root(model: str) -> Path:
     return Path.home() / ".camr" / "app" / model.split("/")[-1]
 
 
-def seed(model: str, haul: Path, tokens: int, root: Path | None = None, reach: str = "global") -> dict:
+def seed(model: str, haul: Path, tokens: int, root: Path | None = None, reach: str = "global",
+         force: bool = False) -> dict:
     from camr_engine.bench.haul.script import load_events
     from camr_engine.bench.local import _Days
     from camr_engine.bench.longhaul import line
@@ -30,7 +31,10 @@ def seed(model: str, haul: Path, tokens: int, root: Path | None = None, reach: s
     root = root or app_root(model)
     events = [e for e in load_events(haul) if e["cum_tokens"] <= tokens]
     r = Reach.parse(reach) if ":" in reach else Reach(reach)
-    memory = Memory(Reader(model), Embedder(), r.path(root), vault=True, reach=r.label)
+    folder = r.path(root)
+    if (folder / "index.json").exists() and not force:  # seeding twice would keep every moment twice
+        raise SystemExit(f"{folder} already holds a memory: it was seeded before. Pass --force to add to it anyway.")
+    memory = Memory(Reader(model), Embedder(), folder, vault=True, reach=r.label)
     days = _Days(None, True)
     t, kept = time.perf_counter(), 0
     for i, e in enumerate(events, 1):
@@ -54,8 +58,9 @@ def main(argv=None) -> int:
     ap.add_argument("--tokens", type=int, default=256_000)
     ap.add_argument("--reach", default="global")
     ap.add_argument("--root", type=Path)
+    ap.add_argument("--force", action="store_true", help="add to a memory that already holds moments")
     a = ap.parse_args(argv)
-    print(seed(a.model, a.haul, a.tokens, a.root, a.reach))
+    print(seed(a.model, a.haul, a.tokens, a.root, a.reach, a.force))
     return 0
 
 
