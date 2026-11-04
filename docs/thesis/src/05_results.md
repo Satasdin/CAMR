@@ -222,7 +222,7 @@ Table: {#testcases} Test cases and results
 
 | Test ID | Traceability | Scenario | Expected result | Actual result and evidence | Verdict |
 |---|---|---|---|---|---|
-| T-01 | All FR | The automated suite | Every test passes | 730 passed (4 November) | Pass |
+| T-01 | All FR | The automated suite | Every test passes | 730 passed (4 November, before Swarm was removed) | Pass |
 | T-02 | NFR-01 | Speed bench, 2,000 words in the room, cache bypassed, five tries | Median first word under 0.5 s | 0.233 s (E-20) | Pass |
 | T-03 | NFR-02 | The same bench, notes against words | At least 10 times sooner | 4.6 times (E-20) | Fail (kept) |
 | T-04 | NFR-03 | The 1.7B told the whole Long Haul, measured at 1K, 10K and 17.7K moments | First word and RAM do not climb | First word 0.11, 0.15, 0.08 s; RAM 4.26, 4.28, 4.23 GB (E-38) | Pass |
@@ -232,7 +232,7 @@ Table: {#testcases} Test cases and results
 | T-08 | NFR-07 | Proof lives, week 12: notes against the same desk as words | ≥ 95% of the facts; ≤ 3 extra false memories | 164 against 163 facts; 25 against 24 false memories (E-20) | Pass |
 | T-09 | NFR-08 | Never-said questions at every cut | A decline is graded right, a guess false memory | Graded as specified (grading tests); the 4B declined 9 of 10 at 2M and 10 of 10 at 3M and 4M | Pass |
 | T-10 | NFR-09 | The 4B's 3M checkpoint run twice | Identical verdicts | 29 of 73 both times, every verdict the same (E-41) | Pass |
-| T-11 | NFR-11 | Negative requests to the server and proxies | Only the app's own requests are served | Security tests pass (12 for the app, 35 for the pairing) | Pass |
+| T-11 | NFR-11 | Negative requests to the server and proxies | Only the app's own requests are served | The app's 12 security tests and the pairing's 35 tests, which include its security checks, pass | Pass |
 | T-12 | NFR-12 | A second process opens a reach folder | Refused | Refused with `ReachBusy` (reach tests) | Pass |
 | T-13 | NFR-14 | The night's yardstick runs | Spend under $60 | $28.71, every call in the ledger | Pass |
 | T-14 | NFR-15 | Inspection of the records of 4 November | Machine, load, versions, commit and code hash in each | Present in every record | Pass |
@@ -363,7 +363,7 @@ Table: {#diagnosis} Why the 1.7B missed facts at 2M (E-37)
 | Did sleep lose it? | 37 of 40 recall answers hit an asleep room; waking each room first gave 2 of 40 both ways | Sleep was not the cause |
 | Was the fact on the desk? | Yes, sometimes twice (for example "Muthoni Wafula is working off a Lenovo Yoga 7"); the 1.7B still answered "I don't know", even with the same words as plain text in a fresh prompt | The wording was the cause |
 
-With the engine's own wording, written for the scripted lives before any Long Haul result, the same 1.7B answered 19, 20, 21 and 21 against 14, 20, 17 and 15, and 6 of 10 facts at 2M. It also invented more: it declined only 3 of the 10 never-said questions at 2M, against 8 with the yardstick's wording on the same desks. The 1.7B's honesty is a property of its wording, not of its memory. The 4B does not have this problem: it keeps the yardstick's wording and is both right and honest. No wording was picked after seeing it work on these questions; the 4B, 8B and 27B kept the yardstick's wording as planned.
+With the engine's own wording, written for the scripted lives before any Long Haul result, the same 1.7B answered 19, 20, 21 and 21 against 14, 20, 17 and 15, and 6 of 10 facts at 2M. It also invented more: it declined only 3 of the 10 never-said questions at 2M, against 7 with the yardstick's wording (and, on the same 2M desks read as words, 3 against 8; E-37). The 1.7B's honesty is a property of its wording, not of its memory. The 4B does not have this problem: it keeps the yardstick's wording and is both right and honest. No wording was picked after seeing it work on these questions; the 4B, 8B and 27B kept the yardstick's wording as planned.
 
 ### Notes Against Words: What the Tensors Buy {#notes-words}
 
@@ -438,7 +438,9 @@ Table: {#claude} The Claude yardstick on the Long Haul (from the records)
 | Claude Sonnet 5.5 | 138 | 23 | 12.7–70.0 s | $4.92 + $3.87 |
 | Claude Opus 5.5 | 130 | not run | 19.3–105.2 s | $9.86 |
 
-For comparison, the 4B with CAMR answered 105 of the same 216 questions from 64K to 2M and 58 of 146 at 3M and 4M. Sonnet answered more within its window, and less beyond it. Opus scored no better than Sonnet on the Long Haul (130 against 138) at twice the price, so it sat out the suites and the longer cuts (E-36). Claude was honest: it never invented a never-said fact. Its first token came after 13 to 105 seconds on a history this long, because it reads up to a million tokens per request; the engine's first word came in under a third of a second. Spending for the night, suites included, was $28.71 of the $60 cap, every call logged.
+![{#firstword} The wait for the first word as the history grows: CAMR's median (cyan) against the model alone (amber) and Claude's first token per request (grey, dashed); note the logarithmic scale](figures/ch5/first_word.png){width=15.9}
+
+Figure {fig:firstword} sets the waits side by side. For comparison, the 4B with CAMR answered 105 of the same 216 questions from 64K to 2M and 58 of 146 at 3M and 4M. Sonnet answered more within its window, and less beyond it. Opus scored no better than Sonnet on the Long Haul (130 against 138) at twice the price, so it sat out the suites and the longer cuts (E-36). Claude was honest: it never invented a never-said fact. Sonnet's and Opus's first token came after 13 to 105 seconds on a history this long, because it reads up to a million tokens per request; the engine's first word came in under a third of a second. Spending for the night, suites included, was $28.71 of the $60 cap, every call logged.
 
 ### The Public Suites {#suites-results}
 
@@ -547,7 +549,7 @@ Table: {#failures} Weaknesses found
 | Two hops are not joined | 0 of 10 at 2M (4B) | One room per question seldom holds both halves, and the reader does not join rooms | Open: reading several rooms together |
 | The growing page is never built | 0 of 3 for every model at 2M | It needs the week-1 design and the day-61 change together | Open, for everyone |
 | Changed facts and look-alikes trail Claude | 3 against 5 at 2M | The newest of several values must be weighed against the others | Open |
-| The 1.7B's honesty depends on its wording | Never said 3 of 10 (own wording) against 8 (yardstick's) | A small reader follows its instructions too literally either way | Bounded: both reported; the 4B is honest |
+| The 1.7B's honesty depends on its wording | Never said 3 of 10 at 2M (own wording) against 7 (yardstick's) | A small reader follows its instructions too literally either way | Bounded: both reported; the 4B is honest |
 | RAM was understated | 19.2 GB footprint against 5.7 GB reported (E-40) | MLX's unbounded buffer cache | Fixed: 1 GB cap, footprint logged |
 | Notes are 10 times sooner than words | 4.6 times (E-20) | The mark was set on a slower machine | Not met, kept |
 | Notes are large | 40 GB for 2M tokens before sleep; 147,456 bytes per token for the 4B | Keys and values are about 29,000 times their text | Bounded by sleep; distilling not built |

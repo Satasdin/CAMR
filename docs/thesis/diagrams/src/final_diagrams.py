@@ -548,7 +548,7 @@ def deployment() -> Diagram:
     d.artifact(100, 370, 220, 130, "CAMR.app", "Chat · Code;<br>its own launch token;<br>picks the model")
     d.node(440, 290, 370, 330, small("«executionEnvironment»") + "<br><b>Python 3.12 virtual environment</b>",
            depth=12, fill=env)
-    for x, y, n, t in ((455, 360, "App server", "127.0.0.1:8790<br>(8765 alone)"),
+    for x, y, n, t in ((455, 360, "App server", "127.0.0.1, a free port<br>picked by the app"),
                        (635, 360, "Memory engine", "Session · Memory ·<br>Core · Rooms ·<br>Tiers · Vault"),
                        (455, 480, "Ollama pairing", "127.0.0.1:11435"),
                        (635, 480, "Benchmarks", "bench/ runners,<br>Claude client")):

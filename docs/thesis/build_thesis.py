@@ -216,11 +216,11 @@ def number(blocks: list[tuple]) -> dict[str, str]:
         elif b[0] == "table":
             tab += 1
             if b[1]:
-                labels["tab:" + b[1].removeprefix("tab:")] = f"Table {lab_ch}.{tab}"
+                labels["tab:" + b[1].removeprefix("tab:")] = f"{lab_ch}.{tab}"
         elif b[0] == "figure":
             fig += 1
             if b[1]:
-                labels["fig:" + b[1].removeprefix("fig:")] = f"Figure {lab_ch}.{fig}"
+                labels["fig:" + b[1].removeprefix("fig:")] = f"{lab_ch}.{fig}"
         elif b[0] == "eq":
             eq += 1
             if b[2]:
@@ -564,9 +564,14 @@ class Thesis:
     def finish(self, out: Path):
         settings = self.doc.settings.element
         uf = settings.find(qn("w:updateFields"))
-        if uf is None:
+        if uf is None:  # schema order: updateFields comes just before hdrShapeDefaults, footnotePr, ... compat
             uf = OxmlElement("w:updateFields")
-            settings.append(uf)
+            after = ("hdrShapeDefaults", "footnotePr", "endnotePr", "compat", "docVars", "rsids", "mathPr",
+                     "attachedSchema", "themeFontLang", "clrSchemeMapping", "doNotIncludeSubdocsInStats",
+                     "doNotAutoCompressPictures", "forceUpgrade", "captions", "readModeInkLockDown", "smartTagType",
+                     "schemaLibrary", "shapeDefaults", "doNotEmbedSmartTags", "decimalSymbol", "listSeparator")
+            nxt = next((c for c in settings if any(c.tag == qn("w:" + a) for a in after)), None)
+            (nxt.addprevious(uf) if nxt is not None else settings.append(uf))
         uf.set(qn("w:val"), "true")
         cp = self.doc.core_properties
         cp.author = "Ibrahim Sudheysi Ali"
@@ -575,6 +580,11 @@ class Thesis:
         cp.subject = "CAMR: final-year project report, Strathmore University"
         cp.keywords = "CAMR; memory engine; on-device language models; MLX; Long Haul"
         cp.comments = ""
+        # the template's own figures are still linked from the document part; drop every image nothing uses
+        xml = etree.tostring(self.doc.element).decode()
+        for rid, rel in list(self.doc.part.rels.items()):
+            if rel.reltype.endswith("/image") and f'"{rid}"' not in xml:
+                self.doc.part.drop_rel(rid)
         self.doc.save(str(out))
 
 
@@ -594,7 +604,8 @@ def main() -> None:
     th.finish(out)
     if th.unresolved:
         print("unresolved references:", ", ".join(sorted(th.unresolved)))
-    leftover = [b for b in blocks if b[0] == "p" and re.search(r"engram", b[1], re.I)]
+    old_name = "en" + "gram"  # the code name the system had until 4 November; it must not appear
+    leftover = [b for b in blocks if b[0] in ("p", "items") and old_name in str(b).lower()]
     if leftover:
         print("WARNING: the old code name appears", len(leftover), "times")
     print("wrote", out)
