@@ -389,3 +389,11 @@ diagnosis is recorded but not used.
 - ingest: about 1,100 tokens a second throughout.
 
 The p90 first word (2–5 s) is a question whose room is asleep or whose answer is long, read as words.
+
+**E-39 Past 2M: the same questions under one and two million more tokens.** Ibrahim asked to push past 2M, to 3M and
+4M. `engram.bench.haul.extend` keeps the 110 days and every probe exactly as they are (checked event for event).
+It then adds 110 more working days of noise only, from the same generators with random streams of their own,
+and the longer script passes the same fairness checks. The 3M and 4M cuts ask the 2M cut's 73 questions: a cut
+where nothing new has become askable reuses the cut before's sample. So any change in score is the history's
+weight, not new questions. The 4B (engine and bare) runs at 3M and 4M first. Claude Haiku and Sonnet run there
+too; their 1M window holds only the last days, which have nothing planted.
