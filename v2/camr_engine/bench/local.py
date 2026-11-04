@@ -734,12 +734,13 @@ def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
 
 
 def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = False, watch: bool = False,
-                   wake: bool = False, wording: str = "yardstick", bits: int | None = None) -> Contender:
+                   wake: bool = False, wording: str = "yardstick", bits: int | None = None,
+                   disk_gb: float | None = None) -> Contender:
     """A contender with the Long Haul's wording. ``wording`` "yardstick": the engine and words read LONGHAUL_INTRO,
     bare reads the yardstick's own. "own": every one reads the engine's own instructions (memory.INTRO), bare with
     its window as the notes, and the name says so ("+own"). ``learn``, ``watch`` and ``wake`` are the engine's, and
-    so is ``bits``: how its rooms keep their notes on the SSD (memory.BITS when not given; the name says so,
-    "+8bit")."""
+    so are ``bits``: how its rooms keep their notes on the SSD (memory.BITS when not given; the name says so,
+    "+8bit"), and ``disk_gb``: its disk budget in GB instead of DISK_BYTES (the name says so, "+8GB")."""
     kind, _ = parse(spec)
     if wording not in WORDINGS:
         raise ValueError(f"wording is one of {', '.join(WORDINGS)}, not {wording!r}")
@@ -749,9 +750,13 @@ def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = Fal
         kw.update(learn=learn, watch=watch, wake=wake)
         if bits is not None:
             kw["bits"] = bits
+        if disk_gb is not None:
+            kw["disk_bytes"] = int(disk_gb * 2**30)
     c = make(spec, loader, **kw)
     if kind == "engine" and bits is not None:
         c.name += f"+{bits}bit"
+    if kind == "engine" and disk_gb is not None:
+        c.name += f"+{disk_gb:g}GB"
     if own:
         c.name += "+own"
     return c
@@ -799,7 +804,8 @@ def _failure(e: Exception, record: dict, where: str | None, stage: str) -> None:
 def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] | None = None, limit: int | None = None,
              memories: Path = MEMORIES, records: Path = RECORDS, loader: Loader | None = None,
              progress: Callable[[str], None] = print, learn: bool = False, watch: bool = False,
-             wake: bool = False, wording: str = "yardstick", bits: int | None = None) -> list[dict]:
+             wake: bool = False, wording: str = "yardstick", bits: int | None = None,
+             disk_gb: float | None = None) -> list[dict]:
     """Each contender through the Long Haul's checkpoints, one after another; returns their records. A contender
     that fails is recorded with ``failed`` (its checkpoints so far kept) and the next one runs."""
     from camr_engine.bench.longhaul import CUTS, checkpoints, grader
@@ -809,7 +815,8 @@ def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] |
     loader = loader or Loader()
     out = []
     for spec in specs:
-        c = haul_contender(spec, loader, learn=learn, watch=watch, wake=wake, wording=wording, bits=bits)
+        c = haul_contender(spec, loader, learn=learn, watch=watch, wake=wake, wording=wording, bits=bits,
+                           disk_gb=disk_gb)
         rec = run(c, events, cps, task="longhaul", grader=grader, limit=limit, records=records,
                   folder=memory_folder("longhaul", c.name, memories), progress=progress,
                   meta={"haul": haul_meta(folder), "cuts": names}, raise_failure=False)
@@ -974,6 +981,8 @@ def parser() -> argparse.ArgumentParser:
                             "instructions (memory.INTRO) for every local contender")
         p.add_argument("--bits", type=int, choices=(16, 8, 4),
                        help="how the engine's new rooms keep their notes on the SSD (default: memory.BITS)")
+        p.add_argument("--disk-gb", type=float,
+                       help="the engine's disk budget for awake room files, in GB (default: 40 GB)")
         p.add_argument("--wake", action="store_true",
                        help="wake an asleep room the engine asks (its notes written again from its words) instead of "
                             "reading it as words")
@@ -986,12 +995,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         parse(spec)  # every name checked before any model is loaded
     if a.cmd == "longhaul":
         for r in longhaul(a.contender, a.dir, cuts=a.cuts, limit=a.limit, memories=a.memories, records=a.records,
-                          learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits):
+                          learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits,
+                          disk_gb=a.disk_gb):
             print(r.get("path"))
         return 0
     loader = Loader()
     for spec in a.contender:
-        c = haul_contender(spec, loader, learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits)
+        c = haul_contender(spec, loader, learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits,
+                           disk_gb=a.disk_gb)
         r = speed(c, a.dir, memory=memory_folder("speed", c.name, a.memories), marks=a.marks, questions=a.questions,
                   until=cut_tokens(a.until) if a.until else None, records=a.records, raise_failure=False)
         if "failed" in r:

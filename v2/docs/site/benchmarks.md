@@ -341,6 +341,12 @@ The wait as the engine's memory grows (`camr_engine.bench.local speed`, `engine:
 Notes read off the SSD at 6–12 GB/s when a room is not hot. At 2M most rooms are asleep (4,471 of 5,391), so most
 answers read their room as words, and read nothing from the SSD.
 
+Storage: notes kept at 8 bits instead of 16 (`--bits`, `engine:qwen3-1.7b`, 5 November 2026) got 14 and 19 right
+at 64K and 256K against 14 and 20, in 18.2 GB of rooms at 256K against 34.3 GB, with the first word at 0.094 s against
+0.098 s. At 4 bits: 14 and 18, in 9.7 GB. At 8 bits with an 8 GB disk budget (`--disk-gb 8`): 14 and 20, in 8.6 GB,
+366 of 759 rooms asleep. See [RAM, the SSD and sleep](swapping.md#storage); the records are in
+`records/bench/2026-11-05/`.
+
 The records are under `records/bench/`. Each names the machine, how busy it was (`load_1m`), and the code that made
 it (`camr_source_sha`).
 

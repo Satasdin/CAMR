@@ -613,6 +613,31 @@ with their records kept: the 27B, Qwen2.5-0.5B, Qwen2.5-VL 3B (once the multimod
 Gemma 3 download, and 511 GB of finished benchmarks' memory folders. Emptying the Trash is his to do. The Ollama
 vision model (`qwen2.5vl:3b`) is left for him to remove: `ollama rm qwen2.5vl:3b`.
 
+**E-54 Notes kept at 8 bits on the SSD, and an 8 GB disk budget per reach in the app.** The app's seeded memories
+took 32-41 GB each (112 KB a token on the 1.7B, 144 KB on the 4B and 8B). Rooms now keep their notes at 8 bits by
+default (`Memory(bits=8)`, `camr_engine.notes.pack`): every 64 numbers along a head share a 16-bit scale and offset, so
+a token is 17/32 of its 16-bit size and rooms still grow by appending. Each room's bits are in the index and in its
+file's name (`room-000001.q8.notes`), so 16-bit rooms from before still read.
+- **Measured** on the Long Haul, `engine:qwen3-1.7b`, 64K and 256K (74 questions), one run each:
+
+  | Bits | Right (64K, 256K) | Rooms at 256K | First word p50 at 256K | SSD fetch p50 at 256K |
+  | --- | --- | --- | --- | --- |
+  | 16 | 14, 20 | 34.3 GB | 0.098 s | 4.9 ms, 54 MB |
+  | 8 | 14, 19 | 18.2 GB | 0.094 s | 2.5 ms, 29 MB |
+  | 4 | 14, 18 | 9.7 GB | 0.146 s | 2.0 ms, 15 MB |
+  | 8, 8 GB budget | 14, 20 | 8.6 GB, 366 of 759 rooms asleep | 0.126 s | 0.1 ms, 1 MB |
+
+- **Why 8 and not 4.** At 8 bits 61 of 74 answers were word for word the 16-bit ones and one verdict changed (a
+  remembered backup time became "I don't know"): within noise. At 4 bits only 48 were the same and two answers were
+  lost.
+- **The budget.** The app's sessions give each reach 8 GB of awake notes (`CAMR_SHELF_DISK_GB` sets another). It is
+  held in the warm-up (`shelves.hold`, on the session's thread before any question) and each time a moment is kept.
+  The Long Haul at 256K, 8-bit, with 8 GB kept its 20 right with nearly half its rooms asleep, at 28 ms more to the
+  first word, since an asleep room is read as words.
+- **Existing memories** are packed in place by `python -m camr_engine.shrink <reach> [--apply]`: each 8-bit copy is
+  checked against the old notes before the index names it and the old file is deleted.
+- Records: `records/bench/2026-11-05/*longhaul-engine-qwen3-1.7b-{16bit,8bit,4bit,8bit-8GB}.json`.
+
 **E-55 The chat is an assistant, and the model decides when to reach into memory.** Ibrahim found the chat answering
 "show me step by step" with "I don't know": every question went through memory's strict answer ("only the notes,
 else I don't know"), with no conversation.

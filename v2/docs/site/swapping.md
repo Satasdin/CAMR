@@ -20,7 +20,7 @@ Tiers(ram_bytes: int = RAM_BYTES, disk_bytes: int | None = None, *, wake: bool =
 | Option | Default | What it does |
 | --- | --- | --- |
 | `ram_bytes` | 512 MiB | RAM for the core and the hot rooms together: about nine full rooms of the 1.7B's notes |
-| `disk_bytes` | `None` (no limit) | the most the awake room files may take on the SSD |
+| `disk_bytes` | `None` (no limit; 8 GB a reach in the Mac app) | the most the awake room files may take on the SSD |
 | `wake` | `False` | wake an asleep room when a question needs it, instead of reading its words |
 | `pool` | its own | RAM shared with other memories' tiers |
 
@@ -47,6 +47,44 @@ Every read says where it came from. A `Recall` carries `tier` (`"ram"`, `"ssd"` 
 
 On the MacBook Pro M5 Pro, a room is read from the SSD at about 12 GB/s with the cache bypassed. The same files
 come from RAM at about 60 GB/s (DECISIONS.md, E-17).
+
+## Storage
+
+A room's file keeps its notes at 16, 8 or 4 bits: `Memory(..., bits=8)`, 8 by default. At 8 or 4 bits every 64
+numbers along a head share one scale and one offset (MLX's `mx.quantize`), so a token is still a fixed number of
+bytes and a room still grows by appending. A token at 8 bits takes 17/32 of its 16-bit size (about 60 KB on the
+1.7B, 78 KB on the 4B and 8B), at 4 bits 9/32. The index records each room's bits, and so does the file's name:
+`room-000001.notes` is 16-bit, `room-000001.q8.notes` 8-bit. Rooms written at 16 bits before still read, and a
+moment joining one is appended at 16 bits. A model whose heads do not split into groups of 64 keeps 16 bits.
+
+Measured on the Long Haul (`engine:qwen3-1.7b`, 64K and 256K, 34 and 40 questions, 5 November 2026):
+
+| Bits | Right at 64K | Right at 256K | Disk at 256K | First word p50 (256K) | SSD fetch p50 (256K) |
+| --- | --- | --- | --- | --- | --- |
+| 16 | 14 | 20 | 34.3 GB | 0.098 s | 4.9 ms (54 MB) |
+| 8 | 14 | 19 | 18.2 GB | 0.094 s | 2.5 ms (29 MB) |
+| 4 | 14 | 18 | 9.7 GB | 0.146 s | 2.0 ms (15 MB) |
+| 8, with an 8 GB disk budget | 14 | 20 | 8.6 GB (366 of 759 rooms asleep) | 0.126 s | 0.1 ms (1 MB) |
+
+At 8 bits 61 of the 74 answers were word for word the 16-bit ones, and one verdict changed. At 4 bits 48 were, and
+two answers were lost at 256K. So 8 bits is the default. The SSD reads half as much, and turning the bytes back
+into numbers costs less than that saves: the room was on the desk in 5.4 ms at the median, against 6.9 ms at 16
+bits. With the 8 GB budget, 19 of the 40 questions at 256K read their room as words, and the score held at 20. The
+8-bit row is from a second run on a quiet machine; the first, beside another benchmark, gave the same answers.
+
+Rooms already on the SSD can be packed in place, with a dry run first:
+
+```bash
+python -m camr_engine.shrink ~/.camr/app/Qwen3-4B-Instruct-2507-4bit/global            # what it would do
+python -m camr_engine.shrink ~/.camr/app/Qwen3-4B-Instruct-2507-4bit/global --apply    # do it
+```
+
+It writes each room's 8-bit copy beside the old file and checks it: its size, its bytes against packing the old
+notes again, and every number within one and a half quantization steps. Only then does the index name the copy,
+and only then is the old file deleted. It refuses a reach the app has open.
+
+The Mac app gives each reach a disk budget of 8 GB (`CAMR_SHELF_DISK_GB` sets another). It is held in the warm-up,
+before the first question, and again each time a moment is kept, so a shelf stops growing on the SSD.
 
 ## Sleep
 

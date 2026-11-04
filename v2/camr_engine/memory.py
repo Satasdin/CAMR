@@ -18,7 +18,8 @@ computes exactly what it did in step 1:
 - ``notebook``: a header already read, shared by several memories (camr_engine.reach).
 
 ``bits`` is how new rooms keep their notes on the SSD: 16 (as the model wrote them), 8 or 4 (quantized, see
-camr_engine.notes.pack). Rooms already on the SSD keep the bits they were written at.
+camr_engine.notes.pack; 8 by default). Rooms already on the SSD keep the bits they were written at, and a model
+whose heads do not split into groups of 64 numbers keeps 16.
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ from camr_engine.core import CORE_TOKENS, Core
 from camr_engine.live import current
 from camr_engine.events import EventLog, Looks, used
 from camr_engine.metrics import Meter, folder_bytes, measure
-from camr_engine.notes import Notebook, pack, unpack
+from camr_engine.notes import GROUP, Notebook, pack, unpack
 from camr_engine.rooms import Rooms
 from camr_engine.swap import SSD, Tiers
 from camr_engine.vault import INDEX, SHARE, Vault
@@ -49,7 +50,7 @@ ROOM_TOKENS = 512  # at most 57 MB of notes on the 1.7B, inside the 256 MB allow
 JOIN = 0.80  # how close a moment must be to a room's closest moment to join it
 CLOSEST = 4  # moments re-read as words after the room
 ALLOWANCE_BYTES = 256 * 2**20
-BITS = 16  # new rooms' notes on the SSD
+BITS = 8  # new rooms' notes on the SSD: 8 bits held the Long Haul's answers (DECISIONS.md, E-54)
 _OWN = object()  # "this memory's own core", as against a core (or None) a session passes in
 
 
@@ -99,6 +100,8 @@ class Memory:
         self.dtype = self.notebook.core[0][0].dtype
         if room_tokens * self.notebook.shape.token_bytes > allowance:
             raise ValueError("a full room must fit the allowance")
+        if self.notebook.shape.head_dim % GROUP:  # heads that do not split into groups of 64 keep 16 bits
+            bits = 16
         self.rooms = Rooms(path, self.notebook.shape.token_bytes, room_tokens, join, bits=bits)
         self.vault: Vault | None = (Vault(self.path / "vault", reach=reach) if vault is True
                                     else vault if isinstance(vault, Vault) else None)

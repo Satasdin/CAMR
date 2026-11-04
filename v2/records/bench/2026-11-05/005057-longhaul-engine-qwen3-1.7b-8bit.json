@@ -1,0 +1,4355 @@
+{
+ "kind": "bench",
+ "task": "longhaul",
+ "contender": {
+  "name": "engine:qwen3-1.7b+8bit",
+  "kind": "engine",
+  "model": "qwen3-1.7b",
+  "repo": "mlx-community/Qwen3-1.7B-4bit",
+  "embedder": "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
+  "reach": "project:longhaul",
+  "drives": "camr_engine.memory.Memory at <folder>/project/<project>, as reach.Session drives one reach: choose, then answer with record=True",
+  "layers": [
+   "rooms",
+   "vault",
+   "core",
+   "tiers",
+   "metrics"
+  ],
+  "core": "on, empty: every moment is told untagged, and the core holds only notes tagged core",
+  "ram_bytes": 2000000000,
+  "disk_bytes": 40000000000,
+  "wake": false,
+  "room_tokens": 512,
+  "join": 0.8,
+  "closest": 4,
+  "kv_shape": {
+   "layers": 28,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "rope_base": 1000000.0,
+   "token_bytes": 114688
+  },
+  "moment": "[YYYY-MM-DD, day N] text",
+  "day_lines_kept": false,
+  "nap_days": 5,
+  "enable_thinking": false,
+  "system": "You answer questions about a project's history: one developer's log of chats, decisions, code, notes and lessons. Notes from that history come before each question. Answer from them only. When they never say, answer \"I don't know\". Keep each answer short unless the question asks for code or a page.",
+  "prompt": "system: the instructions, then \"Notes:\" with the core, the room and the closest moments, \"End of notes.\", \"Today is <date>.\" and the family's line; user: the question",
+  "today_line": true,
+  "hint_in": "system, after the notes and the date",
+  "hints": {
+   "page": "Reply with the page as one complete HTML document in a ```html block, its CSS included.",
+   "code": "Reply with the code in one ```python block.",
+   "maths": "Show the working in a few short steps, then give the final number on the last line."
+  },
+  "writes": "Memory.remember for each moment; the index is saved at each nap and before a checkpoint's first question (reach.Session.remember saves after every moment)",
+  "questions": "read-only: each question is answered from the memory as the telling left it",
+  "watch": false,
+  "event_log": true,
+  "peak_ram_gb": "MLX's peak over the answer, retrieval included"
+ },
+ "thinking": false,
+ "max_tokens": {
+  "page": 1200,
+  "code": 600,
+  "maths": 400,
+  "other": 120
+ },
+ "limit": null,
+ "folder": "/Users/p3wrky/Desktop/camr-build-wt/work/memories/longhaul-engine-qwen3-1.7b-8bit-20261105-005057.nosync",
+ "started": "2026-11-05T00:50:57",
+ "environment": {
+  "machine": "Mac17,9",
+  "chip": "Apple M5 Pro",
+  "memory_gb": 24,
+  "power": "AC Power",
+  "load_1m": 4.35,
+  "python": "3.12.12",
+  "camr_commit": "17f2199",
+  "camr_dirty": true,
+  "camr_source_sha": "e3b0c44298fc1c14",
+  "mlx": "0.32.4",
+  "mlx_lm": "0.32.2",
+  "numpy": "2.5.4"
+ },
+ "history_tokens": "the history told so far, as the task counts it (the same for every contender); extra.memory_tokens is the contender's own count of what it holds",
+ "haul": {
+  "dir": "../work/haul/s1",
+  "seed": 1,
+  "version": 2,
+  "tokens": 2010094,
+  "events": 17786,
+  "script_sha": "b3ba3aa91a4849b6"
+ },
+ "cuts": [
+  "64K",
+  "256K"
+ ],
+ "checkpoints": [
+  {
+   "name": "64K",
+   "tokens": 63860,
+   "events": 551,
+   "ingest": {
+    "events": 551,
+    "tokens": 63860,
+    "seconds": 35.089,
+    "tell_s": 35.084,
+    "read_s": 0.005,
+    "events_per_s": 15.7,
+    "tokens_per_s": 1819.9
+   },
+   "status": {
+    "moments": 544,
+    "rooms": 237,
+    "history_tokens": 73608,
+    "awake_rooms": 237,
+    "asleep_rooms": 0,
+    "hot_rooms": 55,
+    "ram_used_bytes": 1986281472,
+    "disk_awake_bytes": 4484788224,
+    "folder_bytes": 4488048729,
+    "disk_gb": 4.488049,
+    "vault_notes": 544,
+    "core_tokens": 0,
+    "token_bytes": 114688,
+    "bits": 8,
+    "join_hits": {
+     "ssd": 151,
+     "ram": 156
+    },
+    "remember_s": 35.005,
+    "saves_s": 0.005,
+    "naps": {
+     "count": 1,
+     "seconds": 0.074,
+     "faded_notes": 323,
+     "slept_rooms": 0
+    }
+   },
+   "footprint_gb": 4.667,
+   "summary": {
+    "fact": {
+     "questions": 10,
+     "right": 2,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 2,
+      "declined": 8
+     },
+     "ttft_s": {
+      "p50": 0.1014,
+      "p90": 0.1328
+     },
+     "total_s": {
+      "p50": 0.1463,
+      "p90": 0.1665
+     },
+     "prefill_tps": {
+      "p50": 5424.1,
+      "p90": 5762.16
+     },
+     "decode_tps": {
+      "p50": 179.55,
+      "p90": 199.93
+     },
+     "retrieval_ms": {
+      "p50": 16.9235,
+      "p90": 22.6748
+     },
+     "bytes_read": {
+      "p50": 4325888.0,
+      "p90": 29428224.0
+     },
+     "gbps": {
+      "p50": 7.42,
+      "p90": 9.68
+     },
+     "read_share": {
+      "p50": 0.0064,
+      "p90": 0.0213
+     },
+     "context_tokens": {
+      "p50": 767.5,
+      "p90": 1124.1
+     },
+     "history_tokens": 63860,
+     "peak_ram_gb": 3.966,
+     "disk_gb": 4.488007,
+     "tiers": {
+      "ssd": 7,
+      "ram": 3
+     }
+    },
+    "maths": {
+     "questions": 9,
+     "right": 2,
+     "graded": 9,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "declined": 1,
+      "wrong": 5,
+      "right": 2,
+      "stale": 1
+     },
+     "ttft_s": {
+      "p50": 0.1458,
+      "p90": 0.1946
+     },
+     "total_s": {
+      "p50": 0.5224,
+      "p90": 0.6198
+     },
+     "prefill_tps": {
+      "p50": 5900.4,
+      "p90": 6150.36
+     },
+     "decode_tps": {
+      "p50": 199.6,
+      "p90": 206.2
+     },
+     "retrieval_ms": {
+      "p50": 21.901,
+      "p90": 23.3158
+     },
+     "bytes_read": {
+      "p50": 28270592.0,
+      "p90": 29062656.0
+     },
+     "gbps": {
+      "p50": 10.28,
+      "p90": 11.524
+     },
+     "read_share": {
+      "p50": 0.0131,
+      "p90": 0.0177
+     },
+     "context_tokens": {
+      "p50": 1148.0,
+      "p90": 1565.2
+     },
+     "history_tokens": 63860,
+     "peak_ram_gb": 4.03,
+     "disk_gb": 4.488019,
+     "tiers": {
+      "ssd": 9
+     }
+    },
+    "page": {
+     "questions": 3,
+     "right": 0,
+     "graded": 3,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "wrong": 3
+     },
+     "ttft_s": {
+      "p50": 0.0832,
+      "p90": 0.0948
+     },
+     "total_s": {
+      "p50": 2.9679,
+      "p90": 4.1709
+     },
+     "prefill_tps": {
+      "p50": 5033.5,
+      "p90": 5149.66
+     },
+     "decode_tps": {
+      "p50": 206.9,
+      "p90": 212.74
+     },
+     "retrieval_ms": {
+      "p50": 20.065,
+      "p90": 26.0434
+     },
+     "bytes_read": {
+      "p50": 29793792.0,
+      "p90": 30573670.4
+     },
+     "gbps": {
+      "p50": 8.05,
+      "p90": 10.81
+     },
+     "read_share": {
+      "p50": 0.0311,
+      "p90": 0.061
+     },
+     "context_tokens": {
+      "p50": 871.0,
+      "p90": 919.8
+     },
+     "history_tokens": 63860,
+     "peak_ram_gb": 3.762,
+     "disk_gb": 4.488031,
+     "tiers": {
+      "ssd": 2,
+      "ram": 1
+     }
+    },
+    "code": {
+     "questions": 2,
+     "right": 0,
+     "graded": 2,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "wrong": 2
+     },
+     "ttft_s": {
+      "p50": 0.1637,
+      "p90": 0.1663
+     },
+     "total_s": {
+      "p50": 0.4942,
+      "p90": 0.6025
+     },
+     "prefill_tps": {
+      "p50": 6219.15,
+      "p90": 6317.35
+     },
+     "decode_tps": {
+      "p50": 196.7,
+      "p90": 196.7
+     },
+     "retrieval_ms": {
+      "p50": 28.805,
+      "p90": 32.889
+     },
+     "bytes_read": {
+      "p50": 26686464.0,
+      "p90": 26686464.0
+     },
+     "gbps": {
+      "p50": 9.33,
+      "p90": 10.498
+     },
+     "read_share": {
+      "p50": 0.0178,
+      "p90": 0.0198
+     },
+     "context_tokens": {
+      "p50": 1335.5,
+      "p90": 1339.1
+     },
+     "history_tokens": 63860,
+     "peak_ram_gb": 4.057,
+     "disk_gb": 4.488038,
+     "tiers": {
+      "ssd": 2
+     }
+    },
+    "never": {
+     "questions": 10,
+     "right": 10,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 10
+     },
+     "ttft_s": {
+      "p50": 0.0927,
+      "p90": 0.267
+     },
+     "total_s": {
+      "p50": 0.1206,
+      "p90": 0.2988
+     },
+     "prefill_tps": {
+      "p50": 5300.7,
+      "p90": 6492.51
+     },
+     "decode_tps": {
+      "p50": 177.0,
+      "p90": 181.33
+     },
+     "retrieval_ms": {
+      "p50": 16.3625,
+      "p90": 23.5356
+     },
+     "bytes_read": {
+      "p50": 1766912.0,
+      "p90": 15335577.6
+     },
+     "gbps": {
+      "p50": 6.6,
+      "p90": 8.066
+     },
+     "read_share": {
+      "p50": 0.0008,
+      "p90": 0.0246
+     },
+     "context_tokens": {
+      "p50": 782.0,
+      "p90": 1830.1
+     },
+     "history_tokens": 63860,
+     "peak_ram_gb": 4.092,
+     "disk_gb": 4.488048,
+     "tiers": {
+      "ram": 5,
+      "ssd": 5
+     }
+    },
+    "all": {
+     "questions": 34,
+     "right": 14,
+     "graded": 34,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "right": 14,
+      "declined": 9,
+      "wrong": 10,
+      "stale": 1
+     },
+     "ttft_s": {
+      "p50": 0.1179,
+      "p90": 0.1862
+     },
+     "total_s": {
+      "p50": 0.1653,
+      "p90": 0.6451
+     },
+     "prefill_tps": {
+      "p50": 5477.25,
+      "p90": 6183.76
+     },
+     "decode_tps": {
+      "p50": 182.5,
+      "p90": 206.42
+     },
+     "retrieval_ms": {
+      "p50": 18.8635,
+      "p90": 26.3585
+     },
+     "bytes_read": {
+      "p50": 10662400.0,
+      "p90": 29233254.4
+     },
+     "gbps": {
+      "p50": 8.25,
+      "p90": 11.512
+     },
+     "read_share": {
+      "p50": 0.0097,
+      "p90": 0.0288
+     },
+     "context_tokens": {
+      "p50": 856.5,
+      "p90": 1497.5
+     },
+     "history_tokens": 63860,
+     "peak_ram_gb": 4.092,
+     "disk_gb": 4.488048,
+     "tiers": {
+      "ssd": 25,
+      "ram": 9
+     }
+    }
+   },
+   "answers": [
+    {
+     "id": "fact-362",
+     "family": "fact",
+     "question": "What does Nairobi West Potatoes Agencies supply us with?",
+     "expected": "cooking oil",
+     "answer": "Nairobi West Potatoes Agencies supplies us with cooking oil.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names cooking oil",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1339,
+      "total_s": 0.1942,
+      "prefill_tps": 5442.9,
+      "decode_tps": 199.0,
+      "retrieval_ms": 16.7,
+      "bytes_read": 4386816,
+      "gbps": 7.42,
+      "read_share": 0.0044,
+      "context_tokens": 772,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.901,
+      "disk_gb": 4.487999,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.297,
+       "core": 0.045,
+       "fetch": 0.591,
+       "desk": 1.768,
+       "total": 16.7
+      },
+      "room": 187,
+      "new_tokens": 631,
+      "answer_tokens": 13,
+      "mlx_decode_tps": 232.7,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.79,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-098",
+     "family": "fact",
+     "question": "What is the number plate of Thika Farm's delivery truck?",
+     "expected": "KBR 675H",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0848,
+      "total_s": 0.1117,
+      "prefill_tps": 5212.9,
+      "decode_tps": 185.9,
+      "retrieval_ms": 16.466,
+      "bytes_read": 4264960,
+      "gbps": 6.38,
+      "read_share": 0.0079,
+      "context_tokens": 491,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.607,
+      "disk_gb": 4.488,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.226,
+       "core": 0.035,
+       "fetch": 0.669,
+       "desk": 1.537,
+       "total": 16.466
+      },
+      "room": 210,
+      "new_tokens": 352,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 267.0,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8362,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-193",
+     "family": "fact",
+     "question": "What is Iten Traders' minimum order, in shillings?",
+     "expected": "48,500",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1205,
+      "total_s": 0.1492,
+      "prefill_tps": 5757.4,
+      "decode_tps": 174.2,
+      "retrieval_ms": 16.969,
+      "bytes_read": 6336512,
+      "gbps": 8.02,
+      "read_share": 0.0066,
+      "context_tokens": 763,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.899,
+      "disk_gb": 4.488001,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.26,
+       "core": 0.032,
+       "fetch": 0.791,
+       "desk": 1.886,
+       "total": 16.969
+      },
+      "room": 162,
+      "new_tokens": 590,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 247.9,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7397,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-337",
+     "family": "fact",
+     "question": "How many grams is a portion of fish fillet?",
+     "expected": "440 g",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1327,
+      "total_s": 0.1634,
+      "prefill_tps": 5511.6,
+      "decode_tps": 162.9,
+      "retrieval_ms": 27.344,
+      "bytes_read": 30524928,
+      "gbps": 5.79,
+      "read_share": 0.0397,
+      "context_tokens": 1143,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.964,
+      "disk_gb": 4.488002,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.302,
+       "core": 0.034,
+       "fetch": 5.272,
+       "desk": 7.736,
+       "total": 27.344
+      },
+      "room": 5,
+      "new_tokens": 573,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 232.0,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8714,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-293",
+     "family": "fact",
+     "question": "Who is our contact person at Kapsabet Passion Distributors?",
+     "expected": "Elijah Odhiambo",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.088,
+      "total_s": 0.1159,
+      "prefill_tps": 5217.8,
+      "decode_tps": 179.2,
+      "retrieval_ms": 17.658,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 836,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.65,
+      "disk_gb": 4.488002,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.395,
+       "core": 0.022,
+       "fetch": 0.0,
+       "desk": 3.242,
+       "total": 17.658
+      },
+      "room": 96,
+      "new_tokens": 362,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 256.5,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.758,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-073",
+     "family": "fact",
+     "question": "Which matatu route does Caroline Mwita take to work?",
+     "expected": "24",
+     "answer": "Caroline Mwita takes matatu route 24 to work.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 24",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0842,
+      "total_s": 0.1562,
+      "prefill_tps": 5008.6,
+      "decode_tps": 208.3,
+      "retrieval_ms": 16.365,
+      "bytes_read": 3716608,
+      "gbps": 6.93,
+      "read_share": 0.0064,
+      "context_tokens": 466,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.586,
+      "disk_gb": 4.488003,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.24,
+       "core": 0.025,
+       "fetch": 0.536,
+       "desk": 1.564,
+       "total": 16.365
+      },
+      "room": 70,
+      "new_tokens": 336,
+      "answer_tokens": 16,
+      "mlx_decode_tps": 236.7,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.857,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-156",
+     "family": "fact",
+     "question": "Which locker number is Kennedy Onsongo's?",
+     "expected": "138",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0863,
+      "total_s": 0.1137,
+      "prefill_tps": 5405.3,
+      "decode_tps": 182.5,
+      "retrieval_ms": 16.705,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 627,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.615,
+      "disk_gb": 4.488004,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.304,
+       "core": 0.029,
+       "fetch": 0.0,
+       "desk": 2.372,
+       "total": 16.705
+      },
+      "room": 147,
+      "new_tokens": 369,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 262.0,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.6946,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-300",
+     "family": "fact",
+     "question": "What is Diana Ondieki's phone extension?",
+     "expected": "261",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1246,
+      "total_s": 0.1541,
+      "prefill_tps": 5650.1,
+      "decode_tps": 169.5,
+      "retrieval_ms": 22.156,
+      "bytes_read": 29306368,
+      "gbps": 12.17,
+      "read_share": 0.0193,
+      "context_tokens": 1122,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.966,
+      "disk_gb": 4.488005,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.186,
+       "core": 0.02,
+       "fetch": 2.408,
+       "desk": 5.542,
+       "total": 22.156
+      },
+      "room": 104,
+      "new_tokens": 572,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 242.4,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.6989,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-171",
+     "family": "fact",
+     "question": "How many days' notice does Narok Spices Growers need for an order?",
+     "expected": "8",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1146,
+      "total_s": 0.1435,
+      "prefill_tps": 5805.0,
+      "decode_tps": 173.0,
+      "retrieval_ms": 17.237,
+      "bytes_read": 5605376,
+      "gbps": 7.61,
+      "read_share": 0.0064,
+      "context_tokens": 719,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.928,
+      "disk_gb": 4.488006,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.458,
+       "core": 0.022,
+       "fetch": 0.736,
+       "desk": 2.021,
+       "total": 17.237
+      },
+      "room": 83,
+      "new_tokens": 558,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 248.2,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7931,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-109",
+     "family": "fact",
+     "question": "What does Kapsabet Passion Distributors supply us with?",
+     "expected": "tilapia",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0882,
+      "total_s": 0.116,
+      "prefill_tps": 5131.0,
+      "decode_tps": 179.9,
+      "retrieval_ms": 16.878,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 834,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.648,
+      "disk_gb": 4.488007,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.629,
+       "core": 0.038,
+       "fetch": 0.0,
+       "desk": 2.21,
+       "total": 16.878
+      },
+      "room": 96,
+      "new_tokens": 360,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 257.3,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7481,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-01-new",
+     "family": "maths",
+     "question": "Fee on 7,321?",
+     "expected": "75",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the method was taught",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1185,
+      "total_s": 0.1467,
+      "prefill_tps": 5525.3,
+      "decode_tps": 177.3,
+      "retrieval_ms": 19.043,
+      "bytes_read": 15049216,
+      "gbps": 9.66,
+      "read_share": 0.0131,
+      "context_tokens": 860,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.957,
+      "disk_gb": 4.488008,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.095,
+       "core": 0.025,
+       "fetch": 1.558,
+       "desk": 3.365,
+       "total": 19.043
+      },
+      "room": 101,
+      "new_tokens": 544,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 253.4,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7958,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-01-rule",
+     "family": "maths",
+     "question": "Fee on 12,000?",
+     "expected": "25",
+     "answer": "1% of 12,000 is 120.  \n120 rounded up to the next 5 shillings is 125.  \nFee is 125.  \n\nFinal number: 125.",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 125, not 25",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1173,
+      "total_s": 0.3699,
+      "prefill_tps": 5400.6,
+      "decode_tps": 209.8,
+      "retrieval_ms": 18.684,
+      "bytes_read": 15049216,
+      "gbps": 10.21,
+      "read_share": 0.0126,
+      "context_tokens": 843,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.933,
+      "disk_gb": 4.488009,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.202,
+       "core": 0.024,
+       "fetch": 1.474,
+       "desk": 2.985,
+       "total": 18.684
+      },
+      "room": 101,
+      "new_tokens": 527,
+      "answer_tokens": 54,
+      "mlx_decode_tps": 217.6,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8237,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-03-new",
+     "family": "maths",
+     "question": "Mama Njeri counts the chapatis: a number leaves 2 over in piles of 7, 1 over in piles of 9 and 1 over in piles of 11. What is the smallest positive number that fits?",
+     "expected": "100",
+     "answer": "1. The moduli 7, 9, 11 are coprime.  \n2. Find one solution: 2 mod 7, 1 mod 9, 1 mod 11.  \n3. The smallest number is 59.  \n\n59",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 59, not 100",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.195,
+      "total_s": 0.497,
+      "prefill_tps": 6105.5,
+      "decode_tps": 195.4,
+      "retrieval_ms": 24.059,
+      "bytes_read": 28270592,
+      "gbps": 9.63,
+      "read_share": 0.0151,
+      "context_tokens": 1566,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.03,
+      "disk_gb": 4.48801,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.496,
+       "core": 0.036,
+       "fetch": 2.936,
+       "desk": 5.591,
+       "total": 24.059
+      },
+      "room": 125,
+      "new_tokens": 1033,
+      "answer_tokens": 60,
+      "mlx_decode_tps": 202.0,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9427,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-01-same",
+     "family": "maths",
+     "question": "What's our fee on a KES 3,456 payment?",
+     "expected": "35",
+     "answer": "1% of 3,456 is 34.56.  \n34.56 rounds up to 35.  \nOur fee on a KES 3,456 payment is 35.",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 35",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1323,
+      "total_s": 0.371,
+      "prefill_tps": 6137.0,
+      "decode_tps": 205.3,
+      "retrieval_ms": 19.098,
+      "bytes_read": 15049216,
+      "gbps": 10.28,
+      "read_share": 0.0111,
+      "context_tokens": 1003,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.956,
+      "disk_gb": 4.488011,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.279,
+       "core": 0.036,
+       "fetch": 1.465,
+       "desk": 3.318,
+       "total": 19.098
+      },
+      "room": 101,
+      "new_tokens": 687,
+      "answer_tokens": 50,
+      "mlx_decode_tps": 213.7,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9733,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-04-same",
+     "family": "maths",
+     "question": "How many ways are there to choose 3 of 17 chairs in a row so that no two chosen chairs are next to each other?",
+     "expected": "455",
+     "answer": "1. Put 3 chosen chairs down with one empty chair between each pair: 3 + 2 = 5 chairs.  \n2. The other 12 empty chairs go into the 4 gaps (before, between, after) freely.  \n3. This is equivalent to choosing 3 positions out of 17 \u2212 3 + 1 = 15.  \nFinal number: 455.",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 455",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1305,
+      "total_s": 0.5614,
+      "prefill_tps": 5648.5,
+      "decode_tps": 201.9,
+      "retrieval_ms": 22.775,
+      "bytes_read": 29062656,
+      "gbps": 11.54,
+      "read_share": 0.0193,
+      "context_tokens": 1148,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.964,
+      "disk_gb": 4.488013,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.832,
+       "core": 0.039,
+       "fetch": 2.519,
+       "desk": 5.386,
+       "total": 22.775
+      },
+      "room": 51,
+      "new_tokens": 602,
+      "answer_tokens": 88,
+      "mlx_decode_tps": 206.5,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9702,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-04-rule",
+     "family": "maths",
+     "question": "In how many ways can we use 4 of the 19 parking bays for the vans with no two side by side?",
+     "expected": "715",
+     "answer": "1. Put 4 chosen bays down with one empty bay between each pair: uses 4 + 3 = 7 bays.  \n2. The other 12 empty bays can go into the 5 gaps (before, between, after) freely.  \n3. That is the same as choosing 4 positions out of 19 \u2212 4 + 1 = 16.  \nFinal number: 16 choose 4 = 1820.",
+     "verdict": "stale",
+     "right": false,
+     "reason": "final number 1820 is what the uncorrected method gives",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1458,
+      "total_s": 0.6517,
+      "prefill_tps": 5894.9,
+      "decode_tps": 199.6,
+      "retrieval_ms": 21.901,
+      "bytes_read": 29062656,
+      "gbps": 11.5,
+      "read_share": 0.0173,
+      "context_tokens": 1269,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.01,
+      "disk_gb": 4.488014,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.725,
+       "core": 0.039,
+       "fetch": 2.526,
+       "desk": 4.611,
+       "total": 21.901
+      },
+      "room": 51,
+      "new_tokens": 723,
+      "answer_tokens": 102,
+      "mlx_decode_tps": 203.6,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8395,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-03-same",
+     "family": "maths",
+     "question": "Mama Njeri counts the chapatis: a number leaves 1 over in piles of 3, 6 over in piles of 7 and 6 over in piles of 8. What is the smallest positive number that fits?",
+     "expected": "118",
+     "answer": "1. The number leaves 1 over in piles of 3, 6 over in piles of 7, and 6 over in piles of 8.  \n2. Find the smallest number that satisfies these conditions.  \n3. The smallest positive number is 59.  \n\nFinal number: 59",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 59, not 118",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1945,
+      "total_s": 0.5224,
+      "prefill_tps": 6077.2,
+      "decode_tps": 195.2,
+      "retrieval_ms": 23.13,
+      "bytes_read": 28270592,
+      "gbps": 11.52,
+      "read_share": 0.0126,
+      "context_tokens": 1565,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.03,
+      "disk_gb": 4.488016,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.409,
+       "core": 0.023,
+       "fetch": 2.455,
+       "desk": 5.243,
+       "total": 23.13
+      },
+      "room": 125,
+      "new_tokens": 1032,
+      "answer_tokens": 65,
+      "mlx_decode_tps": 201.3,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9711,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-03-rule",
+     "family": "maths",
+     "question": "For tray stacks: a number leaves 6 over in piles of 7, 3 over in piles of 9 and 6 over in piles of 11. What is the largest such number below 3,000?",
+     "expected": "2316",
+     "answer": "1. For 7: 7 \u00d7 6 = 42  \n2. For 9: 9 \u00d7 3 = 27  \n3. For 11: 11 \u00d7 6 = 66  \n\nCombine: 42 + 27 + 66 = 135  \n\nCheck: 135 leaves 6, 3, 6.  \n\nFinal number: 135.",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 135, not 2316",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1501,
+      "total_s": 0.6118,
+      "prefill_tps": 6203.8,
+      "decode_tps": 203.6,
+      "retrieval_ms": 19.676,
+      "bytes_read": 12794880,
+      "gbps": 10.24,
+      "read_share": 0.0083,
+      "context_tokens": 1080,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.989,
+      "disk_gb": 4.488017,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.466,
+       "core": 0.015,
+       "fetch": 1.249,
+       "desk": 2.945,
+       "total": 19.676
+      },
+      "room": 127,
+      "new_tokens": 801,
+      "answer_tokens": 95,
+      "mlx_decode_tps": 207.9,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8328,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-04-new",
+     "family": "maths",
+     "question": "How many ways are there to choose 5 of 19 chairs in a row so that no two chosen chairs are next to each other?",
+     "expected": "3003",
+     "answer": "1. Put 5 chosen chairs down with one empty chair between each pair: 5 + 4 = 9 chairs.  \n2. The other 10 empty chairs can go into the 6 gaps (before, between, after) freely.  \n3. This is the same as choosing 5 positions out of 19 \u2212 5 + 1 = 15.  \nFinal number: 435.",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 435, not 3003",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.147,
+      "total_s": 0.5934,
+      "prefill_tps": 5900.4,
+      "decode_tps": 199.4,
+      "retrieval_ms": 22.852,
+      "bytes_read": 29062656,
+      "gbps": 11.41,
+      "read_share": 0.0173,
+      "context_tokens": 1271,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.011,
+      "disk_gb": 4.488019,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.853,
+       "core": 0.039,
+       "fetch": 2.546,
+       "desk": 5.414,
+       "total": 22.852
+      },
+      "room": 51,
+      "new_tokens": 725,
+      "answer_tokens": 90,
+      "mlx_decode_tps": 203.9,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9005,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "page-catering",
+     "family": "page",
+     "question": "Build the catering page.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Catering Page</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            margin: 0;\n            padding: 0;\n            background: #f4f4f4;\n        }\n        h1 {\n            text-align: center;\n            color: #333;\n        }\n        .container {\n            max-width: 800px;\n            margin: 40px auto;\n            padding: 20px;\n            background: #fff;\n            border-radius: 10px;\n            box-shadow: 0 2px 5px rgba(0,0,0,0.1);\n        }\n        ul {\n            list-style: none;\n            padding: 0;\n            margin: 20px 0;\n        }\n        ul li {\n            margin: 10px 0;\n            background: #eee;\n            padding: 10px 15px;\n            border-radius: 5px;\n        }\n        ul li a {\n            text-decoration: none;\n            color: #333;\n        }\n        .action {\n            margin-top: 20px;\n            background: #ffd700;\n            padding: 15px;\n            border-radius: 5px;\n            font-weight: bold;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <h1>Catering Page</h1>\n        <ul>\n            <li>Collect the menu from all branches</li>\n            <li>Menu photos for every dish</li>\n            <li>Set up staging server</li>\n            <li>Train new staff</li>\n            <li>Update design tokens</li>\n        </ul>\n        <div class=\"action\">Action: Kerubo to agree on the design tokens</div>\n        <div class=\"action\">Action: Winnie to collect the menu from all branches by Tuesday</div>\n    </div>\n</body>\n</html>\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "main colour #0B5FFF is not used; font Inter is not set; no <nav> links; no <footer>; spacing off the scale: margin: 40px, padding: 20px, margin: 20px, margin: 10px",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0832,
+      "total_s": 2.2488,
+      "prefill_tps": 5033.5,
+      "decode_tps": 206.9,
+      "retrieval_ms": 20.065,
+      "bytes_read": 29793792,
+      "gbps": 11.5,
+      "read_share": 0.0311,
+      "context_tokens": 871,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.658,
+      "disk_gb": 4.48802,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 10.342,
+       "core": 0.023,
+       "fetch": 2.592,
+       "desk": 7.108,
+       "total": 20.065
+      },
+      "room": 62,
+      "new_tokens": 313,
+      "answer_tokens": 449,
+      "mlx_decode_tps": 207.8,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.803,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "page-contact",
+     "family": "page",
+     "question": "Build the contact page: the four branches with a map link each, and a short message form.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Contact Page</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            margin: 0;\n            padding: 0;\n            background: #f4f4f4;\n        }\n        .container {\n            max-width: 800px;\n            margin: 40px auto;\n            padding: 20px;\n            background: #fff;\n            border-radius: 10px;\n            box-shadow: 0 0 10px rgba(0,0,0,0.1);\n        }\n        h1 {\n            text-align: center;\n            color: #333;\n        }\n        .branches {\n            display: flex;\n            flex-wrap: wrap;\n            gap: 20px;\n            margin-top: 20px;\n        }\n        .branch {\n            flex: 1 1 250px;\n            background: #e0e0e0;\n            border-radius: 10px;\n            padding: 20px;\n            text-align: center;\n            box-shadow: 0 0 5px rgba(0,0,0,0.2);\n        }\n        .branch h2 {\n            margin-bottom: 10px;\n            color: #555;\n        }\n        .branch a {\n            display: block;\n            background: #007bff;\n            color: #fff;\n            padding: 15px;\n            border-radius: 50%;\n            text-decoration: none;\n            font-size: 24px;\n            transition: background 0.3s;\n        }\n        .branch a:hover {\n            background: #0056b3;\n        }\n        .form {\n            margin-top: 20px;\n            background: #e0e0e0;\n            border-radius: 10px;\n            padding: 20px;\n            text-align: center;\n        }\n        .form h2 {\n            margin-bottom: 15px;\n            color: #333;\n        }\n        .form input, .form button {\n            padding: 15px;\n            margin: 10px 0;\n            border: 1px solid #ccc;\n            border-radius: 5px;\n            background: #fff;\n            color: #555;\n            font-size: 16px;\n        }\n        .form button {\n            background: #007bff;\n            color: #fff;\n            border: none;\n            cursor: pointer;\n        }\n        .form button:hover {\n            background: #0056b3;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <h1>Contact Us</h1>\n        <div class=\"branches\">\n            <div class=\"branch\">\n                <h2>Branch 1</h2>\n                <a href=\"#\" target=\"_blank\">View Map</a>\n            </div>\n            <div class=\"branch\">\n                <h2>Branch 2</h2>\n                <a href=\"#\" target=\"_blank\">View Map</a>\n            </div>\n            <div class=\"branch\">\n                <h2>Branch 3</h2>\n                <a href=\"#\" target=\"_blank\">View Map</a>\n            </div>\n            <div class=\"branch\">\n                <h2>Branch 4</h2>\n                <a href=\"#\" target=\"_blank\">View Map</a>\n            </div>\n        </div>\n        <div class=\"form\">\n            <h2>Send a Message</h2>\n            <form action=\"#\" method=\"post\">\n                <input type=\"text\" name=\"name\" placeholder=\"Your Name\" required>\n                <input type=\"email\" name=\"email\" placeholder=\"Your Email\" required>\n                <textarea name=\"message\" rows=\"5\" placeholder=\"Your Message\" required></textarea>\n                <button type=\"submit\">Send</button>\n            </form>\n        </div>\n    </div>\n</body>\n</html>\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "main colour #0B5FFF is not used; font Inter is not set; no <nav> links; no <footer>; spacing off the scale: margin: 40px, padding: 20px, gap: 20px, margin: 20px",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0977,
+      "total_s": 4.4716,
+      "prefill_tps": 5178.7,
+      "decode_tps": 201.2,
+      "retrieval_ms": 27.538,
+      "bytes_read": 30768640,
+      "gbps": 4.6,
+      "read_share": 0.0685,
+      "context_tokens": 932,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.762,
+      "disk_gb": 4.488024,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.705,
+       "core": 0.046,
+       "fetch": 6.69,
+       "desk": 6.096,
+       "total": 27.538
+      },
+      "room": 37,
+      "new_tokens": 358,
+      "answer_tokens": 881,
+      "mlx_decode_tps": 201.7,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.797,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "page-about",
+     "family": "page",
+     "question": "Build the about page: Mama Njeri's story, the kitchen team, and photos of the Westlands kitchen.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Mama Njeri's Story</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            line-height: 1.6;\n            margin: 0;\n            padding: 0;\n            background: #f4f4f4;\n        }\n        h1, h2 {\n            color: #333;\n        }\n        .container {\n            max-width: 800px;\n            margin: 20px auto;\n            padding: 20px;\n            background: #fff;\n            border-radius: 10px;\n            box-shadow: 0 2px 5px rgba(0,0,0,0.1);\n        }\n        .story {\n            background: #fff;\n            padding: 15px;\n            border-radius: 5px;\n        }\n        .team {\n            background: #f0f0f0;\n            padding: 15px;\n            border-radius: 5px;\n        }\n        .photos {\n            background: #e0e0e0;\n            padding: 15px;\n            border-radius: 5px;\n        }\n        img {\n            max-width: 100%;\n            height: auto;\n            margin-top: 10px;\n            border-radius: 5px;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <h1>Mama Njeri's Story</h1>\n        <p>Mama Njeri is a passionate chef from the Westlands region of Kenya. She started her journey in the kitchen, learning the art of traditional Kenyan cooking from her mother. Over the years, she has grown into a skilled and respected chef, known for her authentic and flavorful dishes.</p>\n\n        <h2>The Kitchen Team</h2>\n        <p>The kitchen team at Mama Njeri's is a close-knit group of talented individuals who share a love for food and a commitment to excellence. They work together to create dishes that are not only delicious but also a reflection of Kenyan culture and heritage.</p>\n\n        <h2>Photos of the Westlands Kitchen</h2>\n        <p>Here are some photos of the Westlands kitchen, where the magic of cooking happens:</p>\n        <img src=\"https://via.placeholder.com/600x400?text=Westlands+Kitchen\" alt=\"Westlands Kitchen\">\n        <img src=\"https://via.placeholder.com/600x400?text=Chef+Njeri\" alt=\"Chef Njeri\">\n        <img src=\"https://via.placeholder.com/600x400?text=Dishes+from+Westlands\" alt=\"Dishes from Westlands\">\n    </div>\n</body>\n</html>\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "main colour #0B5FFF is not used; font Inter is not set; no <nav> links; no <footer>; spacing off the scale: margin: 20px, padding: 20px, padding: 15px, padding: 15px; no <h1> naming About",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0779,
+      "total_s": 2.9679,
+      "prefill_tps": 3948.1,
+      "decode_tps": 214.2,
+      "retrieval_ms": 17.065,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 388,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.454,
+      "disk_gb": 4.488031,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 16.065,
+       "core": 0.026,
+       "fetch": 0.0,
+       "desk": 0.975,
+       "total": 17.065
+      },
+      "room": 212,
+      "new_tokens": 237,
+      "answer_tokens": 620,
+      "mlx_decode_tps": 214.9,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8366,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "code-14",
+     "family": "code",
+     "question": "Write `vat_part_cents(net_items: list[int]) -> int`: the total VAT in cents on a receipt whose lines have these net amounts in cents. VAT is worked out line by line, the way our money helpers do it.",
+     "expected": "a function vat_part_cents that passes 4 tests",
+     "answer": "```python\ndef vat_part_cents(net_items: list[int]) -> int:\n    total = sum(net_items)\n    return total + total * VAT_PERCENT // 100\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "passes 0 of 4 tests; case 0: got 6956, want 957; case 1: got 23, want 0",
+     "max_tokens": 600,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1605,
+      "total_s": 0.3588,
+      "prefill_tps": 6096.4,
+      "decode_tps": 196.7,
+      "retrieval_ms": 23.7,
+      "bytes_read": 26686464,
+      "gbps": 10.79,
+      "read_share": 0.0154,
+      "context_tokens": 1331,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.05,
+      "disk_gb": 4.488037,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.61,
+       "core": 0.038,
+       "fetch": 2.473,
+       "desk": 5.579,
+       "total": 23.7
+      },
+      "room": 146,
+      "new_tokens": 824,
+      "answer_tokens": 40,
+      "mlx_decode_tps": 206.8,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8112,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "code-20",
+     "family": "code",
+     "question": "Write `split_labels(total_cents: int, people: int) -> list[str]`: split a bill exactly the way our money helpers split bills, and give each share as a price label.",
+     "expected": "a function split_labels that passes 3 tests",
+     "answer": "```python\ndef split_labels(total_cents: int, people: int) -> list[str]:\n    base, extra = divmod(total_cents, people)\n    return [f\"{sign}KES {base:,}.{base % 100:02d}\" if i < extra else f\"{sign}KES {base:,}.{base % 100:02d}\" for i in range(people)]\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "passes 0 of 3 tests; case 0: NameError: name 'sign' is not defined; case 1: NameError: name 'sign' is not defined",
+     "max_tokens": 600,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1669,
+      "total_s": 0.6296,
+      "prefill_tps": 6341.9,
+      "decode_tps": 196.7,
+      "retrieval_ms": 33.91,
+      "bytes_read": 26686464,
+      "gbps": 7.87,
+      "read_share": 0.0203,
+      "context_tokens": 1340,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.057,
+      "disk_gb": 4.488038,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 25.392,
+       "core": 0.04,
+       "fetch": 3.39,
+       "desk": 5.088,
+       "total": 33.91
+      },
+      "room": 146,
+      "new_tokens": 833,
+      "answer_tokens": 92,
+      "mlx_decode_tps": 201.0,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8477,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-01",
+     "family": "never",
+     "question": "What is Otieno's surname?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0912,
+      "total_s": 0.1195,
+      "prefill_tps": 4797.7,
+      "decode_tps": 176.7,
+      "retrieval_ms": 27.942,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 853,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.592,
+      "disk_gb": 4.48804,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 24.315,
+       "core": 0.049,
+       "fetch": 0.0,
+       "desk": 3.579,
+       "total": 27.942
+      },
+      "room": 112,
+      "new_tokens": 298,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 253.2,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7198,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-47",
+     "family": "never",
+     "question": "What is the uptime check interval?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2531,
+      "total_s": 0.2849,
+      "prefill_tps": 6585.3,
+      "decode_tps": 157.2,
+      "retrieval_ms": 14.383,
+      "bytes_read": 7494144,
+      "gbps": 6.6,
+      "read_share": 0.0045,
+      "context_tokens": 1748,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.092,
+      "disk_gb": 4.488041,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 10.438,
+       "core": 0.023,
+       "fetch": 1.135,
+       "desk": 2.787,
+       "total": 14.383
+      },
+      "room": 93,
+      "new_tokens": 1556,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 224.7,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.747,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-11",
+     "family": "never",
+     "question": "What brand is the espresso machine at Westlands?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1129,
+      "total_s": 0.1408,
+      "prefill_tps": 5406.4,
+      "decode_tps": 179.2,
+      "retrieval_ms": 15.656,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 723,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.884,
+      "disk_gb": 4.488041,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.162,
+       "core": 0.034,
+       "fetch": 0.0,
+       "desk": 1.46,
+       "total": 15.656
+      },
+      "room": 154,
+      "new_tokens": 520,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 255.9,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.6463,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-37",
+     "family": "never",
+     "question": "What does Diana Ondieki do at Mama Njeri's Kitchen?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0749,
+      "total_s": 0.1031,
+      "prefill_tps": 3615.7,
+      "decode_tps": 177.3,
+      "retrieval_ms": 16.199,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 765,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.501,
+      "disk_gb": 4.488042,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.231,
+       "core": 0.03,
+       "fetch": 0.0,
+       "desk": 1.939,
+       "total": 16.199
+      },
+      "room": 112,
+      "new_tokens": 210,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 253.3,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7918,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-41",
+     "family": "never",
+     "question": "Which extension do I dial to reach Fatuma Kirimi?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0941,
+      "total_s": 0.1217,
+      "prefill_tps": 5287.8,
+      "decode_tps": 181.2,
+      "retrieval_ms": 17.899,
+      "bytes_read": 8529920,
+      "gbps": 7.79,
+      "read_share": 0.0116,
+      "context_tokens": 607,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.707,
+      "disk_gb": 4.488043,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.07,
+       "core": 0.029,
+       "fetch": 1.095,
+       "desk": 2.705,
+       "total": 17.899
+      },
+      "room": 176,
+      "new_tokens": 398,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 257.8,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7157,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-40",
+     "family": "never",
+     "question": "Which matatu route does Adhiambo Ruto take to work?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.09,
+      "total_s": 0.1174,
+      "prefill_tps": 5064.2,
+      "decode_tps": 182.5,
+      "retrieval_ms": 21.041,
+      "bytes_read": 14074368,
+      "gbps": 4.55,
+      "read_share": 0.0344,
+      "context_tokens": 645,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.645,
+      "disk_gb": 4.488044,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.215,
+       "core": 0.033,
+       "fetch": 3.094,
+       "desk": 3.699,
+       "total": 21.041
+      },
+      "room": 81,
+      "new_tokens": 345,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 259.9,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7796,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-44",
+     "family": "never",
+     "question": "How many minutes does vegetable rice take to prepare?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1375,
+      "total_s": 0.1672,
+      "prefill_tps": 5665.9,
+      "decode_tps": 168.4,
+      "retrieval_ms": 23.046,
+      "bytes_read": 26686464,
+      "gbps": 8.25,
+      "read_share": 0.0235,
+      "context_tokens": 1149,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.987,
+      "disk_gb": 4.488045,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.062,
+       "core": 0.036,
+       "fetch": 3.236,
+       "desk": 5.712,
+       "total": 23.046
+      },
+      "room": 17,
+      "new_tokens": 642,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 240.5,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7977,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-56",
+     "family": "never",
+     "question": "What is the admin URL path?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.3919,
+      "total_s": 0.4244,
+      "prefill_tps": 6482.2,
+      "decode_tps": 153.8,
+      "retrieval_ms": 12.245,
+      "bytes_read": 3533824,
+      "gbps": 5.32,
+      "read_share": 0.0017,
+      "context_tokens": 2569,
+      "history_tokens": 63860,
+      "peak_ram_gb": 4.027,
+      "disk_gb": 4.488046,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 10.089,
+       "core": 0.018,
+       "fetch": 0.664,
+       "desk": 1.474,
+       "total": 12.245
+      },
+      "room": 152,
+      "new_tokens": 2442,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 219.5,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7555,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-10",
+     "family": "never",
+     "question": "Which school do Mama Njeri's grandchildren attend?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0773,
+      "total_s": 0.1051,
+      "prefill_tps": 4026.2,
+      "decode_tps": 179.9,
+      "retrieval_ms": 16.059,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 799,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.549,
+      "disk_gb": 4.488047,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.117,
+       "core": 0.03,
+       "fetch": 0.0,
+       "desk": 1.912,
+       "total": 16.059
+      },
+      "room": 112,
+      "new_tokens": 244,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 256.7,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.786,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-34",
+     "family": "never",
+     "question": "What does Voi Wheat Distributors supply us with?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0845,
+      "total_s": 0.113,
+      "prefill_tps": 5313.6,
+      "decode_tps": 175.4,
+      "retrieval_ms": 16.526,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 704,
+      "history_tokens": 63860,
+      "peak_ram_gb": 3.635,
+      "disk_gb": 4.488048,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.082,
+       "core": 0.033,
+       "fetch": 0.0,
+       "desk": 2.412,
+       "total": 16.526
+      },
+      "room": 175,
+      "new_tokens": 357,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 252.5,
+      "rss_peak_gb": 3.241,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7209,
+      "memory_tokens": 73608
+     },
+     "asked_before": false
+    }
+   ]
+  },
+  {
+   "name": "256K",
+   "tokens": 255952,
+   "events": 2343,
+   "ingest": {
+    "events": 1792,
+    "tokens": 192092,
+    "seconds": 133.69,
+    "tell_s": 133.673,
+    "read_s": 0.018,
+    "events_per_s": 13.4,
+    "tokens_per_s": 1436.8
+   },
+   "status": {
+    "moments": 2327,
+    "rooms": 737,
+    "history_tokens": 299072,
+    "awake_rooms": 737,
+    "asleep_rooms": 0,
+    "hot_rooms": 45,
+    "ram_used_bytes": 1979170816,
+    "disk_awake_bytes": 18221858816,
+    "folder_bytes": 18235833576,
+    "disk_gb": 18.235834,
+    "vault_notes": 2327,
+    "core_tokens": 0,
+    "token_bytes": 114688,
+    "bits": 8,
+    "join_hits": {
+     "ssd": 892,
+     "ram": 698
+    },
+    "remember_s": 167.708,
+    "saves_s": 0.023,
+    "naps": {
+     "count": 3,
+     "seconds": 1.026,
+     "faded_notes": 3796,
+     "slept_rooms": 0
+    }
+   },
+   "footprint_gb": 4.113,
+   "summary": {
+    "fact": {
+     "questions": 10,
+     "right": 5,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 1,
+     "verdicts": {
+      "declined": 5,
+      "right": 5
+     },
+     "ttft_s": {
+      "p50": 0.0876,
+      "p90": 0.0946
+     },
+     "total_s": {
+      "p50": 0.1215,
+      "p90": 0.1498
+     },
+     "prefill_tps": {
+      "p50": 5057.9,
+      "p90": 5268.06
+     },
+     "decode_tps": {
+      "p50": 181.8,
+      "p90": 197.17
+     },
+     "retrieval_ms": {
+      "p50": 22.1795,
+      "p90": 23.1324
+     },
+     "bytes_read": {
+      "p50": 29397760.0,
+      "p90": 30098432.0
+     },
+     "gbps": {
+      "p50": 11.835,
+      "p90": 12.402
+     },
+     "read_share": {
+      "p50": 0.0267,
+      "p90": 0.0326
+     },
+     "context_tokens": {
+      "p50": 885.0,
+      "p90": 936.0
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 3.856,
+     "disk_gb": 18.235785,
+     "tiers": {
+      "ssd": 10
+     }
+    },
+    "changed": {
+     "questions": 4,
+     "right": 0,
+     "graded": 4,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "declined": 4
+     },
+     "ttft_s": {
+      "p50": 0.0842,
+      "p90": 0.0957
+     },
+     "total_s": {
+      "p50": 0.1116,
+      "p90": 0.1236
+     },
+     "prefill_tps": {
+      "p50": 4484.25,
+      "p90": 5353.06
+     },
+     "decode_tps": {
+      "p50": 181.5,
+      "p90": 182.29
+     },
+     "retrieval_ms": {
+      "p50": 22.5725,
+      "p90": 22.8814
+     },
+     "bytes_read": {
+      "p50": 29611008.0,
+      "p90": 30793011.2
+     },
+     "gbps": {
+      "p50": 11.74,
+      "p90": 11.82
+     },
+     "read_share": {
+      "p50": 0.0284,
+      "p90": 0.0317
+     },
+     "context_tokens": {
+      "p50": 795.5,
+      "p90": 919.4
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 3.885,
+     "disk_gb": 18.235789,
+     "tiers": {
+      "ssd": 3,
+      "ram": 1
+     }
+    },
+    "two_hop": {
+     "questions": 1,
+     "right": 0,
+     "graded": 1,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 0,
+     "verdicts": {
+      "declined": 1
+     },
+     "ttft_s": {
+      "p50": 0.1311,
+      "p90": 0.1311
+     },
+     "total_s": {
+      "p50": 0.1604,
+      "p90": 0.1604
+     },
+     "prefill_tps": {
+      "p50": 5955.1,
+      "p90": 5955.1
+     },
+     "decode_tps": {
+      "p50": 170.6,
+      "p90": 170.6
+     },
+     "retrieval_ms": {
+      "p50": 22.715,
+      "p90": 22.715
+     },
+     "bytes_read": {
+      "p50": 29611008.0,
+      "p90": 29611008.0
+     },
+     "gbps": {
+      "p50": 10.49,
+      "p90": 10.49
+     },
+     "read_share": {
+      "p50": 0.0215,
+      "p90": 0.0215
+     },
+     "context_tokens": {
+      "p50": 1194.0,
+      "p90": 1194.0
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 4.031,
+     "disk_gb": 18.23579,
+     "tiers": {
+      "ssd": 1
+     }
+    },
+    "maths": {
+     "questions": 10,
+     "right": 3,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 4,
+     "verdicts": {
+      "wrong": 5,
+      "right": 3,
+      "declined": 1,
+      "stale": 1
+     },
+     "ttft_s": {
+      "p50": 0.1489,
+      "p90": 0.1839
+     },
+     "total_s": {
+      "p50": 0.5191,
+      "p90": 1.0955
+     },
+     "prefill_tps": {
+      "p50": 5907.3,
+      "p90": 6346.46
+     },
+     "decode_tps": {
+      "p50": 198.95,
+      "p90": 212.3
+     },
+     "retrieval_ms": {
+      "p50": 21.8455,
+      "p90": 24.3008
+     },
+     "bytes_read": {
+      "p50": 24310272.0,
+      "p90": 28532582.4
+     },
+     "gbps": {
+      "p50": 10.675,
+      "p90": 11.494
+     },
+     "read_share": {
+      "p50": 0.015,
+      "p90": 0.0201
+     },
+     "context_tokens": {
+      "p50": 1231.5,
+      "p90": 1452.2
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 4.19,
+     "disk_gb": 18.235804,
+     "tiers": {
+      "ssd": 10
+     }
+    },
+    "page": {
+     "questions": 3,
+     "right": 0,
+     "graded": 3,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 3,
+     "verdicts": {
+      "wrong": 3
+     },
+     "ttft_s": {
+      "p50": 0.0837,
+      "p90": 0.1012
+     },
+     "total_s": {
+      "p50": 3.209,
+      "p90": 4.4393
+     },
+     "prefill_tps": {
+      "p50": 3932.8,
+      "p90": 4823.76
+     },
+     "decode_tps": {
+      "p50": 207.0,
+      "p90": 211.8
+     },
+     "retrieval_ms": {
+      "p50": 23.252,
+      "p90": 25.0032
+     },
+     "bytes_read": {
+      "p50": 29732864.0,
+      "p90": 30561484.8
+     },
+     "gbps": {
+      "p50": 11.42,
+      "p90": 11.852
+     },
+     "read_share": {
+      "p50": 0.0309,
+      "p90": 0.0323
+     },
+     "context_tokens": {
+      "p50": 789.0,
+      "p90": 936.2
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 3.873,
+     "disk_gb": 18.235816,
+     "tiers": {
+      "ssd": 3
+     }
+    },
+    "code": {
+     "questions": 2,
+     "right": 1,
+     "graded": 2,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 2,
+     "verdicts": {
+      "right": 1,
+      "wrong": 1
+     },
+     "ttft_s": {
+      "p50": 0.1651,
+      "p90": 0.1685
+     },
+     "total_s": {
+      "p50": 0.4717,
+      "p90": 0.5741
+     },
+     "prefill_tps": {
+      "p50": 6162.1,
+      "p90": 6198.18
+     },
+     "decode_tps": {
+      "p50": 198.3,
+      "p90": 199.5
+     },
+     "retrieval_ms": {
+      "p50": 29.4705,
+      "p90": 33.6949
+     },
+     "bytes_read": {
+      "p50": 26686464.0,
+      "p90": 26686464.0
+     },
+     "gbps": {
+      "p50": 8.545,
+      "p90": 9.581
+     },
+     "read_share": {
+      "p50": 0.0193,
+      "p90": 0.0212
+     },
+     "context_tokens": {
+      "p50": 1331.5,
+      "p90": 1331.9
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 4.104,
+     "disk_gb": 18.235823,
+     "tiers": {
+      "ssd": 2
+     }
+    },
+    "never": {
+     "questions": 10,
+     "right": 10,
+     "graded": 10,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 2,
+     "verdicts": {
+      "right": 10
+     },
+     "ttft_s": {
+      "p50": 0.0948,
+      "p90": 0.1061
+     },
+     "total_s": {
+      "p50": 0.1227,
+      "p90": 0.1363
+     },
+     "prefill_tps": {
+      "p50": 5163.05,
+      "p90": 5606.4
+     },
+     "decode_tps": {
+      "p50": 178.9,
+      "p90": 186.74
+     },
+     "retrieval_ms": {
+      "p50": 22.6145,
+      "p90": 25.6365
+     },
+     "bytes_read": {
+      "p50": 28818944.0,
+      "p90": 30567577.6
+     },
+     "gbps": {
+      "p50": 10.33,
+      "p90": 12.706
+     },
+     "read_share": {
+      "p50": 0.0241,
+      "p90": 0.0478
+     },
+     "context_tokens": {
+      "p50": 915.0,
+      "p90": 1047.5
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 3.993,
+     "disk_gb": 18.235833,
+     "tiers": {
+      "ssd": 9,
+      "ram": 1
+     }
+    },
+    "all": {
+     "questions": 40,
+     "right": 19,
+     "graded": 40,
+     "errors": 0,
+     "truncated": 0,
+     "asked_before": 12,
+     "verdicts": {
+      "declined": 11,
+      "right": 19,
+      "wrong": 9,
+      "stale": 1
+     },
+     "ttft_s": {
+      "p50": 0.0944,
+      "p90": 0.1695
+     },
+     "total_s": {
+      "p50": 0.1298,
+      "p90": 1.0955
+     },
+     "prefill_tps": {
+      "p50": 5250.55,
+      "p90": 6198.65
+     },
+     "decode_tps": {
+      "p50": 184.55,
+      "p90": 204.39
+     },
+     "retrieval_ms": {
+      "p50": 22.458,
+      "p90": 24.3151
+     },
+     "bytes_read": {
+      "p50": 28636160.0,
+      "p90": 30780825.6
+     },
+     "gbps": {
+      "p50": 11.11,
+      "p90": 12.315
+     },
+     "read_share": {
+      "p50": 0.0241,
+      "p90": 0.0326
+     },
+     "context_tokens": {
+      "p50": 915.0,
+      "p90": 1355.3
+     },
+     "history_tokens": 255952,
+     "peak_ram_gb": 4.19,
+     "disk_gb": 18.235833,
+     "tiers": {
+      "ssd": 38,
+      "ram": 2
+     }
+    }
+   },
+   "answers": [
+    {
+     "id": "fact-141",
+     "family": "fact",
+     "question": "What is the Docker base image?",
+     "expected": "python:3.12-bookworm",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0736,
+      "total_s": 0.1001,
+      "prefill_tps": 2878.1,
+      "decode_tps": 188.7,
+      "retrieval_ms": 11.99,
+      "bytes_read": 2254336,
+      "gbps": 5.35,
+      "read_share": 0.0057,
+      "context_tokens": 281,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.409,
+      "disk_gb": 18.235777,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 10.319,
+       "core": 0.029,
+       "fetch": 0.421,
+       "desk": 1.221,
+       "total": 11.99
+      },
+      "room": 579,
+      "new_tokens": 175,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 269.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8258,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-306",
+     "family": "fact",
+     "question": "On which day of the month is the Karen rent due?",
+     "expected": "28th",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.094,
+      "total_s": 0.1223,
+      "prefill_tps": 5353.2,
+      "decode_tps": 176.7,
+      "retrieval_ms": 23.208,
+      "bytes_read": 29976576,
+      "gbps": 9.7,
+      "read_share": 0.0329,
+      "context_tokens": 935,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.794,
+      "disk_gb": 18.235778,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.347,
+       "core": 0.021,
+       "fetch": 3.09,
+       "desk": 5.749,
+       "total": 23.208
+      },
+      "room": 454,
+      "new_tokens": 374,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 252.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8106,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-193",
+     "family": "fact",
+     "question": "What is Iten Traders' minimum order, in shillings?",
+     "expected": "48,500",
+     "answer": "Iten Traders won't deliver below KES 48,500.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 48,500",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0841,
+      "total_s": 0.1723,
+      "prefill_tps": 5033.9,
+      "decode_tps": 204.1,
+      "retrieval_ms": 22.763,
+      "bytes_read": 31195136,
+      "gbps": 12.35,
+      "read_share": 0.03,
+      "context_tokens": 886,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.708,
+      "disk_gb": 18.235779,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.38,
+       "core": 0.034,
+       "fetch": 2.526,
+       "desk": 5.822,
+       "total": 22.763
+      },
+      "room": 162,
+      "new_tokens": 305,
+      "answer_tokens": 19,
+      "mlx_decode_tps": 227.2,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7397,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "fact-065",
+     "family": "fact",
+     "question": "Which laptop does Muthoni Wafula use?",
+     "expected": "Lenovo Yoga 7",
+     "answer": "Lenovo Yoga 7.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names Lenovo Yoga 7",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0778,
+      "total_s": 0.1107,
+      "prefill_tps": 4274.7,
+      "decode_tps": 182.4,
+      "retrieval_ms": 17.692,
+      "bytes_read": 2619904,
+      "gbps": 1.28,
+      "read_share": 0.0264,
+      "context_tokens": 366,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.525,
+      "disk_gb": 18.23578,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.301,
+       "core": 0.035,
+       "fetch": 2.053,
+       "desk": 1.303,
+       "total": 17.692
+      },
+      "room": 648,
+      "new_tokens": 254,
+      "answer_tokens": 7,
+      "mlx_decode_tps": 245.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8434,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-010",
+     "family": "fact",
+     "question": "What locker number does Ndinda Kerubo have?",
+     "expected": "51",
+     "answer": "Locker 51.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names 51",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0911,
+      "total_s": 0.1189,
+      "prefill_tps": 4823.0,
+      "decode_tps": 179.9,
+      "retrieval_ms": 21.407,
+      "bytes_read": 29428224,
+      "gbps": 12.3,
+      "read_share": 0.0263,
+      "context_tokens": 884,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.762,
+      "disk_gb": 18.235781,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.195,
+       "core": 0.026,
+       "fetch": 2.392,
+       "desk": 4.793,
+       "total": 21.407
+      },
+      "room": 407,
+      "new_tokens": 332,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 257.0,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.762,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-050",
+     "family": "fact",
+     "question": "What is the number plate of Kitengela Ventures' delivery truck?",
+     "expected": "KDS 711Z",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0928,
+      "total_s": 0.1206,
+      "prefill_tps": 5258.6,
+      "decode_tps": 179.9,
+      "retrieval_ms": 23.124,
+      "bytes_read": 28087808,
+      "gbps": 11.88,
+      "read_share": 0.0255,
+      "context_tokens": 892,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.8,
+      "disk_gb": 18.235781,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.394,
+       "core": 0.033,
+       "fetch": 2.365,
+       "desk": 6.332,
+       "total": 23.124
+      },
+      "room": 609,
+      "new_tokens": 362,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 256.7,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8754,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-075",
+     "family": "fact",
+     "question": "Which day of the week is Elijah Lagat off?",
+     "expected": "Monday",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0998,
+      "total_s": 0.128,
+      "prefill_tps": 5117.5,
+      "decode_tps": 177.3,
+      "retrieval_ms": 21.975,
+      "bytes_read": 29367296,
+      "gbps": 12.87,
+      "read_share": 0.0229,
+      "context_tokens": 945,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.856,
+      "disk_gb": 18.235782,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.226,
+       "core": 0.023,
+       "fetch": 2.282,
+       "desk": 5.445,
+       "total": 21.975
+      },
+      "room": 49,
+      "new_tokens": 394,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 255.5,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8368,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-255",
+     "family": "fact",
+     "question": "What is Caroline Mwita's staff badge number?",
+     "expected": "MNK-7158",
+     "answer": "MNK-7158.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names MNK-7158",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0838,
+      "total_s": 0.1254,
+      "prefill_tps": 5081.9,
+      "decode_tps": 192.3,
+      "retrieval_ms": 22.384,
+      "bytes_read": 28453376,
+      "gbps": 10.42,
+      "read_share": 0.0326,
+      "context_tokens": 844,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.699,
+      "disk_gb": 18.235783,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.302,
+       "core": 0.022,
+       "fetch": 2.731,
+       "desk": 5.329,
+       "total": 22.384
+      },
+      "room": 219,
+      "new_tokens": 308,
+      "answer_tokens": 9,
+      "mlx_decode_tps": 242.7,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8007,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-081",
+     "family": "fact",
+     "question": "Which branch does Sharon Mwiti work at?",
+     "expected": "Upper Hill",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0824,
+      "total_s": 0.11,
+      "prefill_tps": 3739.8,
+      "decode_tps": 181.2,
+      "retrieval_ms": 22.399,
+      "bytes_read": 29976576,
+      "gbps": 11.79,
+      "read_share": 0.0309,
+      "context_tokens": 783,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.622,
+      "disk_gb": 18.235784,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.233,
+       "core": 0.024,
+       "fetch": 2.542,
+       "desk": 5.6,
+       "total": 22.399
+      },
+      "room": 389,
+      "new_tokens": 222,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 259.6,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7977,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "fact-129",
+     "family": "fact",
+     "question": "Who is the landlord of the Karen branch?",
+     "expected": "Patrick Chacha",
+     "answer": "The landlord of the Karen branch is Patrick Chacha.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names Patrick Chacha",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0913,
+      "total_s": 0.1473,
+      "prefill_tps": 5242.5,
+      "decode_tps": 196.4,
+      "retrieval_ms": 21.357,
+      "bytes_read": 29976576,
+      "gbps": 12.12,
+      "read_share": 0.0271,
+      "context_tokens": 923,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.779,
+      "disk_gb": 18.235785,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.187,
+       "core": 0.032,
+       "fetch": 2.474,
+       "desk": 4.664,
+       "total": 21.357
+      },
+      "room": 454,
+      "new_tokens": 362,
+      "answer_tokens": 12,
+      "mlx_decode_tps": 233.5,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7489,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-07-past",
+     "family": "changed",
+     "question": "What was the nightly backup time on day 13?",
+     "expected": "03:40",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0824,
+      "total_s": 0.1099,
+      "prefill_tps": 3824.1,
+      "decode_tps": 181.8,
+      "retrieval_ms": 22.628,
+      "bytes_read": 29854720,
+      "gbps": 11.74,
+      "read_share": 0.0309,
+      "context_tokens": 785,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.627,
+      "disk_gb": 18.235786,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.327,
+       "core": 0.035,
+       "fetch": 2.543,
+       "desk": 5.723,
+       "total": 22.628
+      },
+      "room": 140,
+      "new_tokens": 226,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 260.2,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8135,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-21-past",
+     "family": "changed",
+     "question": "What was the WhatsApp orders cut-off time on day 12?",
+     "expected": "21:30",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.082,
+      "total_s": 0.1096,
+      "prefill_tps": 3854.0,
+      "decode_tps": 181.2,
+      "retrieval_ms": 22.99,
+      "bytes_read": 31195136,
+      "gbps": 11.84,
+      "read_share": 0.0321,
+      "context_tokens": 806,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.63,
+      "disk_gb": 18.235787,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.392,
+       "core": 0.026,
+       "fetch": 2.634,
+       "desk": 5.938,
+       "total": 22.99
+      },
+      "room": 225,
+      "new_tokens": 225,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 259.6,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9089,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-31-past",
+     "family": "changed",
+     "question": "What was the number of gunicorn threads on day 15?",
+     "expected": "3",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0999,
+      "total_s": 0.128,
+      "prefill_tps": 5455.3,
+      "decode_tps": 177.9,
+      "retrieval_ms": 22.517,
+      "bytes_read": 29367296,
+      "gbps": 11.38,
+      "read_share": 0.0258,
+      "context_tokens": 968,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.885,
+      "disk_gb": 18.235788,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.384,
+       "core": 0.023,
+       "fetch": 2.58,
+       "desk": 5.53,
+       "total": 22.517
+      },
+      "room": 178,
+      "new_tokens": 417,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 255.1,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8183,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "changed-74-past",
+     "family": "changed",
+     "question": "How many guests was the Chui Motors event for on day 9?",
+     "expected": "345",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0859,
+      "total_s": 0.1133,
+      "prefill_tps": 5114.5,
+      "decode_tps": 182.5,
+      "retrieval_ms": 16.697,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 721,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.712,
+      "disk_gb": 18.235789,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.354,
+       "core": 0.034,
+       "fetch": 0.0,
+       "desk": 2.309,
+       "total": 16.697
+      },
+      "room": 448,
+      "new_tokens": 350,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 261.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8009,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "hop-26",
+     "family": "two_hop",
+     "question": "How many days' notice do we have to give for lemons?",
+     "expected": "5",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1311,
+      "total_s": 0.1604,
+      "prefill_tps": 5955.1,
+      "decode_tps": 170.6,
+      "retrieval_ms": 22.715,
+      "bytes_read": 29611008,
+      "gbps": 10.49,
+      "read_share": 0.0215,
+      "context_tokens": 1194,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.031,
+      "disk_gb": 18.23579,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.365,
+       "core": 0.033,
+       "fetch": 2.824,
+       "desk": 5.493,
+       "total": 22.715
+      },
+      "room": 112,
+      "new_tokens": 639,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 244.1,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7068,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-01-rule",
+     "family": "maths",
+     "question": "Fee on 12,000?",
+     "expected": "25",
+     "answer": "1% of 12,000 is 120. Step 2: the next multiple of 5 above it is 125. Step 3: 125 is more than 10, and 12,000 is not a multiple of 1,000, so the fee is 125. Final number: 125.",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 125, not 25",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0876,
+      "total_s": 0.4859,
+      "prefill_tps": 5297.4,
+      "decode_tps": 215.9,
+      "retrieval_ms": 19.315,
+      "bytes_read": 15049216,
+      "gbps": 8.75,
+      "read_share": 0.0196,
+      "context_tokens": 674,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.713,
+      "disk_gb": 18.235791,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.153,
+       "core": 0.025,
+       "fetch": 1.721,
+       "desk": 3.416,
+       "total": 19.315
+      },
+      "room": 101,
+      "new_tokens": 358,
+      "answer_tokens": 87,
+      "mlx_decode_tps": 220.9,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8237,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "maths-02-new",
+     "family": "maths",
+     "question": "Same question as before, now for divisibility by 13 with n up to 25,000: how many n from 1 to 25,000 make n\u00b2 + 1 divisible by 13?",
+     "expected": "3846",
+     "answer": "1. Solve $ n^2 \\equiv -1 \\pmod{13} $.  \n2. Try residues 0-12: $ n \\equiv 5 $ or $ 8 $ (since $ 5^2 + 1 = 26 = 13 \\times 2 $, $ 8^2 + 1 = 65 = 13 \\times 5 $).  \n3. So 2 numbers in every block of 13.  \n4. $ 25,000 = 13 \\times 1923 + 11 $, so 1923 full blocks.  \n5. Total: $ 1923 \\times 2 = 3846 $.\n\nFinal number: 3846.",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 3846",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1805,
+      "total_s": 1.0472,
+      "prefill_tps": 6217.2,
+      "decode_tps": 198.5,
+      "retrieval_ms": 21.84,
+      "bytes_read": 20654592,
+      "gbps": 9.77,
+      "read_share": 0.0117,
+      "context_tokens": 1385,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.982,
+      "disk_gb": 18.235792,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.618,
+       "core": 0.028,
+       "fetch": 2.114,
+       "desk": 4.081,
+       "total": 21.84
+      },
+      "room": 345,
+      "new_tokens": 977,
+      "answer_tokens": 173,
+      "mlx_decode_tps": 200.7,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8464,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-01-new",
+     "family": "maths",
+     "question": "Fee on 7,321?",
+     "expected": "75",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the method was taught",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0906,
+      "total_s": 0.1183,
+      "prefill_tps": 5628.7,
+      "decode_tps": 180.5,
+      "retrieval_ms": 21.302,
+      "bytes_read": 24310272,
+      "gbps": 10.98,
+      "read_share": 0.0245,
+      "context_tokens": 853,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.805,
+      "disk_gb": 18.235794,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.246,
+       "core": 0.041,
+       "fetch": 2.215,
+       "desk": 4.8,
+       "total": 21.302
+      },
+      "room": 455,
+      "new_tokens": 385,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 258.0,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7966,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "maths-03-new",
+     "family": "maths",
+     "question": "Mama Njeri counts the chapatis: a number leaves 2 over in piles of 7, 1 over in piles of 9 and 1 over in piles of 11. What is the smallest positive number that fits?",
+     "expected": "100",
+     "answer": "1. Moduli 7, 9, 11 are coprime.  \n2. Find number \u2261 2 mod 7, \u2261 1 mod 9, \u2261 1 mod 11.  \n3. Solve using Chinese remainder theorem.  \nFinal number: 62.",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 62, not 100",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.2141,
+      "total_s": 0.5523,
+      "prefill_tps": 6409.1,
+      "decode_tps": 192.2,
+      "retrieval_ms": 23.659,
+      "bytes_read": 28270592,
+      "gbps": 10.37,
+      "read_share": 0.0127,
+      "context_tokens": 1742,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.19,
+      "disk_gb": 18.235795,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.451,
+       "core": 0.04,
+       "fetch": 2.725,
+       "desk": 5.443,
+       "total": 23.659
+      },
+      "room": 125,
+      "new_tokens": 1209,
+      "answer_tokens": 66,
+      "mlx_decode_tps": 198.1,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9427,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "maths-08-same",
+     "family": "maths",
+     "question": "We sell packs of 4 and of 9. How many ways can a customer buy exactly 210?",
+     "expected": "6",
+     "answer": "1. Solve 4x + 9y = 210  \n2. One solution: (x, y) = (3, 22)  \n3. Total ways: 6  \n\nFinal number: 6",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 6",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1221,
+      "total_s": 0.3589,
+      "prefill_tps": 5628.3,
+      "decode_tps": 202.7,
+      "retrieval_ms": 22.251,
+      "bytes_read": 26808320,
+      "gbps": 11.48,
+      "read_share": 0.0191,
+      "context_tokens": 1065,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.013,
+      "disk_gb": 18.235796,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.704,
+       "core": 0.025,
+       "fetch": 2.335,
+       "desk": 5.188,
+       "total": 22.251
+      },
+      "room": 286,
+      "new_tokens": 556,
+      "answer_tokens": 49,
+      "mlx_decode_tps": 211.1,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9692,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-02-rule",
+     "family": "maths",
+     "question": "Among the order numbers from 1 to 6,000, how many n make n\u00b2 + 1 divisible by 13?",
+     "expected": "831",
+     "answer": "1. Solve $ n^2 \\equiv -1 \\pmod{13} $.\n2. Try residues 0-12: $ n \\equiv 5 $ or $ 8 $ (since $ 5^2 + 1 = 26 $, $ 8^2 + 1 = 65 $).\n3. So 2 numbers in every block of 13.\n4. $ 6000 = 13 \\times 461 + 8 $, so 461 blocks give $ 2 \\times 461 = 922 $.\n5. Add the 8 remaining numbers: $ 922 + 2 = 924 $.\n\nFinal number: 924.",
+     "verdict": "stale",
+     "right": false,
+     "reason": "final number 924 is what the uncorrected method gives",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1359,
+      "total_s": 0.9453,
+      "prefill_tps": 6197.7,
+      "decode_tps": 202.6,
+      "retrieval_ms": 21.241,
+      "bytes_read": 20654592,
+      "gbps": 9.83,
+      "read_share": 0.0155,
+      "context_tokens": 1111,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.006,
+      "disk_gb": 18.235798,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.964,
+       "core": 0.038,
+       "fetch": 2.102,
+       "desk": 4.137,
+       "total": 21.241
+      },
+      "room": 345,
+      "new_tokens": 703,
+      "answer_tokens": 165,
+      "mlx_decode_tps": 205.1,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8318,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-04-new",
+     "family": "maths",
+     "question": "How many ways are there to choose 5 of 19 chairs in a row so that no two chosen chairs are next to each other?",
+     "expected": "3003",
+     "answer": "1. Put 5 chosen chairs down with one empty chair between each: 5 + 4 = 9 chairs.  \n2. The other 10 empty chairs go into the 6 gaps (before, between, after) freely.  \n3. This is the same as choosing 5 positions out of 19 \u2212 5 + 1 = 15.  \nFinal number: C(15, 5) = 3003.",
+     "verdict": "right",
+     "right": true,
+     "reason": "final number 3003",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1619,
+      "total_s": 0.6483,
+      "prefill_tps": 5804.5,
+      "decode_tps": 199.4,
+      "retrieval_ms": 26.468,
+      "bytes_read": 30890496,
+      "gbps": 11.46,
+      "read_share": 0.0166,
+      "context_tokens": 1352,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.11,
+      "disk_gb": 18.235799,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 16.658,
+       "core": 0.035,
+       "fetch": 2.695,
+       "desk": 7.079,
+       "total": 26.468
+      },
+      "room": 393,
+      "new_tokens": 776,
+      "answer_tokens": 98,
+      "mlx_decode_tps": 203.5,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9052,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "maths-08-rule",
+     "family": "maths",
+     "question": "With juice bottles of 4 and 15, in how many ways can we make up an order of exactly 232?",
+     "expected": "1",
+     "answer": "1. Solve 4x + 15y = 232  \n2. Find one solution (e.g., x = 12, y = 8)  \n3. The number of solutions is the number of ways  \n\nFinal number: 12.",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 12, not 1",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0987,
+      "total_s": 0.3677,
+      "prefill_tps": 5084.2,
+      "decode_tps": 211.9,
+      "retrieval_ms": 20.562,
+      "bytes_read": 11698176,
+      "gbps": 8.19,
+      "read_share": 0.0145,
+      "context_tokens": 653,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.75,
+      "disk_gb": 18.235801,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.942,
+       "core": 0.032,
+       "fetch": 1.429,
+       "desk": 3.16,
+       "total": 20.562
+      },
+      "room": 591,
+      "new_tokens": 392,
+      "answer_tokens": 58,
+      "mlx_decode_tps": 219.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8115,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-07-new",
+     "family": "maths",
+     "question": "A starter starts at 74 g. Each day it doubles, then 10 g is taken out. What does it weigh after 10 days?",
+     "expected": "65546",
+     "answer": "1. Start: 74 g  \n2. Day 1: 74 * 2 - 10 = 148  \n3. Day 2: 148 * 2 - 10 = 286  \n4. Day 3: 286 * 2 - 10 = 562  \n5. Day 4: 562 * 2 - 10 = 1110  \n6. Day 5: 1110 * 2 - 10 = 2200  \n7. Day 6: 2200 * 2 - 10 = 4380  \n8. Day 7: 4380 * 2 - 10 = 8750  \n9. Day 8: 8750 * 2 - 10 = 17500  \n10. Day 9: 17500 * 2 - 10 = 35000  \n11. Day 10: 35000 * 2 - 10 = 70000  \n\nFinal number: 70000 g",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 70000, not 65546",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1716,
+      "total_s": 1.5305,
+      "prefill_tps": 6339.5,
+      "decode_tps": 198.0,
+      "retrieval_ms": 21.851,
+      "bytes_read": 24310272,
+      "gbps": 11.62,
+      "read_share": 0.0122,
+      "context_tokens": 1408,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.099,
+      "disk_gb": 18.235802,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.086,
+       "core": 0.033,
+       "fetch": 2.092,
+       "desk": 4.639,
+       "total": 21.851
+      },
+      "room": 455,
+      "new_tokens": 940,
+      "answer_tokens": 270,
+      "mlx_decode_tps": 199.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.9415,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "maths-08-new",
+     "family": "maths",
+     "question": "We sell packs of 5 and of 7. How many ways can a customer buy exactly 154?",
+     "expected": "5",
+     "answer": "1. Solve 5x + 7y = 154  \n2. Find one solution: x = 2, y = 18  \n3. Total ways: 9  \n\nFinal number: 9",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "final number 9, not 5",
+     "max_tokens": 400,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1774,
+      "total_s": 0.4121,
+      "prefill_tps": 6010.1,
+      "decode_tps": 196.0,
+      "retrieval_ms": 24.06,
+      "bytes_read": 26808320,
+      "gbps": 11.24,
+      "read_share": 0.0134,
+      "context_tokens": 1420,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.115,
+      "disk_gb": 18.235804,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.835,
+       "core": 0.026,
+       "fetch": 2.384,
+       "desk": 5.815,
+       "total": 24.06
+      },
+      "room": 286,
+      "new_tokens": 911,
+      "answer_tokens": 47,
+      "mlx_decode_tps": 204.5,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8652,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "page-catering",
+     "family": "page",
+     "question": "Build the catering page.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "```html\n<!DOCTYPE html>\n<html>\n<head>\n    <title>Catering</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n        }\n        h1 {\n            text-align: center;\n        }\n        .section {\n            margin: 20px 0;\n        }\n        .section h2 {\n            margin-top: 0;\n        }\n        .dish {\n            border: 1px solid #ccc;\n            padding: 10px;\n            margin: 10px 0;\n            border-radius: 5px;\n        }\n        .dish h3 {\n            margin-top: 0;\n        }\n    </style>\n</head>\n<body>\n    <h1>Catering</h1>\n    <div class=\"section\">\n        <h2>Dishes</h2>\n        <div class=\"dish\">\n            <h3>Embakasi</h3>\n            <p>Leftovers at Rongai up 12% this week.</p>\n        </div>\n        <div class=\"dish\">\n            <h3>Uji</h3>\n            <p>Feedback from a customer about uji: portion too small.</p>\n        </div>\n        <div class=\"dish\">\n            <h3>Reorder Report</h3>\n            <p>Edwin demoed the reorder report on staging; needs work.</p>\n        </div>\n    </div>\n</body>\n</html>\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "main colour #0B5FFF is not used; font Inter is not set; no <nav> links; no <footer>; spacing off the scale: margin: 20px, padding: 10px, margin: 10px",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0763,
+      "total_s": 1.5365,
+      "prefill_tps": 3409.7,
+      "decode_tps": 213.0,
+      "retrieval_ms": 18.143,
+      "bytes_read": 29732864,
+      "gbps": 11.96,
+      "read_share": 0.0326,
+      "context_tokens": 753,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.583,
+      "disk_gb": 18.235806,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 10.063,
+       "core": 0.024,
+       "fetch": 2.485,
+       "desk": 5.57,
+       "total": 18.143
+      },
+      "room": 620,
+      "new_tokens": 196,
+      "answer_tokens": 312,
+      "mlx_decode_tps": 214.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8463,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "page-contact",
+     "family": "page",
+     "question": "Build the contact page: the four branches with a map link each, and a short message form.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Contact Page</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            margin: 0;\n            padding: 0;\n            background: #f4f4f4;\n        }\n        .container {\n            max-width: 960px;\n            margin: 40px auto;\n            padding: 20px;\n            background: #fff;\n            border-radius: 10px;\n            box-shadow: 0 2px 5px rgba(0,0,0,0.1);\n        }\n        h2 {\n            text-align: center;\n            color: #333;\n        }\n        .branches {\n            display: flex;\n            flex-wrap: wrap;\n            gap: 20px;\n            margin-top: 20px;\n        }\n        .branch {\n            flex: 1 1 250px;\n            text-align: center;\n            background: #e0e0e0;\n            border-radius: 10px;\n            padding: 20px;\n            box-shadow: 0 2px 5px rgba(0,0,0,0.1);\n        }\n        .branch h3 {\n            margin-bottom: 10px;\n        }\n        .branch p {\n            font-size: 18px;\n            color: #555;\n        }\n        .form {\n            margin-top: 20px;\n            background: #e0e0e0;\n            border-radius: 10px;\n            padding: 20px;\n            box-shadow: 0 2px 5px rgba(0,0,0,0.1);\n        }\n        .form input, .form textarea {\n            width: 100%;\n            padding: 10px;\n            margin: 10px 0;\n            border: 1px solid #ccc;\n            border-radius: 5px;\n        }\n        .form button {\n            width: 100%;\n            padding: 10px;\n            background: #007bff;\n            border: none;\n            border-radius: 5px;\n            color: white;\n            font-size: 16px;\n        }\n        .form button:hover {\n            background: #0056b3;\n        }\n        .message {\n            margin-top: 20px;\n            font-size: 18px;\n            color: #555;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <h2>Contact Us</h2>\n        <div class=\"branches\">\n            <div class=\"branch\">\n                <h3>Branch 1</h3>\n                <p>Location: 123 Main St</p>\n                <a href=\"https://example.com/map1\" target=\"_blank\" rel=\"noreferrer\">View Map</a>\n            </div>\n            <div class=\"branch\">\n                <h3>Branch 2</h3>\n                <p>Location: 456 Oak Ave</p>\n                <a href=\"https://example.com/map2\" target=\"_blank\" rel=\"noreferrer\">View Map</a>\n            </div>\n            <div class=\"branch\">\n                <h3>Branch 3</h3>\n                <p>Location: 789 Pine Rd</p>\n                <a href=\"https://example.com/map3\" target=\"_blank\" rel=\"noreferrer\">View Map</a>\n            </div>\n            <div class=\"branch\">\n                <h3>Branch 4</h3>\n                <p>Location: 012 River Ln</p>\n                <a href=\"https://example.com/map4\" target=\"_blank\" rel=\"noreferrer\">View Map</a>\n            </div>\n        </div>\n        <div class=\"form\">\n            <form>\n                <input type=\"text\" placeholder=\"Your Name\" required>\n                <textarea rows=\"5\" placeholder=\"Your Message\" required></textarea>\n                <button type=\"submit\">Send Message</button>\n            </form>\n            <div class=\"message\">Thank you for your message!</div>\n        </div>\n    </div>\n</body>\n</html>\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "main colour #0B5FFF is not used; font Inter is not set; no <nav> links; no <footer>; spacing off the scale: margin: 40px, padding: 20px, gap: 20px, margin: 20px; no <h1> naming Contact",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1056,
+      "total_s": 4.7469,
+      "prefill_tps": 5046.5,
+      "decode_tps": 199.9,
+      "retrieval_ms": 25.441,
+      "bytes_read": 30768640,
+      "gbps": 10.44,
+      "read_share": 0.0279,
+      "context_tokens": 973,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.873,
+      "disk_gb": 18.235809,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 16.046,
+       "core": 0.025,
+       "fetch": 2.948,
+       "desk": 6.422,
+       "total": 25.441
+      },
+      "room": 37,
+      "new_tokens": 399,
+      "answer_tokens": 929,
+      "mlx_decode_tps": 200.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.797,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "page-about",
+     "family": "page",
+     "question": "Build the about page: Mama Njeri's story, the kitchen team, and photos of the Westlands kitchen.",
+     "expected": "an HTML page in the design system, main colour #0B5FFF",
+     "answer": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Mama Njeri's Story</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            line-height: 1.6;\n            margin: 0;\n            padding: 0;\n            background: #f4f4f4;\n        }\n        header {\n            background: #0088cc;\n            color: white;\n            text-align: center;\n            padding: 1em;\n        }\n        h1, h2 {\n            margin-top: 0;\n        }\n        .story {\n            background: #ffffff;\n            padding: 2em;\n            margin: 2em 0;\n            border-left: 5px solid #0088cc;\n        }\n        .team {\n            background: #ffffff;\n            padding: 2em;\n            margin: 2em 0;\n            border-left: 5px solid #0088cc;\n        }\n        .photos {\n            background: #ffffff;\n            padding: 2em;\n            margin: 2em 0;\n            border-left: 5px solid #0088cc;\n        }\n        img {\n            max-width: 100%;\n            height: auto;\n            margin: 1em 0;\n        }\n    </style>\n</head>\n<body>\n    <header>\n        <h1>Mama Njeri's Story</h1>\n        <p>At Mama Njeri's Kitchen, every dish is a celebration of flavor and care. From the moment the first customer walks in, the kitchen is alive with energy and promise.</p>\n    </header>\n    <section class=\"story\">\n        <h2>The Kitchen Team</h2>\n        <p>Mama Njeri's kitchen is a team of passionate chefs and support staff who work together to bring the best dishes to the community. The team is always ready to meet the demands of the customers and to make every meal a special experience.</p>\n    </section>\n    <section class=\"team\">\n        <h2>The Kitchen Team</h2>\n        <p>The kitchen team at Mama Njeri's includes chefs, servers, and support staff who are dedicated to providing the best possible service and food. They work together to ensure that every customer has a memorable experience.</p>\n    </section>\n    <section class=\"photos\">\n        <h2>Photos of the Westlands Kitchen</h2>\n        <p>Here are some photos of the Westlands kitchen, where the energy and passion of the team are on full display.</p>\n        <img src=\"https://via.placeholder.com/600x400?text=Westlands+Kitchen\" alt=\"Westlands Kitchen\">\n        <img src=\"https://via.placeholder.com/600x400?text=Chefs+at+Mama+Njeri\" alt=\"Chefs at Mama Njeri\">\n    </section>\n</body>\n</html>\n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "main colour #0B5FFF is not used; font Inter is not set; no <nav> links; no <footer>; no <h1> naming About",
+     "max_tokens": 1200,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0837,
+      "total_s": 3.209,
+      "prefill_tps": 3932.8,
+      "decode_tps": 207.0,
+      "retrieval_ms": 23.252,
+      "bytes_read": 29550080,
+      "gbps": 11.42,
+      "read_share": 0.0309,
+      "context_tokens": 789,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.644,
+      "disk_gb": 18.235816,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.89,
+       "core": 0.037,
+       "fetch": 2.588,
+       "desk": 5.737,
+       "total": 23.252
+      },
+      "room": 212,
+      "new_tokens": 235,
+      "answer_tokens": 648,
+      "mlx_decode_tps": 207.7,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8366,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "code-14",
+     "family": "code",
+     "question": "Write `vat_part_cents(net_items: list[int]) -> int`: the total VAT in cents on a receipt whose lines have these net amounts in cents. VAT is worked out line by line, the way our money helpers do it.",
+     "expected": "a function vat_part_cents that passes 4 tests",
+     "answer": "```python\ndef vat_part_cents(net_items: list[int]) -> int:\n    return sum(item * VAT_PERCENT // 100 for item in net_items)\n```",
+     "verdict": "right",
+     "right": true,
+     "reason": "passes all 4 tests",
+     "max_tokens": 600,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1608,
+      "total_s": 0.3437,
+      "prefill_tps": 6117.0,
+      "decode_tps": 196.8,
+      "retrieval_ms": 24.19,
+      "bytes_read": 26686464,
+      "gbps": 9.84,
+      "read_share": 0.0169,
+      "context_tokens": 1332,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.104,
+      "disk_gb": 18.235821,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.789,
+       "core": 0.026,
+       "fetch": 2.713,
+       "desk": 5.662,
+       "total": 24.19
+      },
+      "room": 146,
+      "new_tokens": 825,
+      "answer_tokens": 37,
+      "mlx_decode_tps": 207.8,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8112,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "code-20",
+     "family": "code",
+     "question": "Write `split_labels(total_cents: int, people: int) -> list[str]`: split a bill exactly the way our money helpers split bills, and give each share as a price label.",
+     "expected": "a function split_labels that passes 3 tests",
+     "answer": "```python\ndef split_labels(total_cents: int, people: int) -> list[str]:\n    base, extra = divmod(total_cents, people)\n    return [f\"{sign}KES {c // 100:,}.{c % 100:02d}\" for i in range(people) for c in [base + 1 if i < extra else base]] \n```",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "passes 0 of 3 tests; case 0: NameError: name 'sign' is not defined; case 1: NameError: name 'sign' is not defined",
+     "max_tokens": 600,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1693,
+      "total_s": 0.5997,
+      "prefill_tps": 6207.2,
+      "decode_tps": 199.8,
+      "retrieval_ms": 34.751,
+      "bytes_read": 26686464,
+      "gbps": 7.25,
+      "read_share": 0.0217,
+      "context_tokens": 1331,
+      "history_tokens": 255952,
+      "peak_ram_gb": 4.104,
+      "disk_gb": 18.235823,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 25.569,
+       "core": 0.052,
+       "fetch": 3.682,
+       "desk": 5.449,
+       "total": 34.751
+      },
+      "room": 146,
+      "new_tokens": 824,
+      "answer_tokens": 87,
+      "mlx_decode_tps": 204.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8477,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "never-01",
+     "family": "never",
+     "question": "What is Otieno's surname?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1037,
+      "total_s": 0.1315,
+      "prefill_tps": 4953.8,
+      "decode_tps": 179.9,
+      "retrieval_ms": 39.42,
+      "bytes_read": 29611008,
+      "gbps": 4.41,
+      "read_share": 0.0648,
+      "context_tokens": 867,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.714,
+      "disk_gb": 18.235824,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 24.574,
+       "core": 0.054,
+       "fetch": 6.717,
+       "desk": 8.074,
+       "total": 39.42
+      },
+      "room": 112,
+      "new_tokens": 312,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 257.6,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7198,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "never-60",
+     "family": "never",
+     "question": "What is Sharon Mwiti's job at the kitchen?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1127,
+      "total_s": 0.1437,
+      "prefill_tps": 5780.1,
+      "decode_tps": 161.3,
+      "retrieval_ms": 23.471,
+      "bytes_read": 29976576,
+      "gbps": 11.3,
+      "read_share": 0.0235,
+      "context_tokens": 1070,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.993,
+      "disk_gb": 18.235825,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.514,
+       "core": 0.025,
+       "fetch": 2.652,
+       "desk": 6.281,
+       "total": 23.471
+      },
+      "room": 389,
+      "new_tokens": 509,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 227.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7735,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-55",
+     "family": "never",
+     "question": "What is Diana Ondieki's staff badge number?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1054,
+      "total_s": 0.1355,
+      "prefill_tps": 5587.1,
+      "decode_tps": 166.1,
+      "retrieval_ms": 17.422,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 1045,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.929,
+      "disk_gb": 18.235826,
+      "tier": "ram"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.346,
+       "core": 0.023,
+       "fetch": 0.0,
+       "desk": 3.053,
+       "total": 17.422
+      },
+      "room": 30,
+      "new_tokens": 486,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 238.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7306,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-48",
+     "family": "never",
+     "question": "Who is the landlord of the Embakasi branch?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1,
+      "total_s": 0.1281,
+      "prefill_tps": 5516.3,
+      "decode_tps": 177.9,
+      "retrieval_ms": 21.884,
+      "bytes_read": 30524928,
+      "gbps": 11.35,
+      "read_share": 0.0269,
+      "context_tokens": 996,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.909,
+      "disk_gb": 18.235827,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.265,
+       "core": 0.023,
+       "fetch": 2.689,
+       "desk": 4.907,
+       "total": 21.884
+      },
+      "room": 269,
+      "new_tokens": 426,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 254.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7883,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-32",
+     "family": "never",
+     "question": "How many seats does the Lavington branch have?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0744,
+      "total_s": 0.1012,
+      "prefill_tps": 5030.7,
+      "decode_tps": 186.6,
+      "retrieval_ms": 16.591,
+      "bytes_read": 2985472,
+      "gbps": 3.54,
+      "read_share": 0.0113,
+      "context_tokens": 405,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.579,
+      "disk_gb": 18.235828,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.201,
+       "core": 0.034,
+       "fetch": 0.843,
+       "desk": 1.512,
+       "total": 16.591
+      },
+      "room": 218,
+      "new_tokens": 287,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 269.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7807,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-04",
+     "family": "never",
+     "question": "What is the Wi-Fi password at the Westlands branch?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0738,
+      "total_s": 0.1004,
+      "prefill_tps": 4803.4,
+      "decode_tps": 188.0,
+      "retrieval_ms": 16.214,
+      "bytes_read": 2680832,
+      "gbps": 5.05,
+      "read_share": 0.0072,
+      "context_tokens": 386,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.557,
+      "disk_gb": 18.235829,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.371,
+       "core": 0.037,
+       "fetch": 0.531,
+       "desk": 1.275,
+       "total": 16.214
+      },
+      "room": 549,
+      "new_tokens": 273,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 270.1,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8101,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-42",
+     "family": "never",
+     "question": "What is Hawa Biwott's staff badge number?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0945,
+      "total_s": 0.1224,
+      "prefill_tps": 4898.3,
+      "decode_tps": 179.2,
+      "retrieval_ms": 24.105,
+      "bytes_read": 28453376,
+      "gbps": 6.56,
+      "read_share": 0.0459,
+      "context_tokens": 877,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.786,
+      "disk_gb": 18.23583,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.331,
+       "core": 0.037,
+       "fetch": 4.338,
+       "desk": 5.398,
+       "total": 24.105
+      },
+      "room": 219,
+      "new_tokens": 341,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 257.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7435,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-40",
+     "family": "never",
+     "question": "Which matatu route does Adhiambo Ruto take to work?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0942,
+      "total_s": 0.1225,
+      "prefill_tps": 5295.4,
+      "decode_tps": 176.7,
+      "retrieval_ms": 22.651,
+      "bytes_read": 28818944,
+      "gbps": 12.65,
+      "read_share": 0.0242,
+      "context_tokens": 916,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.812,
+      "disk_gb": 18.235831,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.562,
+       "core": 0.024,
+       "fetch": 2.279,
+       "desk": 5.786,
+       "total": 22.651
+      },
+      "room": 416,
+      "new_tokens": 374,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 252.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.79,
+      "memory_tokens": 299072
+     },
+     "asked_before": true
+    },
+    {
+     "id": "never-35",
+     "family": "never",
+     "question": "What is Moses Tanui's staff badge number?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.095,
+      "total_s": 0.1229,
+      "prefill_tps": 4896.0,
+      "decode_tps": 179.2,
+      "retrieval_ms": 23.436,
+      "bytes_read": 30951424,
+      "gbps": 10.33,
+      "read_share": 0.0315,
+      "context_tokens": 923,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.81,
+      "disk_gb": 18.235832,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.355,
+       "core": 0.032,
+       "fetch": 2.996,
+       "desk": 6.052,
+       "total": 23.436
+      },
+      "room": 248,
+      "new_tokens": 346,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 256.4,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7492,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    },
+    {
+     "id": "never-45",
+     "family": "never",
+     "question": "Which matatu route does Mumbua Oduya take to work?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.093,
+      "total_s": 0.121,
+      "prefill_tps": 5350.4,
+      "decode_tps": 178.6,
+      "retrieval_ms": 22.578,
+      "bytes_read": 28818944,
+      "gbps": 12.93,
+      "read_share": 0.024,
+      "context_tokens": 914,
+      "history_tokens": 255952,
+      "peak_ram_gb": 3.795,
+      "disk_gb": 18.235833,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.484,
+       "core": 0.026,
+       "fetch": 2.229,
+       "desk": 5.838,
+       "total": 22.578
+      },
+      "room": 416,
+      "new_tokens": 372,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 256.3,
+      "rss_peak_gb": 3.316,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8347,
+      "memory_tokens": 299072
+     },
+     "asked_before": false
+    }
+   ]
+  }
+ ],
+ "finished": "2026-11-05T00:54:27",
+ "path": "/Users/p3wrky/Desktop/camr-build-wt/v2/records/bench/2026-11-05/005057-longhaul-engine-qwen3-1.7b-8bit.json"
+}
