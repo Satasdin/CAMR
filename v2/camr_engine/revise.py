@@ -13,7 +13,8 @@ moments are kept with no extra step. The judge's word is never reported as an an
 
 Nothing the user said is lost to the judge alone: a moment is left out as SAME only when it is also nearly the
 same words (``SAME_CLOSE``) and the judge answered exactly SAME. And moments are only ever compared with moments
-of the same source (``source``: the user, a file, or the web), so a web page never supersedes what the user said.
+of the same source (``source_of``: the user, a file, or the web, by the tags each moment is kept with), so a web
+page never supersedes what the user said.
 """
 
 from __future__ import annotations
@@ -31,28 +32,28 @@ CLOSE = 0.78  # below this the pair is about different things: no judge needed
 SAME_CLOSE = 0.95  # only this close may a moment be left out as already kept
 
 
-def source(text: str) -> str:
-    """Where a moment came from: the web, a file, or the user (as the chat and media write them)."""
-    if "From the web (" in text:
-        return "web"
-    if "] From " in text[:40] or text.lstrip().startswith(("[file", "From ")) or " (page " in text[:120]:
-        return "file"
-    return "user"
+def source_of(memory, mid: int) -> str:
+    """Where a kept moment came from, by its vault note's tags: ``web``, ``file`` (camr_engine.media tags every
+    file's moments), or ``user``. Never guessed from the words."""
+    vault = getattr(memory, "vault", None)
+    note = vault.get(vault.moment_id(mid)) if vault is not None else None
+    tags = set(note.tags) if note is not None else set()
+    return "web" if "web" in tags else "file" if "file" in tags else "user"
 
 
-def closest(memory, text: str, embedder) -> tuple[int, float] | None:
-    """The moment closest to ``text`` in ``memory`` and how close it is (None for an empty memory)."""
+def closest(memory, text: str, embedder, source: str = "user") -> tuple[int, float] | None:
+    """The moment closest to ``text`` among those from the same ``source``, and how close it is (None when there
+    is none)."""
     rooms = memory.rooms
     if not rooms.moments or not rooms.vectors.size:
         return None
     sims = rooms.vectors @ np.asarray(embedder.encode_one(text), dtype=np.float32)
-    mine = source(text)
-    same = np.array([source(m.text) == mine for m in rooms.moments[:len(sims)]])
-    if not same.any():
-        return None
-    sims = np.where(same, sims, -1.0)  # only moments from the same source
-    i = int(np.argmax(sims))
-    return i, float(sims[i])
+    for i in np.argsort(-sims)[:8]:  # the nearest few, nearest first, until one from the same source
+        if sims[i] < CLOSE:
+            break
+        if source_of(memory, int(i)) == source:
+            return int(i), float(sims[i])
+    return None
 
 
 def judge(reader, old: str, new: str) -> str:
@@ -63,10 +64,10 @@ def judge(reader, old: str, new: str) -> str:
     return word if word in ("SAME", "UPDATE", "NEW") else "NEW"  # exactly one of the three, else kept as new
 
 
-def revise(memory, reader, embedder, text: str) -> dict:
-    """What to do with ``text`` before it is kept in ``memory``: {verdict, old (the moment compared), score, text
-    (what to keep, None for SAME)}."""
-    got = closest(memory, text, embedder)
+def revise(memory, reader, embedder, text: str, source: str = "user") -> dict:
+    """What to do with ``text`` (from ``source``: user, file or web) before it is kept in ``memory``: {verdict, old
+    (the moment compared), score, text (what to keep, None for SAME)}."""
+    got = closest(memory, text, embedder, source)
     if got is None or got[1] < CLOSE:
         return {"verdict": "new", "old": None, "score": got[1] if got else None, "text": text}
     mid, score = got

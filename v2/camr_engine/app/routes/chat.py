@@ -394,7 +394,7 @@ class Talk:
                 self.sorter = Sorter(session.embedder)
             target = self.sorter.sort(f"{question} {answer[:300]}").name
         reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
-        m, rv = self._keep_moment(session, reach, text, day, today)
+        m, rv = self._keep_moment(session, reach, text, day, today, "web" if source is not None else "user")
         on = shelf_of(reach.label)
         if m is None:  # asked and answered before: kept once
             return {"reach": reach.label, "shelf": on.name if on else None, "moment": rv["old"], "revised": "same"}
@@ -433,12 +433,14 @@ class Talk:
                 m = session.memory(reach)
                 if kind == ".pdf" or seen:  # the vision model reads images and video frames; a PDF its text, at once
                     kept = media.ingest(f, m, day=day, date=today, describe=self._eyes() if seen else None,
-                                        stamp=lambda t: f"[{today.isoformat()}] {t}")
+                                        stamp=lambda t: f"[{today.isoformat()}] From the file {f.name}, not something "
+                                                        f"the user said: {t}")
                 else:
                     words = f.read_text(errors="ignore").split()
                     kept = []
                     for i in range(0, len(words), 300):  # pieces of about a paragraph
-                        text = f"[{today.isoformat()}] From {f.name}: " + " ".join(words[i:i + 300])
+                        text = (f"[{today.isoformat()}] From the file {f.name}, not something the user said: "
+                                + " ".join(words[i:i + 300]))
                         m.remember(text, day, date=today, tags=["file", "text"])
                         kept.append(text)
                 m.save()
@@ -480,19 +482,19 @@ class Talk:
         return {**out, "kept": True, "reply": reply, "moment": m.mid, "room": m.room, "tokens": m.tokens,
                 "event": self._event(session.memory(reach), ("remember",))}
 
-    def _keep_moment(self, session, reach, text: str, day: int, today: dt.date):
+    def _keep_moment(self, session, reach, text: str, day: int, today: dt.date, source: str = "user"):
         """Keep a moment after comparing it with the closest one already kept (camr_engine.revise): (the moment, or
         None when it was the same; the verdict)."""
         from camr_engine.revise import mark, revise
 
         memory = session.memory(reach)
-        rv = revise(memory, session.reader, session.embedder, text)
+        rv = revise(memory, session.reader, session.embedder, text, source)
         live = current()
         if live is not None and rv["old"] is not None:
             live.add("revise", verdict=rv["verdict"], old=rv["old"], score=rv["score"], reach=reach.label)
         if rv["text"] is None:
             return None, rv
-        m = session.remember(rv["text"], day, date=today, to=reach)
+        m = session.remember(rv["text"], day, date=today, to=reach, tags=[] if source == "user" else [source])
         if m is not None and rv["verdict"] == "update":
             mark(memory, rv["old"], m.mid)
         memory.save()

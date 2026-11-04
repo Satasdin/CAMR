@@ -449,6 +449,7 @@ def test_the_assistant_routes_thinks_researches_and_learns(tmp_path, looks, monk
             text = "<think>56 lies between 49 and 64.</think>About 7.483."
             return Reply(text, 0.001, 100.0, len(ids), 9, [text])
 
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))  # never a benchmark's flag
     monkeypatch.setattr(assistant, "research", lambda q: {"title": "Square root", "url": "https://en.wikipedia.org/"
                                                           "wiki/Square_root", "text": "A square root of x is..."})
     app = TalkApp(tmp_path / "camr", reader=Thinker())

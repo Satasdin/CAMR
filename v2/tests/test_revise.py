@@ -41,11 +41,12 @@ def test_a_close_moment_is_judged_and_a_far_one_is_not(tmp_path):
 
 
 def test_a_web_moment_is_never_compared_with_what_the_user_said(tmp_path):
-    from camr_engine.revise import source
+    from camr_engine.revise import source_of
 
     r = Judge()
     m = Memory(r, FakeEmbedder(), tmp_path / "m", vault=True, log=False, room_tokens=400, join=0.2)
     m.remember("Iten Traders minimum order is KES 48500.", 1)
-    web = "[2026-11-05] From the web (Iten, https://x), not something the user said. Iten Traders minimum order is KES 1."
-    assert source(web) == "web" and source("Iten Traders minimum order is KES 48500.") == "user"
-    assert revise(m, r, m.embedder, web)["verdict"] == "new" and r.asked == 0
+    web = m.remember("Iten Traders minimum order is KES 1.", 1, tags=["web"])
+    assert source_of(m, 0) == "user" and source_of(m, web.mid) == "web"
+    got = revise(m, r, m.embedder, "Iten Traders minimum order is KES 52000.", "web")
+    assert got["old"] == web.mid  # compared only with the web's moment, never the user's
