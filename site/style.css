@@ -159,6 +159,14 @@ tbody th { color: var(--ink); }
 .facts b.gone { color: #3a424a; }
 .shelves .facts { margin-bottom: 0; }
 
+/* --- the assistant: pairs of screenshots, and a row of what else it does */
+.assistant .shot { margin-bottom: clamp(20px, 3vw, 40px); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 3vw, 40px); }
+.feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: clamp(12px, 2vw, 24px); }
+.feats > div { padding: 22px 22px 0 0; border-top: 1px solid var(--line); display: grid; gap: 8px; align-content: start; }
+.feats b { font: 500 clamp(26px, 3vw, 40px)/1 var(--sans); letter-spacing: -.03em; }
+.feats span { color: var(--ink-3); font: 13px/1.45 var(--mono); max-width: 34ch; }
+
 /* --- download */
 .dl-card {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 28px;
@@ -202,7 +210,7 @@ tbody th { color: var(--ink); }
 @media (max-width: 860px) {
   .strip { grid-template-columns: 1fr 1fr; }
   .dl-card, .use-grid { grid-template-columns: 1fr; }
-  .how-grid { grid-template-columns: 1fr; }
+  .how-grid, .pair, .feats { grid-template-columns: 1fr; }
   .how-grid .shot:last-child { max-width: 240px; }
   .hero-shot img { max-height: none; width: 100%; max-width: 440px; }
   .dl-card { padding-right: clamp(28px, 5vw, 64px); }
