@@ -292,7 +292,8 @@ def run(contender: Contender, events: Sequence[dict], checkpoints: Sequence[dict
                             "read_s": round(read_s, 3),
                             "events_per_s": round(n / ingest_s, 2) if ingest_s > 0 and n else None,
                             "tokens_per_s": round(tokens / ingest_s, 1) if ingest_s > 0 and tokens else None},
-                 "status": contender.status(), "summary": summarize(answers), "answers": answers}
+                 "status": contender.status(), "footprint_gb": _footprint_gb(), "summary": summarize(answers),
+                 "answers": answers}
             record["checkpoints"].append(r)
             record["finished"] = dt.datetime.now().isoformat(timespec="seconds")
             if save:
@@ -313,6 +314,14 @@ def run(contender: Contender, events: Sequence[dict], checkpoints: Sequence[dict
     finally:
         contender.close()
     return record
+
+
+def _footprint_gb() -> float | None:
+    """This process's physical footprint after a checkpoint (engram.models.footprint_bytes), or None."""
+    from engram.models import footprint_bytes
+
+    got = footprint_bytes()
+    return round(got / 1e9, 3) if got is not None else None
 
 
 def ask_all(contender: Contender, questions: Iterable[dict], grader: Callable[[Any, str], Any] | None = None, *,

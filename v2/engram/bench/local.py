@@ -60,9 +60,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Iterator, Sequence
 
-from engram.bench.contender import (METRICS, OTHER_TOKENS, RECORDS, THINKING, Answer, Contender, ask_all, decode_tps,
-                                    max_tokens, metrics, record_path, run, slug, stamp, summarize, write_record,
-                                    environment)
+from engram.bench.contender import (METRICS, OTHER_TOKENS, RECORDS, THINKING, Answer, Contender, _footprint_gb, ask_all,
+                                    decode_tps, max_tokens, metrics, record_path, run, slug, stamp, summarize,
+                                    write_record, environment)
 from engram.memory import _SLOT, INTRO, Memory, today_text
 from engram.metrics import folder_bytes
 from engram.notes import Shape
@@ -898,7 +898,8 @@ def _speed(contender: Contender, events: list[dict], probes: list[dict], record:
                         "tokens_per_s": round(n_tokens / seg, 1) if seg > 0 else None,
                         "overall_events_per_s": round(told / ingest_s, 2) if ingest_s > 0 else None,
                         "overall_tokens_per_s": round(e["cum_tokens"] / ingest_s, 1) if ingest_s > 0 else None},
-             "disk_gb": st.get("disk_gb"), "status": st, "summary": summarize(answers)["all"], "answers": answers}
+             "disk_gb": st.get("disk_gb"), "footprint_gb": _footprint_gb(), "status": st,
+             "summary": summarize(answers)["all"], "answers": answers}
         record["points"].append(p)
         record["finished"] = dt.datetime.now().isoformat(timespec="seconds")
         if save:

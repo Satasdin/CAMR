@@ -5,6 +5,8 @@ Imports of MLX are inside the classes, so the rest of the package (lives, gradin
 
 from __future__ import annotations
 
+import ctypes
+import os
 import time
 from dataclasses import dataclass, field
 
@@ -16,6 +18,11 @@ READER_27B = "mlx-community/Qwen3.8-27B-4bit"  # 16 GB; hybrid attention, so it 
 EMBEDDER = "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 MAX_ANSWER_TOKENS = 40
 PREFILL_STEP = 2048
+# MLX keeps every freed GPU buffer for reuse, by default up to the whole GPU limit (about 18 GB on a 24 GB Mac). A
+# long ingest frees a desk's worth of buffers for every moment, so the process grows until macOS compresses and swaps
+# it: 19 GB for the 4B at 3M tokens, of which 1 GB was resident. The cap keeps a reusable buffer cache and no more.
+# ENGRAM_MLX_CACHE_GB sets it; "off" leaves MLX's default.
+CACHE_GB = os.environ.get("ENGRAM_MLX_CACHE_GB", "1")
 
 
 @dataclass
@@ -34,6 +41,7 @@ class Reader:
     def __init__(self, repo: str = READER, max_tokens: int = MAX_ANSWER_TOKENS):
         from mlx_lm import load
 
+        limit_cache()
         self.repo, self.max_tokens = repo, max_tokens
         self.model, self.tok = load(repo)
 
@@ -93,6 +101,7 @@ class Embedder:
     def __init__(self, repo: str = EMBEDDER):
         from mlx_lm import load
 
+        limit_cache()
         self.model, self.tok = load(repo)
         self.name = f"mlx:{repo.split('/')[-1]}"
         self.dim = int(self.encode(["dimension probe"]).shape[1])
@@ -127,4 +136,33 @@ def peak_gb() -> float | None:
 
         return mx.get_peak_memory() / 1e9
     except ImportError:
+        return None
+
+
+def limit_cache(gb: str | float | None = None) -> int | None:
+    """Cap MLX's cache of freed buffers at ``gb`` (CACHE_GB by default). Returns the cap in bytes, or None when it is
+    left at MLX's default ("off") or MLX is missing."""
+    gb = CACHE_GB if gb is None else gb
+    if str(gb).lower() == "off":
+        return None
+    try:
+        import mlx.core as mx
+    except ImportError:
+        return None
+    n = int(float(gb) * 1e9)
+    mx.set_cache_limit(n)
+    return n
+
+
+def footprint_bytes(pid: int | None = None) -> int | None:
+    """The process's physical footprint, as Activity Monitor's Memory column counts it: resident pages, compressed
+    pages and the GPU memory it holds. MLX's own peak counts only arrays in use. None where macOS's libproc is not."""
+    try:
+        lib = ctypes.CDLL("/usr/lib/libproc.dylib")
+        lib.proc_pid_rusage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
+        info = (ctypes.c_uint64 * 16)()  # rusage_info_v0: a 16-byte uuid, then user and system time, ..., footprint
+        if lib.proc_pid_rusage(os.getpid() if pid is None else pid, 0, info) != 0:
+            return None
+        return int(info[9])
+    except (OSError, AttributeError):
         return None

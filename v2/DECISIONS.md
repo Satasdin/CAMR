@@ -397,3 +397,21 @@ and the longer script passes the same fairness checks. The 3M and 4M cuts ask th
 where nothing new has become askable reuses the cut before's sample. So any change in score is the history's
 weight, not new questions. The 4B (engine and bare) runs at 3M and 4M first. Claude Haiku and Sonnet run there
 too; their 1M window holds only the last days, which have nothing planted.
+
+**E-40 The engine's process held 19 GB; MLX's buffer cache is now capped at 1 GB.** Ibrahim asked to optimize RAM.
+During the 4B's 4M-token run, the process's physical footprint (what Activity Monitor shows) was 19.2 GB:
+- only 1.0 GB was resident;
+- the rest sat compressed or in swap, which was full (8.8 of 9.2 GB).
+
+The records' "peak RAM" of 5.7 GB is MLX's peak of arrays in use during one answer, so it never saw this.
+
+The cause is MLX's cache of freed GPU buffers. It is unbounded up to the GPU limit (about 18 GB here), and a long
+ingest frees a desk's worth of buffers for every moment.
+
+`engram.models.limit_cache` now caps it when a reader or embedder loads: 1 GB by default, `ENGRAM_MLX_CACHE_GB` to
+change it, `off` for MLX's default. It changes no computation, only how many freed buffers are kept for reuse.
+
+Every checkpoint and speed point now records the process's footprint (`footprint_gb`, from libproc) beside MLX's
+peak. `engram.bench.ram` measures the cap against no cap in fresh processes, with footprint over time, ingest speed
+and first word. It runs after the queue. The 8B, 27B and Ollama runs are the first measured with the cap. Every run
+before them (1.7B and 4B) ran without it; their scores are unaffected, and their RAM is now known to be understated.
