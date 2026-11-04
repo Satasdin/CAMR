@@ -488,7 +488,7 @@ def engine_brains(app, root: Path | None = None) -> Callable[[dict], Brain] | No
     root = Path(root) if root else (Path(memory.path).parent if memory is not None else Path.home() / ".camr")
 
     def make(spec: dict) -> Brain:
-        from camr_engine.agentic.brain import EngineBrain, PlainBrain
+        from camr_engine.agentic.brain import CLOSEST, EngineBrain, PlainBrain
 
         if not spec["memory"]:
             runtime = getattr(app, "models", None)
@@ -501,7 +501,8 @@ def engine_brains(app, root: Path | None = None) -> Callable[[dict], Brain] | No
         except ImportError:  # pragma: no cover
             START = dt.date(2026, 1, 5)
         s = Session(reader, embedder, root=root, name=spec.get("session"), project=spec.get("project"),
-                    agent=spec.get("agent"), reads=spec["reads"], writes=spec["writes"], tiers={}, metrics=True)
+                    agent=spec.get("agent"), reads=spec["reads"], writes=spec["writes"], tiers={}, metrics=True,
+                    closest=CLOSEST)
         if spec.get("pool") is not None:  # one RAM budget for every thread
             adopt(s, spec["pool"])
         return EngineBrain(s, day=lambda d: (d - START).days)

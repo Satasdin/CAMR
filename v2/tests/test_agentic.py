@@ -646,3 +646,59 @@ def test_a_task_that_names_a_file_is_told_to_read_it_first(ws):
     assert "First read src/fees.py with read_file" in run.prompt(1).user and "missing.py with" not in run.prompt(1).user
     run.task = "Add a helper"
     assert "First read" not in run.prompt(1).user
+
+
+def test_a_look_made_again_with_no_write_since_is_not_run_again(ws):
+    run = make_run(ws, [call("list_files"), call("list_files"), call("write_file", path="a.txt", content="a\n"),
+                        call("list_files"), "Done."])
+    run.execute()
+    looks = [t for t in run.turns if t["kind"] == "call" and t["tool"] == "list_files"]
+    assert "src/" in looks[0]["text"] and looks[1]["text"].startswith("(the same as [1]: nothing has changed")
+    assert "a.txt" in looks[2]["text"]  # a write came between, so it is run again
+
+
+def test_the_first_step_says_when_the_workspace_is_empty(ws, tmp_path):
+    assert "The workspace is empty" not in make_run(ws, []).prompt(1).user
+    empty = tmp_path / "new-site"
+    (empty / ".git").mkdir(parents=True)
+    run = make_run(Workspace(empty), [call("write_file", path="index.html", content="<p>hi</p>\n"), "Done."])
+    assert "The workspace is empty: make the files the task needs with write_file." in run.prompt(1).user
+    run.execute()
+    assert "The workspace is empty" not in run.prompt(2).user
+
+
+def test_a_reply_cut_off_inside_a_call_is_told_and_the_next_gets_twice_the_room(ws):
+    cut = '<tool_call>\n{"name": "write_file", "arguments": {"path": "index.html", "content": "<html><body>'
+    brain = FakeBrain([cut, call("write_file", path="index.html", content="<p>hi</p>\n"), "Done."])
+    p = BUILT_IN[0]
+    run = Run("t-1", "Build the page", brain=brain, tools=Toolbox(ws, Gate(), allows=p.allows), persona=p,
+              gate=Gate(), workspace=ws.name, step_tokens=len([cut[i:i + 3] for i in range(0, len(cut), 3)]))
+    run.execute()
+    assert run.state == "done" and (ws.root / "index.html").read_text() == "<p>hi</p>\n"
+    assert brain.prompts[1].max_tokens == 2 * brain.prompts[0].max_tokens
+    assert "ran out of room" in brain.prompts[1].user and "nothing ran" in brain.prompts[1].user
+    assert any(t["kind"] == "error" and "cut off" in t["text"] for t in run.turns)
+
+
+def test_files_the_task_names_and_the_run_has_not_written_are_named_each_step(ws):
+    p = BUILT_IN[0]
+    brain = FakeBrain([call("write_file", path="index.html", content="<p>hi</p>\n"),
+                       call("write_file", path="style.css", content="p {}\n"), "Done."])
+    run = Run("t-1", "Build index.html and style.css; see README.md", brain=brain,
+              tools=Toolbox(ws, Gate(), allows=p.allows), persona=p, gate=Gate(), workspace=ws.name)
+    run.execute()
+    assert "Named in the task" not in brain.prompts[0].user
+    assert "Named in the task and not in the workspace yet: style.css." in brain.prompts[1].user
+    assert "Named in the task" not in brain.prompts[2].user
+    assert f'not "{ws.name}/a.txt"' in brain.prompts[0].system
+
+
+def test_after_two_looks_made_again_the_next_step_has_only_tools_that_change_things(ws):
+    brain = FakeBrain([call("list_files"), call("list_files"), call("list_files"), call("list_files"),
+                       call("write_file", path="a.txt", content="a\n"), "Done."])
+    run = make_run(ws, [])
+    run.brain = brain
+    run.execute()
+    names = [{t["function"]["name"] for t in p.tools} for p in brain.prompts]
+    assert "list_files" in names[2] and "list_files" not in names[3] and "write_file" in names[3]
+    assert "list_files" in names[5]  # a write came between

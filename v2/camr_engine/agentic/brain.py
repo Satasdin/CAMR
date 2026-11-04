@@ -135,9 +135,11 @@ class PlainBrain:
         pass
 
 
-ENGINE_RULES = ("This request is a task in the user's project, not a question about the notes: the one-sentence "
-                "rule above does not apply. Use the notes above when they help: names, rules, decisions and fixes "
-                "from earlier work.")
+CLOSEST = 8  # moments a code step re-reads as words after its room: a task needs more facts than a short answer
+ENGINE_RULES = ("This request is a task in the user's project, not a question about the notes: the rules above to "
+                "answer in one sentence and to reply \"I don't know\" do not apply. Do the task with the tools. The "
+                "notes above are what you remember of this project and its people: use the names, facts, rules, "
+                "decisions and fixes they hold.")
 
 
 class EngineBrain:

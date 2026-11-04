@@ -43,8 +43,10 @@ HISTORY_CHARS = 60_000  # the steps so far, at most: about 15-20K tokens, well i
 TERM_CHARS = 200_000  # terminal characters kept (as camr_engine.agentic.shell.KEEP)
 TERM_LIMIT = 4000  # terminal chunks kept
 ENDED = ("done", "stopped", "failed")
+ROOM_MAX = 4096  # a step cut off inside a call gets twice the room for its next reply, at most this
 
-RULES = """You work in the folder "{ws}" on the user's Mac. Paths are relative to it.
+RULES = """You work in the folder "{ws}" on the user's Mac. Paths are relative to it, so leave its name out: "a.txt",
+not "{ws}/a.txt".
 Call tools as the tool list says; one reply may call several. Read a file before you change it. edit_file replaces
 text copied exactly from the file; write_file writes a whole file.
 run_shell and the MCP tools wait for the user to allow each call, and the user may refuse.
@@ -55,6 +57,8 @@ _DEFINES = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?(?:def|class|function|con
 
 
 _NAMED = re.compile(r"[\w./-]+\.[A-Za-z0-9]{1,6}\b")  # a file the task names, as money.py or src/app.ts
+LOOKS = ("read_file", "list_files", "search")  # tools that only look: the same call gives the same result until a write
+AGAIN = "(the same as "  # how a look made again is answered
 
 class Run:
     def __init__(self, rid: str, task: str, *, brain: Brain, tools: Toolbox, persona: Persona, gate: Gate,
@@ -70,6 +74,7 @@ class Run:
         self.label, self.workspace, self.skills, self.marks = label, workspace, skills, marks
         self.notes, self.notes_title = list(notes or []), notes_title
         self.max_steps, self.step_tokens, self.keep_it = max_steps, step_tokens, keep
+        self.room = step_tokens  # the next reply's token limit (doubled after a reply cut off inside a call)
         self.measuring, self.on_step, self.on_think = measuring, on_step, on_think
         self.state = "queued"  # queued, thinking, tool, waiting, measuring, keeping, done, stopped, failed
         self.answer: str | None = None
@@ -155,6 +160,8 @@ class Run:
                     "decode_tps": thought.decode_tps, "memory": thought.memory}
             self._turn(turn)
             self._span("model", t0, t1, f"step {k}", ticks=ticks(thought, t0))
+            if not found and self._cut(thought):
+                continue
             if not found:
                 self.answer = words or "(the model wrote nothing)"
                 self._turn({"kind": "answer", "text": self.answer})
@@ -165,8 +172,9 @@ class Run:
                     break
                 self._set("tool")
                 t2 = self.now()
-                done = self.tools.run(c.name, c.args, owner=self.id, label=self.label, cancel=self.cancel,
-                                      on_output=self._term, on_wait=lambda what: self._set("waiting"))
+                done = self._again(c.name, c.args) or self.tools.run(
+                    c.name, c.args, owner=self.id, label=self.label, cancel=self.cancel, on_output=self._term,
+                    on_wait=lambda what: self._set("waiting"))
                 t3 = self.now()
                 self.history.append((c.name, c.args, done))
                 call = {"kind": "call", "step": k, **done.show()}
@@ -203,6 +211,34 @@ class Run:
                     self._turn({"kind": "kept", **self.kept})
             self._set("done")
 
+    def _cut(self, thought: Thought) -> bool:
+        """A reply that ran out of tokens inside a tool call (a whole file is long): nothing ran, so the model is
+        told, and its next reply gets twice the room (up to ROOM_MAX). Not an answer, so the run goes on."""
+        open_ = thought.text.rfind("<tool_call>")
+        if thought.gen_tokens < self.room or open_ < 0 or "</tool_call>" in thought.text[open_:]:
+            return False
+        self.history.append(("(cut off)", {}, Done("(cut off)", {}, False, (
+            f"your reply ran out of room ({self.room} tokens) inside a tool call, so nothing ran. Call it again, "
+            "whole; for a long file, write the first part with write_file and add the rest with edit_file."), 0.0)))
+        self._turn({"kind": "error", "text": f"step {self.steps} was cut off at {self.room} tokens inside a call"})
+        self.room = min(self.room * 2, max(ROOM_MAX, self.step_tokens))
+        return True
+
+    def _again(self, name: str, args: dict) -> Done | None:
+        """A look the run made already, with no write since: not run again, so a small model that keeps listing an
+        empty folder is told to move on."""
+        if name not in LOOKS:
+            return None
+        for i in range(len(self.history) - 1, -1, -1):
+            n, a, d = self.history[i]
+            if d.wrote is not None or n not in LOOKS:
+                return None
+            if n == name and a == args:
+                return Done(name, args, True, f"{AGAIN}[{i + 1}]: nothing has changed since. Do not look "
+                            "again: take the next step of the task (write or change a file), or answer if it is "
+                            "done.)", 0.0)
+        return None
+
     def _answered(self) -> str:
         """The state once the model answered: keeping it in memory first, when that is on."""
         return "keeping" if self.keep_it and self.brain.memory_on else "done"
@@ -220,6 +256,15 @@ class Run:
             text += f"\nSkills you can read with load_skill:\n{self.skills}"
         return text
 
+    def unwritten(self) -> list[str]:
+        """Files the task names that are not in the workspace yet (index.html, style.css), in the order it names
+        them: a small model that has written one of two files tends to look around instead of writing the next."""
+        ws = getattr(self.tools, "workspace", None)
+        if ws is None:
+            return []
+        root = Path(ws.root)
+        return [w for w in dict.fromkeys(_NAMED.findall(self.task)) if not (root / w).exists()][:4]
+
     def named_files(self) -> list[str]:
         """Files in the workspace that the task names (money.py, src/app.ts), in the order it names them."""
         ws = getattr(self.tools, "workspace", None)
@@ -229,23 +274,47 @@ class Run:
         found = [w for w in dict.fromkeys(_NAMED.findall(self.task)) if (root / w).is_file()]
         return found[:4]
 
+    def empty(self) -> bool:
+        """The workspace holds no file yet (caches and .git aside)."""
+        ws = getattr(self.tools, "workspace", None)
+        if ws is None:
+            return False
+        try:
+            return ws.listing(".", 1)["entries"] == 0
+        except (OSError, ValueError):
+            return False
+
     def prompt(self, step: int) -> Prompt:
         lines = [f"Task: {self.task}"]
         named = self.named_files() if not self.history else []
         if named:  # small models answer from their notes instead: the notes are about earlier work, maybe other code
             lines += ["", f"First read {', '.join(named)} with read_file: answer from the files as they are now, "
                           "not from the notes."]
+        if not self.history and self.empty():
+            lines += ["", "The workspace is empty: make the files the task needs with write_file."]
         if self.notes:
             lines += ["", self.notes_title, *[f"- {n}" for n in self.notes]]
         if self.history:
             lines += ["", "What you did so far, oldest first:"]
             for i, (name, args, done), body in zip(range(1, len(self.history) + 1), self.history, self._bodies()):
                 lines += [f"[{i}] {name}({short(args)})", ("result:" if done.ok else "failed:"), body]
+            todo = self.unwritten()
+            if todo:
+                lines += ["", f"Named in the task and not in the workspace yet: {', '.join(todo)}."]
             lines += ["", "Next: call the next tool, or, when the task is done, answer in plain words with no tool "
                       "call."]
-        return Prompt(self.system(), "\n".join(lines), self.tools.specs(), ask=self.task,
-                      max_tokens=self.step_tokens, tags={"run": self.id, "step": step, **(
+        return Prompt(self.system(), "\n".join(lines), self._specs(), ask=self.task,
+                      max_tokens=self.room, tags={"run": self.id, "step": step, **(
                           {"agent": self.label} if self.label else {})})
+
+    def _specs(self) -> list[dict]:
+        """The tools for the next step: after two looks in a row were told they were made already, only those that
+        change something, so the model writes or answers."""
+        specs = self.tools.specs()
+        last = [d.text for _, _, d in self.history[-2:]]
+        if len(last) == 2 and all(t.startswith(AGAIN) for t in last):
+            return [x for x in specs if x["function"]["name"] not in LOOKS]
+        return specs
 
     def _bodies(self) -> list[str]:
         """Each result as the model reads it back: the newest FULL_RESULTS in full, older ones shortened; then, while
