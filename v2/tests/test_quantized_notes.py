@@ -158,3 +158,34 @@ def test_shrink_finishes_a_stopped_run_and_refuses_an_open_reach(tmp_path):
     got = shrink(reach, 8, model=str(model), apply=True, progress=lambda *_: None)
     assert got["packed"] == 1 and not (reach / "room-000000.notes").exists()
     assert sorted(p.name for p in reach.glob("room-*.notes")) == ["room-000000.q8.notes", "room-000001.q8.notes"]
+
+
+def test_each_reach_gets_8_gb_unless_the_environment_says_otherwise(monkeypatch):
+    from camr_engine.shelves import disk_budget
+
+    monkeypatch.delenv("CAMR_SHELF_DISK_GB", raising=False)
+    assert disk_budget() == 8 * 2**30
+    monkeypatch.setenv("CAMR_SHELF_DISK_GB", "24")
+    assert disk_budget() == 24 * 2**30
+    monkeypatch.setenv("CAMR_SHELF_DISK_GB", "lots")
+    assert disk_budget() == 8 * 2**30
+
+
+def test_holding_the_budget_puts_cold_rooms_to_sleep_and_saves(tmp_path):
+    from camr_engine.shelves import hold
+
+    rooms = Rooms(tmp_path, TB, room_tokens=1000, join=0.99)
+    for i in range(3):
+        rooms.add(f"m{i}", i, unit(1, i), bytes([i]) * (10 * TB), None)
+
+    class Kept:  # a memory as hold sees it: tiers, and save
+        tiers = Tiers(disk_bytes=15 * TB).bind(rooms)
+        saved = 0
+
+        def save(self):
+            Kept.saved += 1
+
+    told = []
+    got = hold({"global": Kept(), "none": object()}, lambda kind, **k: told.append((kind, k["slept"])))
+    assert got == {"global": [0, 1]} and Kept.saved == 1 and told == [("budget", 2)]
+    assert hold({"global": Kept()}) == {}  # held already: nothing more sleeps
