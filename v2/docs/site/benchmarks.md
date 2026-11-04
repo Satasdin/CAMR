@@ -280,26 +280,47 @@ Seed 1 is for the proof. Seed 0 is for development and tuning.
 
 ## Results
 
-| Benchmark | Engine, 1.7B | Engine, 4B | Engine, 8B | 27B, words | Ollama, paired | Ollama, bare | Claude Haiku | Claude Sonnet | Claude Opus |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Long Haul, 64K | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| Long Haul, 256K | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| Long Haul, 1M | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| Long Haul, 2M | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| BABILong | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| MemoryAgentBench | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| LongMemEval S | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| HARP pairs | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| MATH-500 (no memory) | see records | see records | see records | see records | see records | see records | see records | see records | see records |
-| AIME 2025 and 2026 (no memory) | see records | see records | see records | see records | see records | see records | see records | see records | see records |
+Measured on the MacBook Pro M5 Pro (24 GB), 4 November 2026. The records are in `records/bench/2026-11-04/`.
 
-The wait as the engine's memory grows (`engram.bench.local speed`):
+Right answers on the Long Haul (34, 40, 69 and 73 questions at 64K, 256K, 1M and 2M; 3M and 4M ask the 2M questions
+on the longer script):
 
-| Moments kept | First word, p50 | Retrieval, p50 | Read from the SSD | GB/s | Disk |
+| Contender | 64K | 256K | 1M | 2M | 3M | 4M | First word p50 | Peak RAM |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `engine:qwen3-4b` | 25 | 26 | 25 | 29 | see records | see records | 0.21–0.31 s | 5.8 GB |
+| `bare:qwen3-4b` | 18 | 14 | 20 | 11 | see records | see records | 0.34–0.38 s | 14.7 GB |
+| `engine:qwen3-1.7b+own` | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.5 GB |
+| `engine:qwen3-1.7b` | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.5 GB |
+| `bare:qwen3-1.7b+own` | 7 | 7 | 14 | 9 | | | 0.13 s | 7.5 GB |
+| `bare:qwen3-1.7b` | 8 | 13 | 14 | 7 | | | 0.13 s | 7.5 GB |
+| `ollama:qwen3:1.7b` | 16 | 17 | 16 | 16 | | | 0.38–0.40 s | 3.3 GB |
+| `ollama-bare:qwen3:1.7b` | 8 | 12 | 10 | 7 | | | | 5.7 GB |
+| `claude-haiku-5-5` | 22 | 21 | 17 | 10 | 10 | 10 | 13–43 s | |
+| `claude-sonnet-5-5` | 28 | 35 | 43 | 32 | 13 | 10 | 13–53 s | |
+| `claude-opus-5-5` | 24 | 33 | 42 | 31 | | | 19–105 s | |
+
+The 8B and the 27B are in the records once their runs finish.
+
+The Hugging Face suites (right answers):
+
+| Suite | `claude-haiku-5-5` | `claude-sonnet-5-5` |
+| --- | --- | --- |
+| MATH-500, levels 3 to 5 (50) | 44 | 47 |
+| AIME 2025 and 2026 (60) | 54 | 56 |
+| HARP pairs, memory on (60) | 55 | 58 |
+| HARP pairs, memory off (60) | 48 | 52 |
+| BABILong qa1–qa5, 4k to 128k (100) | 78 | |
+
+The wait as the engine's memory grows (`engram.bench.local speed`, `engine:qwen3-1.7b`):
+
+| Moments kept | History | First word, p50 | Retrieval, p50 | Peak RAM | Disk |
 | --- | --- | --- | --- | --- | --- |
-| 1,000 | see records | see records | see records | see records | see records |
-| 10,000 | see records | see records | see records | see records | see records |
-| the end of the Long Haul | see records | see records | see records | see records | see records |
+| 1,000 | 112K tokens | 0.11 s | 24 ms | 4.26 GB | 14.9 GB |
+| 10,000 | 1.15M tokens | 0.15 s | 17 ms | 4.28 GB | 40.0 GB |
+| 17,676 (the end of the Long Haul) | 2.01M tokens | 0.08 s | 18 ms | 4.23 GB | 40.1 GB |
+
+Notes read off the SSD at 6–12 GB/s when a room is not hot. At 2M most rooms are asleep (4,471 of 5,391), so most
+answers read their room as words, and read nothing from the SSD.
 
 The records are under `records/bench/`. Each names the machine, how busy it was (`load_1m`), and the code that made
 it (`engram_source_sha`).
