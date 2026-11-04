@@ -20,6 +20,8 @@ final class ChatModel: ObservableObject {
     @Published var busy = false
     @Published var draft = ""
     @Published var reach = ""
+    @Published var shelf = "auto"  // where Remember puts a moment: a shelf, or auto (by meaning)
+    @Published var shelves: [ShelfInfo] = []
 
     let engine: Engine
     let weights: WeightsModel
@@ -36,6 +38,31 @@ final class ChatModel: ObservableObject {
         let rooms = reaches.compactMap { $0.num("rooms") }.reduce(0, +)
         if rooms > 0 { weights.rooms = Int(rooms) }
         reach = reaches.first(where: { ($0["written"] as? Bool) == true })?.str("label") ?? ""
+        shelves = st.list("shelves").map {
+            ShelfInfo(name: $0.str("name") ?? "", label: $0.str("label") ?? "", reach: $0.str("reach") ?? "",
+                      notes: Int($0.num("rooms") ?? 0))
+        }
+        weights.shelves = shelves
+        if let sh = st.str("shelf") { shelf = sh }
+    }
+
+    /// Shelves on (the engine then reads every shelf), then the warming of the model and the newest notes followed.
+    func useShelves() async {
+        _ = try? await engine.post("/api/chat/settings", ["shelf": shelf])
+        await refresh()
+        var next = 0
+        for _ in 0..<400 {
+            guard let got = try? await engine.get("/api/live?id=warm&from=\(next)") else { break }
+            for e in got.list("events") { weights.warmEvent(e) }
+            next = Int(got.num("next") ?? Double(next))
+            if (got["done"] as? Bool) == true { break }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
+    func pick(shelf name: String) async {
+        shelf = name
+        _ = try? await engine.post("/api/chat/settings", ["shelf": name])
     }
 
     func setMemory(_ on: Bool) async {
@@ -57,7 +84,8 @@ final class ChatModel: ObservableObject {
         let k = turns.count - 1
         weights.beginAnswer(memory: memoryOn)
         do {
-            let job = try await engine.post("/api/chat/message", ["text": text, "intent": remember ? "tell" : "ask"])
+            let job = try await engine.post("/api/chat/message", ["text": text, "intent": remember ? "tell" : "ask",
+                                                                 "shelf": shelf])
             guard let id = job.str("id") else { throw Engine.Failure(message: "no job id") }
             var next = 0
             var done = false
@@ -83,7 +111,8 @@ final class ChatModel: ObservableObject {
             weights.roomEvent(e)
             if let r = e.num("room") {
                 let tier = e.str("tier") ?? ""
-                turns[k].meta = "room \(Int(r)) · " + (tier == "ssd" ? "read from the SSD" : tier == "ram" ? "hot in RAM" : "read as words")
+                let on = shelves.first(where: { $0.reach == e.str("reach") }).map { " on \($0.label)" } ?? ""
+                turns[k].meta = "note \(Int(r))\(on) · " + (tier == "ssd" ? "read from the SSD" : tier == "ram" ? "hot in RAM" : "read as words")
             }
         case "token":
             turns[k].text += e.str("text") ?? ""
@@ -104,7 +133,13 @@ final class ChatModel: ObservableObject {
             weights.finish(m)
             var parts: [String] = []
             if e.str("intent") == "tell" {
-                parts.append((e["kept"] as? Bool) == true ? "kept in \(e.str("reach") ?? "memory")" : "not kept")
+                if (e["kept"] as? Bool) == true {
+                    let label = shelves.first(where: { $0.name == e.str("shelf") })?.label
+                    parts.append(label.map { "on the \($0) shelf" } ?? "kept in \(e.str("reach") ?? "memory")")
+                    if (e["sorted"] as? Bool) == true { parts.append("sorted by meaning") }
+                } else {
+                    parts.append("not kept")
+                }
             } else {
                 if let f = m?.num("first_word_s") ?? e.num("wait_s") { parts.append("first word \(secondsText(f))") }
                 if !turns[k].meta.isEmpty { parts.append(turns[k].meta) }

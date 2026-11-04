@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// What the weights view draws, fed only by what the engine measured: the model's layers as they load, the room an
-/// answer reads (and whether it came from RAM or the SSD), and, for every word, how strongly each layer fired (32
-/// numbers a layer, from camr_engine.live). Nothing here is made up: with no events, nothing moves.
+/// What the weights view draws, fed only by what the engine measured: the model's layers as they load, the shelves
+/// of memory and the note an answer reads (and whether it came from RAM or the SSD), the notes warmed before the
+/// first question, and, for every word, how strongly each layer fired (32 numbers a layer, from camr_engine.live).
+/// Nothing here is made up: with no events, nothing moves. (The engine calls a note a room.)
 @MainActor
 final class WeightsModel: ObservableObject {
     static let bins = 32
@@ -25,7 +26,11 @@ final class WeightsModel: ObservableObject {
     @Published var tier: String?
     @Published var roomBytes: Double = 0
     @Published var readBytes: Double = 0
-    var roomAt: Date?  // when the room was chosen: its notes then flow into every layer
+    var roomAt: Date?  // when the note was chosen: it then flows into every layer
+    @Published var shelf: String?  // the shelf the chosen note is on
+    var shelves: [ShelfInfo] = []  // from the chat's state, in order
+    var warmed: [String: [(Int, Date)]] = [:]  // notes read ahead, by shelf: (note, when)
+    @Published var warmBytes: Double = 0
     var residentUntil: Date?  // the room's keys and values sit in every layer's attention until the answer ends
 
     // the answer
@@ -103,7 +108,23 @@ final class WeightsModel: ObservableObject {
         if act.count != layers { act = Array(repeating: Array(repeating: 0, count: Self.bins), count: layers) }
     }
 
+    func warmEvent(_ e: [String: Any]) {
+        switch e.str("kind") {
+        case "warm":
+            if let s = e.str("shelf"), let r = e.num("room") { warmed[s, default: []].append((Int(r), Date())) }
+            warmBytes += e.num("bytes") ?? 0
+        case "token":
+            layersEvent(e["layers"] as? [[Double]])
+        default:
+            break
+        }
+    }
+
     func roomEvent(_ e: [String: Any]) {
+        shelf = shelves.first(where: { $0.reach == e.str("reach") })?.name
+        if let s = shelf, let i = shelves.firstIndex(where: { $0.name == s }), let n = e.num("rooms") {
+            shelves[i].notes = Int(n)
+        }
         rooms = Int(e.num("rooms") ?? Double(rooms))
         room = e.num("room").map(Int.init)
         tier = e.str("tier")
@@ -148,6 +169,13 @@ final class WeightsModel: ObservableObject {
     }
 }
 
+struct ShelfInfo {
+    let name: String
+    let label: String
+    let reach: String
+    var notes: Int
+}
+
 /// The weights view: the memory's rooms above, the model's layers below (one column a layer, 32 cells each), and
 /// the chosen room's notes flowing into every layer when memory is on.
 struct WeightsView: View {
@@ -184,8 +212,12 @@ struct WeightsView: View {
 
     var memoryLine: String {
         guard w.memoryOn else { return "the model alone" }
-        var parts = ["\(w.rooms) rooms"]
-        if let r = w.room { parts.append("room \(r)") }
+        let total = w.shelves.isEmpty ? w.rooms : w.shelves.reduce(0) { $0 + $1.notes }
+        var parts = [w.shelves.isEmpty ? "\(total) notes" : "\(w.shelves.count) shelves · \(total) notes"]
+        if let r = w.room {
+            let on = w.shelves.first(where: { $0.name == w.shelf })?.label
+            parts.append(on.map { "note \(r) on \($0)" } ?? "note \(r)")
+        }
         if let t = w.tier { parts.append(t == "ssd" ? "read from SSD" : t == "ram" ? "hot in RAM" : "as words") }
         return parts.joined(separator: " · ")
     }
@@ -204,6 +236,7 @@ struct WeightsView: View {
         if w.memoryOn, w.readBytes > 0 { parts.append("read \(bytesText(w.readBytes))") }
         if w.words > 0 { parts.append("\(w.words) words") }
         if let s = w.loadSeconds, parts.isEmpty { parts.append("weights read in \(secondsText(s))") }
+        if parts.isEmpty, w.warmBytes > 0 { parts.append("warmed \(bytesText(w.warmBytes)) of notes into RAM") }
         return parts.isEmpty ? " " : parts.joined(separator: " · ")
     }
 
@@ -214,38 +247,75 @@ struct WeightsView: View {
     private func draw(_ ctx: inout GraphicsContext, _ size: CGSize, _ now: Date) {
         ctx.fill(Path(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 10), with: .color(Theme.ink))
         let pad: CGFloat = 10
-        let memH = size.height * 0.24
-        let gap = size.height * 0.14
+        let memH = size.height * (w.shelves.isEmpty ? 0.24 : 0.30)
+        let gap = size.height * 0.12
         let memRect = CGRect(x: pad, y: pad, width: size.width - 2 * pad, height: memH - pad)
         let modelRect = CGRect(x: pad, y: memH + gap, width: size.width - 2 * pad, height: size.height - memH - gap - pad)
-        let tiles = roomTiles(memRect)
-        let chosen = chosenTile(tiles.count)
-        drawRooms(&ctx, tiles, chosen, now)
+        let chosen = w.shelves.isEmpty ? drawGrid(&ctx, memRect, now) : drawShelves(&ctx, memRect, now)
         let cols = columns(modelRect)
         drawLayers(&ctx, cols, modelRect, now)
         if w.memoryOn, let at = w.roomAt, let c = chosen {
-            drawFlow(&ctx, from: tiles[c], to: cols, modelTop: modelRect.minY, since: now.timeIntervalSince(at))
+            drawFlow(&ctx, from: c, to: cols, modelTop: modelRect.minY, since: now.timeIntervalSince(at))
         }
     }
 
-    private func roomTiles(_ r: CGRect) -> [CGRect] {
-        let cw = r.width / CGFloat(roomCols), ch = r.height / CGFloat(roomRows)
-        var out: [CGRect] = []
-        for row in 0..<roomRows {
-            for col in 0..<roomCols {
-                out.append(CGRect(x: r.minX + CGFloat(col) * cw + 1.5, y: r.minY + CGFloat(row) * ch + 1.5,
-                                  width: cw - 3, height: ch - 3))
+    /// One row a shelf: its name and size, then its notes as tiles (each tile stands for an equal share of them).
+    /// Returns the chosen note's tile.
+    private func drawShelves(_ ctx: inout GraphicsContext, _ r: CGRect, _ now: Date) -> CGRect? {
+        let labelW: CGFloat = min(96, r.width * 0.28)
+        let rowH = r.height / CGFloat(w.shelves.count)
+        let cols = max(6, Int((r.width - labelW) / max(10, rowH * 0.95)))
+        let cw = (r.width - labelW) / CGFloat(cols)
+        var chosen: CGRect?
+        for (k, sh) in w.shelves.enumerated() {
+            let y = r.minY + CGFloat(k) * rowH
+            let isChosen = w.memoryOn && sh.name == w.shelf && w.roomAt != nil
+            let text = Text("\(sh.label.uppercased())  \(sh.notes)").font(Theme.mono(rowH > 22 ? 10 : 8, .semibold))
+                .foregroundColor(!w.memoryOn ? Theme.faint : isChosen ? Theme.memory : Theme.dim)
+            ctx.draw(text, at: CGPoint(x: r.minX, y: y + rowH / 2), anchor: .leading)
+            let filled = min(cols, sh.notes)
+            let recentWarm = (w.warmed[sh.name] ?? []).filter { now.timeIntervalSince($0.1) < 1.6 }
+            for i in 0..<cols {
+                let t = CGRect(x: r.minX + labelW + CGFloat(i) * cw + 1.5, y: y + 2, width: cw - 3, height: rowH - 4)
+                let p = Path(roundedRect: t, cornerRadius: 2)
+                if !w.memoryOn {
+                    ctx.stroke(p, with: .color(.white.opacity(0.05)), lineWidth: 0.5)
+                } else if i < filled {
+                    ctx.fill(p, with: .color(Theme.memory.opacity(0.10)))
+                    ctx.stroke(p, with: .color(Theme.memory.opacity(0.28)), lineWidth: 0.6)
+                } else {
+                    ctx.stroke(p, with: .color(.white.opacity(0.05)), lineWidth: 0.5)
+                }
+            }
+            for (note, at) in recentWarm where w.memoryOn && sh.notes > 0 {  // read ahead off the SSD into RAM
+                let i = tile(note, of: sh.notes, cols: cols)
+                let t = CGRect(x: r.minX + labelW + CGFloat(i) * cw + 1.5, y: y + 2, width: cw - 3, height: rowH - 4)
+                let a = max(0, 1 - now.timeIntervalSince(at) / 1.6) * 0.7
+                ctx.fill(Path(roundedRect: t, cornerRadius: 2), with: .color(Theme.memory.opacity(a)))
+            }
+            if isChosen, let note = w.room, sh.notes > 0 {
+                let i = tile(note, of: sh.notes, cols: cols)
+                chosen = CGRect(x: r.minX + labelW + CGFloat(i) * cw + 1.5, y: y + 2, width: cw - 3, height: rowH - 4)
             }
         }
-        return out
+        if let c = chosen { glow(&ctx, c, now) }
+        return chosen
     }
 
-    private func chosenTile(_ n: Int) -> Int? {
-        guard let room = w.room, w.rooms > 0 else { return nil }
-        return min(n - 1, room * n / max(w.rooms, n) + (w.rooms < n ? 0 : 0))
+    private func tile(_ note: Int, of n: Int, cols: Int) -> Int {
+        n <= cols ? min(note, cols - 1) : min(cols - 1, note * cols / n)
     }
 
-    private func drawRooms(_ ctx: inout GraphicsContext, _ tiles: [CGRect], _ chosen: Int?, _ now: Date) {
+    /// One memory with no shelves: its notes as one grid.
+    private func drawGrid(_ ctx: inout GraphicsContext, _ r: CGRect, _ now: Date) -> CGRect? {
+        let cw = r.width / CGFloat(roomCols), ch = r.height / CGFloat(roomRows)
+        var tiles: [CGRect] = []
+        for row in 0..<roomRows {
+            for col in 0..<roomCols {
+                tiles.append(CGRect(x: r.minX + CGFloat(col) * cw + 1.5, y: r.minY + CGFloat(row) * ch + 1.5,
+                                    width: cw - 3, height: ch - 3))
+            }
+        }
         let filled = w.rooms == 0 ? 0 : min(tiles.count, max(1, w.rooms))
         for (i, t) in tiles.enumerated() {
             let p = Path(roundedRect: t, cornerRadius: 2)
@@ -258,16 +328,23 @@ struct WeightsView: View {
                 ctx.stroke(p, with: .color(.white.opacity(0.06)), lineWidth: 0.5)
             }
         }
-        guard w.memoryOn, let c = chosen, let at = w.roomAt else { return }
-        let age = now.timeIntervalSince(at)
-        let heat = max(0.35, 1 - age / 2.5)
-        let t = tiles[c].insetBy(dx: -1, dy: -1)
+        guard w.memoryOn, let note = w.room, w.rooms > 0, w.roomAt != nil else { return nil }
+        let c = tiles[tile(note, of: w.rooms, cols: tiles.count)]
+        glow(&ctx, c, now)
+        return c
+    }
+
+    /// The chosen note: bright, with a short beam when it was read up from the SSD.
+    private func glow(_ ctx: inout GraphicsContext, _ tile: CGRect, _ now: Date) {
+        guard let at = w.roomAt else { return }
+        let heat = max(0.35, 1 - now.timeIntervalSince(at) / 2.5)
+        let t = tile.insetBy(dx: -1, dy: -1)
         ctx.drawLayer { g in
             g.addFilter(.blur(radius: 6))
             g.fill(Path(roundedRect: t.insetBy(dx: -3, dy: -3), cornerRadius: 3), with: .color(Theme.memory.opacity(heat)))
         }
         ctx.fill(Path(roundedRect: t, cornerRadius: 2), with: .color(Theme.memory.opacity(0.4 + 0.6 * heat)))
-        if w.tier == "ssd" {  // read up from the SSD: a short beam down from the tile
+        if w.tier == "ssd" {
             let p = Path { $0.move(to: CGPoint(x: t.midX, y: t.minY - 6)); $0.addLine(to: CGPoint(x: t.midX, y: t.minY)) }
             ctx.stroke(p, with: .color(Theme.memory.opacity(heat)), lineWidth: 1)
         }

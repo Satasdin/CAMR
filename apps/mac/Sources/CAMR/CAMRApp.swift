@@ -118,7 +118,7 @@ struct RootView: View {
         .background(Theme.ink)
         .onChange(of: engine.phase) { _, p in
             if p == .ready {
-                Task { await chat.refresh(); await code.refresh() }
+                Task { await chat.useShelves(); await code.refresh() }
                 if !world.played { world.played = true; Script.play(world) }
             }
         }
@@ -160,6 +160,17 @@ struct RootView: View {
                 .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
             }
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("REMEMBER ON").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
+                HStack(spacing: 4) {
+                    shelfButton("auto", "Auto")
+                    ForEach(chat.shelves, id: \.name) { sh in shelfButton(sh.name, sh.label) }
+                }
+                .padding(3)
+                .background(RoundedRectangle(cornerRadius: 9).fill(Theme.panel))
+            }
+            .disabled(engine.phase != .ready)
+
             Toggle(isOn: Binding(get: { world.tab == "chat" ? chat.memoryOn : code.memoryOn }, set: { on in
                 if world.tab == "chat" { Task { await chat.setMemory(on) } } else { code.memoryOn = on; weights.memoryOn = on }
             })) {
@@ -200,6 +211,18 @@ struct RootView: View {
         case .ready: return "ready"
         case .failed: return "stopped"
         }
+    }
+
+    private func shelfButton(_ id: String, _ title: String) -> some View {
+        Button { Task { await chat.pick(shelf: id) } } label: {
+            Text(title).font(Theme.ui(11, .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .foregroundStyle(chat.shelf == id ? Color.black : Theme.dim)
+                .background(RoundedRectangle(cornerRadius: 7).fill(chat.shelf == id ? Theme.memory : .clear))
+        }
+        .buttonStyle(.plain)
+        .help(id == "auto" ? "Put each remembered moment on the shelf it is closest to by meaning" : "Remember on \(title)")
     }
 
     private func tabButton(_ id: String, _ title: String, _ icon: String) -> some View {
