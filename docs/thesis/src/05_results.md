@@ -96,7 +96,11 @@ Table: {#cuts} The cuts and their checkpoints
 | 3M | 2,999,988 | 26,244 | after day 110 | 73 (the 2M questions) |
 | 4M | 4,000,000 | 34,936 | after day 110 | 73 (the 2M questions) |
 
-Every answer receives one of five verdicts (Table {tab:verdicts}). The same answer always gets the same verdict, grading costs nothing, and anyone can grade again from the raw answers kept in each record.
+Every answer receives one of five verdicts (Table {tab:verdicts}). The same answer always gets the same verdict, grading costs nothing, and anyone can grade again from the raw answers kept in each record. A contender's score at a cut is its accuracy, the share of the cut's questions graded right (Equation {eq:accuracy}); the tables give the counts R and Q, and Figure {fig:longhaul} the shares.
+
+$$\text{accuracy}_c = \frac{R_c}{Q_c}$$ {#accuracy} [Accuracy at a cut]
+
+In Equation {eq:accuracy}, R_c is the number of answers graded right at cut c and Q_c the number of questions asked there (34, 40, 69 or 73).
 
 Table: {#verdicts} The verdicts
 
@@ -155,7 +159,21 @@ Table: {#modules} The engine's main modules (`v2/camr_engine/`)
 
 ### Write Path, Read Path and Tiers
 
-Two implementation choices from the rooms build matter for every result. Each room is written as one continuous page, so a new moment is read with its room's earlier moments in view (E-15). A single room is laid on the desk without turning its keys, which cut laying the desk from 55 ms to 15 ms at 2,000 words (E-18). The final engine added three things to that path. Every moment carries its date and day number, as `[YYYY-MM-DD, day N] text`, since the Long Haul asks about days by number. Rooms move between tiers: in the benchmarks, 2 GB of RAM held the hot rooms and 40 GB of disk the awake room files, and at the end of the 2M-token history 920 rooms were awake and 4,471 asleep (E-38). A question whose room is asleep reads that room's moments as words, which costs reading them as plain text would; waking was off in the benchmarks. Finally, the benchmark's questions were read-only: the hot rooms, the least-recently-used clock and the vault strengths were restored after every answer, so that asking never teaches (E-31).
+Every choice of memory rests on one closeness measure, the cosine of two embeddings (Equation {eq:closeness}). Embeddings are stored as unit vectors, so the cosine is a single dot product, and a question is compared with every moment in one matrix product; the moment with the highest closeness gives the room that is read, and a new moment joins a room only when its closeness to a moment there is at least 0.80 (Equation {eq:room}).
+
+$$s(a,b) = \hat{e}_a \cdot \hat{e}_b = \cos\theta_{ab}, \qquad m^{*} = \underset{m}{\arg\max}\ s(q,m)$$ {#closeness} [Closeness of two moments, and the moment a question reads]
+
+Here ê_a and ê_b are the unit embeddings of a and b, q is the question and m ranges over every moment kept. The notes a room holds take the size given by Equation {eq:notes}, which is Equation {eq:bytes} multiplied by the room's tokens.
+
+$$S_{\text{notes}} = n \times L \times 2 \times H_{kv} \times d_h \times b$$ {#notes} [Size of a room's notes]
+
+For n tokens, L layers, H_kv key–value heads of size d_h and b bytes per value (2 at 16 bits), a full 512-token room is 512 × 28 × 2 × 8 × 128 × 2 = 58.7 MB on the 1.7B and 512 × 36 × 2 × 8 × 128 × 2 = 75.5 MB on the 4B and 8B.
+
+Two implementation choices from the rooms build matter for every result. Each room is written as one continuous page, so a new moment is read with its room's earlier moments in view (E-15). A single room is laid on the desk without turning its keys, which cut laying the desk from 55 ms to 15 ms at 2,000 words (E-18). The final engine added three things to that path. Every moment carries its date and day number, as `[YYYY-MM-DD, day N] text`, since the Long Haul asks about days by number. Rooms move between tiers: in the benchmarks, 2 GB of RAM held the hot rooms and 40 GB of disk the awake room files, and at the end of the 2M-token history 920 rooms were awake and 4,471 asleep (E-38). The disk budget is kept by the rule of Equation {eq:budget}: while the awake room files outgrow the budget, the weakest room goes to sleep, ties going to the room used least recently.
+
+$$\text{while}\ \sum_{r \in A} S_r > B_{\text{disk}}:\quad r^{*} = \underset{r \in A}{\arg\min}\ \left(\sigma_r,\ \tau_r\right)\ \text{sleeps}$$ {#budget} [The disk budget rule]
+
+In Equation {eq:budget}, A is the set of awake rooms, S_r the size of room r's notes file, B_disk the disk budget (40 GB in the benchmarks), σ_r the room's strength (that of its strongest vault note, Equation {eq:fade}) and τ_r the time it was last used; sleeping deletes the room's notes file and keeps its words. A question whose room is asleep reads that room's moments as words, which costs reading them as plain text would; waking was off in the benchmarks. Finally, the benchmark's questions were read-only: the hot rooms, the least-recently-used clock and the vault strengths were restored after every answer, so that asking never teaches (E-31).
 
 ### The Vault, the Core, Reach and the Switch
 
@@ -388,6 +406,14 @@ Table: {#speed} The wait as memory grows (`engine:qwen3-1.7b`; E-38)
 
 ![{#speed} The wait, retrieval time, RAM and disk as the 1.7B's memory grows from 1,000 to 17,676 moments](figures/ch5/speed.png){width=15.9}
 
+The wait for the first word is the sum of the steps an answer takes before it writes (Equation {eq:latency}); every record logs each term, so a slow answer can be traced to its step.
+
+$$t_{\text{first}} = t_{\text{choose}} + t_{\text{core}} + t_{\text{fetch}} + t_{\text{wake}} + t_{\text{desk}} + t_{\text{prefill}} + t_{\text{token}}$$ {#latency} [Time to the first word]
+
+The first five terms are the retrieval time of Table {tab:metrics} (choosing the room, building the core, reading the room, waking it when asleep, laying the desk); t_prefill is reading the closest moments, the date and the question as words, and t_token is writing the first token. When a room is read from the SSD, its read bandwidth is the bytes read over the fetch time (Equation {eq:bandwidth}).
+
+$$\text{bandwidth} = \frac{\text{read bytes}}{t_{\text{fetch}}}$$ {#bandwidth} [Read bandwidth of a room fetched from the SSD]
+
 The first word stays at about 0.1 s because the desk is always one room of at most 512 tokens plus four moments, however large the memory grows. Retrieval, one product of the question with every moment's embedding and one read of a room, took 17 to 24 ms. Reading the history in took about 1,100 tokens a second throughout. The 90th-percentile first word (2 to 5 s) is a question whose room is asleep or whose answer is long, read as words. Rooms not hot were read off the SSD at 6 to 12 GB/s. At the 2M cut, Claude waited 16 to 105 s for its first token (Haiku 15.9 s, Sonnet 53.5 s, Opus 105.2 s).
 
 ### RAM: the Cap on the Buffer Cache {#ram-results}
@@ -503,8 +529,11 @@ Table: {#media} Multimodal memory: right answers by kind of file (seed 1: 29 pla
 | Ollama `qwen2.5vl:3b` alone (newest 32K) | 0 | 0 | 0 | 0 | 5 | 5 | 2 | | 1.9 GB† |
 | Ollama `gemma3:4b` with the pairing (words) | 8 | 7 | 6 | 5 | 2 | 28 | | 0.36 s | 1.9 GB† |
 | Ollama `gemma3:4b` alone (newest 32K) | 0 | 0 | 0 | 1 | 4 | 5 | | | 1.9 GB† |
+| Qwen3 4B with CAMR, reading Gemma 3's words | | | | | | 36 | | | |
 
-With CAMR, every planted fact from every kind of file was recalled on seed 1, at least 40,000 tokens after the file was told, by the vision model and by the text-only 4B: 29 of 29 each, and 27 to 28 of 29 on seed 2. The 4B with CAMR answered all 37 on seed 1 and 35 on seed 2, declining every never-said question, and beat the vision model holding the file in its prompt (34 and 33) at under a third of its wait. The models alone recalled almost nothing: by the questions, the files had left their windows. Ollama's vision model, given memory as words through the pairing, did as well as the engine's vision model (34 and 33), in the smallest process. A second vision model, Ollama's Gemma 3 4B, described the files itself and, through the pairing, recalled 26 of the 29 facts against 1 alone, but invented answers to 6 of the 8 never-said questions. Looking at the image again added nothing on this set and cost nearly four times the wait. The vision models' weakness was honesty, not recall: with memory they invented answers to 3 to 5 of the 8 never-said questions, where the 4B invented none. († Ollama's own peak resident memory, not a process footprint.)
+With CAMR, every planted fact from every kind of file was recalled on seed 1, at least 40,000 tokens after the file was told, by the vision model and by the text-only 4B: 29 of 29 each, and 27 to 28 of 29 on seed 2. The 4B with CAMR answered all 37 on seed 1 and 35 on seed 2, declining every never-said question, and beat the vision model holding the file in its prompt (34 and 33) at under a third of its wait. The models alone recalled almost nothing: by the questions, the files had left their windows. Ollama's vision model, given memory as words through the pairing, did as well as the engine's vision model (34 and 33), in the smallest process. A second vision model, Ollama's Gemma 3 4B, described the files itself and, through the pairing, recalled 26 of the 29 facts against 1 alone, but invented answers to 6 of the 8 never-said questions. Given Gemma's descriptions instead of Qwen2.5-VL's, the 4B with CAMR answered 36 of 37: the memory, not the describer, carried the answers. Figure {fig:media} sets the totals side by side. Looking at the image again added nothing on this set and cost nearly four times the wait. The vision models' weakness was honesty, not recall: with memory they invented answers to 3 to 5 of the 8 never-said questions, where the 4B invented none. († Ollama's own peak resident memory, not a process footprint.)
+
+![{#media} Multimodal memory: right answers of 37 on two draws of files, with CAMR (cyan), with the file in the prompt (grey) and alone (amber)](figures/ch5/media.png){width=15.9}
 
 ### Development Evidence: the Rooms Build on Scripted Lives {#rooms-results}
 

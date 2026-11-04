@@ -285,6 +285,48 @@ def reach():
     return vals, facts
 
 
+def media():
+    """Multimodal memory: right answers of 37, by contender, on both draws of files (seed 1 and 2)."""
+    import glob
+    rows = {}
+    for f in sorted(glob.glob(str(ROOT / "v2" / "records" / "bench" / "2026-11-0*" / "*media*.json"))):
+        d = json.loads(Path(f).read_text())
+        name = d["contender"]["name"] if isinstance(d["contender"], dict) else d["contender"]
+        seed = d["media"]["dir"].rstrip("/").split("/")[-1]
+        cp = d["checkpoints"][-1]["summary"]["all"]
+        rows.setdefault(name, {})[seed] = cp["right"]
+    order = [("engine:qwen3-4b", "Qwen3 4B + CAMR", CYAN_D), ("engine:qwen2.5-vl-3b", "Qwen2.5-VL-3B + CAMR", CYAN),
+             ("ollama:qwen2.5vl:3b", "Ollama VL-3B + pairing", CYAN_L),
+             ("file:qwen2.5-vl-3b", "VL-3B, file in the prompt", GREY),
+             ("bare:qwen3-4b", "Qwen3 4B alone", AMBER), ("bare:qwen2.5-vl-3b", "VL-3B alone", AMBER_D),
+             ("ollama-bare:qwen2.5vl:3b", "Ollama VL-3B alone", AMBER)]
+    order = [o for o in order if o[0] in rows]
+    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    w = 0.38
+    for i, (key, label, color) in enumerate(order):
+        for j, seed in enumerate(("s1", "s2")):
+            v = rows[key].get(seed)
+            if v is None:
+                continue
+            x = i + (j - 0.5) * w
+            ax.bar(x, v, width=w * 0.92, color=color, alpha=1.0 if j == 0 else 0.6, edgecolor=color)
+            ax.text(x, v + 0.6, str(v), ha="center", fontsize=7.5, color=INK)
+    ax.set_xticks(range(len(order)))
+    ax.set_xticklabels([o[1] for o in order], fontsize=7.4, rotation=18, ha="right")
+    ax.set_ylim(0, 40)
+    ax.axhline(37, color=GREY_L, lw=1, ls="--")
+    ax.text(len(order) - 0.6, 37.6, "37 questions", fontsize=7.4, color=GREY, ha="right")
+    ax.set_ylabel("Right answers (of 37)")
+    ax.grid(axis="x", visible=False)
+    from matplotlib.patches import Patch
+    ax.legend(handles=[Patch(color=GREY_D, label="seed 1"), Patch(color=GREY_D, alpha=0.6, label="seed 2")],
+              fontsize=7.4, loc="upper right", bbox_to_anchor=(1.0, 0.93))
+    fig.tight_layout()
+    fig.savefig(OUT / "media.png")
+    plt.close(fig)
+    return rows
+
+
 if __name__ == "__main__":
     longhaul_share()
     first_word()
@@ -292,6 +334,7 @@ if __name__ == "__main__":
     ram()
     print("speed", speed())
     print("reach", reach())
+    print("media", media())
     for label, vals, *_ in cols:
         print(label, vals)
     print("wrote", sorted(p.name for p in OUT.glob("*.png")))

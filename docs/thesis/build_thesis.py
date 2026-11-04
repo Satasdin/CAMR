@@ -98,7 +98,7 @@ def omath(latex: str):
 KEY = re.compile(r"\s*\{#([\w:-]+)\}\s*")
 CAPTION = re.compile(r"^Table:\s*(?:\{#([\w:-]+)\})?\s*(.+)$")
 IMAGE = re.compile(r"^!\[(?:\{#([\w:-]+)\})?\s*(.*?)\]\((.*?)\)(\{.*\})?\s*$")
-EQUATION = re.compile(r"^\$\$(.+?)\$\$\s*(?:\{#([\w:-]+)\})?\s*$")
+EQUATION = re.compile(r"^\$\$(.+?)\$\$\s*(?:\{#([\w:-]+)\})?\s*(?:\[(.+)\])?\s*$")
 ITEM = re.compile(r"^\s*([-*]|\d+[.)])\s+")
 
 
@@ -165,8 +165,8 @@ def parse(text: str) -> list[tuple]:
             blocks.append(("figure", key, cap.strip(), path, (opts or "").strip("{}")))
         elif EQUATION.match(s):
             flush()
-            latex, key = EQUATION.match(s).groups()
-            blocks.append(("eq", latex.strip(), key))
+            latex, key, cap = EQUATION.match(s).groups()
+            blocks.append(("eq", latex.strip(), key, (cap or "").strip()))
         elif ITEM.match(line):
             flush()
             numbered = bool(re.match(r"^\s*\d+[.)]\s", line))
@@ -409,7 +409,7 @@ class Thesis:
             r.font.name, r.font.size = "Courier New", Pt(9.5)
         self.doc.add_paragraph(style="Normal").paragraph_format.space_after = Pt(0)
 
-    def equation(self, latex: str):
+    def equation(self, latex: str, caption: str = ""):
         self.eq += 1
         p = self.doc.add_paragraph(style="Normal")
         pf = p.paragraph_format
@@ -420,6 +420,16 @@ class Thesis:
         p.add_run("\t")
         p._p.append(omath(latex))
         p.add_run(f"\t({self.chlabel}.{self.eq})")
+        if caption:  # a hidden TC entry, so Word's list of equations (TOC \f e) finds it
+            entry = f"Equation {self.chlabel}.{self.eq}: {self.plain(caption)}"
+            self.outline.append(("loe", 1, entry))
+            for typ, txt in (("begin", None), ("instr", f' TC "{entry}" \\f e \\l 1 '), ("end", None)):
+                r = OxmlElement("w:r")
+                if typ == "instr":
+                    it = OxmlElement("w:instrText"); it.set(qn("xml:space"), "preserve"); it.text = txt; r.append(it)
+                else:
+                    c = OxmlElement("w:fldChar"); c.set(qn("w:fldCharType"), typ); r.append(c)
+                p._p.append(r)
 
     def table(self, caption: str, rows: list[list[str]], width_cm: float = TEXT_WIDTH_CM):
         self.tab += 1
@@ -630,7 +640,7 @@ class Thesis:
             elif k == "code":
                 self.code(b[1])
             elif k == "eq":
-                self.equation(b[1])
+                self.equation(b[1], b[3] if len(b) > 3 else "")
             elif k == "table":
                 self.table(b[2], b[3])
             elif k == "figure":
@@ -642,6 +652,8 @@ class Thesis:
                 self.field_list('TOC \\o "1-3" \\h \\z \\u', "toc", "Right-click and choose Update Field to build the table of contents.")
             elif k == "lof":
                 self.field_list('TOC \\h \\z \\t "FigCaption,1"', "lof", "Right-click and choose Update Field to build the list of figures.")
+            elif k == "loe":
+                self.field_list('TOC \\h \\z \\f e', "loe", "Right-click and choose Update Field to build the list of equations.")
             elif k == "lot":
                 self.field_list('TOC \\h \\z \\t "TabCaption,1"', "lot", "Right-click and choose Update Field to build the list of tables.")
             elif k == "frontmatter-end":

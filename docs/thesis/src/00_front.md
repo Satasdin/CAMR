@@ -63,6 +63,10 @@ Keywords: on-device language models; external memory; key–value cache; retriev
 
 ::lot::
 
+#! ~List of Equations
+
+::loe::
+
 #! ~List of Abbreviations
 
 AI - Artificial Intelligence

@@ -68,8 +68,7 @@ The engine has three parts arranged around a frozen local language model. The wr
 
 The central quantity of the baseline's evaluation was the fraction of the capability gap closed, computed for each task type by Equation {eq:gap}, where S is the accuracy score of a condition on that task type.
 
-$$\text{gap closed} = \frac{S_{\text{treatment}} - S_{\text{floor}}}{S_{\text{ceiling}} - S_{\text{floor}}}$$ {#gap}
-
+$$\text{gap closed} = \frac{S_{\text{treatment}} - S_{\text{floor}}}{S_{\text{ceiling}} - S_{\text{floor}}}$$ {#gap} [Fraction of the capability gap closed]
 A value of zero means the engine added nothing and a value of one means the small model with memory matched the large model. The engine's evaluation reports right answers out of the questions asked at each size of history, for each contender, because the ceiling itself changes with the size of the history: a cloud model that sees the whole history at 256,000 tokens sees only its last part at 2 million. Table {tab:conditions} summarises the conditions.
 
 Table: {#conditions} Experimental conditions

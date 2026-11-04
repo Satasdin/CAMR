@@ -60,9 +60,11 @@ def context() -> Diagram:
         lab(d, 910, cy - 28 - 18 * (top.count("<br>") + 1), 266, top)
         lab(d, 910, cy + 28, 266, bottom)
 
-    left(470, "User<br>" + small("of the Mac app (Chat, Code)"),
-         "moments to remember, questions,<br>code tasks, approvals,<br>memory on or off, reach",
-         "answers, code changes,<br>what each answer read,<br>vault notes")
+    left(450, "User<br>" + small("of the Mac app (Chat, Code)"),
+         "moments and files to remember,<br>questions, research, code tasks,<br>approvals, memory on or off",
+         "answers (from memory, the model<br>or the web), code changes,<br>what each answer read")
+    left(640, "Wikipedia<br>" + small("public API, for research"), "a search for the question",
+         "the best page's plain text")
     left(800, "Researcher<br>" + small("student, supervisor, examiner"),
          "contender, model, cut, seed,<br>benchmark commands", "dated records, tables,<br>charts, cost ledger")
 
@@ -96,14 +98,14 @@ def use_cases() -> Diagram:
         return d.card(cx - 125, cy - 38, 250, 76, label, kind="usecase", size=16, pad=16)
 
     L, M, R = 470, 795, 1115
-    chat = uc(L, 210, "Chat with memory")
-    tell = uc(L, 340, "Tell something<br>to remember")
+    chat = uc(L, 210, "Chat: ask, or<br>research online")
+    tell = uc(L, 340, "Tell or attach<br>something to remember")
     code = uc(L, 470, "Code with a<br>local agent")
     watch = uc(L, 600, "Watch what an<br>answer reads")
     vault = uc(L, 730, "Browse the vault<br>(Obsidian)")
     pair = uc(L, 900, "Pair Ollama<br>with memory")
     switch = uc(M, 190, "Switch memory<br>on or off")
-    reach = uc(M, 320, "Choose a reach")
+    reach = uc(M, 320, "Choose a reach<br>or a shelf")
     recall = uc(M, 520, "Recall from memory")
     bench = uc(M, 760, "Run a benchmark", italic=True)
     grade = uc(M, 990, "Grade answers<br>by rule")
@@ -589,9 +591,96 @@ def deployment() -> Diagram:
     return d
 
 
+# --------------------------------------------------------------------- the assistant
+def assistant() -> Diagram:
+    d = Diagram("Assistant", "Component diagram of the CAMR assistant", 1560, 1110,
+                "Solid arrow: calls or passes data · dashed arrow: events the app watches · «external»: off the Mac")
+
+    def comp(x, y, w, h, name, det, stereo=None):
+        return d.component(x, y, w, h, name, det, stereo=stereo, size=14)
+
+    comp(40, 140, 300, 140, "CAMR Mac app", "Chat: Ask · Remember · Research online<br>· Attach a file; Code; "
+         "the live<br>weights view", stereo="SwiftUI")
+    comp(420, 150, 320, 120, "App server", "routes/chat.py · 127.0.0.1;<br>launch token; one job at a time")
+    comp(40, 390, 220, 130, "Files", "media.py: PDF pages<br>as text; images and<br>video via the eyes")
+    comp(280, 390, 220, 130, "Research", "assistant.research:<br>the page as marked<br>data, never orders")
+    comp(520, 390, 220, 130, "Router", "assistant.route: one<br>word, MEMORY or<br>GENERAL")
+    comp(280, 610, 190, 110, "Wikipedia", "search, then the<br>page's plain text", stereo="external")
+
+    d.band(800, 120, 720, 700, "«subsystem» Memory engine (camr_engine)", style="package", label_side="right")
+    d.card(820, 165, 680, 235, "", kind="box")
+    d.text(834, 175, 650, "<b>Shelves</b> · shelves.py: each shelf a reach; Auto files a moment by meaning; "
+           "every question reads all four; warm() builds the kernels and reads the newest notes into RAM",
+           size=14, align="left", color=INK)
+    for i, (name, det) in enumerate([("Projects", "global reach:<br>the project"),
+                                     ("Coding", "project:coding:<br>what Code learns"),
+                                     ("Research", "project:research:<br>from the web"),
+                                     ("Personal", "project:personal:<br>the user's life")]):
+        d.card(832 + 167 * i, 255, 156, 125, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=6)
+    d.card(820, 420, 680, 380, "", kind="box")
+    d.text(834, 430, 650, "<b>Memory</b> · memory.py, one per shelf: remember · choose · recall · answer · fade",
+           size=14, align="left", color=INK)
+    parts = [("Core", "core.py: standing<br>facts, in RAM"),
+             ("Rooms (notes)", "rooms.py: the<br>model's keys and<br>values, on the SSD"),
+             ("Tiers", "swap.py: RAM,<br>SSD, asleep<br>as words"),
+             ("Vault", "vault.py: a note<br>a moment, doors"),
+             ("Revision", "revise.py: SAME,<br>UPDATE or NEW; old<br>note kept, superseded"),
+             ("Event log", "events.py: what<br>an answer read"),
+             ("Metrics", "metrics.py: first<br>word, tier, GB/s"),
+             ("Live", "live.py: layers<br>loading, firing")]
+    for i, (name, det) in enumerate(parts):
+        x, y = 832 + 167 * (i % 4), 470 + 160 * (i // 4)
+        d.card(x, y, 156, 145, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=6)
+
+    comp(800, 880, 230, 120, "Reader", "Qwen3 1.7B · 4B · 8B,<br>4-bit; frozen", stereo="MLX model")
+    comp(1045, 880, 230, 120, "Eyes", "Qwen3-VL-4B-Thinking:<br>sees and reasons; images,<br>video frames", stereo="MLX vision model")
+    comp(1290, 880, 230, 120, "Embedder", "Qwen3-Embedding-0.6B;<br>frozen", stereo="MLX model")
+
+    # app and server
+    d.path([(340, 190), (420, 190)])
+    lab(d, 342, 120, 76, "HTTP,<br>loopback,<br>token", size=13)
+    d.path([(420, 245), (340, 245)], head="open", dashed=True)
+    lab(d, 342, 252, 76, "answers,<br>live events", size=13)
+    # the server's three doors
+    d.path([(580, 270), (580, 330), (150, 330), (150, 390)])
+    d.path([(390, 330), (390, 390)])
+    d.path([(580, 330), (630, 330), (630, 390)])
+    lab(d, 158, 340, 110, "Attach a file", align="left", size=13)
+    lab(d, 398, 340, 120, "Research online", align="left", size=13)
+    lab(d, 638, 340, 60, "Ask", align="left", size=13)
+    # research and the web
+    d.path([(330, 520), (330, 610)])
+    lab(d, 336, 530, 90, "HTTPS<br>search", size=13)
+    d.path([(430, 610), (430, 520)])
+    lab(d, 336, 590, 90, "page text", size=13)
+    # the router: memory or the model's own knowledge
+    d.path([(740, 450), (800, 450)])
+    lab(d, 742, 424, 58, "MEMORY", size=12)
+    d.path([(630, 520), (630, 940), (800, 940)])
+    lab(d, 640, 860, 150, "GENERAL: the<br>model's own knowledge", align="left", size=13)
+    # what is kept goes on a shelf
+    d.path([(230, 520), (230, 780), (800, 780)])
+    d.path([(490, 520), (490, 780)], head=None)
+    lab(d, 238, 786, 380, "kept on a shelf (web pages marked as from the web)", align="left", size=13)
+    # files are read by the eyes
+    d.path([(110, 520), (110, 1060), (1160, 1060), (1160, 1000)])
+    lab(d, 120, 1066, 300, "images and video frames described", align="left", size=13)
+    # the engine and the models
+    d.path([(915, 800), (915, 880)])
+    lab(d, 925, 822, 90, "the desk", align="left", size=13)
+    d.path([(1405, 800), (1405, 880)])
+    lab(d, 1415, 822, 70, "embed", align="left", size=13)
+    return d
+
 DIAGRAMS = {"context": context, "use_cases": use_cases, "evaluation_pipeline": activity,
             "architecture": architecture, "sequence_question": sequence, "state_room": states, "files": files,
-            "deployment": deployment}
+            "deployment": deployment, "assistant": assistant}
+
+try:  # the two baseline diagrams, drawn by the earlier generator (read only) at the same scale
+    import diagrams as _v1  # noqa: E402
+    DIAGRAMS.update({"architecture_v1": _v1.architecture_v1, "schema_v1": _v1.schema_v1})
+except Exception:  # noqa: BLE001
+    pass
 
 
 def render(name: str, d: Diagram) -> Path:
@@ -601,7 +690,7 @@ def render(name: str, d: Diagram) -> Path:
     with tempfile.TemporaryDirectory() as tmp:
         page = Path(tmp) / f"{name}.html"
         page.write_text(html)
-        subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=2",
+        subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=3",
                         f"--window-size={d.w},{d.h - TOP}", "--virtual-time-budget=5000",
                         f"--user-data-dir={tmp}/profile", f"--screenshot={out}", page.as_uri()],
                        check=True, capture_output=True, timeout=120)
