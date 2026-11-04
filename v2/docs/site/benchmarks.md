@@ -308,8 +308,8 @@ The Hugging Face suites (right answers):
 | --- | --- | --- | --- | --- |
 | MATH-500, levels 3 to 5 (50) | 44 | 47 | | |
 | AIME 2025 and 2026 (60) | 54 | 56 | | |
-| HARP pairs, memory on (60) | 55 | 58 | running | 34 |
-| HARP pairs, memory off (60) | 48 | 52 | running | 21 |
+| HARP pairs, memory on (60) | 55 | 58 | 28 | 34 |
+| HARP pairs, memory off (60) | 48 | 52 | 21 | 21 |
 | BABILong qa1–qa5, 4k to 128k (100) | 78 | | 39 | 20 |
 
 The Ollama 1.7B answers with its thinking off. On HARP it is given `--work-room 8192`: the room Claude has to think

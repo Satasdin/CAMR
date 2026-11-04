@@ -149,13 +149,13 @@ On the same 2.01M tokens, Claude waits 13–105 s before its first token.
 |---|---|---|---|---|
 | MATH-500, levels 3–5 (50) | 44 | 47 | | |
 | AIME 2025 + 2026 (60) | 54 | 56 | | |
-| HARP pairs, correction told (60) | 55 | 58 | running | **34** |
-| HARP pairs, nothing told (60) | 48 | 52 | running | 21 |
+| HARP pairs, correction told (60) | 55 | 58 | 28 | **34** |
+| HARP pairs, nothing told (60) | 48 | 52 | 21 | 21 |
 | BABILong 4k–128k (100) | 78 | — | 39 | 20 |
 
 The Ollama 1.7B has its thinking off, so on HARP it gets the room Claude has to think in (8,192 tokens) to work in
 its words (E-43); at 400 tokens 80% of its answers were cut off. With that room, a correction told through the
-pairing is worth 13 more right answers (34 against 21); for Claude it is worth 6 or 7. On BABILong the pairing
+pairing is worth 13 more right answers (34 against 21), and 6 more than the same correction left in the bare model's 32K window among 30K tokens of noise (28); for Claude it is worth 6 or 7. On BABILong the pairing
 hurts (20 against 39): its 512 tokens of notes miss "where is X now", which needs the latest of many mentions.
 
 Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/records/bench/claude-ledger.jsonl`.
@@ -194,8 +194,7 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 - **The engine is not run on the Hugging Face suites.** `suite_run` takes Claude and Ollama only; the engine needs
   a suite wording.
 - **LongMemEval, MemoryAgentBench and Web-Bench** have loaders but no runs.
-- **Running now:** the bare Ollama 1.7B on HARP with room to work; then the multimodal memory benchmark (PDFs,
-  images, charts, short videos).
+- **Running now:** the multimodal memory benchmark (PDFs, images, charts, short videos).
 - **The thesis document:** being assembled at `docs/thesis/CAMR_Thesis.docx`, chapters 1–6.
 - **4M:** rerun on power with the cache cap: 29 of 73 at 3M and at 4M.
 
