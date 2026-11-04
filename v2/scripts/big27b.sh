@@ -18,15 +18,15 @@ for p in pathlib.Path("records").glob(f"*/*-{persona}-s1-{contender}.json"):
 sys.exit(1)
 PYEOF
 }
-pkill -f "engram.app" || true
+pkill -f "camr_engine.app" || true
 echo "--- starting $(date), load $(sysctl -n vm.loadavg)"
 for persona in student farmer developer; do
   for c in bare-27b camr-27b camr2-words-27b; do
     if quizzed "$persona" "$c"; then echo "$persona $c: already quizzed"; continue; fi
-    $PY -I -m engram.ruler run --persona "$persona" --seed 1 --contender "$c" --quiz-weeks 12 2>&1 | grep -v -i warning
+    $PY -I -m camr_engine.ruler run --persona "$persona" --seed 1 --contender "$c" --quiz-weeks 12 2>&1 | grep -v -i warning
   done
   for c in bare camr camr2-words; do
-    $PY -I -m engram.ruler errands --persona "$persona" --seed 1 --contender "$c" --reader 27b 2>&1 | grep -v -i warning
+    $PY -I -m camr_engine.ruler errands --persona "$persona" --seed 1 --contender "$c" --reader 27b 2>&1 | grep -v -i warning
   done
 done
 echo "27b finished $(date)"

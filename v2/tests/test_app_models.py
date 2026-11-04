@@ -15,9 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from engram import hardware
-from engram.app import fit, hub
-from engram.app.runtime import Runtime
+from camr_engine import hardware
+from camr_engine.app import fit, hub
+from camr_engine.app.runtime import Runtime
 
 GIB = 1024**3
 
@@ -137,11 +137,11 @@ def test_the_verdict_follows_the_gpu_limit_and_the_speed_measured_here(tmp_path)
     small = fit.judge(fit.anatomy(QWEN3_1_7B, "Qwen3-1.7B"), 968080210, 8192, mac, s,
                       measured=s.mlx["mlx-community/Qwen3-1.7B-4bit"])
     assert small["verdict"] == "fits" and small["source"] == "measured" and small["speed_source"] == "measured"
-    assert small["need_bytes"] == int(2.77e9) + fit.ENGRAM_RAM  # measured peak plus the engram's RAM budget
+    assert small["need_bytes"] == int(2.77e9) + fit.CAMR_RAM  # measured peak plus the camr's RAM budget
     assert small["spare_bytes"] > 10 * GIB and not small["tight"]
     a27 = fit.anatomy(QWEN_27B, "Qwen3.8-27B")
     big = fit.judge(a27, 16054541349, 8192, mac, s, measured=s.mlx["mlx-community/Qwen3.8-27B-4bit"])
-    assert big["verdict"] == "fits" and big["tight"] and big["parts"]["engram"] == 0  # it reads words
+    assert big["verdict"] == "fits" and big["tight"] and big["parts"]["camr"] == 0  # it reads words
     huge = fit.judge(a27, 16054541349, 32768, mac, s, measured=s.mlx["mlx-community/Qwen3.8-27B-4bit"])
     assert huge["verdict"] == "wont_run" and huge["source"] == "measured"  # it ran out of GPU memory here
     est = fit.judge(a27, 16054541349, 8192, mac, s)
@@ -374,11 +374,11 @@ class StandIn:
 
 @pytest.fixture
 def models_server(tmp_path, monkeypatch):
-    from engram.app import measuring
-    from engram.app.routes import models as routes
-    from engram.app.server import make_server
+    from camr_engine.app import measuring
+    from camr_engine.app.routes import models as routes
+    from camr_engine.app.server import make_server
 
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
     cache = tmp_path / "hf"
     fake_cache(cache, "mlx-community/Qwen3-1.7B-4bit", ["model.safetensors"], size=968080210 // 1000)
     fake_cache(cache, "mlx-community/Half-4bit", ["a.safetensors", "b.safetensors"], missing=("b.safetensors",))
@@ -416,7 +416,7 @@ def models_server(tmp_path, monkeypatch):
 
     def call(path, body=None):
         c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
-        headers = {"Host": f"127.0.0.1:{port}", "X-Engram-Token": token}
+        headers = {"Host": f"127.0.0.1:{port}", "X-CAMR-Token": token}
         if body is not None:
             headers["Content-Type"] = "application/json"
         c.request("POST" if body is not None else "GET", path, body=None if body is None else json.dumps(body),

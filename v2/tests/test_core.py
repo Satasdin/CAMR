@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from engram.models import Reply
+from camr_engine.models import Reply
 
 needs_mlx = pytest.mark.skipif(importlib.util.find_spec("mlx") is None, reason="needs MLX (the Mac)")
 TODAY = dt.date(2026, 1, 20)
@@ -92,7 +92,7 @@ class FakeEmbedder:
 
 
 def make(path, **kw):
-    from engram.memory import Memory
+    from camr_engine.memory import Memory
 
     settings = {"log": False, "room_tokens": 400, "join": 0.2, **kw}
     return Memory(FakeReader(), FakeEmbedder(), path, **settings)
@@ -114,7 +114,7 @@ def numbers(text: str) -> list[float]:
 
 @needs_mlx
 def test_the_core_is_built_from_core_tagged_notes_and_kept_in_ram(tmp_path):
-    from engram.vault import Vault
+    from camr_engine.vault import Vault
 
     m = make(tmp_path / "memory", vault=True, core=True)
     m.vault.write("I am Ibrahim.", tags=["core"], pinned=True)
@@ -162,7 +162,7 @@ def test_the_core_goes_after_the_header_and_before_the_room(tmp_path):
     # the room was written straight after the header: on the desk its keys are turned along by the core's length
     import mlx.core as mx
 
-    from engram.notes import turn
+    from camr_engine.notes import turn
 
     raw = m._array(m.rooms.fetch([0])[0]).transpose(1, 2, 3, 0, 4)  # (layers, 2, heads, tokens, dim)
     n = rec.tokens
@@ -243,10 +243,10 @@ class StubLooks:
 
 @needs_mlx
 def test_notes_used_in_one_answer_gain_strength_and_their_doors_strengthen(tmp_path, monkeypatch):
-    import engram.memory
-    from engram.vault import FADE, SHARE, TOGETHER, USE
+    import camr_engine.memory
+    from camr_engine.vault import FADE, SHARE, TOGETHER, USE
 
-    monkeypatch.setattr(engram.memory, "Looks", StubLooks)
+    monkeypatch.setattr(camr_engine.memory, "Looks", StubLooks)
     m = make(tmp_path / "memory", vault=True, log=True)
     a = m.remember("Amina moved to Nakuru.", 0)
     b = m.remember("Amina adopted a dog called Simba.", 1)

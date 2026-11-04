@@ -359,7 +359,7 @@ def sequence() -> Diagram:
              "<b>Notebook</b><br>" + small("notes.py"), "<b>MLX models</b><br>" + small("embedder · reader")]
     for x, h in zip(xs[1:], heads):
         d.card(x - 90, 160, 180, 56, h, kind="head", size=15, pad=6)
-    msgs = [(0, 1, "1. types a question and presses Send"), (1, 2, "2. POST /api/chat {text} + X-Engram-Token"),
+    msgs = [(0, 1, "1. types a question and presses Send"), (1, 2, "2. POST /api/chat {text} + X-CAMR-Token"),
             (2, 2, "3. check host, origin, JSON and token; take the lock"), (2, 3, "4. answer(question, today)"),
             (3, 3, "5. prompt(): the header, whose notes stay in RAM"), (3, 6, "6. embed the question"),
             (6, 3, "7. unit vector q"), (3, 3, "8. choose(): the closest moment's room and the 4 closest moments"),
@@ -545,7 +545,7 @@ def files_v2() -> Diagram:
         d.deco(x, y, 13, 17, "doc_out", layer=3)
         d.deco(x + 1.5, y + 1.5, 10, 14, "doc_in", layer=3)
 
-    d.band(30, 120, 1020, 900, "~/.engram/default/ · one memory (each simulation gets its own folder)", style="package")
+    d.band(30, 120, 1020, 900, "~/.camr/default/ · one memory (each simulation gets its own folder)", style="package")
     d.card(70, 170, 940, 170, "", kind="box")
     icon(982, 180)
     d.text(84, 180, 880, small("«artifact»") + "<br><b>room-000042.notes</b> · append-only; written and read with "
@@ -621,7 +621,7 @@ def deployment() -> Diagram:
     d.artifact(980, 375, 210, 80, "Qwen3-1.7B-4bit", "reader, frozen")
     d.artifact(980, 465, 210, 80, "Qwen3-Embedding-0.6B", "4bit-DWQ · embedder, frozen")
     d.node(480, 700, 730, 200, small("«device»") + "<br><b>Internal SSD</b>", depth=12, fill=env)
-    d.artifact(500, 770, 220, 110, "~/.engram/", "default/: your memory ·<br>simulations/: one per run")
+    d.artifact(500, 770, 220, 110, "~/.camr/", "default/: your memory ·<br>simulations/: one per run")
     d.artifact(740, 770, 210, 110, "records/", "dated test records (JSON),<br>in the repository")
     d.artifact(970, 770, 220, 110, "~/.cache/huggingface/", "model weights,<br>about 1.3 GB")
     d.node(1310, 280, 220, 220, small("«device»") + "<br><b>GitHub Actions</b><br>ubuntu-latest, external<br><br>"

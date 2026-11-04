@@ -1,4 +1,4 @@
-# The lightweight memory engine (code name `engram`; the name is still to be picked)
+# The lightweight memory engine (code name `camr`; the name is still to be picked)
 
 **Memory a local model reads like its own weights.** A small model on a Mac keeps a memory that lives on the SSD and
 grows past any context window, without getting slower or heavier. It is not a vector database. The memory is the
@@ -13,16 +13,16 @@ stands). The overnight summary of 4 November is in [../MORNING.md](../MORNING.md
 
 | Layer | Lives in | What it holds | Module |
 |---|---|---|---|
-| Subconscious | RAM, always on | a small core of facts every answer starts from | `engram/core.py` |
-| Conscious | SSD, burst-read into RAM | rooms of saved notes (keys and values); hot rooms stay in RAM, cold ones sleep under a disk budget | `engram/rooms.py`, `engram/swap.py` |
-| Archive | SSD, as text | every moment as a linked note, browsable like an Obsidian vault | `engram/vault.py` |
+| Subconscious | RAM, always on | a small core of facts every answer starts from | `camr_engine/core.py` |
+| Conscious | SSD, burst-read into RAM | rooms of saved notes (keys and values); hot rooms stay in RAM, cold ones sleep under a disk budget | `camr_engine/rooms.py`, `camr_engine/swap.py` |
+| Archive | SSD, as text | every moment as a linked note, browsable like an Obsidian vault | `camr_engine/vault.py` |
 
-**Reach** decides who shares a memory: one session, a project, an agent, or everyone (`engram/reach.py`). Every
-answer records its speed, retrieval time and SSD bandwidth (`engram/metrics.py`).
+**Reach** decides who shares a memory: one session, a project, an agent, or everyone (`camr_engine/reach.py`). Every
+answer records its speed, retrieval time and SSD bandwidth (`camr_engine/metrics.py`).
 
 ## The app
 
-`python -m engram.app --open` serves one local page with six screens. Screenshots are in [docs/screens](docs/screens).
+`python -m camr_engine.app --open` serves one local page with six screens. Screenshots are in [docs/screens](docs/screens).
 
 | Screen | What it does |
 |---|---|
@@ -39,7 +39,7 @@ Ollama cannot load saved keys and values, so the engine gives it memory as words
 Ollama's API:
 
 ```sh
-python -m engram.pair.ollama --port 11435 --memory ~/.engram/ollama
+python -m camr_engine.pair.ollama --port 11435 --memory ~/.camr/ollama
 ```
 
 Then run `OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:1.7b`. See [docs/site/ollama.md](docs/site/ollama.md).
@@ -78,7 +78,7 @@ from are in [docs/site](docs/site).
 sh scripts/install.sh
 ```
 
-After that, `.venv/bin/python -m engram.app --open` starts it again.
+After that, `.venv/bin/python -m camr_engine.app --open` starts it again.
 
 # History: CAMR v2 before the rethink (2–3 November 2026)
 
@@ -118,7 +118,7 @@ questions about things it never told.
 - **Notes answer like words:** the same answer 96.8% of the time, and 164 facts against 163.
 - **Not yet the 4B.** Knowing more and inventing less is the work of steps 3 to 6.
 
-How the wait grows with memory on the desk (`python -m engram.ruler speed`, the SSD read with the cache bypassed):
+How the wait grows with memory on the desk (`python -m camr_engine.ruler speed`, the SSD read with the cache bypassed):
 
 | Words in the room | Notes | Reading the words | Notes sooner by |
 |---|---|---|---|
@@ -142,11 +142,11 @@ every week. Every run writes a dated test record to `records/`, naming the machi
 ```sh
 uv venv --python 3.12 && uv pip install -e ".[dev,baseline]"
 uv pip install --no-deps -e ~/Desktop/camr-repo           # the CAMR v1, for its contender
-python -m engram.ruler life --persona farmer --seed 0     # read a life and its quiz
-python -m engram.ruler run --persona student --seed 1 --contender engram
-python -m engram.ruler chart --persona student --seed 1   # records/charts/growth-student-s1.svg
-python -m engram.ruler speed --persona student            # first word by memory on the desk
-python -m engram.ruler errands --persona farmer --seed 1 --contender engram   # the agent use case
+python -m camr_engine.ruler life --persona farmer --seed 0     # read a life and its quiz
+python -m camr_engine.ruler run --persona student --seed 1 --contender camr
+python -m camr_engine.ruler chart --persona student --seed 1   # records/charts/growth-student-s1.svg
+python -m camr_engine.ruler speed --persona student            # first word by memory on the desk
+python -m camr_engine.ruler errands --persona farmer --seed 1 --contender camr   # the agent use case
 scripts/errands.sh                                         # errands for every contender and life
 scripts/step1.sh                                           # every contender through the three proof lives
 pytest
@@ -157,8 +157,8 @@ Contenders:
 - `perfect`: every note pasted in.
 - `camr`: the CAMR v1 on the same models.
 - `camr-4b`: the CAMR v1 with a model more than twice the size.
-- `engram`: CAMR v2, rooms and notes (the contender's code name).
-- `engram-words`: CAMR v2's memory read as words.
+- `camr`: CAMR v2, rooms and notes (the contender's code name).
+- `camr-words`: CAMR v2's memory read as words.
 
 Models (MLX, downloaded once): Qwen3-1.7B-4bit, Qwen3-4B-Instruct-2507-4bit, Qwen3-Embedding-0.6B-4bit-DWQ.
 

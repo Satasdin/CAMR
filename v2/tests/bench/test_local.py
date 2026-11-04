@@ -12,11 +12,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from engram.bench import contender as cn
-from engram.bench import local
-from engram.bench.contender import (METRICS, TIERS, Answer, Contender, ask_all, decode_tps, grade_with, max_tokens,
+from camr_engine.bench import contender as cn
+from camr_engine.bench import local
+from camr_engine.bench.contender import (METRICS, TIERS, Answer, Contender, ask_all, decode_tps, grade_with, max_tokens,
                                     metrics, pick, record_path, run, stamp, summarize)
-from engram.models import Reply
+from camr_engine.models import Reply
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # test_core's fakes
 
@@ -314,7 +314,7 @@ def test_the_notes_shape_comes_from_each_models_config():
 
 
 def test_bare_reads_the_history_as_the_yardstick_does():
-    claude = pytest.importorskip("engram.bench.claude")
+    claude = pytest.importorskip("camr_engine.bench.claude")
     assert local.BARE_SYSTEM == claude.SYSTEM and local.OPENER == claude.OPENER
     lines = ["Day 1 · Monday 22 September 2025", "User: hi", "Assistant: hello"]
     msgs, _ = claude.Claude(client=object())._messages(lines, 0, 3, claude.Segments(), "</history>", cache=False)
@@ -324,8 +324,8 @@ def test_bare_reads_the_history_as_the_yardstick_does():
 
 
 def test_memory_contenders_read_the_same_instructions_with_notes_for_the_history():
-    orun = pytest.importorskip("engram.bench.ollama_run")
-    from engram.memory import INTRO
+    orun = pytest.importorskip("camr_engine.bench.ollama_run")
+    from camr_engine.memory import INTRO
 
     assert local.LONGHAUL_INTRO == orun.PAIRED_SYSTEM  # the words the Ollama pairing's paired contender reads
 
@@ -346,7 +346,7 @@ def test_memory_contenders_read_the_same_instructions_with_notes_for_the_history
 
 
 def test_the_engines_own_wording_goes_to_every_local_contender_and_is_named():
-    from engram.memory import INTRO
+    from camr_engine.memory import INTRO
 
     class NoLoad(local.Loader):
         def reader(self, repo):
@@ -693,10 +693,10 @@ class FakeLooks:
 
 
 def test_a_watched_answer_strengthens_what_it_used_only_when_the_engine_learns(tmp_path, monkeypatch):
-    import engram.memory
-    from engram.events import EventLog
+    import camr_engine.memory
+    from camr_engine.events import EventLog
 
-    monkeypatch.setattr(engram.memory, "Looks", FakeLooks)
+    monkeypatch.setattr(camr_engine.memory, "Looks", FakeLooks)
     for learn in (False, True):
         e = engine(log=True, watch=True, learn=learn)
         e.open(tmp_path / f"mem-{learn}")
@@ -712,7 +712,7 @@ def test_a_watched_answer_strengthens_what_it_used_only_when_the_engine_learns(t
 
 
 def test_an_unwatched_answer_is_still_logged_without_its_looks(tmp_path):
-    from engram.events import EventLog
+    from camr_engine.events import EventLog
 
     e = engine(log=True)  # the fake reader is not Qwen3: a watched answer would fail
     e.open(tmp_path / "mem")
@@ -727,7 +727,7 @@ def test_an_unwatched_answer_is_still_logged_without_its_looks(tmp_path):
 
 
 def test_the_engine_can_read_the_long_hauls_wording_and_memorys_own_is_unchanged(tmp_path):
-    from engram.memory import INTRO, Memory
+    from camr_engine.memory import INTRO, Memory
 
     reader, embedder = fakes()
     day = dt.date(2025, 10, 1)
@@ -843,7 +843,7 @@ def test_the_long_haul_goes_on_after_a_contender_fails(tmp_path, monkeypatch):
 
 
 def test_speed_questions_are_short_and_askable(tmp_path):
-    from engram.bench.haul.script import load_probes
+    from camr_engine.bench.haul.script import load_probes
 
     probes = load_probes(tiny_haul(tmp_path / "haul"))
     assert local.speed_questions(probes, 100, 5) == []
@@ -852,7 +852,7 @@ def test_speed_questions_are_short_and_askable(tmp_path):
 
 
 def test_the_loader_loads_each_reader_once_and_warms_it_untimed(monkeypatch):
-    import engram.models
+    import camr_engine.models
 
     made = []
 
@@ -868,7 +868,7 @@ def test_the_loader_loads_each_reader_once_and_warms_it_untimed(monkeypatch):
             self.calls.append(max_tokens)
             return Reply("ok", 0.0, 0.0, 3, 1, [])
 
-    monkeypatch.setattr(engram.models, "Reader", Reader)
+    monkeypatch.setattr(camr_engine.models, "Reader", Reader)
     loader = local.Loader()
     a = loader.reader("one")
     assert loader.reader("one") is a and a.calls == [4] and "one" in loader.warm_s  # one short, untimed generation

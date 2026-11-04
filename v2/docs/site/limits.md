@@ -16,7 +16,7 @@ What the engine does not do, or does not do well yet. Each comes from the code o
   8B qualify.
 - **Hybrid models read words.** Qwen 27B (`Qwen3.8-27B`) keeps a running state instead of keys and values in 48 of
   its 64 layers. It cannot use saved notes, so it reads the engine's memory as words: the same rooms, chosen the same
-  way, pasted in as text. That reading is a contender in the benchmarks (`CamrWords` in `engram.ruler.contenders`),
+  way, pasted in as text. That reading is a contender in the benchmarks (`CamrWords` in `camr_engine.ruler.contenders`),
   not an option of `Memory` or `Session`.
 - **Notes belong to one model.** Rooms written by one model cannot be read by another. Opening them with a model
   whose notes are a different size fails ("these rooms were written for a different model"). A model whose notes

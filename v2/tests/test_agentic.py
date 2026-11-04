@@ -12,17 +12,17 @@ from pathlib import Path
 
 import pytest
 
-from engram.agentic import marks as gutter
-from engram.agentic.brain import Prompt, Thought
-from engram.agentic.gate import Gate
-from engram.agentic.loop import Run
-from engram.agentic.parse import calls, prose
-from engram.agentic.personas import BUILT_IN, Personas, check
-from engram.agentic.shell import environment, run
-from engram.agentic.skills import Skills
-from engram.agentic.swarm import Swarm, tasks
-from engram.agentic.tools import Toolbox
-from engram.agentic.workspace import Outside, Workspace, check_root
+from camr_engine.agentic import marks as gutter
+from camr_engine.agentic.brain import Prompt, Thought
+from camr_engine.agentic.gate import Gate
+from camr_engine.agentic.loop import Run
+from camr_engine.agentic.parse import calls, prose
+from camr_engine.agentic.personas import BUILT_IN, Personas, check
+from camr_engine.agentic.shell import environment, run
+from camr_engine.agentic.skills import Skills
+from camr_engine.agentic.swarm import Swarm, tasks
+from camr_engine.agentic.tools import Toolbox
+from camr_engine.agentic.workspace import Outside, Workspace, check_root
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def test_secrets_git_and_self_running_files_are_left_alone(ws):
 
 def test_a_workspace_is_a_project_folder_never_the_disk_or_home_or_keys(tmp_path):
     for bad in ["/", str(Path.home()), str(Path.home() / ".ssh"), str(Path.home() / ".config" / "camr"),
-                str(Path.home() / ".engram"), "relative/path", str(tmp_path / "missing"), "/etc", "/usr/bin"]:
+                str(Path.home() / ".camr"), "relative/path", str(tmp_path / "missing"), "/etc", "/usr/bin"]:
         with pytest.raises(Outside):
             check_root(bad)
     assert check_root(str(tmp_path)) == tmp_path.resolve()
@@ -109,7 +109,7 @@ def test_a_write_keeps_the_file_mode_and_leaves_no_temporary_file(ws):
     p.chmod(0o755)
     ws.write("run.sh", "echo 2\n")
     assert p.read_text() == "echo 2\n" and p.stat().st_mode & 0o777 == 0o755
-    assert not list(ws.root.glob(".engram-*"))
+    assert not list(ws.root.glob(".camr-*"))
 
 
 # -- the parser
@@ -515,10 +515,10 @@ def test_git_and_self_running_files_are_refused_in_any_case_and_with_invisible_l
 
 
 def test_a_workspace_neither_holds_nor_sits_inside_the_apps_own_folders(tmp_path):
-    keep = tmp_path / "engram" / "code"
+    keep = tmp_path / "camr" / "code"
     keep.mkdir(parents=True)
     (tmp_path / "project").mkdir()
-    for bad in [tmp_path, tmp_path / "engram", keep]:
+    for bad in [tmp_path, tmp_path / "camr", keep]:
         with pytest.raises(Outside):
             check_root(str(bad), [keep])
     inner = keep / "inside"
@@ -529,7 +529,7 @@ def test_a_workspace_neither_holds_nor_sits_inside_the_apps_own_folders(tmp_path
 
 
 def test_a_regular_expression_that_backtracks_stops_and_the_app_keeps_running(ws, monkeypatch):
-    from engram.agentic import workspace as wsmod
+    from camr_engine.agentic import workspace as wsmod
 
     monkeypatch.setattr(wsmod, "SEARCH_S", 0.4)
     (ws.root / "slow.txt").write_text("a" * 40 + "!\n")
@@ -555,7 +555,7 @@ def test_a_regular_expression_that_backtracks_stops_and_the_app_keeps_running(ws
 
 
 def test_a_big_file_comes_back_in_clipped_pieces_with_where_to_read_on(ws):
-    from engram.agentic.tools import READ_LINES, RESULT_LIMIT
+    from camr_engine.agentic.tools import READ_LINES, RESULT_LIMIT
 
     (ws.root / "big.txt").write_text("".join(f"line {i} " + "x" * 90 + "\n" for i in range(1, 3001)))
     (ws.root / "min.js").write_text("var a=1;" * 20_000)
@@ -574,7 +574,7 @@ def test_a_big_file_comes_back_in_clipped_pieces_with_where_to_read_on(ws):
 
 
 def test_what_the_model_reads_of_earlier_steps_stays_within_its_budget(ws):
-    from engram.agentic.loop import HISTORY_CHARS
+    from camr_engine.agentic.loop import HISTORY_CHARS
 
     (ws.root / "big.txt").write_text("".join("y" * 99 + "\n" for _ in range(3000)))
     reads = [call("read_file", path="big.txt", start_line=1 + 400 * i) for i in range(7)]
@@ -588,7 +588,7 @@ def test_what_the_model_reads_of_earlier_steps_stays_within_its_budget(ws):
 
 
 def test_the_terminal_keeps_only_its_last_characters(ws):
-    from engram.agentic.loop import TERM_CHARS
+    from camr_engine.agentic.loop import TERM_CHARS
 
     r = make_run(ws, [])
     for _ in range(40):
@@ -602,7 +602,7 @@ def test_the_terminal_keeps_only_its_last_characters(ws):
 
 
 def test_the_gate_refuses_a_command_that_would_not_read_as_it_runs(ws):
-    from engram.agentic.tools import hidden
+    from camr_engine.agentic.tools import hidden
 
     gate = Gate()
     tools = Toolbox(ws, gate)
@@ -614,7 +614,7 @@ def test_the_gate_refuses_a_command_that_would_not_read_as_it_runs(ws):
 
 
 def test_a_server_name_always_splits_back_into_itself():
-    from engram.agentic.servers import spec, split_name, tool_name
+    from camr_engine.agentic.servers import spec, split_name, tool_name
 
     for bad in ["my__srv", "srv_", "_srv", "a" * 33]:
         with pytest.raises(ValueError):
@@ -625,7 +625,7 @@ def test_a_server_name_always_splits_back_into_itself():
 
 
 def test_an_allowed_command_still_running_stops_when_the_app_exits(ws):
-    from engram.agentic import shell
+    from camr_engine.agentic import shell
 
     out = {}
     th = threading.Thread(target=lambda: out.setdefault("r", run("sleep 30; echo late", ws.root)))
@@ -668,7 +668,7 @@ def test_a_run_counts_as_running_until_its_answer_is_kept(ws):
 
 
 def test_a_saved_fix_is_known_by_its_words_after_its_date():
-    from engram.agentic.brain import is_fix
+    from camr_engine.agentic.brain import is_fix
 
     assert is_fix("[2026-11-04] Your fix in a.py (kept): you changed `x` to `y`.")
     assert is_fix("Your fix in a.py") and not is_fix("[2026-11-04] Code task: Your fix") and not is_fix("")

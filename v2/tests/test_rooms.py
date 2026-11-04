@@ -7,7 +7,7 @@ import json
 
 import numpy as np
 
-from engram.rooms import Rooms
+from camr_engine.rooms import Rooms
 
 TB = 16  # bytes per token in these tests
 

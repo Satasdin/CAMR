@@ -503,7 +503,7 @@ server (Server-Sent Events, JSON):
 
 ## Libraries
 
-Every library below is vendored into `v2/engram/app/static/vendor/`. There is no CDN at runtime and fonts are
+Every library below is vendored into `v2/camr_engine/app/static/vendor/`. There is no CDN at runtime and fonts are
 self-hosted woff2, so the app works with Wi-Fi off. Each version is the newest stable release that is at least two
 weeks old on 4 Nov 2026, checked on the npm registry.
 

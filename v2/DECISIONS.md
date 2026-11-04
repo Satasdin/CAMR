@@ -1,12 +1,12 @@
 # Decisions
 
-Technical calls made while building engram, each with its reason. Ibrahim's own calls (the name, the look, fade
+Technical calls made while building camr, each with its reason. Ibrahim's own calls (the name, the look, fade
 never destroy, the headline, scripted lives only) are in the plan: https://claude.ai/artifact/9ZeFGovgtQHjGfKw7CJ8AN
 
 ## Step 0: the ruler (2 November 2026)
 
 **E-01 Home.** `~/Developer/engram`, outside iCloud: iCloud evicted files from the old project's virtual environment
-and stalled imports. The old CAMR (`~/Desktop/camr-repo`) is the baseline and is not changed by engram.
+and stalled imports. The old CAMR (`~/Desktop/camr-repo`) is the baseline and is not changed by camr.
 
 **E-02 One reader and one embedder for every contender.** Qwen3-1.7B-4bit reads; Qwen3-4B-Instruct-2507-4bit reads for
 the "camr-4b" contender only. Qwen3-Embedding-0.6B-4bit-DWQ embeds. All run with MLX. Only the memory differs between
@@ -56,7 +56,7 @@ against that day's right answers.
 reader it includes reading every note once, because a single question would have to. Within a quiz the perfect reader
 keeps those notes as a cache and rewinds after each question, so a run takes minutes rather than hours.
 
-**E-12 Provenance before the first commit.** Every record carries `engram_source_sha`, a hash of `engram/**/*.py`, so
+**E-12 Provenance before the first commit.** Every record carries `camr_source_sha`, a hash of `camr_engine/**/*.py`, so
 it names the code that produced it.
 
 **E-13 The baseline runs.** All twelve records (three lives × four contenders) came from code `a6beaea852f10d1a`.
@@ -121,7 +121,7 @@ the MacBook Air M4. Measured here:
 
 The step 0 baselines (commits 776fecf, 1112b72) were measured on the Air. They stay as history, and all four are
 re-run here. Runs and charts now use only records made on the current machine, and every record notes how busy the
-machine was (`load_1m`). Answers also differ slightly between chips: the same engram setup knew 158 facts on the Air
+machine was (`load_1m`). Answers also differ slightly between chips: the same camr setup knew 158 facts on the Air
 and 164 here. E-14 to E-16 were measured on the Air; the tuning below was measured here.
 
 **E-18 Room size and how many moments to re-read.** Tuned over 100 questions on the three development lives at
@@ -141,17 +141,17 @@ since it sits exactly where it was written. That took the desk from 55 ms to 15 
 
 **E-19 Step 1's pass marks, written before any proof-life (seed 1) run.**
 1. *First word under 0.5 s with 2,000 words of memory* (the plan's "done when"). Measured by
-   `python -m engram.ruler speed`: one room of that many words on the desk, read from the SSD with the cache
+   `python -m camr_engine.ruler speed`: one room of that many words on the desk, read from the SSD with the cache
    bypassed, median of 5 tries.
 2. *Accuracy matches reading the text* (the plan's "done when"). Summed over the three proof lives at week 12,
-   engram knows at least 95% as many facts as `engram-words`, the same desk read entirely as words, and makes no
+   camr knows at least 95% as many facts as `camr-words`, the same desk read entirely as words, and makes no
    more than 3 extra false memories (of 45).
 3. *At least 10× sooner than reading the same words* (the plan's "proves"), at 2,000 words. That figure came from
    the Air, where reading ran at 800 tokens/s. Here reading runs at about 6,600 tokens/s and a trial gave 2.9× at
    1,000 words, so this mark is expected to fail on this machine. It is kept as written and the measured ratio will
    be reported either way.
 
-Engram's place against the baselines is reported too, but the bar for that is the proof in step 6, not step 1.
+CAMR's place against the baselines is reported too, but the bar for that is the proof in step 6, not step 1.
 
 **E-20 Step 1's results against its pass marks.** These are the three proof lives (seed 1) on the MacBook Pro M5 Pro,
 3 November. Every record has 12 weeks, comes from code `e0c66092baca7fca`, and started at a 1-minute load of 1.4
@@ -160,7 +160,7 @@ to 5.7 (median 1.8).
 | Mark | Result | |
 |---|---|---|
 | 1. First word under 0.5 s with 2,000 words | 0.233 s (588 MB read from the SSD in 0.046 s) | **pass** |
-| 2. Knows at least 95% of `engram-words`, at most 3 extra false memories | 164 vs 163 facts; 25 vs 24 false memories; identical answers on 3,483 of 3,600 | **pass** |
+| 2. Knows at least 95% of `camr-words`, at most 3 extra false memories | 164 vs 163 facts; 25 vs 24 false memories; identical answers on 3,483 of 3,600 | **pass** |
 | 3. At least 10× sooner than reading the words, at 2,000 words | 4.6× (5.8× at 3,000 words) | **fail** |
 
 Mark 3 fails because this Mac reads text fast. Notes skip the reading but still pay for the SSD read and the copy into
@@ -177,16 +177,16 @@ while its notes on the SSD grew from 82 MB to 963 MB. Against the baselines on t
 | perfect reader | 90 | 17 | 1.90 s, climbing | 2.77 GB |
 | old CAMR, 1.7B | 166 | 29 | 0.15 s | 2.24 GB |
 | old CAMR, 4B | 208 | 10 | 0.35 s | 3.58 GB |
-| **engram, 1.7B** | **164** | **25** | **0.07 s** | **1.82 GB** |
+| **camr, 1.7B** | **164** | **25** | **0.07 s** | **1.82 GB** |
 
-Engram matches the old CAMR on the same model, at half the wait and 0.4 GB less RAM, without any of its
+CAMR matches the old CAMR on the same model, at half the wait and 0.4 GB less RAM, without any of its
 hand-written rules: no entity bridging, time filters or slot gates. It does not yet reach the 4B. Knowing more and
 inventing less is the job of the later steps (the translation layer, sleep, and settling unsure facts at recall),
 measured by the proof in step 6.
 
 ## Step 2: event log and first view (3 November 2026)
 
-**E-21 What "used" means, and what watching costs.** While engram writes each word, it records that word's attention
+**E-21 What "used" means, and what watching costs.** While camr writes each word, it records that word's attention
 over every node on the desk: the room's moments, and the closest moments re-read as words. Attention is averaged
 over every head of four middle-to-late layers (12, 16, 20, 24 of 28). A node is *used* when it draws at least 10%
 of the desk's attention over the whole answer; the others were only picked up. Measured on the development lives:
@@ -218,7 +218,7 @@ from not knowing:
 
 ## Use cases: chat, errands and the brain view in one app (3 November 2026)
 
-**E-22 Two days left, so the build order stops at step 2.** Ibrahim's call. The time goes to showing engram in use
+**E-22 Two days left, so the build order stops at step 2.** Ibrahim's call. The time goes to showing camr in use
 instead:
 - chat-style work;
 - agentic work;
@@ -239,14 +239,14 @@ On the development lives, a stricter wording ("every argument must be a value wr
 model never called `ask_user`. It filled a never-told argument with a guess, or with words copied from the task
 ("mum's home").
 
-**E-24 The app.** `python -m engram.app` serves one local page with four tabs: Simulation (added later, in commit 0c27183), Chat, Errands and Brain.
+**E-24 The app.** `python -m camr_engine.app` serves one local page with four tabs: Simulation (added later, in commit 0c27183), Chat, Errands and Brain.
 - **Chat:** a message ending in "?" is answered from memory; anything else is remembered as a dated moment.
 - **Errands:** one task, one tool call, filled from memory.
 - **Brain:** any answer or errand replayed word by word on the specimen view from the design rounds, with the
   traces strip underneath. For an errand, the strip shows only the argument values: the part that came from memory.
   A loaded life can be quizzed, so the Brain tab can sort what went wrong from what went right.
 
-The server listens on 127.0.0.1 only. Memory lives in `~/.engram/default` and reopens where it left off. The map
+The server listens on 127.0.0.1 only. Memory lives in `~/.camr/default` and reopens where it left off. The map
 layout is a plain-numpy t-SNE, which takes 1.3 s for 332 moments and is recomputed only when moments are added.
 
 **E-25 The errands, measured.** The three proof lives (seed 1), the last day, all 100 errands each, on the MacBook
@@ -256,11 +256,11 @@ Pro M5 Pro. The 1.7B reader is the same for all three; only the memory differs. 
 |---|---|---|---|---|---|
 | none (the 1.7B alone) | 1 | 0 | 44 | 0 | 0.15 s |
 | the old CAMR | 40 | 6 | 45 | 0 | 0.16 s |
-| engram | **122** | 16 | 42 | 0 | 0.19 s |
+| camr | **122** | 16 | 42 | 0 | 0.19 s |
 
-Engram does three times as many errands right as the old CAMR. Yet on the quiz the two are level (164 and 166 of
+CAMR does three times as many errands right as the old CAMR. Yet on the quiz the two are level (164 and 166 of
 255, E-20). The old CAMR's gates and entity bridging were tuned for questions, and an errand worded as a request
-("Book me a ride to my vet's home") falls past them. Engram opens the room holding the closest moment, however the
+("Book me a ride to my vet's home") falls past them. CAMR opens the room holding the closest moment, however the
 request is worded.
 
 None of them ever asked. A 1.7B agent fills a never-told argument with a guess. That is the weakness to fix next
@@ -349,7 +349,7 @@ proposals:
 It scored 23 of 25 against 19 and 18 (`design/DECISION.md`). Six screens: Models, Chat, Code, Swarm, Memory, Bench.
 There is no stock photography: the big pictures are live renders of real memory.
 
-**E-35 One measuring job at a time.** Every benchmark runner raises a measuring flag (`~/.engram/measuring.json`).
+**E-35 One measuring job at a time.** Every benchmark runner raises a measuring flag (`~/.camr/measuring.json`).
 While it is up, the app pauses its views and loads, downloads or probes nothing. The GPU queue runs one model at a
 time; Claude runs beside it, since it needs no GPU.
 
@@ -391,7 +391,7 @@ diagnosis is recorded but not used.
 The p90 first word (2–5 s) is a question whose room is asleep or whose answer is long, read as words.
 
 **E-39 Past 2M: the same questions under one and two million more tokens.** Ibrahim asked to push past 2M, to 3M and
-4M. `engram.bench.haul.extend` keeps the 110 days and every probe exactly as they are (checked event for event).
+4M. `camr_engine.bench.haul.extend` keeps the 110 days and every probe exactly as they are (checked event for event).
 It then adds 110 more working days of noise only, from the same generators with random streams of their own,
 and the longer script passes the same fairness checks. The 3M and 4M cuts ask the 2M cut's 73 questions: a cut
 where nothing new has become askable reuses the cut before's sample. So any change in score is the history's
@@ -408,11 +408,11 @@ The records' "peak RAM" of 5.7 GB is MLX's peak of arrays in use during one answ
 The cause is MLX's cache of freed GPU buffers. It is unbounded up to the GPU limit (about 18 GB here), and a long
 ingest frees a desk's worth of buffers for every moment.
 
-`engram.models.limit_cache` now caps it when a reader or embedder loads: 1 GB by default, `ENGRAM_MLX_CACHE_GB` to
+`camr_engine.models.limit_cache` now caps it when a reader or embedder loads: 1 GB by default, `CAMR_MLX_CACHE_GB` to
 change it, `off` for MLX's default. It changes no computation, only how many freed buffers are kept for reuse.
 
 Every checkpoint and speed point now records the process's footprint (`footprint_gb`, from libproc) beside MLX's
-peak. `engram.bench.ram` measures the cap against no cap in fresh processes, with footprint over time, ingest speed
+peak. `camr_engine.bench.ram` measures the cap against no cap in fresh processes, with footprint over time, ingest speed
 and first word. It runs after the queue. The 8B, 27B and Ollama runs are the first measured with the cap. Every run
 before them (1.7B and 4B) ran without it; their scores are unaffected, and their RAM is now known to be understated.
 
@@ -429,7 +429,7 @@ cache and Python. Records: `100255-longhaul-engine-qwen3-4b.json` (before), `143
 (after).
 
 **E-42 Project reach is the best reach; global is close; a session alone is not enough.** The 4B engine heard the
-Long Haul's first 256K tokens four ways and was asked the same 40 questions (`engram.bench.reach_run`):
+Long Haul's first 256K tokens four ways and was asked the same 40 questions (`camr_engine.bench.reach_run`):
 
 | Set-up | Right of 40 | Facts | First word p50 | Disk |
 |---|---|---|---|---|

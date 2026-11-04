@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from engram.view.layout import tsne
+from camr_engine.view.layout import tsne
 
 
 def test_two_kinds_of_moment_land_in_two_places():

@@ -20,9 +20,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 import pytest
 
-from engram.pair.ollama import BUDGET, NOTES_END, NOTES_INTRO, Pairing, Tap, build, make_server
-from engram.pair.provider import QUERY_CHARS, UNDATED, NoMemory, VaultWords, clip, pieces
-from engram.vault import split
+from camr_engine.pair.ollama import BUDGET, NOTES_END, NOTES_INTRO, Pairing, Tap, build, make_server
+from camr_engine.pair.provider import QUERY_CHARS, UNDATED, NoMemory, VaultWords, clip, pieces
+from camr_engine.vault import split
 
 OWN_SYSTEM = "You are Fake, a model's own system prompt."
 NOTE = "[2026-11-03 10:00] The user said: Mama Njeri's main colour is terracotta, #C2410C."
@@ -326,8 +326,8 @@ def test_other_endpoints_pass_through_as_they_are():
 def test_memory_can_be_turned_off_per_request_and_a_load_request_is_left_alone():
     fake, pairing, port = start()
     body = chat_body(("user", "Hi"))
-    assert call(port, "POST", "/api/chat", body, {"X-Engram-Memory": "off"})[1] == b"".join(ndjson("chat"))
-    assert fake.seen[-1][3] == body and "X-Engram-Memory" not in fake.seen[-1][2]
+    assert call(port, "POST", "/api/chat", body, {"X-CAMR-Memory": "off"})[1] == b"".join(ndjson("chat"))
+    assert fake.seen[-1][3] == body and "X-CAMR-Memory" not in fake.seen[-1][2]
     settle(lambda: len(pairing.latest()) >= 1)
     off = pairing.latest()[-1]  # the baseline to compare against: Ollama's speeds, with no memory
     assert not off["memory"] and off["model"] == "fake" and off["decode_tps"] == 20.0 and off["prefill_tps"] == 200.0
@@ -427,9 +427,9 @@ def test_an_allowed_origin_gets_in_and_the_proxy_listens_on_loopback_only():
     body = chat_body(("user", "What is the main colour?"))
     for origin in ("http://127.0.0.1:61889", "app://obsidian.md"):
         for path in ("/api/chat", "/api/generate", "/v1/chat/completions", "/api/chat/", "//api//chat",
-                     "/api/%63hat", "/engram/metrics"):
+                     "/api/%63hat", "/camr_engine/metrics"):
             assert call(port, "POST", path, body, {"Origin": origin})[0] == 403, path
-        assert call(port, "GET", "/engram/metrics", headers={"Origin": origin})[0] == 403
+        assert call(port, "GET", "/camr_engine/metrics", headers={"Origin": origin})[0] == 403
         assert call(port, "OPTIONS", "/api/chat", headers={"Origin": origin})[0] == 403  # the preflight too
     assert len(fake.seen) == before and pairing.provider.asked == []
     for origin in ("http://127.0.0.1:80.evil.example", "http://127.0.0.1.evil.example", "http://127.0.0.1:",
@@ -449,9 +449,9 @@ def test_an_allowed_origin_gets_in_and_the_proxy_listens_on_loopback_only():
 def test_each_request_is_measured_with_ollamas_own_speeds(tmp_path):
     fake, pairing, port = start(metrics_path=tmp_path / "metrics.jsonl")
     status, _, headers = call(port, "POST", "/api/chat", chat_body(("user", "Hi")))
-    assert float(headers["X-Engram-Added-Ms"]) >= 0 and headers["X-Engram-Notes-Chars"] == str(len(NOTE))
+    assert float(headers["X-CAMR-Added-Ms"]) >= 0 and headers["X-CAMR-Notes-Chars"] == str(len(NOTE))
     settle(lambda: len(pairing.latest()) >= 1)
-    m = json.loads(call(port, "GET", "/engram/metrics")[1])["requests"][0]
+    m = json.loads(call(port, "GET", "/camr_engine/metrics")[1])["requests"][0]
     assert m["path"] == "/api/chat" and m["model"] == "fake" and m["status"] == 200 and m["memory"]
     assert m["decode_tps"] == 20.0 and m["prefill_tps"] == 200.0 and m["eval_count"] == 3
     assert m["ollama_load_ms"] == 5.0 and m["ollama_total_ms"] == 300.0  # Ollama's own clock, kept apart

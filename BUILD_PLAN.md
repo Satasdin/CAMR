@@ -23,9 +23,9 @@ Cloud Language Models".
 - **Claude is only a yardstick.** It answers the same tasks on its own, with no memory. Every Claude call logs its
   tokens and cost. Hard cap for the night: **$60** total. The key is in `~/.config/camr/anthropic.env`; read it at
   runtime only and never print, log or commit it.
-- **The name is not chosen yet.** The code stays in package `engram` under `v2/` until he picks one.
+- **The name is not chosen yet.** The code stays in package `camr` under `v2/` until he picks one.
 
-## What exists (CAMR v2, `v2/engram/`)
+## What exists (CAMR v2, `v2/camr_engine/`)
 
 | File | What it does |
 | --- | --- |
@@ -119,10 +119,10 @@ gives 75.
 
 | Path | What lives there |
 | --- | --- |
-| `v2/engram/vault.py`, `reach.py`, `core.py`, `swap.py`, `metrics.py` | New engine layers |
-| `v2/engram/bench/` | Long Haul generator, graders, runners (local, Claude, Ollama), Hugging Face suites |
-| `v2/engram/pair/` | Ollama pairing proxy |
-| `v2/engram/app/` | The app (rebuilt after the design pick) |
+| `v2/camr_engine/vault.py`, `reach.py`, `core.py`, `swap.py`, `metrics.py` | New engine layers |
+| `v2/camr_engine/bench/` | Long Haul generator, graders, runners (local, Claude, Ollama), Hugging Face suites |
+| `v2/camr_engine/pair/` | Ollama pairing proxy |
+| `v2/camr_engine/app/` | The app (rebuilt after the design pick) |
 | `v2/design/` | Design research and the chosen direction |
 | `v2/records/bench/` | Benchmark records (dated JSON) |
 | `v2/docs/` | Docs for people, plus `llms.txt` for agents |

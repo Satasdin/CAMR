@@ -94,7 +94,7 @@ The vault is a folder of Markdown notes, one per moment. It opens in Obsidian as
   about 45 days falls below 0.1 and counts as faded. Pinned notes never fade.
 - Nothing is ever deleted by the engine. A faded note keeps its words. Only a person deletes a note, by deleting its
   file.
-- The files are the truth. A hidden index (`.engram-index.json`) only saves reading every file on opening. A note
+- The files are the truth. A hidden index (`.camr-index.json`) only saves reading every file on opening. A note
   changed by hand is read again because its file changed.
 
 A note as the engine writes it:
@@ -133,7 +133,7 @@ The vault is off by default in `Memory` (`vault=True` turns it on) and on by def
   events.jsonl         one line per moment kept, answer given, room put to sleep or woken
   metrics.jsonl        one line per answer (with metrics on)
   tiers.json           when each room was last used (with tiers on)
-  vault/               one Markdown note per moment, and .engram-index.json
+  vault/               one Markdown note per moment, and .camr-index.json
   .lock                held while a process has the folder open (reach folders)
 ```
 

@@ -13,8 +13,8 @@ import threading
 import numpy as np
 import pytest
 
-from engram.app import measuring
-from engram.app.server import make_server
+from camr_engine.app import measuring
+from camr_engine.app.server import make_server
 
 pytest.importorskip("mlx")
 
@@ -22,7 +22,7 @@ TODAY = dt.date(2026, 1, 20)
 
 
 class FakeLooks:
-    """Stands in for engram.events.Looks (which needs a real Qwen3): the first node on the desk draws half of every
+    """Stands in for camr_engine.events.Looks (which needs a real Qwen3): the first node on the desk draws half of every
     word's attention, the others a little each."""
 
     def __init__(self, reader, header, spans, prompt_len, desk, layers=None):
@@ -43,9 +43,9 @@ class FakeLooks:
 
 @pytest.fixture
 def looks(monkeypatch):
-    import engram.memory
+    import camr_engine.memory
 
-    monkeypatch.setattr(engram.memory, "Looks", FakeLooks)
+    monkeypatch.setattr(camr_engine.memory, "Looks", FakeLooks)
 
 
 class TalkApp:
@@ -77,7 +77,7 @@ def serve(app):
 
     def call(path, body=None):
         c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
-        headers = {"Host": f"127.0.0.1:{port}", "X-Engram-Token": token}
+        headers = {"Host": f"127.0.0.1:{port}", "X-CAMR-Token": token}
         if body is not None:
             headers["Content-Type"] = "application/json"
         c.request("GET" if body is None else "POST", path, body=None if body is None else json.dumps(body),
@@ -90,8 +90,8 @@ def serve(app):
 
 @pytest.fixture
 def chat(tmp_path, looks, monkeypatch):
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
-    app = TalkApp(tmp_path / "engram")
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
+    app = TalkApp(tmp_path / "camr")
     call, httpd = serve(app)
     yield app, call
     httpd.shutdown()
@@ -163,7 +163,7 @@ def test_the_reach_picker_reads_several_reaches_and_writes_one(chat, tmp_path):
     assert [r.label for r in app.session.reaches] == ["session:s1", "project:tally", "global"]
     assert app.session.home.label == "project:tally"
     told = call("/api/chat", {"text": "The fee is 1% rounded up to the next 5 shillings.", "intent": "tell"})[1]
-    assert told["reach"] == "project:tally" and (tmp_path / "engram" / "project" / "tally" / "index.json").exists()
+    assert told["reach"] == "project:tally" and (tmp_path / "camr" / "project" / "tally" / "index.json").exists()
     assert len(app.session.memory("session").rooms.moments) == 1
     st = call("/api/chat/settings", {"reads": ["global"], "writes": "global"})[1]
     assert st["reads"] == ["global"] and [r.label for r in app.session.reaches] == ["global"]
@@ -178,7 +178,7 @@ def test_the_reach_picker_reads_several_reaches_and_writes_one(chat, tmp_path):
 def test_an_errand_makes_one_tool_call_and_logs_it_beside_its_answer(tmp_path, looks, monkeypatch):
     from test_core import FakeReader
 
-    from engram.models import Reply
+    from camr_engine.models import Reply
 
     class ToolReader(FakeReader):
         def generate(self, ids, cache=None, max_tokens=None):
@@ -186,8 +186,8 @@ def test_an_errand_makes_one_tool_call_and_logs_it_beside_its_answer(tmp_path, l
             pieces = ['<tool_call>{"name": "book_ride", ', '"arguments": {"destination": "Nakuru"}}</tool_call>']
             return Reply("".join(pieces), 0.001, 100.0, len(ids), 2, pieces)
 
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
-    app = TalkApp(tmp_path / "engram", reader=ToolReader())
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
+    app = TalkApp(tmp_path / "camr", reader=ToolReader())
     call, httpd = serve(app)
     try:
         call("/api/chat/settings", {"writes": "global"})
@@ -200,15 +200,15 @@ def test_an_errand_makes_one_tool_call_and_logs_it_beside_its_answer(tmp_path, l
         assert [e["type"] for e in log][-2:] == ["agent", "tool"] and log[-1]["args"] == {"destination": "Nakuru"}
         assert app.reader.calls[-1].ids  # the tools went in after the notes
         turns = call("/api/chat/thread")[1]["turns"]
-        assert [t["who"] for t in turns] == ["you", "engram", "you", "engram"] and turns[-1]["tool"] == "book_ride"
+        assert [t["who"] for t in turns] == ["you", "camr", "you", "camr"] and turns[-1]["tool"] == "book_ride"
     finally:
         httpd.shutdown()
         app.talk.close()
 
 
 def test_chat_waits_while_a_benchmark_measures(tmp_path, looks, monkeypatch):
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
-    app = TalkApp(tmp_path / "engram")
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
+    app = TalkApp(tmp_path / "camr")
     call, httpd = serve(app)
     try:
         with measuring.measuring("longhaul"):
@@ -224,7 +224,7 @@ def test_chat_waits_while_a_benchmark_measures(tmp_path, looks, monkeypatch):
 
 
 def test_an_app_without_a_reader_keeps_its_own_chat_and_a_recorded_memory_refuses(tmp_path):
-    from engram.app.fixture import Fixture
+    from camr_engine.app.fixture import Fixture
 
     class StandIn:
         def state(self):
@@ -297,20 +297,20 @@ def test_a_message_waiting_for_the_model_is_said_in_the_session_open_when_it_get
 
 def test_a_poll_never_waits_for_the_model_and_a_failed_open_is_tried_again_only_every_30_s(tmp_path, looks,
                                                                                          monkeypatch):
-    import engram.reach
+    import camr_engine.reach
 
-    from engram.app.routes import chat as chat_routes
+    from camr_engine.app.routes import chat as chat_routes
 
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
-    real = engram.reach.Session
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
+    real = camr_engine.reach.Session
     tries = []
 
     def busy(*a, **kw):
         tries.append(1)
-        raise engram.reach.ReachBusy("another engram holds global")
+        raise camr_engine.reach.ReachBusy("another camr holds global")
 
-    monkeypatch.setattr(engram.reach, "Session", busy)
-    app = TalkApp(tmp_path / "engram")
+    monkeypatch.setattr(camr_engine.reach, "Session", busy)
+    app = TalkApp(tmp_path / "camr")
     call, httpd = serve(app)
     try:
         st = call("/api/chat/state")[1]
@@ -319,7 +319,7 @@ def test_a_poll_never_waits_for_the_model_and_a_failed_open_is_tried_again_only_
             assert call(path)[0] == 200
         assert len(tries) == 1  # the polls did not open it again
         assert call("/api/chat", {"text": "Where?"})[0] == 409 and len(tries) == 2  # a send tries at once
-        monkeypatch.setattr(engram.reach, "Session", real)
+        monkeypatch.setattr(camr_engine.reach, "Session", real)
         app.talk.failed -= chat_routes.RETRY_S + 1
         with app.lock:  # the model is busy: a poll answers at once and opens nothing
             assert call("/api/memory/feed")[0] == 200 and app.talk.session is None
@@ -331,7 +331,7 @@ def test_a_poll_never_waits_for_the_model_and_a_failed_open_is_tried_again_only_
 
 def test_a_message_too_long_is_refused_whole_never_kept_cut(chat):
     app, call = chat
-    from engram.app.routes.chat import TEXT_MAX
+    from camr_engine.app.routes.chat import TEXT_MAX
 
     status, got = call("/api/chat", {"text": "x" * (TEXT_MAX + 1), "intent": "tell"})
     assert status == 413 and f"{TEXT_MAX:,}" in got["error"]

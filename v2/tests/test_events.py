@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from engram.events import USED, EventLog, used
+from camr_engine.events import USED, EventLog, used
 
 
 def test_events_are_appended_one_line_each_and_read_back(tmp_path):

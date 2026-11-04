@@ -9,11 +9,11 @@ from collections import Counter
 
 from haul_shared import built, need_tokenizer, perfect
 
-from engram.bench.haul import CUTS, at_cut, grade, load_events, load_probes, sample, tokens, write
-from engram.bench.haul.grade import names as named
-from engram.bench.haul.probes import CONFIGS, COUNTS, NEVER_ENTITY
-from engram.bench.haul.script import answer_clashes, config_clashes
-from engram.bench.haul.words import FIRST, SURNAMES
+from camr_engine.bench.haul import CUTS, at_cut, grade, load_events, load_probes, sample, tokens, write
+from camr_engine.bench.haul.grade import names as named
+from camr_engine.bench.haul.probes import CONFIGS, COUNTS, NEVER_ENTITY
+from camr_engine.bench.haul.script import answer_clashes, config_clashes
+from camr_engine.bench.haul.words import FIRST, SURNAMES
 
 FAMILIES = {"fact": 400, "changed": 160, "two_hop": 40, "maths": 120, "page": 3, "code": 20, "lookalike": 30,
             "never": 60}
@@ -21,7 +21,7 @@ FAMILIES = {"fact": 400, "changed": 160, "two_hop": 40, "maths": 120, "page": 3,
 
 def test_a_seed_gives_the_same_script_and_another_seed_a_different_one():
     a, b = built(1), built(1)
-    from engram.bench.haul import build
+    from camr_engine.bench.haul import build
     again = build(1)
     other = built(2)
     assert [e["text"] for e in a.events] == [e["text"] for e in again.events]

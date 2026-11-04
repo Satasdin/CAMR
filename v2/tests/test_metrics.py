@@ -8,9 +8,9 @@ import json
 
 import pytest
 
-from engram.memory import Recall
-from engram.metrics import Meter, folder_bytes, measure, peak_ram_bytes, spread, summary
-from engram.models import Reply
+from camr_engine.memory import Recall
+from camr_engine.metrics import Meter, folder_bytes, measure, peak_ram_bytes, spread, summary
+from camr_engine.models import Reply
 
 
 def recall(**kw) -> Recall:
@@ -66,7 +66,7 @@ def test_memory_writes_one_record_per_answer(tmp_path):
     pytest.importorskip("mlx")
     from test_core import TODAY, make
 
-    from engram.swap import Tiers
+    from camr_engine.swap import Tiers
 
     m = make(tmp_path / "memory", vault=True, tiers=Tiers(), metrics=True)
     m.remember("Amina moved to Nakuru.", 0)

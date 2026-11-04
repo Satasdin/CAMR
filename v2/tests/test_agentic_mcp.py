@@ -11,9 +11,9 @@ import time
 
 import pytest
 
-from engram.agentic.gate import Gate
-from engram.agentic.servers import Servers, arguments, spec, split_name, tool_name
-from engram.agentic.tools import Toolbox
+from camr_engine.agentic.gate import Gate
+from camr_engine.agentic.servers import Servers, arguments, spec, split_name, tool_name
+from camr_engine.agentic.tools import Toolbox
 
 pytest.importorskip("mcp")
 

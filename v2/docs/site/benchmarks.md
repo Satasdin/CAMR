@@ -72,10 +72,10 @@ The same answer always gets the same verdict. Grading costs nothing, and anyone 
 ### Build it and look at it
 
 ```sh
-.venv/bin/python -m engram.bench.haul build --seed 1 --out work/haul/s1
-.venv/bin/python -m engram.bench.longhaul show --dir work/haul/s1
-.venv/bin/python -m engram.bench.haul sample --n 15 --per-family --cut 1M --dir work/haul/s1
-.venv/bin/python -m engram.bench.haul grade --dir work/haul/s1 --answers answers.jsonl --cut 1M [--browser]
+.venv/bin/python -m camr_engine.bench.haul build --seed 1 --out work/haul/s1
+.venv/bin/python -m camr_engine.bench.longhaul show --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.haul sample --n 15 --per-family --cut 1M --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.haul grade --dir work/haul/s1 --answers answers.jsonl --cut 1M [--browser]
 ```
 
 - `build` writes `script.jsonl` (one event per line), `probes.jsonl` (one probe per line) and `manifest.json`
@@ -85,7 +85,7 @@ The same answer always gets the same verdict. Grading costs nothing, and anyone 
 
 ### Scoring any contender
 
-Two functions in `engram.bench.longhaul` are shared by every contender:
+Two functions in `camr_engine.bench.longhaul` are shared by every contender:
 
 ```python
 checkpoints(folder: Path, cuts: dict[str, int] = CUTS, per_family: int = PER_FAMILY,
@@ -97,7 +97,7 @@ grader(question: dict, answer: str) -> dict
   `events` is how many events are told by then. Each question is `{id, question, expected, family, probe}`.
 - `grader` returns `{verdict, right, reason}` for one answer.
 
-The local runners use the contender protocol in `engram.bench.contender`: a contender is told the history one event
+The local runners use the contender protocol in `camr_engine.bench.contender`: a contender is told the history one event
 at a time (`tell(text, day)`) and asked questions (`ask(question, *, max_tokens, family)`). Answers get room by
 family: 1,200 tokens for a page, 600 for code, 400 for maths and 120 for the rest. Qwen3's thinking is off for every
 local model.
@@ -106,12 +106,12 @@ local model.
 
 | Name | Runner | What it is |
 | --- | --- | --- |
-| `engine:<model>` | `engram.bench.local` | the engine: one project reach's memory, driven as `Session` drives it, with the vault, the core, the tiers and the metrics on; 2 GB of RAM for hot rooms and 40 GB of disk for room files; `qwen3-1.7b`, `qwen3-4b` or `qwen3-8b`. Questions are read-only (`--learn` to change that); `--wake` wakes an asleep room instead of reading it as words; `--wording own` gives every local contender the engine's own instructions (names end `+own`) |
-| `words:<model>` | `engram.bench.local` | the engine's rooms, chosen the same way, pasted in as text; for `qwen-27b` |
-| `bare:<model>` | `engram.bench.local` | no memory: the most recent part of the history that fits (32K tokens for the 1.7B and 8B, 64K for the 4B, 16K for the 27B, so their keys and values fit in 24 GB) |
-| `ollama:<model>` | `engram.bench.ollama_run` | Ollama through the pairing: memory as words |
-| `ollama-bare:<model>` | `engram.bench.ollama_run` | plain Ollama, with the most recent 32,768 tokens of the history in its prompt |
-| `claude-<model>` | `engram.bench.longhaul`, `engram.bench.suite_run` | Claude alone, the yardstick |
+| `engine:<model>` | `camr_engine.bench.local` | the engine: one project reach's memory, driven as `Session` drives it, with the vault, the core, the tiers and the metrics on; 2 GB of RAM for hot rooms and 40 GB of disk for room files; `qwen3-1.7b`, `qwen3-4b` or `qwen3-8b`. Questions are read-only (`--learn` to change that); `--wake` wakes an asleep room instead of reading it as words; `--wording own` gives every local contender the engine's own instructions (names end `+own`) |
+| `words:<model>` | `camr_engine.bench.local` | the engine's rooms, chosen the same way, pasted in as text; for `qwen-27b` |
+| `bare:<model>` | `camr_engine.bench.local` | no memory: the most recent part of the history that fits (32K tokens for the 1.7B and 8B, 64K for the 4B, 16K for the 27B, so their keys and values fit in 24 GB) |
+| `ollama:<model>` | `camr_engine.bench.ollama_run` | Ollama through the pairing: memory as words |
+| `ollama-bare:<model>` | `camr_engine.bench.ollama_run` | plain Ollama, with the most recent 32,768 tokens of the history in its prompt |
+| `claude-<model>` | `camr_engine.bench.longhaul`, `camr_engine.bench.suite_run` | Claude alone, the yardstick |
 
 The engine's moments carry their date and the Long Haul's day number, as `[YYYY-MM-DD, day 50] text`, since the
 Long Haul asks about days by number.
@@ -120,19 +120,19 @@ Long Haul asks about days by number.
 
 ```sh
 # the engine and the other local contenders, through MLX
-.venv/bin/python -m engram.bench.local longhaul --contender engine:qwen3-1.7b --dir work/haul/s1
-.venv/bin/python -m engram.bench.local longhaul --contender bare:qwen3-1.7b --dir work/haul/s1 --cuts 64K 256K
+.venv/bin/python -m camr_engine.bench.local longhaul --contender engine:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.local longhaul --contender bare:qwen3-1.7b --dir work/haul/s1 --cuts 64K 256K
 
 # the wait as the memory grows, during one reading of the Long Haul: points at 1K and 10K moments, and the end
-.venv/bin/python -m engram.bench.local speed --contender engine:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.local speed --contender engine:qwen3-1.7b --dir work/haul/s1
 
 # Ollama, paired and bare
-.venv/bin/python -m engram.bench.ollama_run longhaul --contender ollama:qwen3-1.7b --dir work/haul/s1
-.venv/bin/python -m engram.bench.ollama_run longhaul --contender ollama-bare:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.ollama_run longhaul --contender ollama:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.ollama_run longhaul --contender ollama-bare:qwen3-1.7b --dir work/haul/s1
 
 # Claude, alone
-.venv/bin/python -m engram.bench.longhaul claude --model claude-haiku-5-5 --dir work/haul/s1
-.venv/bin/python -m engram.bench.longhaul claude --model claude-sonnet-5-5 --dir work/haul/s1 --cuts 64K 256K
+.venv/bin/python -m camr_engine.bench.longhaul claude --model claude-haiku-5-5 --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.longhaul claude --model claude-sonnet-5-5 --dir work/haul/s1 --cuts 64K 256K
 ```
 
 For the local and Ollama runners, `--limit N` asks at most N questions per checkpoint, every family in turn: a
@@ -170,8 +170,8 @@ Prices are per million tokens. A Haiku prompt over 100K tokens is priced on its 
 call.
 
 ```sh
-.venv/bin/python -m engram.bench.claude smoke    # one tiny call
-.venv/bin/python -m engram.bench.claude spent    # what the ledger has spent, against the cap
+.venv/bin/python -m camr_engine.bench.claude smoke    # one tiny call
+.venv/bin/python -m camr_engine.bench.claude spent    # what the ledger has spent, against the cap
 ```
 
 **The key.** It is read from `~/.config/camr/anthropic.env` when the client is made, and handed straight to it. It
@@ -179,7 +179,7 @@ is never printed, logged or stored.
 
 ## The Hugging Face suites
 
-Public benchmarks, loaded, sampled with a seed and graded by their own rules (`engram.bench.suites`).
+Public benchmarks, loaded, sampled with a seed and graded by their own rules (`camr_engine.bench.suites`).
 
 | Suite | Source | What it tests | Graded by | `--n` counts |
 | --- | --- | --- | --- | --- |
@@ -196,14 +196,14 @@ and `meta`. A verdict is `right`, `wrong` or `declined`; for questions about thi
 `false_memory`.
 
 ```sh
-.venv/bin/python -m engram.bench.suites list
-.venv/bin/python -m engram.bench.suites sample babilong --n 2 --seed 0 --lengths 4k,16k
-.venv/bin/python -m engram.bench.suites webdev
+.venv/bin/python -m camr_engine.bench.suites list
+.venv/bin/python -m camr_engine.bench.suites sample babilong --n 2 --seed 0 --lengths 4k,16k
+.venv/bin/python -m camr_engine.bench.suites webdev
 ```
 
 ### Rerun them
 
-`engram.bench.suite_run` runs a suite against any contender: the engine, Ollama (paired or bare), or Claude with no
+`camr_engine.bench.suite_run` runs a suite against any contender: the engine, Ollama (paired or bare), or Claude with no
 memory. Each context gets a memory of its own.
 
 | Suite | How it is run |
@@ -215,9 +215,9 @@ memory. Each context gets a memory of its own.
 | `harp` | memory on: problem A and its worked solution are told, then 30K tokens of Long Haul noise, then problem B and A again are asked; memory off: B and A with nothing told |
 
 ```sh
-.venv/bin/python -m engram.bench.suite_run babilong --contender ollama-bare:qwen3:1.7b --n 3 --lengths 4k
-.venv/bin/python -m engram.bench.suite_run harp --contender ollama:qwen3-1.7b --n 20
-.venv/bin/python -m engram.bench.suite_run math500 --contender claude-haiku-5-5 --n 50 --max-usd 10
+.venv/bin/python -m camr_engine.bench.suite_run babilong --contender ollama-bare:qwen3:1.7b --n 3 --lengths 4k
+.venv/bin/python -m camr_engine.bench.suite_run harp --contender ollama:qwen3-1.7b --n 20
+.venv/bin/python -m camr_engine.bench.suite_run math500 --contender claude-haiku-5-5 --n 50 --max-usd 10
 ```
 
 The suites run Claude and Ollama contenders. The engine's MLX contenders are not run on them yet: their instructions are the Long Haul's, and a suite needs its own.
@@ -226,12 +226,12 @@ A Claude run prints its estimated cost first, and does not start when that passe
 `--estimate` prints the estimate and stops. Every Claude call is also held in the ledger against the night's cap.
 
 `suite_run` does not run `longmemeval` or `webdev`. LongMemEval needs its judge model; its loader and judge prompts
-are in `engram.bench.suites.longmemeval`. WebDev Arena is a history, not questions.
+are in `camr_engine.bench.suites.longmemeval`. WebDev Arena is a history, not questions.
 
 From Python:
 
 ```python
-from engram.bench import suites
+from camr_engine.bench import suites
 
 items = suites.sample("babilong", 2, seed=0, lengths=["4k", "16k"])
 for item in items:
@@ -248,7 +248,7 @@ suites.prompt(item: Item) -> str
 suites.grade(item: Item, reply: str, judge: Callable[[str], str] | None = None) -> str
 ```
 
-Downloads are kept in `$ENGRAM_DATASETS`, or else in the ignored `work/datasets/`. Once a file is there, no network
+Downloads are kept in `$CAMR_DATASETS`, or else in the ignored `work/datasets/`. Once a file is there, no network
 is needed.
 
 ## Speed
@@ -256,13 +256,13 @@ is needed.
 How the wait grows with memory on the desk, notes against words, with the SSD read and the cache bypassed:
 
 ```sh
-.venv/bin/python -m engram.ruler speed --persona student
+.venv/bin/python -m camr_engine.ruler speed --persona student
 ```
 
 How fast each local model reads and writes on this Mac, from 512 to 32K tokens, through MLX and through Ollama:
 
 ```sh
-.venv/bin/python -m engram.bench.throughput --out records/bench
+.venv/bin/python -m camr_engine.bench.throughput --out records/bench
 ```
 
 ## The ruler: the scripted lives
@@ -273,7 +273,7 @@ developer) and the same 100-question quiz every week.
 ```sh
 scripts/step1.sh     # every contender through the three held-out lives
 scripts/errands.sh   # errands for every contender and life
-.venv/bin/python -m engram.ruler run --persona student --seed 1 --contender engram
+.venv/bin/python -m camr_engine.ruler run --persona student --seed 1 --contender camr
 ```
 
 Seed 1 is for the proof. Seed 0 is for development and tuning.
@@ -312,7 +312,7 @@ The Hugging Face suites (right answers):
 | HARP pairs, memory off (60) | 48 | 52 |
 | BABILong qa1–qa5, 4k to 128k (100) | 78 | |
 
-Which reach works best (`engram.bench.reach_run`, `engine:qwen3-4b`, the first 256K tokens, 40 questions; the other
+Which reach works best (`camr_engine.bench.reach_run`, `engine:qwen3-4b`, the first 256K tokens, 40 questions; the other
 project is the Long Haul built from seed 2):
 
 | Set-up | Right | Facts (10) | First word p50 | Disk |
@@ -325,7 +325,7 @@ project is the Long Haul built from seed 2):
 In `project+global` the other project's room won 7 of the 40 questions and cost 2 answers, both declined rather than
 answered from the wrong project. Every set-up declined all 10 never-said questions.
 
-The wait as the engine's memory grows (`engram.bench.local speed`, `engine:qwen3-1.7b`):
+The wait as the engine's memory grows (`camr_engine.bench.local speed`, `engine:qwen3-1.7b`):
 
 | Moments kept | History | First word, p50 | Retrieval, p50 | Peak RAM | Disk |
 | --- | --- | --- | --- | --- | --- |
@@ -337,7 +337,7 @@ Notes read off the SSD at 6–12 GB/s when a room is not hot. At 2M most rooms a
 answers read their room as words, and read nothing from the SSD.
 
 The records are under `records/bench/`. Each names the machine, how busy it was (`load_1m`), and the code that made
-it (`engram_source_sha`).
+it (`camr_source_sha`).
 
 ## Rules for measuring
 

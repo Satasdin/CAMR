@@ -18,7 +18,7 @@ A benchmark record gives every answer a `verdict`, by rule (see [Benchmarks](ben
 
 ## Measured
 
-The engine measures every answer itself, as an `engram.metrics.Record`:
+The engine measures every answer itself, as an `camr_engine.metrics.Record`:
 
 | What | Field | How it is counted |
 | --- | --- | --- |
@@ -59,9 +59,9 @@ largest history and peak RAM, the last disk size, and how many answers came from
 ```python
 from pathlib import Path
 
-from engram.metrics import Meter, summary
+from camr_engine.metrics import Meter, summary
 
-rows = Meter.read(Path("~/.engram/mine/metrics.jsonl").expanduser())
+rows = Meter.read(Path("~/.camr/mine/metrics.jsonl").expanduser())
 print(summary(rows)["first_word_s"])        # {"p50": ..., "p90": ...}
 print(summary(rows)["retrieval_ms"]["fetch"])
 ```

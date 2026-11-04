@@ -7,8 +7,8 @@ import json
 
 import pytest
 
-from engram.bench.suites import longmemeval as lme
-from engram.bench.suites import memoryagentbench as mab
+from camr_engine.bench.suites import longmemeval as lme
+from camr_engine.bench.suites import memoryagentbench as mab
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +19,7 @@ def offline(monkeypatch, tmp_path):
     def no(*a, **k):
         raise AssertionError("tests must not touch the network")
 
-    monkeypatch.setenv("ENGRAM_DATASETS", str(tmp_path / "data"))
+    monkeypatch.setenv("CAMR_DATASETS", str(tmp_path / "data"))
     monkeypatch.setattr(huggingface_hub, "hf_hub_download", no)
     monkeypatch.setattr(huggingface_hub.utils, "get_session", no)
 

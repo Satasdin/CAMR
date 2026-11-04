@@ -3,8 +3,8 @@ No model is loaded."""
 
 from __future__ import annotations
 
-from engram.agent import FORMS, grade, parse, tasks
-from engram.ruler.life import build
+from camr_engine.agent import FORMS, grade, parse, tasks
+from camr_engine.ruler.life import build
 
 
 def test_every_question_in_every_life_becomes_an_errand():

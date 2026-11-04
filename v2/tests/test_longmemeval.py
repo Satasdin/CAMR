@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 
-from engram.ruler.longmemeval import load
+from camr_engine.ruler.longmemeval import load
 
 ITEM = {"question_id": "abc_abs", "question_type": "knowledge-update", "question": "Where do I work now?",
         "answer": "Nairobi", "question_date": "2023/05/30 (Tue) 10:00",

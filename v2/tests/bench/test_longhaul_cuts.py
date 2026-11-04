@@ -2,7 +2,7 @@
 
 import json
 
-from engram.bench import longhaul
+from camr_engine.bench import longhaul
 
 
 def haul(folder, tokens):

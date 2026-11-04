@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from engram import models
+from camr_engine import models
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="libproc is macOS's")

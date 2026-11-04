@@ -19,7 +19,7 @@ says what moved and where.
 | A crisp single structure glowing on black | The Memory stage: one specimen, true black, tight halos and no haze |
 | Colour that means something (depth, region, channel) | Five channel colours, one meaning each, the same on every screen |
 | Only the active groups glow inside thin outlines | Rooms are 1 px hairlines at rest and fill with light only when used |
-| Thousands of dots inside area borders | Every moment is a dot inside its room's outline (the t-SNE layout in `engram/view/layout.py`) |
+| Thousands of dots inside area borders | Every moment is a dot inside its room's outline (the t-SNE layout in `camr_engine/view/layout.py`) |
 | A translucent body lit inside | At rest the whole memory stays visible at 22% intensity, and events light it from inside |
 | Stacked traces on black, a tick per event, labelled rows A1–A8 | The instrument strip under every live view, and the Swarm's channel rows |
 | Selected cells turn white (suite2p) | Pure white means one thing: you selected it, and its trace row turns white too |
@@ -177,7 +177,7 @@ Motion comes from events, and the layout itself never moves.
 ## The app frame
 
 - **Top strip** (44 px, `--bed`, hairline below):
-  - Left: the working name `engram`, set in Martian Mono until the name is picked.
+  - Left: the working name `camr`, set in Martian Mono until the name is picked.
   - Centre: six screen keys styled as hardware keys, `MODELS CHAT CODE SWARM MEMORY BENCH`. The current key gets a
     white underline 2 px thick. Keys `1`–`6` switch screens.
   - Right: always-on live meters, each with a label above a value:
@@ -200,14 +200,14 @@ ruler with a minor tick every 1 GB and a labelled tick every 4 GB.
 - Live contents, read from the system:
   - macOS and other apps in `--ink-4`;
   - the loaded model's weights in solid amber;
-  - the engram core in amber at the resident step;
+  - the camr core in amber at the resident step;
   - the desk flares amber when it fills.
 - A white hairline marks 24 GB. A hatched grey zone marks what macOS keeps for itself.
 - The memory pressure word sits at the right end in Martian Mono: "normal", "tight" or "swapping", taken from
   Activity Monitor's three states.
 
 **Signature: the ghost fit.** Hover or select any model in the list, and its footprint is projected onto the gauge
-as an amber outline, with no fill. The footprint is weights, plus KV for the chosen context, plus the engram core.
+as an amber outline, with no fill. The footprint is weights, plus KV for the chosen context, plus the camr core.
 - If it fits, a readout says `fits · 6.2 GB spare`.
 - If it crosses the hard line, the part past 24 GB turns into a red hatched outline with `× needs 3.1 GB more`.
 - You see the answer before you download anything.
@@ -471,9 +471,9 @@ Under them sits the line "better, never heavier".
 
 **Signature: the flat line** (35%). A big chart with memory size in tokens on x (log scale, 1K to 2M, cut lines at
 64K, 256K, 1M and 2M labelled like exposure marks) and time to first word on y.
-- Engram's line stays flat at 0.07 s in blue (tensors) with a tight glow.
+- CAMR's line stays flat at 0.07 s in blue (tensors) with a tight glow.
 - Baselines that read their whole history rise in `--ink-3`.
-- A twin chart under it does the same for peak RAM (engram flat at 1.65–1.83 GB).
+- A twin chart under it does the same for peak RAM (camr flat at 1.65–1.83 GB).
 - Every point links to its dated JSON record.
 
 **The Long Haul tape** (20%): 110 working days as one long ribbon, with the token count growing as an `--ink-4` area.
@@ -514,7 +514,7 @@ corrected maths, the page that grows, code that must fit, look-alikes, never sai
 
 ## Libraries: pinned, vendored, offline
 
-Everything is copied into `v2/engram/app/static/vendor/<package>@<version>/` and served by the local server. A
+Everything is copied into `v2/camr_engine/app/static/vendor/<package>@<version>/` and served by the local server. A
 `vendor/LOCK.json` records each file's source URL and npm `dist.integrity`. An import map in `index.html` maps bare
 names (`preact`, `preact/hooks`) to the vendored files, so there is no build step for the app itself.
 

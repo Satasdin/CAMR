@@ -31,8 +31,8 @@ digraph deployment_mac {
 
     subgraph cluster_ssd {
       label="«device» Internal SSD"; fontname="Helvetica"; color="#2a78d6"; style="rounded,dashed";
-      mem  [label="«artifact» ~/.engram/default/\nroom-*.notes · index.json · vectors.npy ·\nevents.jsonl · layout.json" shape=note style="filled" fillcolor="#e9f1fb" color="#2a78d6"];
-      sims [label="«artifact» ~/.engram/simulations/\nrebuilt for each simulation" shape=note style="filled" fillcolor="white" color="#2a78d6"];
+      mem  [label="«artifact» ~/.camr/default/\nroom-*.notes · index.json · vectors.npy ·\nevents.jsonl · layout.json" shape=note style="filled" fillcolor="#e9f1fb" color="#2a78d6"];
+      sims [label="«artifact» ~/.camr/simulations/\nrebuilt for each simulation" shape=note style="filled" fillcolor="white" color="#2a78d6"];
       hf   [label="«artifact» ~/.cache/huggingface/\nmodel weights, about 1.3 GB" shape=note style="filled" fillcolor="white" color="#2a78d6"];
       recs [label="«artifact» repository records/\ndated test records (JSON)" shape=note style="filled" fillcolor="white" color="#2a78d6"];
     }
@@ -41,7 +41,7 @@ digraph deployment_mac {
   hub [label="«external» Hugging Face Hub" shape=box3d style="filled" fillcolor="white"];
   ci  [label="«external» GitHub Actions, ubuntu-latest\ntests of lives, grading, records and charts\n(no MLX needed)" shape=box3d style="filled" fillcolor="white"];
 
-  page -> srv     [label="HTTP + JSON on loopback\nHost · Origin · X-Engram-Token"];
+  page -> srv     [label="HTTP + JSON on loopback\nHost · Origin · X-CAMR-Token"];
   srv -> eng;
   srv -> sims     [style=dashed];
   ruler -> eng;

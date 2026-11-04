@@ -15,8 +15,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from engram.app.server import CSP, STATIC, make_server, static_file
-from engram.app.web import Refused, Routes
+from camr_engine.app.server import CSP, STATIC, make_server, static_file
+from camr_engine.app.web import Refused, Routes
 
 
 class StandIn:
@@ -51,16 +51,16 @@ def call(port, method, path, headers=None, body=None):
 
 def page_token(port) -> str:
     _, page, _ = call(port, "GET", "/", {"Host": f"127.0.0.1:{port}"})
-    return re.search(r'<meta name="engram-token" content="([^"]+)"', page).group(1)
+    return re.search(r'<meta name="camr-token" content="([^"]+)"', page).group(1)
 
 
 def test_only_the_served_page_can_use_the_api():
     port, _, httpd = start()
     host = {"Host": f"127.0.0.1:{port}"}
     status, page, _ = call(port, "GET", "/", host)
-    token = re.search(r'<meta name="engram-token" content="([^"]+)"', page).group(1)
+    token = re.search(r'<meta name="camr-token" content="([^"]+)"', page).group(1)
     assert status == 200 and len(token) > 20
-    ok = {**host, "X-Engram-Token": token}
+    ok = {**host, "X-CAMR-Token": token}
     assert call(port, "GET", "/api/state", ok)[0] == 200
     assert call(port, "GET", "/api/state", host)[0] == 403                                  # no secret
     assert call(port, "GET", "/api/state", {**ok, "Host": f"evil.example:{port}"})[0] == 403  # DNS rebinding
@@ -77,12 +77,12 @@ def test_the_token_is_new_each_launch_and_never_in_a_script():
     b, tb, hb = start()
     assert page_token(a) == ta and page_token(b) == tb and ta != tb
     _, page, _ = call(a, "GET", "/", {"Host": f"127.0.0.1:{a}"})
-    assert "__ENGRAM_TOKEN__" not in page
+    assert "__CAMR_TOKEN__" not in page
     scripts = re.findall(r"<script\b[^>]*>(.*?)</script>", page, re.S)
     assert scripts and all(not s.strip() for s in scripts)  # no inline script: script-src 'self' holds
     assert ta not in (STATIC / "shell.js").read_text()
     # a token from another launch is refused
-    assert call(a, "GET", "/api/state", {"Host": f"127.0.0.1:{a}", "X-Engram-Token": tb})[0] == 403
+    assert call(a, "GET", "/api/state", {"Host": f"127.0.0.1:{a}", "X-CAMR-Token": tb})[0] == 403
     ha.shutdown()
     hb.shutdown()
 
@@ -90,8 +90,8 @@ def test_the_token_is_new_each_launch_and_never_in_a_script():
 def test_every_response_carries_the_strict_policy():
     port, token, httpd = start()
     host = {"Host": f"127.0.0.1:{port}"}
-    for path, headers in [("/", host), ("/static/shell.js", host), ("/api/state", {**host, "X-Engram-Token": token}),
-                          ("/api/nothing", {**host, "X-Engram-Token": token})]:
+    for path, headers in [("/", host), ("/static/shell.js", host), ("/api/state", {**host, "X-CAMR-Token": token}),
+                          ("/api/nothing", {**host, "X-CAMR-Token": token})]:
         _, _, h = call(port, "GET", path, headers)
         assert h["Content-Security-Policy"] == CSP
         assert h["X-Content-Type-Options"] == "nosniff"
@@ -146,7 +146,7 @@ def test_a_symlink_out_of_the_static_folder_is_refused(tmp_path):
 
 def test_api_requests_from_other_sites_and_bad_bodies_are_refused():
     port, token, httpd = start()
-    ok = {"Host": f"127.0.0.1:{port}", "X-Engram-Token": token}
+    ok = {"Host": f"127.0.0.1:{port}", "X-CAMR-Token": token}
     post = {**ok, "Content-Type": "application/json"}
     assert call(port, "GET", "/api/state", {**ok, "Sec-Fetch-Site": "cross-site"})[0] == 403
     assert call(port, "GET", "/api/state", {**ok, "Sec-Fetch-Site": "same-site"})[0] == 403
@@ -168,7 +168,7 @@ def test_a_route_reports_its_refusals_and_errors_as_json():
     routes.add("GET", "/api/break", lambda req: 1 / 0)
     routes.add("GET", "/api/echo", lambda req: {"n": req.int("n", 0, hi=10), "q": req.str("q")})
     port, token, httpd = start(routes=routes)
-    ok = {"Host": f"127.0.0.1:{port}", "X-Engram-Token": token}
+    ok = {"Host": f"127.0.0.1:{port}", "X-CAMR-Token": token}
     assert call(port, "GET", "/api/refuse", ok)[:2] == (409, json.dumps({"error": "busy"}))
     status, body, _ = call(port, "GET", "/api/break", ok)
     assert status == 500 and json.loads(body)["error"].startswith("ZeroDivisionError")
@@ -193,7 +193,7 @@ def test_the_server_listens_on_127_0_0_1_only():
 
 
 def test_every_route_module_loads(tmp_path):
-    from engram.app.routes import collect
+    from camr_engine.app.routes import collect
 
     routes = collect()
     assert routes.errors == {}
@@ -201,4 +201,4 @@ def test_every_route_module_loads(tmp_path):
     for p in ["/api/state", "/api/sys", "/api/events", "/api/metrics", "/api/brain", "/api/chat", "/api/errand",
               "/api/models", "/api/models/search", "/api/models/load", "/api/sim/state", "/api/quiz"]:
         assert p in paths, p
-    assert Path(STATIC / "index.html").read_text().count("__ENGRAM_TOKEN__") == 1
+    assert Path(STATIC / "index.html").read_text().count("__CAMR_TOKEN__") == 1

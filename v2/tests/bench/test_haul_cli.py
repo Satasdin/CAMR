@@ -7,8 +7,8 @@ import json
 
 from haul_shared import built, perfect
 
-from engram.bench.haul import at_cut, write
-from engram.bench.haul.__main__ import main
+from camr_engine.bench.haul import at_cut, write
+from camr_engine.bench.haul.__main__ import main
 
 
 def test_build_writes_the_three_files(tmp_path, capsys):

@@ -24,8 +24,8 @@ for persona in student farmer developer; do
       echo "$persona $contender: already complete"
       continue
     fi
-    $PY -I -m engram.ruler run --persona "$persona" --seed 1 --contender "$contender" 2>&1 | grep -v -i warning
+    $PY -I -m camr_engine.ruler run --persona "$persona" --seed 1 --contender "$contender" 2>&1 | grep -v -i warning
   done
-  $PY -I -m engram.ruler chart --persona "$persona" --seed 1
+  $PY -I -m camr_engine.ruler chart --persona "$persona" --seed 1
 done
 echo "runs finished"

@@ -8,10 +8,10 @@ import httpx2
 import pytest
 from anthropic.types import Usage
 
-from engram.bench import claude as cl
-from engram.bench.claude import (OPENER, BudgetError, Checkpoint, Claude, ClaudeError, Ledger, parse_answers, read_key,
+from camr_engine.bench import claude as cl
+from camr_engine.bench.claude import (OPENER, BudgetError, Checkpoint, Claude, ClaudeError, Ledger, parse_answers, read_key,
                                  smoke)
-from engram.bench.cost import cost_usd, estimate_usd
+from camr_engine.bench.cost import cost_usd, estimate_usd
 
 URL = "https://api.anthropic.com/v1/messages"
 

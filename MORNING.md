@@ -16,7 +16,7 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 
 ## What exists now
 
-**The engine** (`v2/engram/`):
+**The engine** (`v2/camr_engine/`):
 - **Subconscious:** `core.py`, an always-on core in RAM.
 - **Conscious:** `rooms.py` and `swap.py`. Rooms of saved keys and values on the SSD; hot rooms stay in RAM, and cold
   ones go to sleep under a 40 GB disk budget.
@@ -24,7 +24,7 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 - **Reach:** `reach.py`, for session, project, agent or global memory.
 - **Metrics:** `metrics.py`, every answer's speed, retrieval and bandwidth.
 
-**The app** (`python -m engram.app --open`): six screens in the "Instrument" design you picked. Screenshots are in
+**The app** (`python -m camr_engine.app --open`): six screens in the "Instrument" design you picked. Screenshots are in
 `v2/docs/screens/`.
 
 | Screen | What it does |
@@ -36,11 +36,11 @@ alone recalls nothing planted (Sonnet 13 of 73 at 3M, 10 at 4M). **At 3M and at 
 | Memory | every room as a tensor tile, the bus, the RAM ruler, the vault; replays any answer |
 | Bench | every record, live: score against history, first word, peak RAM, and Claude's spend |
 
-**The pairing:** `engram.pair.ollama` is a proxy that gives Ollama's CLI memory as words
+**The pairing:** `camr_engine.pair.ollama` is a proxy that gives Ollama's CLI memory as words
 (`OLLAMA_HOST=127.0.0.1:11435`).
 
 **The proof:**
-- `engram/bench/`: the Long Haul (our own test, now extendable to 4M tokens), the local, Ollama and Claude runners,
+- `camr_engine/bench/`: the Long Haul (our own test, now extendable to 4M tokens), the local, Ollama and Claude runners,
   and the Hugging Face suites.
 - Records: `v2/records/bench/2026-11-04/`.
 - Decisions: `v2/DECISIONS.md` E-29 to E-43.
@@ -166,7 +166,7 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 
 ## Your calls (taste and vision only)
 
-1. **The name.** The code still says `engram` and the repo says CAMR. Pick one and I'll rename both.
+1. **The name.** The code still says `camr` and the repo says CAMR. Pick one and I'll rename both.
 2. **Three small design choices** at the end of `v2/design/DIRECTION.md`:
    - amber or ember for RAM;
    - a flat or a layered stage;
@@ -178,7 +178,7 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 ## Look at it
 
 ```bash
-cd ~/Desktop/camr-build-wt/v2 && .venv/bin/python -m engram.app --open
+cd ~/Desktop/camr-build-wt/v2 && .venv/bin/python -m camr_engine.app --open
 ```
 
 That loads the 1.7B. Ask something in Chat (key `2`), then watch Memory (key `5`). Bench (key `6`) has these numbers

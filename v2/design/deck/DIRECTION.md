@@ -265,7 +265,7 @@ The rule is phosphor: an event lights instantly and decays exponentially, like a
 - **Centre, flexible:** the agent's transcript as blocks, Claude Code style.
   - The plan and todo list is pinned at the top: monochrome checkboxes, with the current step in `--fg` and the rest
     in `--fg-mid`.
-  - Each tool call is one dim line, for example `⏺ read_file  engram/rooms.py  2 ms` or
+  - Each tool call is one dim line, for example `⏺ read_file  camr_engine/rooms.py  2 ms` or
     `⏺ recall  "fee rule"  room r-0041  18 ms`. File reads are `--none`; memory recalls carry their place colour.
   - Edits show as unified diffs (CodeMirror merge view), with accept or reject per hunk.
   - A change summary sits above the composer: "3 files, +41 −7, review", as in Zed.
@@ -468,7 +468,7 @@ Together they are "better, never heavier" in one picture: growth on top, flat we
 
 ## Libraries
 
-Everything is copied into `v2/engram/app/static/vendor/` and served by the local server, so the app runs with no
+Everything is copied into `v2/camr_engine/app/static/vendor/` and served by the local server, so the app runs with no
 network.
 - **No CDN at runtime.** A `vendor/LOCK.json` lists each file with its package, version, licence and SHA-256.
 - **No build step,** except one esbuild run that turns CodeMirror into a single ES module file.

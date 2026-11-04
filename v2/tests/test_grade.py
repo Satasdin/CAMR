@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from engram.ruler.grade import abstains, grade
-from engram.ruler.life import Question, date_aliases
+from camr_engine.ruler.grade import abstains, grade
+from camr_engine.ruler.life import Question, date_aliases
 
 import datetime as dt
 

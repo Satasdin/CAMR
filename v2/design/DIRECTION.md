@@ -11,7 +11,7 @@ a real memory is the mockup.
 ## Scoring
 
 Each direction was scored from 1 to 5 against his taste notes (`visual-taste-colour-means-something`,
-`engram-brain-view`), the engine as it is in `v2/engram/` tonight, and one night of building.
+`camr-brain-view`), the engine as it is in `v2/camr_engine/` tonight, and one night of building.
 
 | Criterion | Instrument | Phosphor (deck) | Living |
 | --- | --- | --- | --- |
@@ -55,7 +55,7 @@ Each direction was scored from 1 to 5 against his taste notes (`visual-taste-col
 | From | Idea | Where it lands |
 | --- | --- | --- |
 | Phosphor | Tensors drawn as tensors: a room is a tile of layer rows by token columns, on the SSD and on the desk alike | The stage, the room sheet |
-| Phosphor | RAM drawn to scale on a 24 GB ruler, with the weights beside the tiny engram, plus a magnified inset with its factor printed | The stage's RAM plate |
+| Phosphor | RAM drawn to scale on a 24 GB ruler, with the weights beside the tiny camr, plus a magnified inset with its factor printed | The stage's RAM plate |
 | Phosphor | Context meter on the composer: tokens in view against the whole history | Chat |
 | Phosphor | Perfetto-style lanes for one answer's path, with a broken axis after the first word | Light path sheet |
 | Phosphor | A bus line on every screen that flares when memory moves | Top strip |
@@ -84,7 +84,7 @@ Each direction was scored from 1 to 5 against his taste notes (`visual-taste-col
 | Living's white for "used" and rose-red for the SSD | White stays selection, and red stays fault |
 | Phosphor's ember RAM `#FF8A3D` | The amber `#FFB75E` separates better from fault red. This is taste question 1 |
 | Phosphor's 220 particles per read | Decoration. One beam sized to its bytes says the same, to scale |
-| Server-Sent Events | `EventSource` cannot send the `X-Engram-Token` header the server checks. The page polls instead |
+| Server-Sent Events | `EventSource` cannot send the `X-CAMR-Token` header the server checks. The page polls instead |
 
 ## The idea in two sentences
 
@@ -320,7 +320,7 @@ b = base + (1 - base) * 2^(-(now - t_event) / half_life)
 ## The app frame
 
 **Top strip** (44 px, `--s1`, a 1 px `--hair` below):
-- **Left:** the working name `engram` in Martian Mono 13 px, `wght` 500, `--ink`.
+- **Left:** the working name `camr` in Martian Mono 13 px, `wght` 500, `--ink`.
 - **Centre:** six screen keys, `MODELS CHAT CODE SWARM MEMORY BENCH`:
   - each is a 28 px key with a 1 px `--hair-2` border, radius 2, `--t-label`, and its number `1`–`6` in `--ink-4`
     before the word;
@@ -444,11 +444,11 @@ The stage is the full width, with 16 px padding. It has three regions, left to r
   order:
   - other apps, `--ink-4`;
   - the model's weights, `--ram` resident;
-  - the engram's RAM (core + hot shelf + desk), `--ram` at the event step;
+  - the camr's RAM (core + hot shelf + desk), `--ram` at the event step;
   - free, hairline only.
 
   A 1 px `--ink-2` line marks 24 GB. Label: `RAM 24 GB · 1.71 GB this process · peak 1.83`.
-- **Zoom bracket:** two `--ink-4` hairlines run from the engram's few-pixel span on the ruler down to the inset. The
+- **Zoom bracket:** two `--ink-4` hairlines run from the camr's few-pixel span on the ruler down to the inset. The
   magnification is printed, for example `×412`, computed as the inset's px per GB ÷ the ruler's px per GB. The tiny
   real size is shown honestly, and the inset makes it readable.
 - **Inset**, three blocks with 12 px between them, each with a `--t-label` and readout:
@@ -666,7 +666,7 @@ that word's look × 6 px. Picked-only nodes get no thread, so you can see they w
 - **RAM gauge:** 48 px tall, the full content width, calibrated to 24 GB. Its segments:
   - other apps, `--ink-4`;
   - the loaded model's weights, solid `--ram`;
-  - the engram (core + hot shelf + desk), `--ram` resident;
+  - the camr (core + hot shelf + desk), `--ram` resident;
   - free, hairline only.
 
   A 1 px `--ink-2` line marks 24 GB, and the pressure word sits at the right end.
@@ -678,7 +678,7 @@ that word's look × 6 px. Picked-only nodes get no thread, so you can see they w
 
   Label: `SSD 1 TB · 612 GB free`.
 - **Ghost fit:** hover or arrow onto any model, and its footprint projects onto both bars as outlines with no fill:
-  - on the RAM gauge, weights + KV for the chosen context + the engram's RAM budget;
+  - on the RAM gauge, weights + KV for the chosen context + the camr's RAM budget;
   - on the disk rail, its files.
 
   If it fits: `fits · 6.2 GB spare`. If it crosses 24 GB, the overflow is a red hatched outline past the end, with
@@ -815,7 +815,7 @@ row opens its dated record with `↵`.
 
 **Past the window:**
 - **The flat line:** first word against history tokens. x is log scale from 1K to 2M, with cut lines at 64K, 256K, 1M
-  and 2M. The engram's line is `--ssd` with a tight halo, staying flat at 0.07 s. Baselines that read their whole
+  and 2M. The camr's line is `--ssd` with a tight halo, staying flat at 0.07 s. Baselines that read their whole
   history rise in `--ink-3`.
 - **Peak RAM:** a twin chart under it.
 - **Score against history length:** each model's context window is a vertical `--hair-2` wall labelled at its foot.
@@ -843,10 +843,10 @@ that flares and decays.
 
 ## What the views read
 
-The app builders own `v2/engram/app/`, so these are theirs to add to the server. Nothing below changes `notes.py`,
+The app builders own `v2/camr_engine/app/`, so these are theirs to add to the server. Nothing below changes `notes.py`,
 `rooms.py`, `memory.py` or `events.py`.
 
-| Endpoint (GET, with the `X-Engram-Token` header) | Gives |
+| Endpoint (GET, with the `X-CAMR-Token` header) | Gives |
 | --- | --- |
 | `/api/state` | Today's state, plus `tiers` (`Tiers.state()`), the loaded model, the measuring flag, and each reach's note count and bytes |
 | `/api/brain` | Exists: moments, rooms, layout, answers |
@@ -860,7 +860,7 @@ The app builders own `v2/engram/app/`, so these are theirs to add to the server.
 - **Polling:** the page polls `/api/events` and `/api/metrics` 4 times a second while a request is pending, and once
   a second otherwise. It stops while the tab is hidden. It does not use `EventSource`: it cannot send the token
   header, and putting the token in a URL would leak it into logs.
-- **Token:** the server puts the launch token in `<meta name="engram-token" content="__ENGRAM_TOKEN__">`. `data.js`
+- **Token:** the server puts the launch token in `<meta name="camr-token" content="__CAMR_TOKEN__">`. `data.js`
   reads it, so no inline script is needed.
 - **One proposal for the lead (optional):** an `evict` event `{rooms, bytes}` from `Tiers._fit`, with no change to
   behaviour. Until it exists, evictions are seen by diffing `tiers.ram.rooms` between polls.
@@ -881,7 +881,7 @@ fakes, shown under the `FIXTURE` badge.
 
 ## Libraries: pinned, vendored, offline
 
-Everything is copied into `v2/engram/app/static/vendor/` and served by the local server. At runtime the app makes no
+Everything is copied into `v2/camr_engine/app/static/vendor/` and served by the local server. At runtime the app makes no
 request beyond 127.0.0.1. The current page's Google Fonts link goes.
 - **Versions:** every version below was checked against the npm registry tonight and was published on or before
   21 Oct 2026, at least two weeks ago. That includes all 40 packages in the bundle tree.
@@ -907,7 +907,7 @@ The licences sit at `https://cdn.jsdelivr.net/npm/<package>@<version>/LICENSE`.
 
 ### B. Bundles (built once with esbuild, output committed, `node_modules` never committed)
 
-These live in `v2/engram/app/vendor-src/`, with `package.json` and `entries/` as below, plus `build.sh`. The output
+These live in `v2/camr_engine/app/vendor-src/`, with `package.json` and `entries/` as below, plus `build.sh`. The output
 goes to `static/vendor/`.
 
 | Output | From | Size (built tonight) |
@@ -933,7 +933,7 @@ Reference URLs (npm tarballs follow `https://registry.npmjs.org/<name>/-/<basena
 ```json
 {
   "private": true,
-  "description": "Pinned sources for engram's vendored browser files. Built once with build.sh; node_modules is never committed.",
+  "description": "Pinned sources for camr's vendored browser files. Built once with build.sh; node_modules is never committed.",
   "dependencies": {
     "preact": "10.29.8",
     "htm": "3.1.1",
@@ -1039,8 +1039,8 @@ done
 ### Static layout for the builders
 
 ```
-v2/engram/app/static/
-  index.html        fonts, tokens.css, base.css, <meta engram-token>, <script type="module" src="/static/app/main.js">
+v2/camr_engine/app/static/
+  index.html        fonts, tokens.css, base.css, <meta camr-token>, <script type="module" src="/static/app/main.js">
   app/tokens.css    the token block below
   app/base.css      reset, type roles, component styles
   app/main.js       router (screens 1–6), top strip, bus line, keyboard
@@ -1049,7 +1049,7 @@ v2/engram/app/static/
   app/parts/        readout, trace, toggle, reach, gauge, pathstrip, lightpath, sheet, module, cursors
   app/screens/      models.js, chat.js, code.js, swarm.js, memory.js, bench.js
   vendor/           section A files, section B bundles, LOCK.json
-v2/engram/app/vendor-src/   package.json, package-lock.json, entries/, build.sh (not served)
+v2/camr_engine/app/vendor-src/   package.json, package-lock.json, entries/, build.sh (not served)
 ```
 
 ### `tokens.css`

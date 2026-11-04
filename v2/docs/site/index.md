@@ -18,7 +18,7 @@ Obsidian. Rooms that are used often stay in RAM. Rooms that fade go to sleep and
 benchmarks exist only to show the engine at work and to measure it. The work is the subject of a thesis: "A
 Lightweight External Memory Engine to Bridge the Capability Gap Between On-Device and Cloud Language Models".
 
-Its name is not chosen yet. The code is the Python package `engram`. Earlier write-ups call it CAMR v2.
+Its name is not chosen yet. The code is the Python package `camr`. Earlier write-ups call it CAMR v2.
 
 ## The pages
 

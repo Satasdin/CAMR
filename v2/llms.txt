@@ -4,14 +4,14 @@
 > The model reads its memory mostly as its own saved keys and values ("notes"), not as retrieved text: a question
 > opens one room of notes on the SSD, read in one burst and laid in front of the model already read, then the four
 > closest moments as words. Three layers: a core always in RAM, rooms on the SSD (hot ones kept in RAM), and a vault of
-> linked Markdown notes that opens in Obsidian. Python package `engram`; its final name is not chosen yet.
+> linked Markdown notes that opens in Obsidian. Python package `camr`; its final name is not chosen yet.
 
 - It is not a vector database. The embedder only chooses which room to open; the model reads the room's notes.
 - Everything runs on the Mac. The one outside runtime is Ollama, through a local proxy, where memory goes in as words.
-- Python entry points: `engram.memory.Memory` (one folder) and `engram.reach.Session` (several reaches, an on/off
-  switch). Both have `remember(text, day, ...)` and `answer(question, today, ...)`. Models: `engram.models.Reader`
-  (Qwen3-1.7B 4-bit) and `engram.models.Embedder` (Qwen3-Embedding-0.6B).
-- Install and run: `sh scripts/install.sh`, then `.venv/bin/python -m engram.app --open` (http://127.0.0.1:8765).
+- Python entry points: `camr_engine.memory.Memory` (one folder) and `camr_engine.reach.Session` (several reaches, an on/off
+  switch). Both have `remember(text, day, ...)` and `answer(question, today, ...)`. Models: `camr_engine.models.Reader`
+  (Qwen3-1.7B 4-bit) and `camr_engine.models.Embedder` (Qwen3-Embedding-0.6B).
+- Install and run: `sh scripts/install.sh`, then `.venv/bin/python -m camr_engine.app --open` (http://127.0.0.1:8765).
 - Benchmark results are kept as dated JSON records under `records/bench/`; the docs point there.
 
 ## Docs

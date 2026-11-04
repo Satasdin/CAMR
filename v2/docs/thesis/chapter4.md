@@ -124,7 +124,7 @@ Table 4.4: Data requirements catalogue
 | DR-08 | Each v2 moment shall be stored as dated text, an embedding and notes in a token-major layout (Section 4.4.6). | Must | ii; v2; `rooms.py` | T (`test_rooms.py`) |
 | DR-09 | v2 room files shall only grow, and a memory written for one model shall not open with another. | Must | ii; v2; `rooms.py` | I, T |
 | DR-10 | Every v2 record shall name the machine, chip, memory, power, load, library versions, commit and a hash of the code. | Must | iv; v2; E-12, E-17 | I, T |
-| DR-11 | Personal memory shall stay in a folder on the user's machine (`~/.engram/default`, `~/.camr/`). | Must | iii; both; P §1.6 | I |
+| DR-11 | Personal memory shall stay in a folder on the user's machine (`~/.camr/default`, `~/.camr/`). | Must | iii; both; P §1.6 | I |
 
 ### 4.2.4 Interface and Integration Requirements
 

@@ -9,8 +9,8 @@ from fractions import Fraction
 import pytest
 from haul_shared import built
 
-from engram.bench.haul import grade, maths
-from engram.bench.haul.maths import FAMILIES, fmt, problems
+from camr_engine.bench.haul import grade, maths
+from camr_engine.bench.haul.maths import FAMILIES, fmt, problems
 
 
 def _params(p: dict) -> dict:

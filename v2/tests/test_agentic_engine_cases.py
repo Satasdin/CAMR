@@ -13,10 +13,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from engram.agentic.brain import EngineBrain, Prompt, last_line, lean
-from engram.models import Reply
+from camr_engine.agentic.brain import EngineBrain, Prompt, last_line, lean
+from camr_engine.models import Reply
 
-pytestmark = pytest.mark.skipif(os.environ.get("ENGRAM_ENGINE_CASES") != "1",
+pytestmark = pytest.mark.skipif(os.environ.get("CAMR_ENGINE_CASES") != "1",
                                 reason="runs in its own process, from test_agentic_engine.py")
 pytest.importorskip("mlx")
 
@@ -38,9 +38,9 @@ class ToolReader(FakeReader):
 
 
 def session(tmp_path, reader, **kw):
-    from engram.reach import Session
+    from camr_engine.reach import Session
 
-    settings = {"root": tmp_path / "engram", "name": "20261104-010000-ab12", "project": "kitchen",
+    settings = {"root": tmp_path / "camr", "name": "20261104-010000-ab12", "project": "kitchen",
                 "reads": ("session", "project", "global"), "writes": "project", "log": False, "room_tokens": 400,
                 "join": 0.2, "tiers": {}, "metrics": True, **kw}
     return Session(reader, FakeEmbedder(), **settings)
@@ -66,11 +66,11 @@ def test_a_step_reads_the_room_its_task_is_about_from_the_ssd_then_from_ram(tmp_
 
 
 def test_a_finished_run_is_remembered_where_its_persona_writes(tmp_path):
-    from engram.agentic.gate import Gate
-    from engram.agentic.loop import Run
-    from engram.agentic.personas import BUILT_IN
-    from engram.agentic.tools import Toolbox
-    from engram.agentic.workspace import Workspace
+    from camr_engine.agentic.gate import Gate
+    from camr_engine.agentic.loop import Run
+    from camr_engine.agentic.personas import BUILT_IN
+    from camr_engine.agentic.tools import Toolbox
+    from camr_engine.agentic.workspace import Workspace
 
     root = tmp_path / "kitchen"
     root.mkdir()
@@ -91,18 +91,18 @@ def test_a_finished_run_is_remembered_where_its_persona_writes(tmp_path):
 
 
 def test_a_swarms_agents_each_get_their_own_reach_and_share_one_ram_budget(tmp_path):
-    from engram.agentic.desk import engine_brains
-    from engram.swap import Pool
+    from camr_engine.agentic.desk import engine_brains
+    from camr_engine.swap import Pool
 
     app = SimpleNamespace(reader=FakeReader(), embedder=FakeEmbedder(), memory=None, models=None)
-    make = engine_brains(app, root=tmp_path / "engram")
+    make = engine_brains(app, root=tmp_path / "camr")
     pool = Pool(64 << 20)
     brains = [make({"memory": True, "session": None, "project": None, "agent": f"swarm-a{i}", "reads": ["agent"],
                     "writes": "agent", "pool": pool}) for i in (1, 2)]
     for i, b in enumerate(brains, 1):
         assert [r.label for r in b.session.reaches] == [f"agent:swarm-a{i}"]
         assert all(m.tiers.pool is pool for m in b.session.memories.values())
-        assert (tmp_path / "engram" / "agent" / f"swarm-a{i}").is_dir()
+        assert (tmp_path / "camr" / "agent" / f"swarm-a{i}").is_dir()
     plain = make({"memory": False})
     assert not plain.memory_on and plain.reader is app.reader
     for b in brains:
@@ -121,12 +121,12 @@ def test_the_last_event_is_read_from_the_end_and_each_word_keeps_its_hardest_loo
 
 
 def test_a_reach_already_open_stays_on_its_pool_and_a_fix_is_kept_where_asked(tmp_path):
-    from engram.agentic.brain import is_fix
-    from engram.agentic.desk import engine_brains
-    from engram.swap import Pool
+    from camr_engine.agentic.brain import is_fix
+    from camr_engine.agentic.desk import engine_brains
+    from camr_engine.swap import Pool
 
     app = SimpleNamespace(reader=FakeReader(), embedder=FakeEmbedder(), memory=None, models=None)
-    make = engine_brains(app, root=tmp_path / "engram")
+    make = engine_brains(app, root=tmp_path / "camr")
     first, second = Pool(64 << 20), Pool(64 << 20)
     a = make({"memory": True, "session": None, "project": "kitchen", "agent": "coder", "reads": ["project"],
               "writes": "project", "pool": first})

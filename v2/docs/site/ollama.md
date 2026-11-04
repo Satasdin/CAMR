@@ -11,7 +11,7 @@ tensors into it. So the pairing shows how far memory as words goes; the engine's
 Start the real Ollama as usual (it listens on 127.0.0.1:11434). Then start the proxy, and point the CLI at it:
 
 ```sh
-.venv/bin/python -m engram.pair.ollama --memory ~/.engram/default
+.venv/bin/python -m camr_engine.pair.ollama --memory ~/.camr/default
 OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:1.7b
 ```
 
@@ -21,7 +21,7 @@ not wait for it.
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--port` | 11435 | where the proxy listens, on 127.0.0.1 |
-| `--memory` | `~/.engram/default` | the memory folder: an engine memory, or a new folder |
+| `--memory` | `~/.camr/default` | the memory folder: an engine memory, or a new folder |
 | `--upstream` | `127.0.0.1:11434` | where the real Ollama listens; it must be this Mac |
 | `--budget` | 512 | tokens of notes added to each chat, about one room of the engine's desk |
 | `--no-memory` | off | a plain passthrough, to measure what the proxy itself costs |
@@ -43,7 +43,7 @@ not wait for it.
   prompt.
 - Once the answer has streamed back, the exchange is remembered on one background worker, so the connection is free
   at once. The next recall waits for it, and that wait is counted in its `recall_ms`.
-- A request with the header `X-Engram-Memory: off` is forwarded with no notes, and nothing is remembered.
+- A request with the header `X-CAMR-Memory: off` is forwarded with no notes, and nothing is remembered.
 
 ## What it remembers, and where
 
@@ -70,7 +70,7 @@ As in the app:
 - What a web page sends is refused: a request with an `Origin` header, or with `Sec-Fetch-Site` "cross-site" or
   "same-site". The CLI sends neither.
 - `--allow-origin` lets an origin in only on paths that never touch memory. An `Origin` header on a chat path or on
-  `/engram/metrics` is always refused.
+  `/camr_engine/metrics` is always refused.
 - Bodies are capped.
 - The real Ollama must be on this Mac too. Notes are personal and never leave it.
 
@@ -84,14 +84,14 @@ Every request is measured, with memory on or off:
 - `prefill_tps` and `decode_tps`, as Ollama reported them;
 - `notes_chars` and `remember_ms`.
 
-`GET /engram/metrics` returns the latest 500. Each is also a line of `<memory>/ollama/metrics.jsonl`. A chat
-answered with memory on carries the headers `X-Engram-Added-Ms` and `X-Engram-Notes-Chars`.
+`GET /camr_engine/metrics` returns the latest 500. Each is also a line of `<memory>/ollama/metrics.jsonl`. A chat
+answered with memory on carries the headers `X-CAMR-Added-Ms` and `X-CAMR-Notes-Chars`.
 
 Results with and without memory: see records.
 
 ## The macOS Ollama app: its limits
 
-These come from the pairing code's own notes (`engram/pair/ollama.py`), for the Ollama app 0.13.5. The route
+These come from the pairing code's own notes (`camr_engine/pair/ollama.py`), for the Ollama app 0.13.5. The route
 through the app was read from the app's source. It has not been tried yet.
 
 - The app has no setting for its server's address.

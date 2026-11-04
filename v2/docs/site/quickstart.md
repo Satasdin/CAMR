@@ -39,12 +39,12 @@ Each check is kept as a record under `records/health/`.
 The install script starts it the first time. After that:
 
 ```sh
-.venv/bin/python -m engram.app --open
+.venv/bin/python -m camr_engine.app --open
 ```
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `--memory DIR` | `~/.engram/default` | the memory folder; it reopens where it left off |
+| `--memory DIR` | `~/.camr/default` | the memory folder; it reopens where it left off |
 | `--port N` | `8765` | the port; the app is at `http://127.0.0.1:N` |
 | `--open` | off | open the app in the browser once it is listening |
 | `--check` | off | run the health check instead of the app, then exit |
@@ -61,9 +61,9 @@ the same browser cannot reach your memory.
 
 | What | Where |
 | --- | --- |
-| The app's memory | `~/.engram/default`. Delete the folder to start empty. |
-| Simulations | `~/.engram/simulations`, rebuilt each time one starts |
-| Reach folders (library sessions) | `~/.engram/session/`, `project/`, `agent/`, `global/` |
+| The app's memory | `~/.camr/default`. Delete the folder to start empty. |
+| Simulations | `~/.camr/simulations`, rebuilt each time one starts |
+| Reach folders (library sessions) | `~/.camr/session/`, `project/`, `agent/`, `global/` |
 | Models | `~/.cache/huggingface` |
 
 ## If something goes wrong
@@ -71,9 +71,9 @@ the same browser cannot reach your memory.
 | Problem | Fix |
 | --- | --- |
 | `CAMR needs an Apple-silicon Mac` | This Mac cannot run it: MLX needs M1 or later. |
-| The health check says FAIL | Run `.venv/bin/python -m engram.app --check` again. If it keeps failing, delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
+| The health check says FAIL | Run `.venv/bin/python -m camr_engine.app --check` again. If it keeps failing, delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
 | The page shows "forbidden" | Reload it. The page gets a fresh key each time the app starts. |
-| Port 8765 is busy | Start it on another port: `.venv/bin/python -m engram.app --open --port 8790`. |
+| Port 8765 is busy | Start it on another port: `.venv/bin/python -m camr_engine.app --open --port 8790`. |
 
 ## For developers
 

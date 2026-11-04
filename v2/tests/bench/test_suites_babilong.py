@@ -9,7 +9,7 @@ import random
 
 import pytest
 
-from engram.bench.suites import babilong as b
+from camr_engine.bench.suites import babilong as b
 
 PEOPLE = ("Mary", "John", "Daniel", "Sandra")
 PLACES = ("bathroom", "bedroom", "garden", "hallway", "kitchen", "office")
@@ -24,7 +24,7 @@ def offline(monkeypatch, tmp_path):
     def no(*a, **k):
         raise AssertionError("tests must not touch the network")
 
-    monkeypatch.setenv("ENGRAM_DATASETS", str(tmp_path / "data"))
+    monkeypatch.setenv("CAMR_DATASETS", str(tmp_path / "data"))
     monkeypatch.setattr(huggingface_hub, "hf_hub_download", no)
     monkeypatch.setattr(huggingface_hub, "HfFileSystem", no)
     monkeypatch.setattr(huggingface_hub.utils, "get_session", no)

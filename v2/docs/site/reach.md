@@ -5,15 +5,15 @@ everything. The *switch* turns memory off, so the model answers alone.
 
 ## The four reaches
 
-Each reach is its own folder under one root, `~/.engram` by default. Each folder holds its own rooms and its own
+Each reach is its own folder under one root, `~/.camr` by default. Each folder holds its own rooms and its own
 vault.
 
 | Reach | Label | Folder | For |
 | --- | --- | --- | --- |
-| session | `session:<id>` | `~/.engram/session/<id>/` | one conversation; a new id each time by default |
-| project | `project:<name>` | `~/.engram/project/<name>/` | everything about one project |
-| agent | `agent:<name>` | `~/.engram/agent/<name>/` | one agent's own memory |
-| global | `global` | `~/.engram/global/` | facts that hold everywhere |
+| session | `session:<id>` | `~/.camr/session/<id>/` | one conversation; a new id each time by default |
+| project | `project:<name>` | `~/.camr/project/<name>/` | everything about one project |
+| agent | `agent:<name>` | `~/.camr/agent/<name>/` | one agent's own memory |
+| global | `global` | `~/.camr/global/` | facts that hold everywhere |
 
 A name is plain: letters, digits, `.`, `_` and `-`, at most 64 characters. A name is never a path.
 
@@ -33,8 +33,8 @@ A `Session` reads several reaches at once and writes to one.
 - The header is read once and shared by every reach.
 
 ```python
-from engram.models import Embedder, Reader
-from engram.reach import Session
+from camr_engine.models import Embedder, Reader
+from camr_engine.reach import Session
 
 reader, embedder = Reader(), Embedder()
 with Session(reader, embedder, project="kitchen", reads=("session", "project", "global")) as s:
@@ -70,4 +70,4 @@ With memory off:
 - The answer still gets a metrics record, with no history and no disk, so on and off compare directly.
 
 The Ollama pairing has its own switches: `--no-memory` starts the proxy as a plain passthrough, and a request with
-the header `X-Engram-Memory: off` is forwarded with no notes. See [Pairing with Ollama](ollama.md).
+the header `X-CAMR-Memory: off` is forwarded with no notes. See [Pairing with Ollama](ollama.md).

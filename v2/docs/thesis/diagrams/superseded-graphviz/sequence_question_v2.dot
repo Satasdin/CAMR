@@ -35,7 +35,7 @@ digraph sequence_question_v2 {
   r2_models [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
   {rank=same; r2_user; r2_page; r2_server; r2_memory; r2_rooms; r2_notebook; r2_models;}
   r2_user -> r2_page -> r2_server -> r2_memory -> r2_rooms -> r2_notebook -> r2_models [style=invis];
-  r2_page -> r2_server [label="2. POST /api/chat {text}\n+ X-Engram-Token" color="#111111" fontcolor="#111111" arrowhead=normal];
+  r2_page -> r2_server [label="2. POST /api/chat {text}\n+ X-CAMR-Token" color="#111111" fontcolor="#111111" arrowhead=normal];
   r3_user [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
   r3_page [label="" shape=point width=0.05 height=0.05 color="#9aa3b2" fillcolor="#9aa3b2"];
   r3_server [label="3. check host, origin, JSON, token;\ntake the lock; text ends with “?”" shape=box style="filled" fillcolor="#f3f5f9" color="#9aa3b2" fontsize=9 margin="0.08,0.04"];

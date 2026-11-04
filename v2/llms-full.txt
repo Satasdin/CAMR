@@ -4,14 +4,14 @@
 > The model reads its memory mostly as its own saved keys and values ("notes"), not as retrieved text: a question
 > opens one room of notes on the SSD, read in one burst and laid in front of the model already read, then the four
 > closest moments as words. Three layers: a core always in RAM, rooms on the SSD (hot ones kept in RAM), and a vault of
-> linked Markdown notes that opens in Obsidian. Python package `engram`; its final name is not chosen yet.
+> linked Markdown notes that opens in Obsidian. Python package `camr`; its final name is not chosen yet.
 
 - It is not a vector database. The embedder only chooses which room to open; the model reads the room's notes.
 - Everything runs on the Mac. The one outside runtime is Ollama, through a local proxy, where memory goes in as words.
-- Python entry points: `engram.memory.Memory` (one folder) and `engram.reach.Session` (several reaches, an on/off
-  switch). Both have `remember(text, day, ...)` and `answer(question, today, ...)`. Models: `engram.models.Reader`
-  (Qwen3-1.7B 4-bit) and `engram.models.Embedder` (Qwen3-Embedding-0.6B).
-- Install and run: `sh scripts/install.sh`, then `.venv/bin/python -m engram.app --open` (http://127.0.0.1:8765).
+- Python entry points: `camr_engine.memory.Memory` (one folder) and `camr_engine.reach.Session` (several reaches, an on/off
+  switch). Both have `remember(text, day, ...)` and `answer(question, today, ...)`. Models: `camr_engine.models.Reader`
+  (Qwen3-1.7B 4-bit) and `camr_engine.models.Embedder` (Qwen3-Embedding-0.6B).
+- Install and run: `sh scripts/install.sh`, then `.venv/bin/python -m camr_engine.app --open` (http://127.0.0.1:8765).
 - Benchmark results are kept as dated JSON records under `records/bench/`; the docs point there.
 
 ---
@@ -38,7 +38,7 @@ Obsidian. Rooms that are used often stay in RAM. Rooms that fade go to sleep and
 benchmarks exist only to show the engine at work and to measure it. The work is the subject of a thesis: "A
 Lightweight External Memory Engine to Bridge the Capability Gap Between On-Device and Cloud Language Models".
 
-Its name is not chosen yet. The code is the Python package `engram`. Earlier write-ups call it CAMR v2.
+Its name is not chosen yet. The code is the Python package `camr`. Earlier write-ups call it CAMR v2.
 
 ## The pages
 
@@ -117,12 +117,12 @@ Each check is kept as a record under `records/health/`.
 The install script starts it the first time. After that:
 
 ```sh
-.venv/bin/python -m engram.app --open
+.venv/bin/python -m camr_engine.app --open
 ```
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `--memory DIR` | `~/.engram/default` | the memory folder; it reopens where it left off |
+| `--memory DIR` | `~/.camr/default` | the memory folder; it reopens where it left off |
 | `--port N` | `8765` | the port; the app is at `http://127.0.0.1:N` |
 | `--open` | off | open the app in the browser once it is listening |
 | `--check` | off | run the health check instead of the app, then exit |
@@ -139,9 +139,9 @@ the same browser cannot reach your memory.
 
 | What | Where |
 | --- | --- |
-| The app's memory | `~/.engram/default`. Delete the folder to start empty. |
-| Simulations | `~/.engram/simulations`, rebuilt each time one starts |
-| Reach folders (library sessions) | `~/.engram/session/`, `project/`, `agent/`, `global/` |
+| The app's memory | `~/.camr/default`. Delete the folder to start empty. |
+| Simulations | `~/.camr/simulations`, rebuilt each time one starts |
+| Reach folders (library sessions) | `~/.camr/session/`, `project/`, `agent/`, `global/` |
 | Models | `~/.cache/huggingface` |
 
 ## If something goes wrong
@@ -149,9 +149,9 @@ the same browser cannot reach your memory.
 | Problem | Fix |
 | --- | --- |
 | `CAMR needs an Apple-silicon Mac` | This Mac cannot run it: MLX needs M1 or later. |
-| The health check says FAIL | Run `.venv/bin/python -m engram.app --check` again. If it keeps failing, delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
+| The health check says FAIL | Run `.venv/bin/python -m camr_engine.app --check` again. If it keeps failing, delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
 | The page shows "forbidden" | Reload it. The page gets a fresh key each time the app starts. |
-| Port 8765 is busy | Start it on another port: `.venv/bin/python -m engram.app --open --port 8790`. |
+| Port 8765 is busy | Start it on another port: `.venv/bin/python -m camr_engine.app --open --port 8790`. |
 
 ## For developers
 
@@ -263,7 +263,7 @@ The vault is a folder of Markdown notes, one per moment. It opens in Obsidian as
   about 45 days falls below 0.1 and counts as faded. Pinned notes never fade.
 - Nothing is ever deleted by the engine. A faded note keeps its words. Only a person deletes a note, by deleting its
   file.
-- The files are the truth. A hidden index (`.engram-index.json`) only saves reading every file on opening. A note
+- The files are the truth. A hidden index (`.camr-index.json`) only saves reading every file on opening. A note
   changed by hand is read again because its file changed.
 
 A note as the engine writes it:
@@ -302,7 +302,7 @@ The vault is off by default in `Memory` (`vault=True` turns it on) and on by def
   events.jsonl         one line per moment kept, answer given, room put to sleep or woken
   metrics.jsonl        one line per answer (with metrics on)
   tiers.json           when each room was last used (with tiers on)
-  vault/               one Markdown note per moment, and .engram-index.json
+  vault/               one Markdown note per moment, and .camr-index.json
   .lock                held while a process has the folder open (reach folders)
 ```
 
@@ -327,15 +327,15 @@ everything. The *switch* turns memory off, so the model answers alone.
 
 ## The four reaches
 
-Each reach is its own folder under one root, `~/.engram` by default. Each folder holds its own rooms and its own
+Each reach is its own folder under one root, `~/.camr` by default. Each folder holds its own rooms and its own
 vault.
 
 | Reach | Label | Folder | For |
 | --- | --- | --- | --- |
-| session | `session:<id>` | `~/.engram/session/<id>/` | one conversation; a new id each time by default |
-| project | `project:<name>` | `~/.engram/project/<name>/` | everything about one project |
-| agent | `agent:<name>` | `~/.engram/agent/<name>/` | one agent's own memory |
-| global | `global` | `~/.engram/global/` | facts that hold everywhere |
+| session | `session:<id>` | `~/.camr/session/<id>/` | one conversation; a new id each time by default |
+| project | `project:<name>` | `~/.camr/project/<name>/` | everything about one project |
+| agent | `agent:<name>` | `~/.camr/agent/<name>/` | one agent's own memory |
+| global | `global` | `~/.camr/global/` | facts that hold everywhere |
 
 A name is plain: letters, digits, `.`, `_` and `-`, at most 64 characters. A name is never a path.
 
@@ -355,8 +355,8 @@ A `Session` reads several reaches at once and writes to one.
 - The header is read once and shared by every reach.
 
 ```python
-from engram.models import Embedder, Reader
-from engram.reach import Session
+from camr_engine.models import Embedder, Reader
+from camr_engine.reach import Session
 
 reader, embedder = Reader(), Embedder()
 with Session(reader, embedder, project="kitchen", reads=("session", "project", "global")) as s:
@@ -392,7 +392,7 @@ With memory off:
 - The answer still gets a metrics record, with no history and no disk, so on and off compare directly.
 
 The Ollama pairing has its own switches: `--no-memory` starts the proxy as a plain passthrough, and a request with
-the header `X-Engram-Memory: off` is forwarded with no notes. See [Pairing with Ollama](docs/site/ollama.md).
+the header `X-CAMR-Memory: off` is forwarded with no notes. See [Pairing with Ollama](docs/site/ollama.md).
 
 ---
 
@@ -489,19 +489,19 @@ for m in s.memories.values():
 ```python
 from pathlib import Path
 
-from engram.memory import Memory
-from engram.models import Embedder, Reader
-from engram.swap import Tiers
+from camr_engine.memory import Memory
+from camr_engine.models import Embedder, Reader
+from camr_engine.swap import Tiers
 
 reader, embedder = Reader(), Embedder()
-m = Memory(reader, embedder, Path("~/.engram/mine").expanduser(), vault=True, core=True,
+m = Memory(reader, embedder, Path("~/.camr/mine").expanduser(), vault=True, core=True,
            tiers=Tiers(ram_bytes=512 * 2**20, disk_bytes=2 * 2**30, wake=True), metrics=True)
 ```
 
 The same in a session:
 
 ```python
-from engram.reach import Session
+from camr_engine.reach import Session
 
 s = Session(reader, embedder, core=True, metrics=True,
             tiers={"ram_bytes": 512 * 2**20, "disk_bytes": 2 * 2**30, "wake": True})
@@ -520,7 +520,7 @@ Source: docs/site/library.md
 
 # Python library
 
-The engine is a Python package, `engram`. It is not on PyPI. Install it from the repository's `v2` folder:
+The engine is a Python package, `camr`. It is not on PyPI. Install it from the repository's `v2` folder:
 
 ```sh
 uv pip install --python .venv/bin/python -e .
@@ -537,7 +537,7 @@ copied from the code.
 ## The models
 
 ```python
-from engram.models import Embedder, Reader
+from camr_engine.models import Embedder, Reader
 
 reader = Reader()        # Qwen3-1.7B, 4-bit, through MLX
 embedder = Embedder()    # Qwen3-Embedding-0.6B, 4-bit, through MLX
@@ -561,17 +561,17 @@ same Mac. Different chips can differ slightly (DECISIONS.md, E-17). Answers stop
 
 ## A first memory
 
-This is the health check (`engram/app/__main__.py`), with a folder that lasts:
+This is the health check (`camr_engine/app/__main__.py`), with a folder that lasts:
 
 ```python
 import datetime as dt
 from pathlib import Path
 
-from engram.memory import Memory
-from engram.models import Embedder, Reader
+from camr_engine.memory import Memory
+from camr_engine.models import Embedder, Reader
 
 reader, embedder = Reader(), Embedder()
-m = Memory(reader, embedder, Path("~/.engram/mine").expanduser())
+m = Memory(reader, embedder, Path("~/.camr/mine").expanduser())
 m.remember("[2026-01-05] My sister Amina moved to Nakuru last week.", 0)
 m.remember("[2026-01-06] Paid the electricity bill.", 1)
 reply = m.answer("Where does my sister live?", dt.date(2026, 1, 7))
@@ -714,7 +714,7 @@ Session(reader, embedder, *, root: Path = ROOT, name: str | None = None, project
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `root` | `~/.engram` | where the reach folders live |
+| `root` | `~/.camr` | where the reach folders live |
 | `name` | a new id | the session's id, such as `20261104-021500-a1b2` |
 | `project`, `agent` | `None` | the names of those reaches; needed to read or write them |
 | `reads` | `("session", "global")` | the reaches read, in order of preference |
@@ -764,8 +764,8 @@ Session.answer(self, question: str, today: dt.date, **kw)
 ```python
 import datetime as dt
 
-from engram.models import Embedder, Reader
-from engram.reach import Session
+from camr_engine.models import Embedder, Reader
+from camr_engine.reach import Session
 
 reader, embedder = Reader(), Embedder()
 with Session(reader, embedder, project="kitchen", reads=("session", "project", "global"), core=True) as s:
@@ -779,11 +779,11 @@ with Session(reader, embedder, project="kitchen", reads=("session", "project", "
 
 ## Errands: one tool call from memory
 
-`engram.agent.act` gives an open `Memory` one task. It answers with the ten pretend tools (`engram.agent.TOOLS`,
+`camr_engine.agent.act` gives an open `Memory` one task. It answers with the ten pretend tools (`camr_engine.agent.TOOLS`,
 from `book_ride` to `ask_user`) and returns the call:
 
 ```python
-from engram.agent import act
+from camr_engine.agent import act
 
 tool, args, reply = act(m, "Book me a ride to my sister's home.", dt.date(2026, 1, 7))
 print(tool, args)   # the tool it called, and the arguments it filled from memory
@@ -793,10 +793,10 @@ print(tool, args)   # the tool it called, and the arguments it filled from memor
 act(memory, task_text: str, today, **log) -> tuple[str | None, dict, object]
 ```
 
-For your own tools, call `answer` with `then` and `tools`, and read the call with `engram.agent.parse`:
+For your own tools, call `answer` with `then` and `tools`, and read the call with `camr_engine.agent.parse`:
 
 ```python
-from engram.agent import parse
+from camr_engine.agent import parse
 
 reply = m.answer(task, today, then="Do this with exactly one tool call.", tools=my_tools, max_tokens=120)
 tool, args = parse("".join(reply.pieces))
@@ -821,7 +821,7 @@ tensors into it. So the pairing shows how far memory as words goes; the engine's
 Start the real Ollama as usual (it listens on 127.0.0.1:11434). Then start the proxy, and point the CLI at it:
 
 ```sh
-.venv/bin/python -m engram.pair.ollama --memory ~/.engram/default
+.venv/bin/python -m camr_engine.pair.ollama --memory ~/.camr/default
 OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:1.7b
 ```
 
@@ -831,7 +831,7 @@ not wait for it.
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--port` | 11435 | where the proxy listens, on 127.0.0.1 |
-| `--memory` | `~/.engram/default` | the memory folder: an engine memory, or a new folder |
+| `--memory` | `~/.camr/default` | the memory folder: an engine memory, or a new folder |
 | `--upstream` | `127.0.0.1:11434` | where the real Ollama listens; it must be this Mac |
 | `--budget` | 512 | tokens of notes added to each chat, about one room of the engine's desk |
 | `--no-memory` | off | a plain passthrough, to measure what the proxy itself costs |
@@ -853,7 +853,7 @@ not wait for it.
   prompt.
 - Once the answer has streamed back, the exchange is remembered on one background worker, so the connection is free
   at once. The next recall waits for it, and that wait is counted in its `recall_ms`.
-- A request with the header `X-Engram-Memory: off` is forwarded with no notes, and nothing is remembered.
+- A request with the header `X-CAMR-Memory: off` is forwarded with no notes, and nothing is remembered.
 
 ## What it remembers, and where
 
@@ -880,7 +880,7 @@ As in the app:
 - What a web page sends is refused: a request with an `Origin` header, or with `Sec-Fetch-Site` "cross-site" or
   "same-site". The CLI sends neither.
 - `--allow-origin` lets an origin in only on paths that never touch memory. An `Origin` header on a chat path or on
-  `/engram/metrics` is always refused.
+  `/camr_engine/metrics` is always refused.
 - Bodies are capped.
 - The real Ollama must be on this Mac too. Notes are personal and never leave it.
 
@@ -894,14 +894,14 @@ Every request is measured, with memory on or off:
 - `prefill_tps` and `decode_tps`, as Ollama reported them;
 - `notes_chars` and `remember_ms`.
 
-`GET /engram/metrics` returns the latest 500. Each is also a line of `<memory>/ollama/metrics.jsonl`. A chat
-answered with memory on carries the headers `X-Engram-Added-Ms` and `X-Engram-Notes-Chars`.
+`GET /camr_engine/metrics` returns the latest 500. Each is also a line of `<memory>/ollama/metrics.jsonl`. A chat
+answered with memory on carries the headers `X-CAMR-Added-Ms` and `X-CAMR-Notes-Chars`.
 
 Results with and without memory: see records.
 
 ## The macOS Ollama app: its limits
 
-These come from the pairing code's own notes (`engram/pair/ollama.py`), for the Ollama app 0.13.5. The route
+These come from the pairing code's own notes (`camr_engine/pair/ollama.py`), for the Ollama app 0.13.5. The route
 through the app was read from the app's source. It has not been tried yet.
 
 - The app has no setting for its server's address.
@@ -998,10 +998,10 @@ The same answer always gets the same verdict. Grading costs nothing, and anyone 
 ### Build it and look at it
 
 ```sh
-.venv/bin/python -m engram.bench.haul build --seed 1 --out work/haul/s1
-.venv/bin/python -m engram.bench.longhaul show --dir work/haul/s1
-.venv/bin/python -m engram.bench.haul sample --n 15 --per-family --cut 1M --dir work/haul/s1
-.venv/bin/python -m engram.bench.haul grade --dir work/haul/s1 --answers answers.jsonl --cut 1M [--browser]
+.venv/bin/python -m camr_engine.bench.haul build --seed 1 --out work/haul/s1
+.venv/bin/python -m camr_engine.bench.longhaul show --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.haul sample --n 15 --per-family --cut 1M --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.haul grade --dir work/haul/s1 --answers answers.jsonl --cut 1M [--browser]
 ```
 
 - `build` writes `script.jsonl` (one event per line), `probes.jsonl` (one probe per line) and `manifest.json`
@@ -1011,7 +1011,7 @@ The same answer always gets the same verdict. Grading costs nothing, and anyone 
 
 ### Scoring any contender
 
-Two functions in `engram.bench.longhaul` are shared by every contender:
+Two functions in `camr_engine.bench.longhaul` are shared by every contender:
 
 ```python
 checkpoints(folder: Path, cuts: dict[str, int] = CUTS, per_family: int = PER_FAMILY,
@@ -1023,7 +1023,7 @@ grader(question: dict, answer: str) -> dict
   `events` is how many events are told by then. Each question is `{id, question, expected, family, probe}`.
 - `grader` returns `{verdict, right, reason}` for one answer.
 
-The local runners use the contender protocol in `engram.bench.contender`: a contender is told the history one event
+The local runners use the contender protocol in `camr_engine.bench.contender`: a contender is told the history one event
 at a time (`tell(text, day)`) and asked questions (`ask(question, *, max_tokens, family)`). Answers get room by
 family: 1,200 tokens for a page, 600 for code, 400 for maths and 120 for the rest. Qwen3's thinking is off for every
 local model.
@@ -1032,12 +1032,12 @@ local model.
 
 | Name | Runner | What it is |
 | --- | --- | --- |
-| `engine:<model>` | `engram.bench.local` | the engine: one project reach's memory, driven as `Session` drives it, with the vault, the core, the tiers and the metrics on; 2 GB of RAM for hot rooms and 40 GB of disk for room files; `qwen3-1.7b`, `qwen3-4b` or `qwen3-8b`. Questions are read-only (`--learn` to change that); `--wake` wakes an asleep room instead of reading it as words; `--wording own` gives every local contender the engine's own instructions (names end `+own`) |
-| `words:<model>` | `engram.bench.local` | the engine's rooms, chosen the same way, pasted in as text; for `qwen-27b` |
-| `bare:<model>` | `engram.bench.local` | no memory: the most recent part of the history that fits (32K tokens for the 1.7B and 8B, 64K for the 4B, 16K for the 27B, so their keys and values fit in 24 GB) |
-| `ollama:<model>` | `engram.bench.ollama_run` | Ollama through the pairing: memory as words |
-| `ollama-bare:<model>` | `engram.bench.ollama_run` | plain Ollama, with the most recent 32,768 tokens of the history in its prompt |
-| `claude-<model>` | `engram.bench.longhaul`, `engram.bench.suite_run` | Claude alone, the yardstick |
+| `engine:<model>` | `camr_engine.bench.local` | the engine: one project reach's memory, driven as `Session` drives it, with the vault, the core, the tiers and the metrics on; 2 GB of RAM for hot rooms and 40 GB of disk for room files; `qwen3-1.7b`, `qwen3-4b` or `qwen3-8b`. Questions are read-only (`--learn` to change that); `--wake` wakes an asleep room instead of reading it as words; `--wording own` gives every local contender the engine's own instructions (names end `+own`) |
+| `words:<model>` | `camr_engine.bench.local` | the engine's rooms, chosen the same way, pasted in as text; for `qwen-27b` |
+| `bare:<model>` | `camr_engine.bench.local` | no memory: the most recent part of the history that fits (32K tokens for the 1.7B and 8B, 64K for the 4B, 16K for the 27B, so their keys and values fit in 24 GB) |
+| `ollama:<model>` | `camr_engine.bench.ollama_run` | Ollama through the pairing: memory as words |
+| `ollama-bare:<model>` | `camr_engine.bench.ollama_run` | plain Ollama, with the most recent 32,768 tokens of the history in its prompt |
+| `claude-<model>` | `camr_engine.bench.longhaul`, `camr_engine.bench.suite_run` | Claude alone, the yardstick |
 
 The engine's moments carry their date and the Long Haul's day number, as `[YYYY-MM-DD, day 50] text`, since the
 Long Haul asks about days by number.
@@ -1046,19 +1046,19 @@ Long Haul asks about days by number.
 
 ```sh
 # the engine and the other local contenders, through MLX
-.venv/bin/python -m engram.bench.local longhaul --contender engine:qwen3-1.7b --dir work/haul/s1
-.venv/bin/python -m engram.bench.local longhaul --contender bare:qwen3-1.7b --dir work/haul/s1 --cuts 64K 256K
+.venv/bin/python -m camr_engine.bench.local longhaul --contender engine:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.local longhaul --contender bare:qwen3-1.7b --dir work/haul/s1 --cuts 64K 256K
 
 # the wait as the memory grows, during one reading of the Long Haul: points at 1K and 10K moments, and the end
-.venv/bin/python -m engram.bench.local speed --contender engine:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.local speed --contender engine:qwen3-1.7b --dir work/haul/s1
 
 # Ollama, paired and bare
-.venv/bin/python -m engram.bench.ollama_run longhaul --contender ollama:qwen3-1.7b --dir work/haul/s1
-.venv/bin/python -m engram.bench.ollama_run longhaul --contender ollama-bare:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.ollama_run longhaul --contender ollama:qwen3-1.7b --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.ollama_run longhaul --contender ollama-bare:qwen3-1.7b --dir work/haul/s1
 
 # Claude, alone
-.venv/bin/python -m engram.bench.longhaul claude --model claude-haiku-5-5 --dir work/haul/s1
-.venv/bin/python -m engram.bench.longhaul claude --model claude-sonnet-5-5 --dir work/haul/s1 --cuts 64K 256K
+.venv/bin/python -m camr_engine.bench.longhaul claude --model claude-haiku-5-5 --dir work/haul/s1
+.venv/bin/python -m camr_engine.bench.longhaul claude --model claude-sonnet-5-5 --dir work/haul/s1 --cuts 64K 256K
 ```
 
 For the local and Ollama runners, `--limit N` asks at most N questions per checkpoint, every family in turn: a
@@ -1096,8 +1096,8 @@ Prices are per million tokens. A Haiku prompt over 100K tokens is priced on its 
 call.
 
 ```sh
-.venv/bin/python -m engram.bench.claude smoke    # one tiny call
-.venv/bin/python -m engram.bench.claude spent    # what the ledger has spent, against the cap
+.venv/bin/python -m camr_engine.bench.claude smoke    # one tiny call
+.venv/bin/python -m camr_engine.bench.claude spent    # what the ledger has spent, against the cap
 ```
 
 **The key.** It is read from `~/.config/camr/anthropic.env` when the client is made, and handed straight to it. It
@@ -1105,7 +1105,7 @@ is never printed, logged or stored.
 
 ## The Hugging Face suites
 
-Public benchmarks, loaded, sampled with a seed and graded by their own rules (`engram.bench.suites`).
+Public benchmarks, loaded, sampled with a seed and graded by their own rules (`camr_engine.bench.suites`).
 
 | Suite | Source | What it tests | Graded by | `--n` counts |
 | --- | --- | --- | --- | --- |
@@ -1122,14 +1122,14 @@ and `meta`. A verdict is `right`, `wrong` or `declined`; for questions about thi
 `false_memory`.
 
 ```sh
-.venv/bin/python -m engram.bench.suites list
-.venv/bin/python -m engram.bench.suites sample babilong --n 2 --seed 0 --lengths 4k,16k
-.venv/bin/python -m engram.bench.suites webdev
+.venv/bin/python -m camr_engine.bench.suites list
+.venv/bin/python -m camr_engine.bench.suites sample babilong --n 2 --seed 0 --lengths 4k,16k
+.venv/bin/python -m camr_engine.bench.suites webdev
 ```
 
 ### Rerun them
 
-`engram.bench.suite_run` runs a suite against any contender: the engine, Ollama (paired or bare), or Claude with no
+`camr_engine.bench.suite_run` runs a suite against any contender: the engine, Ollama (paired or bare), or Claude with no
 memory. Each context gets a memory of its own.
 
 | Suite | How it is run |
@@ -1141,9 +1141,9 @@ memory. Each context gets a memory of its own.
 | `harp` | memory on: problem A and its worked solution are told, then 30K tokens of Long Haul noise, then problem B and A again are asked; memory off: B and A with nothing told |
 
 ```sh
-.venv/bin/python -m engram.bench.suite_run babilong --contender ollama-bare:qwen3:1.7b --n 3 --lengths 4k
-.venv/bin/python -m engram.bench.suite_run harp --contender ollama:qwen3-1.7b --n 20
-.venv/bin/python -m engram.bench.suite_run math500 --contender claude-haiku-5-5 --n 50 --max-usd 10
+.venv/bin/python -m camr_engine.bench.suite_run babilong --contender ollama-bare:qwen3:1.7b --n 3 --lengths 4k
+.venv/bin/python -m camr_engine.bench.suite_run harp --contender ollama:qwen3-1.7b --n 20
+.venv/bin/python -m camr_engine.bench.suite_run math500 --contender claude-haiku-5-5 --n 50 --max-usd 10
 ```
 
 The suites run Claude and Ollama contenders. The engine's MLX contenders are not run on them yet: their instructions are the Long Haul's, and a suite needs its own.
@@ -1152,12 +1152,12 @@ A Claude run prints its estimated cost first, and does not start when that passe
 `--estimate` prints the estimate and stops. Every Claude call is also held in the ledger against the night's cap.
 
 `suite_run` does not run `longmemeval` or `webdev`. LongMemEval needs its judge model; its loader and judge prompts
-are in `engram.bench.suites.longmemeval`. WebDev Arena is a history, not questions.
+are in `camr_engine.bench.suites.longmemeval`. WebDev Arena is a history, not questions.
 
 From Python:
 
 ```python
-from engram.bench import suites
+from camr_engine.bench import suites
 
 items = suites.sample("babilong", 2, seed=0, lengths=["4k", "16k"])
 for item in items:
@@ -1174,7 +1174,7 @@ suites.prompt(item: Item) -> str
 suites.grade(item: Item, reply: str, judge: Callable[[str], str] | None = None) -> str
 ```
 
-Downloads are kept in `$ENGRAM_DATASETS`, or else in the ignored `work/datasets/`. Once a file is there, no network
+Downloads are kept in `$CAMR_DATASETS`, or else in the ignored `work/datasets/`. Once a file is there, no network
 is needed.
 
 ## Speed
@@ -1182,13 +1182,13 @@ is needed.
 How the wait grows with memory on the desk, notes against words, with the SSD read and the cache bypassed:
 
 ```sh
-.venv/bin/python -m engram.ruler speed --persona student
+.venv/bin/python -m camr_engine.ruler speed --persona student
 ```
 
 How fast each local model reads and writes on this Mac, from 512 to 32K tokens, through MLX and through Ollama:
 
 ```sh
-.venv/bin/python -m engram.bench.throughput --out records/bench
+.venv/bin/python -m camr_engine.bench.throughput --out records/bench
 ```
 
 ## The ruler: the scripted lives
@@ -1199,7 +1199,7 @@ developer) and the same 100-question quiz every week.
 ```sh
 scripts/step1.sh     # every contender through the three held-out lives
 scripts/errands.sh   # errands for every contender and life
-.venv/bin/python -m engram.ruler run --persona student --seed 1 --contender engram
+.venv/bin/python -m camr_engine.ruler run --persona student --seed 1 --contender camr
 ```
 
 Seed 1 is for the proof. Seed 0 is for development and tuning.
@@ -1238,7 +1238,7 @@ The Hugging Face suites (right answers):
 | HARP pairs, memory off (60) | 48 | 52 |
 | BABILong qa1–qa5, 4k to 128k (100) | 78 | |
 
-Which reach works best (`engram.bench.reach_run`, `engine:qwen3-4b`, the first 256K tokens, 40 questions; the other
+Which reach works best (`camr_engine.bench.reach_run`, `engine:qwen3-4b`, the first 256K tokens, 40 questions; the other
 project is the Long Haul built from seed 2):
 
 | Set-up | Right | Facts (10) | First word p50 | Disk |
@@ -1251,7 +1251,7 @@ project is the Long Haul built from seed 2):
 In `project+global` the other project's room won 7 of the 40 questions and cost 2 answers, both declined rather than
 answered from the wrong project. Every set-up declined all 10 never-said questions.
 
-The wait as the engine's memory grows (`engram.bench.local speed`, `engine:qwen3-1.7b`):
+The wait as the engine's memory grows (`camr_engine.bench.local speed`, `engine:qwen3-1.7b`):
 
 | Moments kept | History | First word, p50 | Retrieval, p50 | Peak RAM | Disk |
 | --- | --- | --- | --- | --- | --- |
@@ -1263,7 +1263,7 @@ Notes read off the SSD at 6–12 GB/s when a room is not hot. At 2M most rooms a
 answers read their room as words, and read nothing from the SSD.
 
 The records are under `records/bench/`. Each names the machine, how busy it was (`load_1m`), and the code that made
-it (`engram_source_sha`).
+it (`camr_source_sha`).
 
 ## Rules for measuring
 
@@ -1295,7 +1295,7 @@ A benchmark record gives every answer a `verdict`, by rule (see [Benchmarks](doc
 
 ## Measured
 
-The engine measures every answer itself, as an `engram.metrics.Record`:
+The engine measures every answer itself, as an `camr_engine.metrics.Record`:
 
 | What | Field | How it is counted |
 | --- | --- | --- |
@@ -1336,9 +1336,9 @@ largest history and peak RAM, the last disk size, and how many answers came from
 ```python
 from pathlib import Path
 
-from engram.metrics import Meter, summary
+from camr_engine.metrics import Meter, summary
 
-rows = Meter.read(Path("~/.engram/mine/metrics.jsonl").expanduser())
+rows = Meter.read(Path("~/.camr/mine/metrics.jsonl").expanduser())
 print(summary(rows)["first_word_s"])        # {"p50": ..., "p90": ...}
 print(summary(rows)["retrieval_ms"]["fetch"])
 ```
@@ -1386,7 +1386,7 @@ What the engine does not do, or does not do well yet. Each comes from the code o
   8B qualify.
 - **Hybrid models read words.** Qwen 27B (`Qwen3.8-27B`) keeps a running state instead of keys and values in 48 of
   its 64 layers. It cannot use saved notes, so it reads the engine's memory as words: the same rooms, chosen the same
-  way, pasted in as text. That reading is a contender in the benchmarks (`CamrWords` in `engram.ruler.contenders`),
+  way, pasted in as text. That reading is a contender in the benchmarks (`CamrWords` in `camr_engine.ruler.contenders`),
   not an option of `Memory` or `Session`.
 - **Notes belong to one model.** Rooms written by one model cannot be read by another. Opening them with a model
   whose notes are a different size fails ("these rooms were written for a different model"). A model whose notes

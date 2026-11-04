@@ -11,8 +11,8 @@ import re
 import numpy as np
 import pytest
 
-from engram.app.server import STATIC
-from engram.events import EventLog
+from camr_engine.app.server import STATIC
+from camr_engine.events import EventLog
 
 STAGE = STATIC / "stage"
 
@@ -22,11 +22,11 @@ def live(tmp_path, monkeypatch):
     pytest.importorskip("mlx")
     from test_app_chat import FakeLooks, TalkApp, serve
 
-    import engram.memory
+    import camr_engine.memory
 
-    monkeypatch.setattr(engram.memory, "Looks", FakeLooks)
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
-    app = TalkApp(tmp_path / "engram")
+    monkeypatch.setattr(camr_engine.memory, "Looks", FakeLooks)
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
+    app = TalkApp(tmp_path / "camr")
     call, httpd = serve(app)
     call("/api/chat", {"text": "I asked for the invoice template today.", "intent": "tell"})
     call("/api/chat/settings", {"writes": "global"})
@@ -111,7 +111,7 @@ def test_a_room_a_moment_and_a_note_open_for_their_sheets(live):
     assert status == 200 and n["text"].strip().endswith("Amina moved to Nakuru.") and n["moment"] == 0
     if g["moments"][1][0] == rid:  # the two moments share a room, so their notes share a door
         assert [x["id"] for x in n["links"]] == ["global-000001"] and n["backlinks"][0]["id"] == "global-000001"
-    for bad in ("../index", "..%2Findex", ".engram-index", "a/b"):
+    for bad in ("../index", "..%2Findex", ".camr-index", "a/b"):
         assert call(f"/api/memory/note?reach=global&id={bad}")[0] in (400, 404), bad
     assert call("/api/memory/note?reach=global&id=global-999999")[0] == 404
 
@@ -132,7 +132,7 @@ def recorded(tmp_path):
     notes = {f"project-x-{i:06d}": {"id": f"project-x-{i:06d}", "day": i, "room": i // 2, "moment": i,
                                     "strength": 1.0 - i / 10, "asleep": i >= 4, "tags": [], "pinned": False,
                                     "links": {f"project-x-{i ^ 1:06d}": 0.5}, "file": [0, 100]} for i in range(6)}
-    (folder / "vault" / ".engram-index.json").write_text(json.dumps({"reach": "project:x", "notes": notes}))
+    (folder / "vault" / ".camr-index.json").write_text(json.dumps({"reach": "project:x", "notes": notes}))
     (folder / "vault" / "project-x-000000.md").write_text(
         "---\nid: project-x-000000\nday: 0\nlinks:\n  - \"[[project-x-000001]]\"\ndoors:\n  - 0.5\n---\nmoment 0\n")
     log = EventLog(folder / "events.jsonl")
@@ -145,7 +145,7 @@ def recorded(tmp_path):
 def test_a_recorded_memory_is_shown_whole_and_never_written(recorded):
     from test_app_chat import serve
 
-    from engram.app.fixture import Fixture
+    from camr_engine.app.fixture import Fixture
 
     before = sorted((p.name, p.stat().st_mtime_ns) for p in recorded.rglob("*"))
     call, httpd = serve(Fixture(recorded))
@@ -194,7 +194,7 @@ def test_a_note_named_as_obsidian_allows_opens_and_a_path_never_does(recorded):
 
     from test_app_chat import serve
 
-    from engram.app.fixture import Fixture
+    from camr_engine.app.fixture import Fixture
 
     for name in ("Fee rule (draft)", "café", "Wanjiru's menu"):
         (recorded / "vault" / f"{name}.md").write_text(f"---\nid: {name}\n---\nabout {name}\n", encoding="utf-8")
@@ -203,7 +203,7 @@ def test_a_note_named_as_obsidian_allows_opens_and_a_path_never_does(recorded):
         for name in ("Fee rule (draft)", "café", "Wanjiru's menu"):
             status, n = call(f"/api/memory/note?reach=project:x&id={quote(name)}")
             assert status == 200 and n["id"] == name and n["text"].strip() == f"about {name}", name
-        for bad in ("../index", ".engram-index", "a/b", "a:b", "[[x]]", " padded", "x" * 201):
+        for bad in ("../index", ".camr-index", "a/b", "a:b", "[[x]]", " padded", "x" * 201):
             assert call(f"/api/memory/note?reach=project:x&id={quote(bad)}")[0] == 400, bad
     finally:
         httpd.shutdown()
@@ -212,7 +212,7 @@ def test_a_note_named_as_obsidian_allows_opens_and_a_path_never_does(recorded):
 def test_a_big_live_memory_is_laid_out_once_per_size_and_cached_beside_its_rooms(tmp_path):
     from types import SimpleNamespace
 
-    from engram.app.routes import memory as mem
+    from camr_engine.app.routes import memory as mem
 
     n = mem.TSNE_MAX + 50
     rng = np.random.default_rng(0)

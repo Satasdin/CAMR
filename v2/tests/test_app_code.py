@@ -13,8 +13,8 @@ import time
 
 import pytest
 
-from engram.app import measuring
-from engram.app.server import make_server
+from camr_engine.app import measuring
+from camr_engine.app.server import make_server
 from test_agentic import FakeBrain, call as tool_call
 
 
@@ -47,7 +47,7 @@ def serve(app):
 
     def api(path, body=None, *, token_=token, extra=None):
         c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
-        headers = {"Host": f"127.0.0.1:{port}", "X-Engram-Token": token_, **(extra or {})}
+        headers = {"Host": f"127.0.0.1:{port}", "X-CAMR-Token": token_, **(extra or {})}
         if body is not None:
             headers["Content-Type"] = "application/json"
         c.request("GET" if body is None else "POST", path, body=None if body is None else json.dumps(body),
@@ -68,7 +68,7 @@ def project(tmp_path):
 
 @pytest.fixture(autouse=True)
 def no_measuring(tmp_path, monkeypatch):
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
 
 
 def wait_for(api, rid, until, limit=5.0):
@@ -189,7 +189,7 @@ def test_memory_off_personas_settings_and_skills(tmp_path, project):
 
 
 def test_no_run_starts_without_a_model_or_while_a_benchmark_measures(tmp_path, project):
-    from engram.app.fixture import Fixture
+    from camr_engine.app.fixture import Fixture
 
     (tmp_path / "rec").mkdir()
     fixture = Fixture(tmp_path / "rec")
@@ -293,7 +293,7 @@ def test_a_saved_fix_is_kept_in_the_projects_memory_and_the_marks_survive_a_late
 
 
 def test_a_chatty_command_never_swells_the_thread_file(tmp_path, project):
-    from engram.agentic.desk import TERM_FILED
+    from camr_engine.agentic.desk import TERM_FILED
 
     app = StandIn(tmp_path, [tool_call("run_shell", command="yes | head -c 3000000"), "Printed a lot."])
     api, httpd = serve(app)

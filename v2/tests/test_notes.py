@@ -7,7 +7,7 @@ import pytest
 
 mx = pytest.importorskip("mlx.core")
 
-from engram.notes import turn  # noqa: E402
+from camr_engine.notes import turn  # noqa: E402
 
 
 def test_turning_keys_moves_them_exactly_as_far_as_the_model_would():

@@ -19,9 +19,9 @@ from pathlib import Path
 
 import pytest
 
-from engram.app.routes import bench
-from engram.app.server import STATIC, make_server
-from engram.app.web import Refused
+from camr_engine.app.routes import bench
+from camr_engine.app.server import STATIC, make_server
+from camr_engine.app.web import Refused
 
 PNG_1X1 = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
 REAL_RUNNING = bench.running
@@ -104,7 +104,7 @@ def no_processes(monkeypatch):
 @pytest.fixture
 def records(tmp_path, monkeypatch):
     """A records folder with one of everything, as the runners leave it."""
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
     root = tmp_path / "records"
     day = "bench/2026-11-04"
     # the engine: a smoke run at 64K, then a fuller run at 64K and 256K
@@ -173,8 +173,8 @@ def records(tmp_path, monkeypatch):
             "kind": "life", "persona": persona, "contender": {"name": "bare-27b"}, "started": f"2026-11-03T{t[:2]}:00",
             "weeks": [{"week": 12, "peak_ram_gb": 15.6, "summary": {"told": 85, "knows": 0, "false_memories": 0,
                                                                     "honest": 15, "wait_median_s": 0.46}}]})
-    write(root, "2026-11-02/103205-student-s1-engram.json", {
-        "kind": "life", "persona": "student", "contender": {"name": "engram"}, "started": "2026-11-02T10:32:05",
+    write(root, "2026-11-02/103205-student-s1-camr_engine.json", {
+        "kind": "life", "persona": "student", "contender": {"name": "camr"}, "started": "2026-11-02T10:32:05",
         "weeks": [{"week": w, "notes_so_far": 24 * w, "peak_ram_gb": 1.74,
                    "summary": {"told": 7 * w, "knows": 5 * w, "false_memories": 12 - w, "wait_median_s": 0.07}}
                   for w in range(1, 13)]})
@@ -278,7 +278,7 @@ def test_the_curves_put_each_measure_against_what_it_grows_with(app):
     life = series["life|life|camr-27b"]["points"][0]
     assert life["x"] == 12 and life["n"] == 3 and life["lo"] == pytest.approx(63 / 85)
     assert life["hi"] == pytest.approx(68 / 85) and life["y"] == pytest.approx((63 + 68 + 65) / 3 / 85)
-    assert len(series["life|life|engram"]["points"]) == 12 and series["life|life|engram"]["memory"] == "tensors"
+    assert len(series["life|life|camr"]["points"]) == 12 and series["life|life|camr"]["memory"] == "tensors"
 
 
 def test_the_run_table_holds_every_record_newest_first_and_skips_superseded_ones(app):
@@ -298,14 +298,14 @@ def test_the_run_table_holds_every_record_newest_first_and_skips_superseded_ones
 
 
 def test_runs_stamped_only_by_their_file_names_sort_among_the_others(app, records):
-    write(records, "2026-11-04/000644-student-s1-errands-engram.json", {
-        "kind": "errands", "persona": "student", "contender": "engram",
+    write(records, "2026-11-04/000644-student-s1-errands-camr_engine.json", {
+        "kind": "errands", "persona": "student", "contender": "camr",
         "summary": {"told": 85, "knows": 40, "false_memories": 2, "honest": 10, "wait_median_s": 0.07}, "tasks": []})
     runs = bench.board(app)["runs"]
     at = {r["path"]: (i, r["started"]) for i, r in enumerate(runs)}
     claude = at["bench/2026-11-04/022518-claude-claude-haiku-5-5-longhaul.json"]
     throughput = at["bench/throughput-2026-11-04-0123.json"]
-    errands = at["2026-11-04/000644-student-s1-errands-engram.json"]
+    errands = at["2026-11-04/000644-student-s1-errands-camr_engine.json"]
     speed = at["speed/2026-11-04-student.json"]
     life = at["2026-11-03/215935-student-s1-camr-27b.json"]
     assert throughput[1] == "2026-11-04T01:23" and speed[1] == "2026-11-04"
@@ -313,7 +313,7 @@ def test_runs_stamped_only_by_their_file_names_sort_among_the_others(app, record
 
 
 def test_the_ledger_counts_spend_as_the_budget_does(app, records):
-    from engram.bench import claude
+    from camr_engine.bench import claude
 
     led = bench.board(app)["ledger"]
     lines = [json.loads(x) for x in (records / "bench" / "claude-ledger.jsonl").read_text().splitlines()
@@ -338,7 +338,7 @@ def test_pages_carry_a_key_only_when_the_answer_holds_html(app):
 
 
 def test_an_empty_folder_gives_dashes_not_errors(tmp_path, monkeypatch):
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
     b = bench.board(App(tmp_path / "nothing", tmp_path / "shots"))
     assert b["headline"] == {"model": "Qwen 27B", "with": None, "without": None}
     assert b["contenders"] == [] and b["series"] == [] and b["runs"] == [] and b["pages"] == []
@@ -362,7 +362,7 @@ def test_a_record_being_written_is_listed_and_read_again_once_it_changes(app, re
 
 
 def test_the_measuring_flag_shows_on_the_board(app, tmp_path):
-    from engram.app.measuring import measuring
+    from camr_engine.app.measuring import measuring
 
     assert bench.board(app)["measuring"] is None
     with measuring("longhaul"):
@@ -380,7 +380,7 @@ def age(root: Path, seconds: float) -> None:
 
 
 def test_pages_are_shot_unasked_only_while_nothing_runs(app, records, monkeypatch):
-    from engram.app.measuring import measuring
+    from camr_engine.app.measuring import measuring
 
     s = bench.board(app)["shoot"]
     assert s["auto"] is False and s["why"] == "waiting: a record changed under a minute ago"  # a run may be writing
@@ -389,8 +389,8 @@ def test_pages_are_shot_unasked_only_while_nothing_runs(app, records, monkeypatc
     (records / "bench" / "claude-ledger.jsonl").touch()  # a Claude call just now
     assert bench.board(app)["shoot"]["auto"] is False
     age(records, 20 * 60)
-    monkeypatch.setattr(bench, "running", lambda: "engram.bench.local")
-    assert bench.board(app)["shoot"] == {"auto": False, "why": "waiting: engram.bench.local is running"}
+    monkeypatch.setattr(bench, "running", lambda: "camr_engine.bench.local")
+    assert bench.board(app)["shoot"] == {"auto": False, "why": "waiting: camr_engine.bench.local is running"}
     monkeypatch.setattr(bench, "running", lambda: None)
     with measuring("longhaul"):
         assert bench.board(app)["shoot"] == {"auto": False, "why": "longhaul is measuring"}
@@ -404,14 +404,14 @@ def test_a_benchmark_process_is_found_by_its_command_line(monkeypatch):
         return run
 
     found = []
-    for lines in (["  101 /usr/bin/python3 -m engram.app --port 8765", "  102 /bin/zsh -l"],
-                  ["  201 .venv/bin/python -m engram.bench.local longhaul engine:qwen3-1.7b"],
-                  ["  301 python /Users/x/v2/engram/ruler/life.py --persona student"],
+    for lines in (["  101 /usr/bin/python3 -m camr_engine.app --port 8765", "  102 /bin/zsh -l"],
+                  ["  201 .venv/bin/python -m camr_engine.bench.local longhaul engine:qwen3-1.7b"],
+                  ["  301 python /Users/x/v2/camr_engine/ruler/life.py --persona student"],
                   ["  401 /Applications/Ollama.app/Contents/Resources/ollama runner --model /x/blobs/sha256-1"],
-                  [f"  {os.getpid()} python -m engram.bench.local speed"]):  # this process is never the runner
+                  [f"  {os.getpid()} python -m camr_engine.bench.local speed"]):  # this process is never the runner
         monkeypatch.setattr(bench, "_PS", {"at": None, "value": None})
         found.append(REAL_RUNNING(run=ps(lines)))
-    assert found == [None, "engram.bench.local", "engram/ruler/life.py", "ollama runner", None]
+    assert found == [None, "camr_engine.bench.local", "camr_engine/ruler/life.py", "ollama runner", None]
     calls = []
     monkeypatch.setattr(bench, "_PS", {"at": None, "value": None})
     REAL_RUNNING(run=lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", ""))
@@ -531,7 +531,7 @@ def serve(app):
 
     def call(path, body=None):
         c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
-        headers = {"Host": f"127.0.0.1:{port}", "X-Engram-Token": token}
+        headers = {"Host": f"127.0.0.1:{port}", "X-CAMR-Token": token}
         if body is not None:
             headers["Content-Type"] = "application/json"
         c.request("POST" if body is not None else "GET", path, body=None if body is None else json.dumps(body),
@@ -543,7 +543,7 @@ def serve(app):
 
 
 def test_the_bench_routes_through_the_server(app, monkeypatch, tmp_path):
-    from engram.app.measuring import measuring
+    from camr_engine.app.measuring import measuring
 
     calls: list = []
     real = bench.render
@@ -620,7 +620,7 @@ def test_the_real_records_read_without_a_failure():
 
 
 def test_the_screen_keeps_the_contract_and_calls_only_routes_that_exist():
-    from engram.app.routes import collect
+    from camr_engine.app.routes import collect
 
     text = (STATIC / "screens" / "bench.js").read_text()
     assert re.search(r"export function mount\(el, api\)", text)

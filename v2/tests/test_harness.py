@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import json
 
-from engram.models import Reply
-from engram.ruler.chart import _nice, draw
-from engram.ruler.contenders import Contender
-from engram.ruler.harness import run
-from engram.ruler.life import build
+from camr_engine.models import Reply
+from camr_engine.ruler.chart import _nice, draw
+from camr_engine.ruler.contenders import Contender
+from camr_engine.ruler.harness import run
+from camr_engine.ruler.life import build
 
 
 class Oracle(Contender):

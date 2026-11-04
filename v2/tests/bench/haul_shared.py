@@ -7,7 +7,7 @@ from functools import lru_cache
 
 import pytest
 
-from engram.bench.haul import tokens
+from camr_engine.bench.haul import tokens
 
 
 def need_tokenizer() -> None:
@@ -17,7 +17,7 @@ def need_tokenizer() -> None:
 
 @lru_cache(maxsize=None)
 def _build(seed: int):
-    from engram.bench.haul import build
+    from camr_engine.bench.haul import build
     return build(seed)
 
 

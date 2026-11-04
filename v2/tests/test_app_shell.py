@@ -15,11 +15,11 @@ import threading
 
 import pytest
 
-from engram.app import measuring
-from engram.app.fixture import Fixture
-from engram.app.server import STATIC, make_server
-from engram.app.tail import Tail
-from engram.events import EventLog
+from camr_engine.app import measuring
+from camr_engine.app.fixture import Fixture
+from camr_engine.app.server import STATIC, make_server
+from camr_engine.app.tail import Tail
+from camr_engine.events import EventLog
 
 
 def serve(app):
@@ -31,7 +31,7 @@ def serve(app):
 
     def get(path, method="GET", body=None):
         c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
-        headers = {"Host": f"127.0.0.1:{port}", "X-Engram-Token": token}
+        headers = {"Host": f"127.0.0.1:{port}", "X-CAMR-Token": token}
         if body is not None:
             headers["Content-Type"] = "application/json"
         c.request(method, path, body=None if body is None else json.dumps(body), headers=headers)
@@ -80,7 +80,7 @@ def test_a_log_that_shrank_is_read_again_from_the_start(tmp_path):
 
 
 def test_the_measuring_flag_holds_only_while_its_process_lives(tmp_path, monkeypatch):
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
     assert measuring.active() is None
     with measuring.measuring("longhaul"):
         job = measuring.active()
@@ -121,7 +121,7 @@ def recorded(tmp_path):
 
 
 def test_a_fixture_serves_its_logs_and_brain_and_refuses_to_talk(recorded, tmp_path, monkeypatch):
-    monkeypatch.setenv("ENGRAM_MEASURING", str(tmp_path / "measuring.json"))
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
     get, httpd = serve(Fixture(recorded))
     status, state = get("/api/state")
     assert status == 200 and state["fixture"] is True and state["moments"] == 4 and state["rooms"] == 2

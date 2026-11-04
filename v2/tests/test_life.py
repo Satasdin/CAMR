@@ -7,8 +7,8 @@ from collections import Counter
 
 import pytest
 
-from engram.ruler.grade import names, norm
-from engram.ruler.life import COUNTS, DAYS, PERSONAS, build
+from camr_engine.ruler.grade import names, norm
+from camr_engine.ruler.life import COUNTS, DAYS, PERSONAS, build
 
 
 @pytest.mark.parametrize("persona", sorted(PERSONAS))

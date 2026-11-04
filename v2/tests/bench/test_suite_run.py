@@ -13,17 +13,17 @@ import pytest
 # no_real_ollama is an autouse fixture: imported here, it guards these tests too
 from test_ollama_run import FakeOllama, no_real_ollama, words  # noqa: F401
 
-from engram.bench import suite_run as sr
-from engram.bench.claude import BudgetError, Call, ClaudeError
-from engram.bench.contender import METRICS, Answer, Contender, metrics
-from engram.bench.cost import Tokens, cost_usd
-from engram.bench.ollama_run import OllamaBare
-from engram.bench.suite_run import (CORRECTION, THINK_ROOM, Ask, ClaudeContender, Group, StopRun, estimate, noise,
+from camr_engine.bench import suite_run as sr
+from camr_engine.bench.claude import BudgetError, Call, ClaudeError
+from camr_engine.bench.contender import METRICS, Answer, Contender, metrics
+from camr_engine.bench.cost import Tokens, cost_usd
+from camr_engine.bench.ollama_run import OllamaBare
+from camr_engine.bench.suite_run import (CORRECTION, THINK_ROOM, Ask, ClaudeContender, Group, StopRun, estimate, noise,
                                     noise_pool, plan_aime, plan_babilong, plan_harp, plan_math500,
                                     plan_memoryagentbench, run)
-from engram.bench.suites import aime, babilong, harp, math500
-from engram.bench.suites import memoryagentbench as mab
-from engram.bench.suites.common import Item, chunk
+from camr_engine.bench.suites import aime, babilong, harp, math500
+from camr_engine.bench.suites import memoryagentbench as mab
+from camr_engine.bench.suites.common import Item, chunk
 
 STORY = "Mary went to the kitchen. " + "The old house was quiet and the rain fell on the roof. " * 300
 
@@ -351,7 +351,7 @@ def test_the_command_line_prints_claudes_estimate_and_refuses_a_run_over_its_cap
 
 
 def test_an_ollama_contender_works_in_its_words_in_the_room_it_is_given():
-    from engram.bench.ollama_run import NUM_CTX, WINDOW
+    from camr_engine.bench.ollama_run import NUM_CTX, WINDOW
 
     c = sr.make_contender("ollama-bare:qwen3:1.7b", work_room=8_192)
     assert c.work_room == 8_192 and c.num_ctx == NUM_CTX + 8_192 and c.window == WINDOW  # the window stays W
@@ -375,7 +375,7 @@ def test_contenders_by_name():
 
 
 def test_the_local_contenders_are_refused_until_they_take_a_suites_wording(monkeypatch, capsys):
-    from engram.bench import local
+    from camr_engine.bench import local
 
     def never(*a, **k):
         raise AssertionError("no local model may be made")

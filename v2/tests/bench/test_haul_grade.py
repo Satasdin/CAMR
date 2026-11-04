@@ -10,10 +10,10 @@ from pathlib import Path
 import pytest
 from haul_shared import good_page
 
-from engram.bench.haul import codefit, grade, page
-from engram.bench.haul.__main__ import main
-from engram.bench.haul.grade import declines, final_number, resolve_timeline, same_number, times
-from engram.bench.haul.probes import NEVER_POOLS, WEEKDAY_FORMS, hhmm
+from camr_engine.bench.haul import codefit, grade, page
+from camr_engine.bench.haul.__main__ import main
+from camr_engine.bench.haul.grade import declines, final_number, resolve_timeline, same_number, times
+from camr_engine.bench.haul.probes import NEVER_POOLS, WEEKDAY_FORMS, hhmm
 
 
 def probe(grader: dict, family: str = "fact") -> dict:

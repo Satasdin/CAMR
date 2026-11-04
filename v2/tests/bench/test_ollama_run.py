@@ -17,12 +17,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 import pytest
 
-from engram.bench import ollama_run as orun
-from engram.bench.contender import METRICS, Answer, Contender
-from engram.bench.ollama_run import (READ_QUESTION, Frame, Ollama, OllamaBare, OllamaError, OllamaPaired,
+from camr_engine.bench import ollama_run as orun
+from camr_engine.bench.contender import METRICS, Answer, Contender
+from camr_engine.bench.ollama_run import (READ_QUESTION, Frame, Ollama, OllamaBare, OllamaError, OllamaPaired,
                                      ThinkingError, haul_meta, longhaul, longhaul_frame, make, speaker, speeds,
                                      think_off)
-from engram.pair.ollama import NOTES_END, NOTES_INTRO
+from camr_engine.pair.ollama import NOTES_END, NOTES_INTRO
 
 
 @pytest.fixture(autouse=True)
@@ -199,7 +199,7 @@ def test_names_take_either_spelling_of_the_model():
 
 
 def test_the_4b_is_the_instruct_build_as_the_local_4b():
-    from engram.bench.local import MODELS as LOCAL
+    from camr_engine.bench.local import MODELS as LOCAL
 
     assert make("ollama:qwen3-4b").model == "qwen3:4b-instruct-2507-q4_K_M"
     assert "Instruct-2507" in LOCAL["qwen3-4b"]
@@ -293,7 +293,7 @@ def test_the_model_is_checked_and_loaded_once_per_run(tmp_path):
 
 
 def test_no_tokenizer_means_no_run(tmp_path, monkeypatch):
-    from engram.bench.haul import tokens
+    from camr_engine.bench.haul import tokens
 
     def missing():
         raise FileNotFoundError("no tokenizer.json")
@@ -398,7 +398,7 @@ def test_a_new_context_that_starts_as_the_last_one_did_is_not_taken_for_a_cut_pr
 
 
 def test_the_long_haul_wording_is_local_bares(tmp_path):
-    from engram.bench.claude import OPENER, SYSTEM
+    from camr_engine.bench.claude import OPENER, SYSTEM
 
     fake = FakeOllama()
     c = bare(fake, frame=longhaul_frame())
@@ -409,7 +409,7 @@ def test_the_long_haul_wording_is_local_bares(tmp_path):
     system, user = fake.chats()[-1]["messages"]
     # local bare: f"{BARE_SYSTEM}\n\n{OPENER}" + "".join(line + "\n\n") + "</history>"
     assert system["content"] == f"{SYSTEM}\n\n{OPENER}Day 1 · Monday 22 September 2025\n\nUser: hello\n\n</history>"
-    from engram.bench.local import HINTS
+    from camr_engine.bench.local import HINTS
 
     assert user["content"] == f"What did the user say?\n\n{HINTS['maths']}"
 
@@ -430,7 +430,7 @@ def test_a_long_question_takes_its_room_from_the_front_of_the_history(tmp_path):
 
 
 def test_each_family_gets_the_local_contenders_line_on_the_form_of_its_answer(tmp_path):
-    from engram.bench.local import HINTS
+    from camr_engine.bench.local import HINTS
 
     fake = FakeOllama()
     c = bare(fake)
@@ -493,8 +493,8 @@ def test_paired_remembers_what_was_told_and_the_proxy_puts_it_before_the_questio
 
 
 def test_paired_looks_notes_up_by_the_question_alone_and_reads_the_familys_line_last_in_its_system(tmp_path):
-    from engram.bench.local import HINTS
-    from engram.memory import today_text
+    from camr_engine.bench.local import HINTS
+    from camr_engine.memory import today_text
 
     fake = FakeOllama()
     c = paired(fake, frame=longhaul_frame(paired=True))
@@ -513,7 +513,7 @@ def test_paired_looks_notes_up_by_the_question_alone_and_reads_the_familys_line_
 
 
 def test_a_long_told_text_is_kept_whole(tmp_path):
-    from engram.pair.provider import PIECE_CHARS, TURN_PIECES
+    from camr_engine.pair.provider import PIECE_CHARS, TURN_PIECES
 
     fake = FakeOllama()
     c = paired(fake)
@@ -584,7 +584,7 @@ class Recorder(Contender):
         self.told.append((day, text))
 
     def ask(self, question, *, max_tokens, family=None):
-        from engram.bench.contender import metrics
+        from camr_engine.bench.contender import metrics
 
         self.asked.append((family, max_tokens))
         return Answer("I don't know.", metrics(ttft_s=0.1, history_tokens=len(self.told)))
@@ -596,7 +596,7 @@ class Recorder(Contender):
 def test_the_long_haul_runs_through_the_shared_runner_with_each_familys_room(tmp_path):
     from haul_shared import built
 
-    from engram.bench.haul import write
+    from camr_engine.bench.haul import write
 
     write(built(), tmp_path / "haul")
     c = Recorder()
@@ -619,7 +619,7 @@ def test_the_long_haul_runs_through_the_shared_runner_with_each_familys_room(tmp
 def test_bare_ollama_end_to_end_on_the_long_haul(tmp_path):
     from haul_shared import built
 
-    from engram.bench.haul import write
+    from camr_engine.bench.haul import write
 
     write(built(), tmp_path / "haul")
     fake = FakeOllama()
@@ -642,7 +642,7 @@ def test_bare_ollama_end_to_end_on_the_long_haul(tmp_path):
 def test_the_command_line_runs_against_the_ollama_it_is_given(tmp_path, capsys):
     from haul_shared import built
 
-    from engram.bench.haul import write
+    from camr_engine.bench.haul import write
 
     write(built(), tmp_path / "haul")
     fake = FakeOllama()

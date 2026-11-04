@@ -6,8 +6,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from engram.rooms import Rooms
-from engram.swap import RAM, SSD, VAULT, Pool, Tiers
+from camr_engine.rooms import Rooms
+from camr_engine.swap import RAM, SSD, VAULT, Pool, Tiers
 
 TB = 16  # bytes per token in these tests
 

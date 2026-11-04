@@ -1,6 +1,6 @@
 # Python library
 
-The engine is a Python package, `engram`. It is not on PyPI. Install it from the repository's `v2` folder:
+The engine is a Python package, `camr`. It is not on PyPI. Install it from the repository's `v2` folder:
 
 ```sh
 uv pip install --python .venv/bin/python -e .
@@ -17,7 +17,7 @@ copied from the code.
 ## The models
 
 ```python
-from engram.models import Embedder, Reader
+from camr_engine.models import Embedder, Reader
 
 reader = Reader()        # Qwen3-1.7B, 4-bit, through MLX
 embedder = Embedder()    # Qwen3-Embedding-0.6B, 4-bit, through MLX
@@ -41,17 +41,17 @@ same Mac. Different chips can differ slightly (DECISIONS.md, E-17). Answers stop
 
 ## A first memory
 
-This is the health check (`engram/app/__main__.py`), with a folder that lasts:
+This is the health check (`camr_engine/app/__main__.py`), with a folder that lasts:
 
 ```python
 import datetime as dt
 from pathlib import Path
 
-from engram.memory import Memory
-from engram.models import Embedder, Reader
+from camr_engine.memory import Memory
+from camr_engine.models import Embedder, Reader
 
 reader, embedder = Reader(), Embedder()
-m = Memory(reader, embedder, Path("~/.engram/mine").expanduser())
+m = Memory(reader, embedder, Path("~/.camr/mine").expanduser())
 m.remember("[2026-01-05] My sister Amina moved to Nakuru last week.", 0)
 m.remember("[2026-01-06] Paid the electricity bill.", 1)
 reply = m.answer("Where does my sister live?", dt.date(2026, 1, 7))
@@ -194,7 +194,7 @@ Session(reader, embedder, *, root: Path = ROOT, name: str | None = None, project
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `root` | `~/.engram` | where the reach folders live |
+| `root` | `~/.camr` | where the reach folders live |
 | `name` | a new id | the session's id, such as `20261104-021500-a1b2` |
 | `project`, `agent` | `None` | the names of those reaches; needed to read or write them |
 | `reads` | `("session", "global")` | the reaches read, in order of preference |
@@ -244,8 +244,8 @@ Session.answer(self, question: str, today: dt.date, **kw)
 ```python
 import datetime as dt
 
-from engram.models import Embedder, Reader
-from engram.reach import Session
+from camr_engine.models import Embedder, Reader
+from camr_engine.reach import Session
 
 reader, embedder = Reader(), Embedder()
 with Session(reader, embedder, project="kitchen", reads=("session", "project", "global"), core=True) as s:
@@ -259,11 +259,11 @@ with Session(reader, embedder, project="kitchen", reads=("session", "project", "
 
 ## Errands: one tool call from memory
 
-`engram.agent.act` gives an open `Memory` one task. It answers with the ten pretend tools (`engram.agent.TOOLS`,
+`camr_engine.agent.act` gives an open `Memory` one task. It answers with the ten pretend tools (`camr_engine.agent.TOOLS`,
 from `book_ride` to `ask_user`) and returns the call:
 
 ```python
-from engram.agent import act
+from camr_engine.agent import act
 
 tool, args, reply = act(m, "Book me a ride to my sister's home.", dt.date(2026, 1, 7))
 print(tool, args)   # the tool it called, and the arguments it filled from memory
@@ -273,10 +273,10 @@ print(tool, args)   # the tool it called, and the arguments it filled from memor
 act(memory, task_text: str, today, **log) -> tuple[str | None, dict, object]
 ```
 
-For your own tools, call `answer` with `then` and `tools`, and read the call with `engram.agent.parse`:
+For your own tools, call `answer` with `then` and `tools`, and read the call with `camr_engine.agent.parse`:
 
 ```python
-from engram.agent import parse
+from camr_engine.agent import parse
 
 reply = m.answer(task, today, then="Do this with exactly one tool call.", tools=my_tools, max_tokens=120)
 tool, args = parse("".join(reply.pieces))

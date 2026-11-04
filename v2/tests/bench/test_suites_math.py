@@ -9,8 +9,8 @@ import zipfile
 
 import pytest
 
-from engram.bench.suites import aime, harp, math500, mathcheck
-from engram.bench.suites.mathcheck import equivalent, extract
+from camr_engine.bench.suites import aime, harp, math500, mathcheck
+from camr_engine.bench.suites.mathcheck import equivalent, extract
 
 
 @pytest.fixture(autouse=True)
@@ -21,7 +21,7 @@ def offline(monkeypatch, tmp_path):
     def no(*a, **k):
         raise AssertionError("tests must not touch the network")
 
-    monkeypatch.setenv("ENGRAM_DATASETS", str(tmp_path / "data"))
+    monkeypatch.setenv("CAMR_DATASETS", str(tmp_path / "data"))
     monkeypatch.setattr(huggingface_hub, "hf_hub_download", no)
     monkeypatch.setattr(huggingface_hub.utils, "get_session", no)
 

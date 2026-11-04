@@ -1,6 +1,6 @@
 # Chapter 5: CAMR v2 additions (insertion blocks)
 
-> **How to use this file.** Each block is headed with the section of `Chapter5_CAMR.docx` it goes into. The v1 text stays as it is. Tables and figures are numbered "Table 5.v2-N" and "Figure 5.v2-N" so they can be renumbered. The Python package and the contender in the test records are called `engram`. That is an internal code name; the text calls the system CAMR v2. The sources are `DECISIONS.md` in the CAMR v2 repository (E-nn), the test records in `records/`, and `docs/FINDINGS.md` in the CAMR v1 repository (Fnn). The state described is CAMR v2 at commit `b651b7a` on 3 November 2026, with the uncommitted changes listed in the 5.5 block. Points to check before inserting are at the end.
+> **How to use this file.** Each block is headed with the section of `Chapter5_CAMR.docx` it goes into. The v1 text stays as it is. Tables and figures are numbered "Table 5.v2-N" and "Figure 5.v2-N" so they can be renumbered. The Python package and the contender in the test records are called `camr`. That is an internal code name; the text calls the system CAMR v2. The sources are `DECISIONS.md` in the CAMR v2 repository (E-nn), the test records in `records/`, and `docs/FINDINGS.md` in the CAMR v1 repository (Fnn). The state described is CAMR v2 at commit `b651b7a` on 3 November 2026, with the uncommitted changes listed in the 5.5 block. Points to check before inserting are at the end.
 
 ---
 
@@ -18,7 +18,7 @@ Table 5.v2-1: CAMR v2 environment and minimum requirements
 | First development machine | MacBook Air M4 (Mac16,12), 16 GB, fanless. About 800 tokens/s reading, 73–90 writing, SSD 3.4–5 GB/s | Step 0 baselines; design measurements E-14 to E-16 | `records/2026-11-02/`; E-17 |
 | Minimum to run | An Apple-silicon Mac (MLX needs one). M1 to M3 Macs and 8 GB Macs were not tested | The installer refuses other machines | `scripts/install.sh`; `docs/USER_GUIDE.md` |
 | Resources used | At most 1.83 GB of memory at week 12, as MLX's peak counter reports it (not resident memory); 930–984 MB of notes on the SSD per 84-day life; 1.3 GB of models | A 16 GB Mac keeps room to spare; notes take 114,688 bytes per token (Equation 4.4) | `peak_ram_gb` and `disk_mb` in the records |
-| Network | Downloads the models once; afterwards they load with `HF_HUB_OFFLINE=1` | Private, offline use (NFR-13) | `engram/app/__main__.py` |
+| Network | Downloads the models once; afterwards they load with `HF_HUB_OFFLINE=1` | Private, offline use (NFR-13) | `camr_engine/app/__main__.py` |
 | Specialised hardware | None dedicated. MLX uses the chip's integrated GPU | The reader's key–value cache is read and written inside the process | Table 4.9 |
 
 The 18 proof-life records and the speed bench were made on battery power, and the errand records on AC power (`environment.power`). The one-minute load when each proof run started was 1.4 to 5.7, with a median of 1.8 (E-20). Continuous integration runs on GitHub Actions `ubuntu-latest` without MLX (`.github/workflows/tests.yml`).
@@ -48,11 +48,11 @@ The first five versions come from each record's `environment` and `contender` fi
 5. It runs the health check.
 6. It opens the app at `http://127.0.0.1:8765`.
 
-The health check, `python -m engram.app --check`, loads both models (downloading them the first time) and teaches a throwaway memory two dated facts. It then asks "Where does my sister live?" and prints `PASS` only if the answer names Nakuru, with the time to the first word. On 3 November a fresh clone of the private repository (https://github.com/Satasdin/CAMR-v2) was installed with uv and passed: "First word after 115 ms … PASS" (Figure 5.v2-1).
+The health check, `python -m camr_engine.app --check`, loads both models (downloading them the first time) and teaches a throwaway memory two dated facts. It then asks "Where does my sister live?" and prints `PASS` only if the answer names Nakuru, with the time to the first word. On 3 November a fresh clone of the private repository (https://github.com/Satasdin/CAMR-v2) was installed with uv and passed: "First word after 115 ms … PASS" (Figure 5.v2-1).
 
 Figure 5.v2-1: The health check on a fresh clone (screenshot to add)
 
-The evaluation is re-run with `scripts/step1.sh` (every contender on the proof lives, then the speed bench) and `scripts/errands.sh`, with CAMR v1 installed beside CAMR v2 as a library. Every record names its machine, its library versions, its commit and `engram_source_sha`, a hash of the engine code (E-12). Three limits apply:
+The evaluation is re-run with `scripts/step1.sh` (every contender on the proof lives, then the speed bench) and `scripts/errands.sh`, with CAMR v1 installed beside CAMR v2 as a library. Every record names its machine, its library versions, its commit and `camr_source_sha`, a hash of the engine code (E-12). Three limits apply:
 1. The design and tuning measurements (E-14 to E-18, E-21) were run from `work/experiments/`, which `.gitignore` excludes.
 2. Answers differ slightly between chips: 158 facts on the Air and 164 on the Pro (E-17).
 3. No proof run was repeated on the same machine.
@@ -67,7 +67,7 @@ The evaluation is re-run with `scripts/step1.sh` (every contender on the proof l
 
 **In plain words.** A memory that grows over weeks cannot be tested on a public question set, so CAMR v2 was tested on three invented twelve-week lives, each of which knows its right answers on every day. One draw of each life was used to build the system; a second was held back for the final test.
 
-`engram/ruler/life.py` generates each life from a persona and a seed (E-05). There are three personas: a university student, a dairy-cooperative manager ("farmer" in file names) and a software developer. A life covers 84 days, from 5 January to 29 March 2026, including 10 quiet days. A quiz is held at the end of each week. The notes are deliberately messy: typos, Swahili asides, changed minds, relative dates, and Kenyan names and places. Time words are never misspelt, because a typo in "yesterday" made the date ambiguous (E-06). No personal data is used.
+`camr_engine/ruler/life.py` generates each life from a persona and a seed (E-05). There are three personas: a university student, a dairy-cooperative manager ("farmer" in file names) and a software developer. A life covers 84 days, from 5 January to 29 March 2026, including 10 quiet days. A quiz is held at the end of each week. The notes are deliberately messy: typos, Swahili asides, changed minds, relative dates, and Kenyan names and places. Time words are never misspelt, because a typo in "yesterday" made the date ambiguous (E-06). No personal data is used.
 
 Table 5.v2-3: The scripted lives
 
@@ -141,8 +141,8 @@ Table 5.v2-6: Contenders (code names in the records)
 | Perfect reader (`perfect`) | Every note so far pasted in | Reading everything |
 | CAMR v1, 1.7B (`camr`) | CAMR v1 as CAMR Personal shipped it, threshold 0.65 | Main baseline |
 | CAMR v1, 4B (`camr-4b`) | The same, on Qwen3-4B | A reader twice the size or more |
-| CAMR v2 (`engram`) | One room of notes plus four closest moments as words | The system |
-| CAMR v2 as words (`engram-words`) | The same desk read as words | Ablation (NFR-07) |
+| CAMR v2 (`camr`) | One room of notes plus four closest moments as words | The system |
+| CAMR v2 as words (`camr-words`) | The same desk read as words | Ablation (NFR-07) |
 | 27B, three ways | None; CAMR v1; CAMR v2's memory as words | Large comparison, in progress (E-26) |
 
 **What was chosen, and on what.** No weights were trained. The reader and embedder are frozen, and the trained translation layer was not built (E-22). The choices that were made, all on the development lives or in advance, are listed in Table 5.v2-7.
@@ -424,9 +424,9 @@ Table 5.v2-20: Room size and moments re-read, development lives, day 83 (knows, 
 2. **Uncommitted work.** Commit `tests/test_app_security.py`, the rooms fix (`work/rooms-recovery.patch`) with its test, and the `DECISIONS.md` edits. Then re-run `pytest`: T-v2-06 should pass, giving 52 of 52.
 3. **Health check.** "115 ms" is from the fresh-clone console and is in no file. Take the screenshot, and say whether `install.sh` itself or the uv steps were run.
 4. **Simulation.** The 1.78 GB figure was read off the tab. The verdicts and waits are in the gitignored `work/simulations/sim-farmer-s1/events.jsonl`, which the next simulation overwrites. Take the screenshot first.
-5. **Charts.** The SVG legends say "engram" and "old CAMR". Re-draw them with "CAMR v2" and "CAMR v1" (`engram/ruler/chart.py`) before inserting.
+5. **Charts.** The SVG legends say "camr" and "old CAMR". Re-draw them with "CAMR v2" and "CAMR v1" (`camr_engine/ruler/chart.py`) before inserting.
 6. **Reproducibility.** Consider committing `work/experiments/` (E-14 to E-18, E-21).
-7. **Computed counts.** The seed overlap, the per-kind table, the paired counts and the weekly means were computed for this chapter with read-only scripts over `engram/ruler/life.py` and the records. For example, the paired counts compare `verdict == "right"` per `qid` in `weeks[-1]` between the `engram` and `camr` records, over questions with an `expected` value.
+7. **Computed counts.** The seed overlap, the per-kind table, the paired counts and the weekly means were computed for this chapter with read-only scripts over `camr_engine/ruler/life.py` and the records. For example, the paired counts compare `verdict == "right"` per `qid` in `weeks[-1]` between the `camr` and `camr` records, over questions with an `expected` value.
 8. **27B.** Fill in Table 5.v2-19 and the `<!-- 27B -->` subsection when `scripts/big27b.sh` finishes, and add an E-26 result entry.
 9. **References.** E-15 and E-16 name APE and EPIC. This text describes the fixes without naming them; add references if they are named.
 10. **Section 4.2.3.** The LongMemEval loader has no requirement ID, so T-v2-11 traces to Section 4.2.3.

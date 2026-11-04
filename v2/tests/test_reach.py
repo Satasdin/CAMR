@@ -11,7 +11,7 @@ import time
 
 import pytest
 
-from engram.reach import KINDS, Reach, ReachBusy, opened
+from camr_engine.reach import KINDS, Reach, ReachBusy, opened
 
 
 def test_each_reach_is_its_own_folder_under_one_root(tmp_path):
@@ -41,9 +41,9 @@ def session(tmp_path, reader=None, embedder=None, **kw):
     pytest.importorskip("mlx")
     from test_core import FakeEmbedder, FakeReader
 
-    from engram.reach import Session
+    from camr_engine.reach import Session
 
-    settings = {"root": tmp_path / "engram", "name": "s1", "log": False, "room_tokens": 400, "join": 0.2, **kw}
+    settings = {"root": tmp_path / "camr", "name": "s1", "log": False, "room_tokens": 400, "join": 0.2, **kw}
     return Session(reader or FakeReader(), embedder or FakeEmbedder(), **settings)
 
 
@@ -53,8 +53,8 @@ def test_a_session_reads_its_own_reach_and_the_global_one_and_writes_to_its_own(
     s.remember("I asked for the invoice template today.", 0)
     s.remember("Amina moved to Nakuru.", 0, to="global")
     assert len(s.memory().rooms.moments) == 1 and len(s.memory("global").rooms.moments) == 1
-    assert (tmp_path / "engram" / "session" / "s1" / "vault").is_dir()
-    assert (tmp_path / "engram" / "global" / "vault" / "global-000000.md").exists()
+    assert (tmp_path / "camr" / "session" / "s1" / "vault").is_dir()
+    assert (tmp_path / "camr" / "global" / "vault" / "global-000000.md").exists()
     notebooks = {id(m.notebook) for m in s.memories.values()}
     assert len(notebooks) == 1  # the header is read once for every reach
 
@@ -147,9 +147,9 @@ def test_two_sessions_share_one_global_memory_and_never_cut_each_others_notes(tm
         "Amina adopted a dog called Simba.")
     s1.answer("What is the dog called?", TODAY)
     s1.close()
-    assert opened(tmp_path / "engram" / "global") is g  # still open: s2 reads it
+    assert opened(tmp_path / "camr" / "global") is g  # still open: s2 reads it
     s2.close()
-    assert opened(tmp_path / "engram" / "global") is None
+    assert opened(tmp_path / "camr" / "global") is None
     s3 = session(tmp_path, name="s3")
     again = s3.memory("global")
     assert [m.text for m in again.rooms.moments] == ["Amina moved to Nakuru.", "Amina adopted a dog called Simba.",
@@ -163,20 +163,20 @@ def test_two_sessions_share_one_global_memory_and_never_cut_each_others_notes(tm
 def test_a_shared_reach_is_saved_as_soon_as_a_moment_is_kept(tmp_path):
     s = session(tmp_path)
     s.remember("Amina moved to Nakuru.", 0, to="global")
-    saved = json.loads((tmp_path / "engram" / "global" / "index.json").read_text())
+    saved = json.loads((tmp_path / "camr" / "global" / "index.json").read_text())
     assert [m["text"] for m in saved["moments"]] == ["Amina moved to Nakuru."]
     s.close()
 
 
 def test_a_reach_open_in_another_process_is_refused_and_nothing_is_left_held(tmp_path):
-    folder = tmp_path / "engram" / "global"
+    folder = tmp_path / "camr" / "global"
     folder.mkdir(parents=True)
     fd = os.open(folder / ".lock", os.O_RDWR | os.O_CREAT)  # another open of the lock: as another process holds it
     fcntl.flock(fd, fcntl.LOCK_EX)
     try:
         with pytest.raises(ReachBusy):
             session(tmp_path)
-        assert opened(tmp_path / "engram" / "session" / "s1") is None  # the reach it did open was let go
+        assert opened(tmp_path / "camr" / "session" / "s1") is None  # the reach it did open was let go
     finally:
         os.close(fd)
     with session(tmp_path) as s:

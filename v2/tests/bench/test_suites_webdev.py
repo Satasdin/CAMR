@@ -7,9 +7,9 @@ import json
 
 import pytest
 
-from engram.bench import suites
-from engram.bench.suites import common, webdev
-from engram.bench.suites.__main__ import main
+from camr_engine.bench import suites
+from camr_engine.bench.suites import common, webdev
+from camr_engine.bench.suites.__main__ import main
 
 
 @pytest.fixture(autouse=True)
@@ -20,7 +20,7 @@ def offline(monkeypatch, tmp_path):
     def no(*a, **k):
         raise AssertionError("tests must not touch the network")
 
-    monkeypatch.setenv("ENGRAM_DATASETS", str(tmp_path / "data"))
+    monkeypatch.setenv("CAMR_DATASETS", str(tmp_path / "data"))
     monkeypatch.setattr(huggingface_hub, "hf_hub_download", no)
     monkeypatch.setattr(huggingface_hub.utils, "get_session", no)
 

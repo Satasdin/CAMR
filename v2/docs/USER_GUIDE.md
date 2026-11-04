@@ -25,7 +25,7 @@ Leave the Terminal window open while you use CAMR; press Ctrl+C there to stop it
 To start it again later:
 
 ```sh
-.venv/bin/python -m engram.app --open
+.venv/bin/python -m camr_engine.app --open
 ```
 
 ## The four tabs
@@ -54,9 +54,9 @@ questions** or **Give it 100 errands**. Each takes under a minute.
 
 ## Where things are kept
 
-- **Your memory:** `~/.engram/default` holds room files, an index, and `events.jsonl`, the log the Brain tab reads.
+- **Your memory:** `~/.camr/default` holds room files, an index, and `events.jsonl`, the log the Brain tab reads.
   Delete this folder to start with an empty memory.
-- **Simulations:** `~/.engram/simulations`, rebuilt each time a simulation starts.
+- **Simulations:** `~/.camr/simulations`, rebuilt each time a simulation starts.
 - **Models:** the Hugging Face cache, `~/.cache/huggingface`.
 
 ## If something goes wrong
@@ -64,13 +64,13 @@ questions** or **Give it 100 errands**. Each takes under a minute.
 | Problem | Fix |
 |---|---|
 | `CAMR needs an Apple-silicon Mac` | This Mac can't run it; MLX needs M1 or later. |
-| The health check says FAIL | Run it again with `.venv/bin/python -m engram.app --check`. If it keeps failing, the model download may be incomplete: delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
+| The health check says FAIL | Run it again with `.venv/bin/python -m camr_engine.app --check`. If it keeps failing, the model download may be incomplete: delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
 | The page shows "forbidden" | Reload it. The page gets a fresh key each time CAMR starts. |
-| Port 8765 is busy | Start it on another port: `.venv/bin/python -m engram.app --open --port 8790`. |
+| Port 8765 is busy | Start it on another port: `.venv/bin/python -m camr_engine.app --open --port 8790`. |
 
 ## For assessors: reproducing the measurements
 
-The evaluation code is under `engram/ruler`. Every run writes a test record to `records/`, naming the machine and
+The evaluation code is under `camr_engine/ruler`. Every run writes a test record to `records/`, naming the machine and
 the code that made it. `scripts/step1.sh` reruns every contender on the three held-out lives and `scripts/errands.sh`
 reruns the agent use case. Comparing against the first version of CAMR needs that repository too; the README says
 how. The test suite runs with `.venv/bin/python -m pytest` after `uv pip install -e ".[dev]"`.

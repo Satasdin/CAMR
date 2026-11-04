@@ -74,7 +74,7 @@ Table 6.v2-2: Recommendations from CAMR v2
 
 *Placement: after Table 6.4, as CAMR v2 directions.*
 
-Each direction extends CAMR v2 from a limitation in Chapter 5. Steps 3 to 6 of the plan were designed but not built (E-22; `docs/plan/engram-plan.html`).
+Each direction extends CAMR v2 from a limitation in Chapter 5. Steps 3 to 6 of the plan were designed but not built (E-22; `docs/plan/camr-plan.html`).
 
 Table 6.v2-3: Prioritised future works for CAMR v2
 

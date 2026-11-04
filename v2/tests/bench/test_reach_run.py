@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from engram.bench import reach_run
+from camr_engine.bench import reach_run
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # test_core's fakes
 

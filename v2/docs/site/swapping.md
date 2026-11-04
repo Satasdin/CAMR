@@ -89,19 +89,19 @@ for m in s.memories.values():
 ```python
 from pathlib import Path
 
-from engram.memory import Memory
-from engram.models import Embedder, Reader
-from engram.swap import Tiers
+from camr_engine.memory import Memory
+from camr_engine.models import Embedder, Reader
+from camr_engine.swap import Tiers
 
 reader, embedder = Reader(), Embedder()
-m = Memory(reader, embedder, Path("~/.engram/mine").expanduser(), vault=True, core=True,
+m = Memory(reader, embedder, Path("~/.camr/mine").expanduser(), vault=True, core=True,
            tiers=Tiers(ram_bytes=512 * 2**20, disk_bytes=2 * 2**30, wake=True), metrics=True)
 ```
 
 The same in a session:
 
 ```python
-from engram.reach import Session
+from camr_engine.reach import Session
 
 s = Session(reader, embedder, core=True, metrics=True,
             tiers={"ram_bytes": 512 * 2**20, "disk_bytes": 2 * 2**30, "wake": True})
