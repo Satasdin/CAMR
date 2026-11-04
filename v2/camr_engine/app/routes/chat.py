@@ -11,7 +11,11 @@
 - shelves (camr_engine.shelves): every chat reads the Projects, Coding, Research and Personal shelves too, and a
   remembered moment goes on the shelf the settings name (``{shelf}``: a shelf's name, or ``auto`` to file it by
   meaning); once a session opens, its model and the newest notes of every shelf are warmed (``GET /api/live?id=warm``);
-- ``POST /api/chat/message`` ``{text, intent, shelf}``: the same as ``POST /api/chat``, started at once and answered with
+- ``chat`` and ``research`` intents (camr_engine.assistant): the assistant keeps the conversation, answers from its
+  own knowledge, reaches into memory only when the model routes the question there, thinks aloud when asked to and
+  the model can, and with ``research`` reads a Wikipedia page first; what it answered (and its source) is kept on a
+  shelf, so it learns;
+- ``POST /api/chat/message`` ``{text, intent, shelf, thinking}``: the same as ``POST /api/chat``, started at once and answered with
   ``{id}``; ``GET /api/live?id=&from=N`` then gives the job's events as they happen (camr_engine.live): the room
   read, each word with every layer's activity, and the reply (``done``). The Mac app draws its weights view from
   these.
@@ -37,11 +41,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from camr_engine.app.web import Refused, Request, Routes, part
+from camr_engine.assistant import can_think
 from camr_engine.live import Live, current, probe, reporting
 from camr_engine.shelves import BY_NAME, SHELVES, Sorter, shelf_of, warm
 from camr_engine.shelves import reaches as shelf_reaches
 
-INTENTS = ("tell", "ask", "errand")
+INTENTS = ("tell", "ask", "errand", "chat", "research")
 DEFAULT_READS = ("session", "global")
 TURNS = 400  # turns kept for the thread
 TEXT_MAX = 4000  # characters in one message; a longer one is refused, never cut
@@ -241,7 +246,7 @@ class Talk:
 
         return self.worker.submit(within).result()
 
-    def start(self, text: str, intent: str | None = None, shelf: str | None = None) -> dict:
+    def start(self, text: str, intent: str | None = None, shelf: str | None = None, thinking: bool = False) -> dict:
         """``say`` on a thread of its own, reporting to a new Live: ``{id}`` names it for ``GET /api/live``."""
         import secrets
 
@@ -255,13 +260,14 @@ class Talk:
             with reporting(live):
                 live.add("start", text=" ".join(text.split()), intent=intent, on=self.on)
                 try:
-                    out = self.say(text, intent, shelf)
+                    out = self.say(text, intent, shelf, thinking)
                 except Refused as e:
                     live.finish(error=e.why, code=e.code)
                 except Exception as e:  # noqa: BLE001 (shown in the chat)
                     live.finish(error=f"{type(e).__name__}: {e}"[:300])
                 else:
                     live.finish(**{k: out.get(k) for k in ("intent", "on", "reply", "reach", "shelf", "sorted",
+                                                          "route", "thinking", "think", "source", "learned",
                                                           "wait_s", "metric", "kept", "room", "moment", "tokens",
                                                           "seconds")})
 
@@ -275,7 +281,7 @@ class Talk:
         day = self.app._day(today) if hasattr(self.app, "_day") else 0
         return today, day
 
-    def say(self, text: str, intent: str | None = None, shelf: str | None = None) -> dict:
+    def say(self, text: str, intent: str | None = None, shelf: str | None = None, thinking: bool = False) -> dict:
         text = " ".join(text.split())
         if not text:
             return {"reply": "", "intent": None}
@@ -284,15 +290,141 @@ class Talk:
             raise Refused(400, f"intent is one of {', '.join(INTENTS)}")
         _not_measuring()
         today, day = self._today()
-        step = {"tell": self._tell, "ask": self._ask, "errand": self._errand}[intent]
+        step = {"tell": self._tell, "ask": self._ask, "errand": self._errand}.get(intent)
         with self.lock:  # the session is taken under the lock: a settings change may have closed the one before
             session = self._open()
             t = time.perf_counter()
-            out = (self.run(step, session, text, today, day, shelf) if intent == "tell"
-                   else self.run(step, session, text, today, day))
+            if intent in ("chat", "research"):
+                out = self.run(self._chat, session, text, today, day, shelf, thinking, intent == "research")
+            elif intent == "tell":
+                out = self.run(step, session, text, today, day, shelf)
+            else:
+                out = self.run(step, session, text, today, day)
             out["seconds"] = round(time.perf_counter() - t, 4)
         self._keep({"who": "you", "text": text, "intent": intent, "at": _now()})
         self._keep({"who": "camr", **out, "at": _now()})
+        return out
+
+    def _chat(self, session, text: str, today: dt.date, day: int, shelf: str | None, thinking: bool,
+              web: bool) -> dict:
+        """The assistant: routed to memory or not by the model, the conversation read, thinking when asked and the
+        model can, a Wikipedia page read first for research; then the exchange kept on a shelf."""
+        from camr_engine.assistant import (ANSWER_TOKENS, MEMORY_RULES, SYSTEM, THINK_TOKENS, WEB_RULES, can_think,
+                                           chat_ids, history_lines, research, route, split_thinking)
+        from camr_engine.memory import Recall
+        from camr_engine.metrics import measure
+
+        live = current()
+        reader = session.reader
+        think = bool(thinking) and can_think(getattr(reader, "repo", None))
+        source, system, way = None, SYSTEM, "general"
+        t = time.perf_counter()
+        if web:
+            way = "web"
+            if live is not None:
+                live.add("route", route="web")
+            try:
+                source = research(text)
+            except OSError as e:  # offline, or the site did not answer
+                source = None
+                if live is not None:
+                    live.add("source", error=f"{type(e).__name__}: {e}"[:200])
+            if source is not None:
+                system = f"{SYSTEM}\n\n{WEB_RULES}\n\nSource: {source['title']} ({source['url']})\n{source['text']}"
+                if live is not None:
+                    live.add("source", title=source["title"], url=source["url"], chars=len(source["text"]))
+            else:
+                system = f"{SYSTEM}\n\nNo source was found online for this question: say so, then answer if you can."
+        elif session.on:
+            way = route(reader, text, self.turns)
+            if live is not None:
+                live.add("route", route=way)
+        if way == "memory":
+            said = "\n".join(f"{m['role']}: {m['content'][:400]}" for m in history_lines(self.turns, 4))
+            then = MEMORY_RULES + (f"\n\nThe conversation so far:\n{said}" if said else "")
+            reply = session.answer(text, today, then=then, max_tokens=ANSWER_TOKENS, day=day)
+            out = self._reply("chat", session, reply, ("answer",))
+        else:
+            ids = chat_ids(reader, system, self.turns, text, thinking=think)
+            reply = reader.generate(ids, max_tokens=THINK_TOKENS if think else ANSWER_TOKENS)
+            reply.metrics = session.meter.add(measure(text, reply, Recall(None, [], 0, 0),
+                                                      total_s=time.perf_counter() - t, first_s=reply.ttft_s,
+                                                      new_tokens=len(ids), history_tokens=0, disk_bytes=0, reach=None))
+            out = {"intent": "chat", "on": session.on, "wait_s": round(float(reply.ttft_s), 4),
+                   "metric": reply.metrics.to_dict() if hasattr(reply.metrics, "to_dict") else None}
+        thought, answer = split_thinking(reply.text)
+        out.update(intent="chat", route=way, reply=answer, thinking=thought, think=think,
+                   source={"title": source["title"], "url": source["url"]} if source else None)
+        if session.on and way != "memory":  # it learns: what it was asked and answered (and its source) is kept
+            out["learned"] = self._learn(session, text, answer, today, day, source, "research" if web else shelf)
+        return out
+
+    def _learn(self, session, question: str, answer: str, today: dt.date, day: int, source: dict | None,
+               shelf: str | None) -> dict | None:
+        """Keep an exchange on a shelf (the one named, else the one it is closest to), or in the session's own
+        reach when shelves are off."""
+        text = f"[{today.isoformat()}] Asked: {question}\nAnswered: {answer[:800]}"
+        if source is not None:
+            text += f"\nSource: {source['title']} ({source['url']})"
+        target = shelf or self.shelf
+        if target == "auto":
+            if self.sorter is None:
+                self.sorter = Sorter(session.embedder)
+            target = self.sorter.sort(f"{question} {answer[:300]}").name
+        reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
+        m = session.remember(text, day, date=today, to=reach)
+        if m is None:
+            return None
+        session.memory(reach).save()
+        on = shelf_of(reach.label)
+        return {"reach": reach.label, "shelf": on.name if on else None, "moment": m.mid}
+
+    def attach(self, path: str, shelf: str | None = None) -> dict:
+        """Read a file into memory: a PDF page by page (camr_engine.media), a text or Markdown file in pieces. An
+        image or a video needs a model that can see, which this chat's text model cannot: it is refused, saying so."""
+        from camr_engine import media
+
+        f = Path(path).expanduser()
+        if not f.is_file():
+            raise Refused(404, "no such file")
+        kind = f.suffix.lower()
+        if kind in (".png", ".jpg", ".jpeg", ".webp", ".heic", ".mp4", ".mov", ".m4v"):
+            raise Refused(409, f"{f.name} needs a model that can see; {getattr(self.app.reader, 'repo', 'this model')} "
+                               "reads text only. PDFs, text and Markdown files can be read.")
+        if kind not in (".pdf", ".txt", ".md", ".markdown"):
+            raise Refused(415, "a PDF, text or Markdown file")
+        _not_measuring()
+        today, day = self._today()
+        with self.lock:
+            session = self._open()
+            if not session.on:
+                raise Refused(409, "memory is off: switch it on to keep a file")
+
+            def read():
+                target = shelf or self.shelf
+                if target == "auto":
+                    if self.sorter is None:
+                        self.sorter = Sorter(session.embedder)
+                    head = f.read_text(errors="ignore")[:1500] if kind != ".pdf" else f.name
+                    target = self.sorter.sort(f"{f.stem} {head}").name
+                reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
+                m = session.memory(reach)
+                if kind == ".pdf":
+                    kept = media.ingest(f, m, day=day, date=today, stamp=lambda t: f"[{today.isoformat()}] {t}")
+                else:
+                    words = f.read_text(errors="ignore").split()
+                    kept = []
+                    for i in range(0, len(words), 300):  # pieces of about a paragraph
+                        text = f"[{today.isoformat()}] From {f.name}: " + " ".join(words[i:i + 300])
+                        m.remember(text, day, date=today, tags=["file", "text"])
+                        kept.append(text)
+                m.save()
+                on = shelf_of(reach.label)
+                return {"file": f.name, "moments": len(kept), "reach": reach.label, "shelf": on.name if on else None}
+
+            out = self.run(read)
+        self._keep({"who": "you", "text": f"(attached {f.name})", "intent": "attach", "at": _now()})
+        self._keep({"who": "camr", "reply": f"Read {f.name}: {out['moments']} pieces kept.", **out, "at": _now()})
         return out
 
     def _tell(self, session, text: str, today: dt.date, day: int, shelf: str | None = None) -> dict:
@@ -412,7 +544,8 @@ class Talk:
                 "on": self.on, "session": self.name, "reads": list(self.reads), "writes": self.writes,
                 "project": self.project, "agent": self.agent, "reaches": reaches,
                 "projects": self._names("project"), "agents": self._names("agent"),
-                "model": {"repo": getattr(reader, "repo", None), "window": _window(reader)}, "picked": picked,
+                "model": {"repo": getattr(reader, "repo", None), "window": _window(reader),
+                          "thinks": can_think(getattr(reader, "repo", None))}, "picked": picked,
                 "history_tokens": history, "last": last, "busy": self.lock.locked()}
 
     def can(self) -> bool:
@@ -567,7 +700,17 @@ def register(routes: Routes) -> None:
         shelf = req.str("shelf", limit=20) or None
         if shelf is not None and shelf != "auto" and shelf not in BY_NAME:
             raise Refused(400, f"a shelf is auto or one of {', '.join(BY_NAME)}")
-        return t.start(text, req.str("intent", limit=10) or None, shelf)
+        return t.start(text, req.str("intent", limit=10) or None, shelf, req.bool("thinking"))
+
+    @routes.post("/api/chat/attach")
+    def attach(req: Request) -> dict:
+        t = talk(req.app)
+        if t is None:
+            raise Refused(409, "this app has no memory to keep a file in")
+        shelf = req.str("shelf", limit=20) or None
+        if shelf is not None and shelf != "auto" and shelf not in BY_NAME:
+            raise Refused(400, f"a shelf is auto or one of {', '.join(BY_NAME)}")
+        return t.attach(req.str("path", limit=1024), shelf)
 
     @routes.get("/api/live")
     def live(req: Request) -> dict:

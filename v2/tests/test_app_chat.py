@@ -431,3 +431,70 @@ def test_shelves_keep_kinds_of_work_apart_and_a_question_reads_them_all(chat, tm
     assert any(e["kind"] == "warmed" for e in warm["events"])
     call("/api/chat/settings", {"shelf": None})
     assert "project:coding" not in [r.label for r in app.session.reaches]  # shelves off: only the reaches picked
+
+
+def test_the_assistant_routes_thinks_researches_and_learns(tmp_path, looks, monkeypatch):
+    from test_core import FakeReader
+
+    from camr_engine import assistant
+    from camr_engine.models import Reply
+
+    class Thinker(FakeReader):
+        repo = "mlx-community/Qwen3-8B-4bit"  # a thinking build
+        way = "GENERAL"
+
+        def generate(self, ids, cache=None, max_tokens=None):
+            if max_tokens == 3:  # the router
+                return Reply(self.way, 0.001, 100.0, len(ids), 1, [self.way])
+            text = "<think>56 lies between 49 and 64.</think>About 7.483."
+            return Reply(text, 0.001, 100.0, len(ids), 9, [text])
+
+    monkeypatch.setattr(assistant, "research", lambda q: {"title": "Square root", "url": "https://en.wikipedia.org/"
+                                                          "wiki/Square_root", "text": "A square root of x is..."})
+    app = TalkApp(tmp_path / "camr", reader=Thinker())
+    call, httpd = serve(app)
+    try:
+        call("/api/chat/state")
+        call("/api/chat/settings", {"shelf": "auto"})
+        got = call("/api/chat", {"text": "What is the square root of 56?", "intent": "chat"})[1]
+        assert got["route"] == "general" and got["reply"] == "About 7.483."
+        assert got["learned"]["reach"].startswith(("project:", "global"))
+        job = call("/api/chat/message", {"text": "Show me step by step", "intent": "chat", "thinking": True})[1]
+        import time
+
+        for _ in range(200):
+            live = call(f"/api/live?id={job['id']}")[1]
+            if live["done"]:
+                break
+            time.sleep(0.02)
+        done = live["events"][-1]
+        assert done["thinking"] == "56 lies between 49 and 64." and done["think"] and done["route"] == "general"
+        assert any(e["kind"] == "route" for e in live["events"])
+        app.reader.way = "MEMORY"
+        call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})
+        got = call("/api/chat", {"text": "Where did Amina move?", "intent": "chat"})[1]
+        assert got["route"] == "memory" and "learned" not in got  # memory's own answer is not kept again
+        got = call("/api/chat", {"text": "square root", "intent": "research"})[1]
+        assert got["route"] == "web" and got["source"]["title"] == "Square root"
+        assert got["learned"]["shelf"] == "research"
+        call("/api/chat/settings", {"on": False})
+        got = call("/api/chat", {"text": "Where did Amina move?", "intent": "chat"})[1]
+        assert got["route"] == "general" and "learned" not in got  # memory off: nothing read, nothing kept
+    finally:
+        httpd.shutdown()
+        app.talk.close()
+
+
+def test_a_text_file_is_read_onto_a_shelf_and_an_image_is_refused_by_a_text_model(chat, tmp_path):
+    app, call = chat
+    call("/api/chat/state")
+    call("/api/chat/settings", {"shelf": "research"})
+    notes = tmp_path / "reading.md"
+    notes.write_text("Attention lets each token weigh every earlier token. " * 80)
+    got = call("/api/chat/attach", {"path": str(notes)})[1]
+    assert got["file"] == "reading.md" and got["moments"] >= 2 and got["shelf"] == "research"
+    photo = tmp_path / "receipt.png"
+    photo.write_bytes(b"\x89PNG")
+    status, why = call("/api/chat/attach", {"path": str(photo)})
+    assert status == 409 and "can see" in why["error"]
+    assert call("/api/chat/attach", {"path": str(tmp_path / "nope.pdf")})[0] == 404
