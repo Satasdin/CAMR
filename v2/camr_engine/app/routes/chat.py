@@ -355,6 +355,9 @@ class Talk:
         if way == "memory":
             said = "\n".join(f"{m['role']}: {m['content'][:400]}" for m in history_lines(self.turns, 4))
             then = MEMORY_RULES + (f"\n\nThe conversation so far:\n{said}" if said else "")
+            near = self._near(session, text)
+            if near:  # a close second on another shelf is read too, as words: a near tie never hides the right note
+                then += "\n\nAlso from memory:\n" + "\n".join(f"- {t[:700]}" for t in near)
             reply = session.answer(text, today, then=then, max_tokens=ANSWER_TOKENS, day=day)
             out = self._reply("chat", session, reply, ("answer",))
         else:
@@ -380,6 +383,21 @@ class Talk:
             out["learned"] = self._learn(session, text, answer, today, day, source, "research" if web else shelf)
         return out
 
+    def _near(self, session, text: str, spread: float = 0.12, most: int = 3) -> list[str]:
+        """The closest moment of each memory the session reads, kept when within ``spread`` of the best of them."""
+        import numpy as np
+
+        vec = np.asarray(session.embedder.encode_one(text, is_query=True), dtype=np.float32)
+        best = []
+        for m in session.memories.values():
+            v = m.rooms.vectors
+            if v.size and m.rooms.moments:
+                sims = v @ vec
+                i = int(np.argmax(sims))
+                best.append((float(sims[i]), m.rooms.moments[i].text))
+        best.sort(key=lambda x: -x[0])
+        return [t for s_, t in best[:most] if best and s_ >= best[0][0] - spread]
+
     def _learn(self, session, question: str, answer: str, today: dt.date, day: int, source: dict | None,
                shelf: str | None) -> dict | None:
         """Keep an exchange on a shelf (the one named, else the one it is closest to), or in the session's own
@@ -392,7 +410,9 @@ class Talk:
         if target == "auto":
             if self.sorter is None:
                 self.sorter = Sorter(session.embedder)
-            target = self.sorter.sort(f"{question} {answer[:300]}").name
+            target = self.sorter.sort(question).name
+            if target in ("coding", "projects") and not _about_work(question):
+                target = "research"  # general knowledge the model answered goes on Research
         reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
         m, rv = self._keep_moment(session, reach, text, day, today, "web" if source is not None else "user")
         on = shelf_of(reach.label)
@@ -678,6 +698,13 @@ def _size(memory, folder: Path | None) -> dict:
            "history_tokens": tokens, "exists": True}
     _SIZES[key] = (time.monotonic(), out)
     return out
+
+
+def _about_work(question: str) -> bool:
+    """Whether a question names the user's own work (my, our, we, I), so an answer to it stays on that shelf."""
+    import re
+
+    return bool(re.search(r"\b(my|our|we|i|us|mine|ours)\b", question.lower()))
 
 
 def _now() -> str:
