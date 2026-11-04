@@ -160,6 +160,25 @@ hurts (20 against 39): its 512 tokens of notes miss "where is X now", which need
 
 Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/records/bench/claude-ledger.jsonl`.
 
+## Multimodal memory (PDFs, photos, charts, videos)
+
+21 files of Mama Njeri's Kitchen (29 planted facts, 8 never-said questions) were told among 99K tokens of the Long
+Haul, then asked about after more than 40K tokens of other work (`v2/camr_engine/bench/media_run.py`, E-45).
+
+| Right of 37 | Seed 1 | Seed 2 | First word |
+|---|---|---|---|
+| **Qwen3 4B + engine**, reading the vision model's words | **37** | **35** | 0.34 s |
+| Qwen2.5-VL-3B, the file in its prompt (the upper bound) | 34 | 33 | 1.23 s |
+| Ollama qwen2.5vl:3b + pairing (memory as words) | 34 | 33 | 0.22 s |
+| Qwen2.5-VL-3B + engine | 33 | 31 | 0.21 s |
+| Qwen3 4B bare (newest 64K) | 17 | 18 | 0.32 s |
+| Qwen2.5-VL-3B bare (newest 32K) | 0 | 2 | 0.14 s |
+
+- With the engine, the vision model recalls every planted fact (29 of 29), as many as with the file in its prompt.
+- Its misses are never-said look-alikes, which it also gets wrong with the file in front of it; the 4B declines them.
+- `camr_engine.media.ingest(path, memory, describe=..., day=...)` is what the app calls: it copies the file into the
+  vault and remembers each page or frame.
+
 ## What I found that you should know
 
 1. **The 1.7B's wording, not its memory, sank its recall at 1M and 2M** (E-37).
@@ -194,7 +213,8 @@ Claude spend for the night: $28.71 of the $60 cap, logged per call in `v2/record
 - **The engine is not run on the Hugging Face suites.** `suite_run` takes Claude and Ollama only; the engine needs
   a suite wording.
 - **LongMemEval, MemoryAgentBench and Web-Bench** have loaders but no runs.
-- **Running now:** the multimodal memory benchmark (PDFs, images, charts, short videos).
+- **Multimodal:** no real photographs, audio, or videos past 12 s. Gemma 3 ran only through Ollama. The 4B ran
+  with a 4 GB disk budget (most rooms asleep) because the disk was nearly full (E-46).
 - **The thesis document:** being assembled at `docs/thesis/CAMR_Thesis.docx`, chapters 1–6.
 - **4M:** rerun on power with the cache cap: 29 of 73 at 3M and at 4M.
 

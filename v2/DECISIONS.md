@@ -539,3 +539,52 @@ tags=())`.
   than 0.13.5. Ollama was not upgraded under a running queue, so (e) is the one Ollama vision model.
 - **Packages:** mlx-vlm 0.7.12, pypdf, reportlab, matplotlib and imageio-ffmpeg went into the venv. Of what was there,
   only fsspec moved (2026.9.0 to 2026.7.0). mlx, mlx-lm and transformers are as they were.
+
+**E-45 Multimodal memory, measured: with the engine, the files are as good as in the prompt.**
+`camr_engine.bench.media_run` tells 21 files (5 PDFs, 8 photos, 5 charts, 3 videos; 29 planted facts and 8
+never-said questions) among 99K tokens of the Long Haul's events, all told by 60K, then asks.
+- **Seed 1, right of 37:**
+  - `engine:qwen3-4b` reading Qwen2.5-VL-3B's words: 37;
+  - the same, reading gemma3:4b's words: 36;
+  - `file:qwen2.5-vl-3b` (the file in the prompt): 34;
+  - `ollama:qwen2.5vl:3b` paired: 34;
+  - `engine:qwen2.5-vl-3b`: 33;
+  - its rooms asleep: 33;
+  - with `+look`: 32;
+  - `ollama:gemma3:4b` paired: 28;
+  - `bare:qwen3-4b` (64K): 17;
+  - Ollama bare: 5 and 5;
+  - `bare:qwen2.5-vl-3b` (32K): 0.
+- **Seed 2:** 35, 33, 33, 31, 18, 2 and 2 in the same order (4B engine, file, Ollama paired, VL engine, bare 4B,
+  bare VL, Ollama bare).
+- **Facts:** the VL engine got all 29 planted facts (seed 2: 27), the same as with the file in the prompt (29, 29).
+  Every miss of the VL model is a never-said look-alike (another supplier's total, the other branch's meeting time),
+  with or without the engine. The 4B declined all 16 never-said questions over the two seeds.
+- **Notes or words:** the VL engine with a 0.5 GB disk budget (every room asleep, read as words) scored the same 33
+  with the same misses. So the 4B's lead comes from the model, not from the notes. It was run with a 4 GB budget,
+  since its notes would take 16 GB and the disk had 13–17 GB free; 36 of its 37 answers read asleep rooms as words.
+- **Look:** showing the image again changed no fact (all were right from the words), lost one never-said question
+  and took the first word from 0.21 to 0.80 s. It stays in `media.look` for the app, and off by default.
+- **Cost of a file:** describing the 21 files took 75 s (MLX) and 65 s (Ollama); 29 moments, 3.7K tokens.
+  Ingest ran at about 1,250 tokens a second for the 3B and 1,000 for the 4B. The VL engine's memory was 4.4 GB on
+  disk (36 KB a token), in a 5.1 GB process.
+
+**E-46 What the night changed in the multimodal run, and what it did not measure.**
+- **Qwen2.5-VL's vision tower runs in bfloat16.** In float16 it overflowed on two of the eight photos (the meeting
+  and fumigation notices), and every word came out "!". It did so at every size tried (768 to 1,280 px) and was
+  fixed by bfloat16, which changes nothing else. `media` now drops such words instead of keeping them. The first
+  description (with "!!!!") was thrown away, and every record comes from the second.
+- **A concurrent edit of `Reader` dropped the line that lets a vision checkpoint's language half read notes.** It is
+  back (7798cc9). The two runs it broke left records that failed at opening; they were deleted, not committed.
+- **Disk:** 516 GB of old memories sit in `work/memories` (not this run's, left for Ibrahim). Each media run's memory
+  is deleted once its record is written (`run --keep` keeps it). Free space stayed above 8 GB.
+- **Ollama:** it was updated to 0.40.14 during the night (not by this run), which made `gemma3:4b` pullable. It was
+  pulled, run, then removed to keep the disk margin. The MLX gemma-3-4b download is incomplete and was not used.
+- **Not measured:**
+  - gemma 3 as an MLX reader or describer;
+  - the 4B with every room awake (no disk for it);
+  - a third seed;
+  - real photographs (the photos are rendered: turned, blurred and grainy, but not taken with a camera);
+  - audio;
+  - videos longer than 12 s.
+  The bare Ollama runs' first word is not reported, since Ollama read the whole window again for every question.

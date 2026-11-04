@@ -1419,6 +1419,85 @@ answers read their room as words, and read nothing from the SSD.
 The records are under `records/bench/`. Each names the machine, how busy it was (`load_1m`), and the code that made
 it (`camr_source_sha`).
 
+## Multimodal memory
+
+Can the memory keep what was in a file: a PDF, a photo, a chart, a short video? `camr_engine.bench.media_run`
+tells 21 files from Mama Njeri's Kitchen among the Long Haul's own events, then asks about them after more than 40K
+tokens of other work.
+
+| Kind | Files | Questions |
+| --- | --- | --- |
+| PDF | 3 invoices, a catering menu of 3 pages, a delivery schedule | 8: totals, a unit price, per-guest prices, a time |
+| Image | 4 photographed receipts, 4 photographed notices (turned, blurred, grainy) | 9: totals, an M-Pesa code, times, a day, a password |
+| Chart | 5 charts: bars, a line, a pie | 6: a bar's value, a point's value, a slice's share, the top bar |
+| Video | 3 whiteboard videos of 12 s, three boards each | 6: prices, times and counts on the middle and last boards |
+| Never said | | 8: the same kinds of thing, but no file says them (a supplier who sent nothing, a branch the chart leaves out) |
+
+- **The history:** 102.6K tokens. That is 99K tokens of Long Haul events (seed 1, without the events that plant the
+  Long Haul's own facts), with the files told among them between 4K and 60K tokens.
+- **Grading:** by the Long Haul's rules (a never-said question is right when declined).
+- **How a file is told:** `camr_engine.media` reads it into words once per vision model: a PDF page's text, an image's
+  caption and the text written in it, a video's frames every 2 s with their times. 21 files make 29 moments.
+  Qwen2.5-VL-3B (MLX) read them in 75 s, Ollama's qwen2.5vl:3b in 65 s, gemma3:4b in 85 s.
+- **With memory on:** the engine ingests each file as the app would. The file is copied into the vault, and its
+  moments are remembered with their page or frame.
+- **Without memory:** the file's words are one line of the history.
+
+```sh
+.venv/bin/python -m camr_engine.bench.media_run build --seed 1 --haul ../work/haul/s1 --out ../work/media/s1
+.venv/bin/python -m camr_engine.bench.media_run describe --describer mlx:qwen2.5-vl-3b
+.venv/bin/python -m camr_engine.bench.media_run run --contender engine:qwen2.5-vl-3b --contender file:qwen2.5-vl-3b
+```
+
+Right answers, seed 1 (records in `records/bench/2026-11-04/` and `2026-11-05/`):
+
+| Contender | PDF (8) | Image (9) | Chart (6) | Video (6) | Never said (8) | Right (37) | First word p50 | RAM | Disk |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `engine:qwen3-4b`, reading Qwen2.5-VL's words (d) | 8 | 9 | 6 | 6 | 8 | **37** | 0.34 s | 7.3 GB | 3.8 GB |
+| `engine:qwen3-4b`, reading gemma3:4b's words | 8 | 8 | 6 | 6 | 8 | **36** | 0.31 s | 6.2 GB | 3.8 GB |
+| `file:qwen2.5-vl-3b`, the file in the prompt (c) | 8 | 9 | 6 | 6 | 5 | 34 | 1.23 s | 4.4 GB | none |
+| `ollama:qwen2.5vl:3b`, paired: memory as words (e) | 8 | 9 | 6 | 6 | 5 | 34 | 0.22 s | 1.1 GB Ollama + 1.9 GB | 5 MB |
+| `engine:qwen2.5-vl-3b` (a) | 8 | 9 | 6 | 6 | 4 | 33 | 0.21 s | 5.1 GB | 4.4 GB |
+| `engine:qwen2.5-vl-3b`, its rooms asleep (read as words) | 8 | 9 | 6 | 6 | 4 | 33 | 0.24 s | 3.3 GB | 0.5 GB |
+| `engine:qwen2.5-vl-3b+look`, the image shown again | 8 | 9 | 6 | 6 | 3 | 32 | 0.80 s | 8.7 GB | 4.4 GB |
+| `ollama:gemma3:4b`, paired | 8 | 7 | 6 | 5 | 2 | 28 | 0.36 s | 2.5 GB Ollama + 1.9 GB | 5 MB |
+| `bare:qwen3-4b`, the newest 64K tokens | 1 | 5 | 3 | 1 | 7 | 17 | 0.32 s | 12.4 GB | none |
+| `ollama-bare:qwen2.5vl:3b`, the newest 32K | 0 | 0 | 0 | 0 | 5 | 5 | | 2.4 GB Ollama | none |
+| `ollama-bare:gemma3:4b`, the newest 32K | 0 | 0 | 0 | 1 | 4 | 5 | | 2.9 GB Ollama | none |
+| `bare:qwen2.5-vl-3b`, the newest 32K (b) | 0 | 0 | 0 | 0 | 0 | 0 | 0.14 s | 6.3 GB | none |
+
+Seed 2 (other files, other facts, the Long Haul of seed 2):
+
+| Contender | PDF | Image | Chart | Video | Never said | Right (37) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `engine:qwen3-4b` (d) | 8 | 8 | 6 | 5 | 8 | **35** |
+| `file:qwen2.5-vl-3b` (c) | 8 | 9 | 6 | 6 | 4 | 33 |
+| `ollama:qwen2.5vl:3b` (e) | 7 | 8 | 6 | 6 | 6 | 33 |
+| `engine:qwen2.5-vl-3b` (a) | 8 | 8 | 6 | 5 | 4 | 31 |
+| `bare:qwen3-4b` | 1 | 5 | 1 | 4 | 7 | 18 |
+| `bare:qwen2.5-vl-3b` (b) | 0 | 1 | 0 | 0 | 1 | 2 |
+| `ollama-bare:qwen2.5vl:3b` | 0 | 0 | 0 | 1 | 1 | 2 |
+
+What it shows:
+- **With the memory, the files are as good as in the prompt.** The vision model with the engine got all 29 planted
+  facts on seed 1 (27 on seed 2). With the file put in front of each question it got 29 (29). Without memory it got
+  none (1 on seed 2), because the files were long gone from its window.
+- **The misses are never-said look-alikes.** Asked about a supplier who sent no invoice, the 3B gives another
+  supplier's total, and asked about another branch's meeting, it gives this one's time. It does this even with the
+  file in its prompt (5 of 8, then 4 of 8). The text-only 4B declined all 8, both seeds.
+- **The model matters more than notes against words.** With its rooms asleep and read as words, the 3B got the same
+  33, with the same four misses. The 4B was run with a 4 GB disk budget, since its notes would take 16 GB and the
+  disk was nearly full, so 36 of its 37 answers read asleep rooms as words.
+- **Words made once serve any reader.** The 4B never saw an image, only the words a vision model wrote, and it scored
+  the best on both seeds. Gemma's words served it almost as well (36).
+- **Showing the image again did not help.** Every fact was already right from the words. Looking again cost a never-said
+  question and took the first word from 0.21 s to 0.80 s.
+- **Bare 4B:** its 64K window still held 9 of the 21 files (the last nine told), so it got 10 facts.
+- **The Ollama bare runs** read their whole window again for every question, so by the runner's rule their first
+  word is not reported. Ollama was 0.40.14 for every Ollama run (it was updated during the night, which also made
+  gemma3:4b pullable).
+- **By rule:** "Six" for 6 is graded wrong (seed 2's 3B engine), as the Long Haul grades numbers.
+
 ## Rules for measuring
 
 - One measuring job at a time. The GPU runs one model, and anything else running skews the times.
