@@ -15,7 +15,9 @@ struct CAMRApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
-            CommandGroup(replacing: .newItem) {}
+            CommandGroup(replacing: .newItem) {
+                Button("New Chat") { Task { await world.chat.newChat() } }.keyboardShortcut("n", modifiers: .command)
+            }
             CommandMenu("View") {
                 Button(world.expanded ? "Weights in the Sidebar" : "Weights Large") { world.expanded.toggle() }
                     .keyboardShortcut("e", modifiers: [.command])

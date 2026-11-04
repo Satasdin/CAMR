@@ -31,6 +31,7 @@ final class ChatModel: ObservableObject {
     @Published var shelves: [ShelfInfo] = []
     @Published var thinks = false  // the model is a thinking build
     @Published var reasoning = true  // let a thinking model think aloud
+    private var job: String?  // the answer being written now, for Stop
 
     let engine: Engine
     let weights: WeightsModel
@@ -101,6 +102,8 @@ final class ChatModel: ObservableObject {
             let job = try await engine.post("/api/chat/message", ["text": text, "intent": intent, "shelf": shelf,
                                                                  "thinking": thinks && reasoning])
             guard let id = job.str("id") else { throw Engine.Failure(message: "no job id") }
+            self.job = id
+            defer { self.job = nil }
             var next = 0
             var done = false
             while !done {
@@ -119,12 +122,34 @@ final class ChatModel: ObservableObject {
         await refresh()
     }
 
-    /// A PDF, text or Markdown file read onto a shelf; a model that cannot see refuses an image, saying so.
+    /// Stop the answer being written: the model ends at its next word.
+    func stop() async {
+        guard let id = job else { return }
+        _ = try? await engine.post("/api/live/stop", ["id": id])
+    }
+
+    /// A new conversation: the turns start again; memory keeps all it learned.
+    func newChat() async {
+        guard !busy else { return }
+        turns = []
+        _ = try? await engine.post("/api/chat/new", [:])
+    }
+
+    func ask(_ text: String, _ mode: Mode = .ask) async {
+        draft = text
+        await send(mode)
+    }
+
+    /// A PDF, image, video, text or Markdown file read onto a shelf.
     func attach() {
         let p = NSOpenPanel()
         p.allowsMultipleSelection = false
         p.prompt = "Read into memory"
         guard p.runModal() == .OK, let url = p.url else { return }
+        attach(url)
+    }
+
+    func attach(_ url: URL) {
         Task {
             turns.append(Turn(who: .you, text: url.lastPathComponent, meta: "attached"))
             turns.append(Turn(who: .camr, text: "Reading \(url.lastPathComponent)…", pending: true))
@@ -247,15 +272,41 @@ struct ChatView: View {
             composer
         }
         .background(Theme.ink)
+        .dropDestination(for: URL.self) { urls, _ in  // drop a file to read it into memory
+            urls.prefix(4).forEach { chat.attach($0) }
+            return !urls.isEmpty
+        }
     }
 
     private var empty: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Ask anything. It remembers.").font(Theme.ui(26, .semibold)).foregroundStyle(Theme.text)
-            Text("It answers from its own knowledge, reaches into memory when a question is about your work or life, and keeps what you discuss on its shelves. Research looks things up online; the clip reads a PDF into memory.")
+            Text("It answers from its own knowledge, reaches into memory when a question is about your work or life, and keeps what you discuss on its shelves. Research looks things up online; drop a PDF, image or video to read it into memory.")
                 .font(Theme.ui(14)).foregroundStyle(Theme.dim).frame(maxWidth: 520, alignment: .leading)
+            VStack(alignment: .leading, spacing: 8) {
+                suggestion("Who is the landlord of the Karen branch?", "from memory", .ask)
+                suggestion("What is the square root of 56? Show your working.", "the model's own knowledge", .ask)
+                suggestion("Who founded the Kenya Wildlife Service?", "researched online, then kept", .research)
+            }
+            .padding(.top, 12)
         }
         .padding(.top, 60)
+    }
+
+    private func suggestion(_ text: String, _ how: String, _ mode: ChatModel.Mode) -> some View {
+        Button { Task { await chat.ask(text, mode) } } label: {
+            HStack(spacing: 10) {
+                Image(systemName: mode == .research ? "globe" : "arrow.up.right").font(.system(size: 11))
+                    .foregroundStyle(mode == .research ? Theme.text : Theme.model)
+                Text(text).font(Theme.ui(14)).foregroundStyle(Theme.text)
+                Text(how).font(Theme.mono(10)).foregroundStyle(Theme.faint)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.line))
+        }
+        .buttonStyle(.plain)
+        .disabled(engine.phase != .ready)
     }
 
     private var composer: some View {
@@ -272,6 +323,7 @@ struct ChatView: View {
                     .lineLimit(1...6)
                     .focused($focused)
                     .onSubmit { Task { await chat.send(.ask) } }
+                    .disabled(engine.phase != .ready || chat.busy)
                     .padding(12)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.line))
@@ -285,13 +337,22 @@ struct ChatView: View {
                 .buttonStyle(Pill(color: Theme.memory))
                 .keyboardShortcut(.return, modifiers: .command)
                 .help("Keep this in memory (⌘↩)")
-                Button { Task { await chat.send(.ask) } } label: {
-                    Label("Ask", systemImage: "arrow.up").labelStyle(.titleAndIcon)
+                if chat.busy {
+                    Button { Task { await chat.stop() } } label: {
+                        Label("Stop", systemImage: "stop.fill").labelStyle(.titleAndIcon)
+                    }
+                    .buttonStyle(Pill(color: Theme.text))
+                    .keyboardShortcut(".", modifiers: .command)
+                    .help("Stop the answer (⌘.)")
+                } else {
+                    Button { Task { await chat.send(.ask) } } label: {
+                        Label("Ask", systemImage: "arrow.up").labelStyle(.titleAndIcon)
+                    }
+                    .buttonStyle(Pill(color: Theme.model))
+                    .help("Ask (↩)")
+                    .disabled(engine.phase != .ready)
                 }
-                .buttonStyle(Pill(color: Theme.model))
-                .help("Ask (↩)")
             }
-            .disabled(engine.phase != .ready || chat.busy)
             HStack {
                 Text("↩ ask · ⌘↩ remember · ⇧⌘↩ research online").font(Theme.mono(10)).foregroundStyle(Theme.faint)
                 Spacer()
@@ -353,8 +414,15 @@ struct TurnView: View {
                 }
                 .foregroundStyle(Theme.memory)
             }
-            if turn.who == .camr, !turn.meta.isEmpty, !turn.pending {
-                Text(turn.meta).font(Theme.mono(10)).foregroundStyle(Theme.faint)
+            if turn.who == .camr, !turn.pending {
+                HStack(spacing: 10) {
+                    if !turn.meta.isEmpty { Text(turn.meta).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(turn.text, forType: .string)
+                    } label: { Image(systemName: "doc.on.doc").font(.system(size: 10)) }
+                    .buttonStyle(.plain).foregroundStyle(Theme.faint).help("Copy the answer")
+                }
             }
         }
     }

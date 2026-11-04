@@ -89,6 +89,8 @@ class Reader:
                 pieces.append(r.text)
                 if live is not None:
                     live.add("token", n=len(pieces), text=r.text, layers=taken())
+                    if live.stopped:  # the person pressed Stop
+                        break
         return Reply("".join(pieces).strip(), first or 0.0, r.generation_tps if r else 0.0, len(ids),
                      r.generation_tokens if r else 0, pieces)
 

@@ -501,3 +501,12 @@ def test_a_text_file_is_read_onto_a_shelf_and_an_image_is_refused_by_a_text_mode
     status, why = call("/api/chat/attach", {"path": str(photo)})
     assert status == 409 and "can see" in why["error"]
     assert call("/api/chat/attach", {"path": str(tmp_path / "nope.pdf")})[0] == 404
+
+
+def test_a_new_chat_forgets_the_conversation_not_the_memory(chat):
+    app, call = chat
+    call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})
+    assert call("/api/chat/thread")[1]["turns"]
+    assert call("/api/chat/new", {})[1] == {"turns": 0} and call("/api/chat/thread")[1]["turns"] == []
+    assert len(app.session.memory("session").rooms.moments) == 1
+    assert call("/api/live/stop", {"id": "nope"})[0] == 404

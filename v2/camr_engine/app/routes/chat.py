@@ -116,8 +116,9 @@ class Talk:
 
     def _make(self):
         from camr_engine.reach import Session
+        from camr_engine.shelves import disk_budget
 
-        settings = {"vault": True, "core": True, "tiers": {}, "metrics": True,
+        settings = {"vault": True, "core": True, "tiers": {"disk_bytes": disk_budget()}, "metrics": True,
                     **(getattr(self.app, "session_settings", None) or {})}
         reads = list(self.reads)
         if self.shelf is not None:  # shelves on: every shelf is read too
@@ -763,6 +764,23 @@ def register(routes: Routes) -> None:
         if shelf is not None and shelf != "auto" and shelf not in BY_NAME:
             raise Refused(400, f"a shelf is auto or one of {', '.join(BY_NAME)}")
         return t.attach(req.str("path", limit=1024), shelf)
+
+    @routes.post("/api/live/stop")
+    def live_stop(req: Request) -> dict:
+        t = talk(req.app)
+        job = t.jobs.get(req.str("id", limit=20)) if t is not None else None
+        if job is None:
+            raise Refused(404, "no such job")
+        job.stopped = True
+        return {"stopped": True}
+
+    @routes.post("/api/chat/new")
+    def new_chat(req: Request) -> dict:
+        """A new conversation: the turns the assistant reads start again (memory keeps everything it learned)."""
+        t = talk(req.app)
+        if t is not None:
+            t.turns = []
+        return {"turns": 0}
 
     @routes.get("/api/live")
     def live(req: Request) -> dict:

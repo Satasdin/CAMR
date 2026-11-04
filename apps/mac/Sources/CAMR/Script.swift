@@ -37,6 +37,10 @@ enum Script {
                     world.tab = "chat"
                     world.chat.draft = arg
                     await world.chat.send(remember: verb == "remember")
+                case "attach":
+                    world.tab = "chat"
+                    world.chat.attach(URL(fileURLWithPath: arg))
+                    while world.chat.turns.last?.pending ?? true { try? await Task.sleep(nanoseconds: 300_000_000) }
                 case "research":
                     world.tab = "chat"
                     world.chat.draft = arg

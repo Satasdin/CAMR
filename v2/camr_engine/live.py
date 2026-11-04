@@ -34,6 +34,7 @@ class Live:
         self.events: list[dict] = []
         self.first = 0  # the index of events[0], once early ones are dropped
         self.done = False
+        self.stopped = False  # asked to stop: a model writing for this job ends at its next word
         self.t0 = time.perf_counter()
         self.lock = threading.Lock()
 
