@@ -59,7 +59,7 @@ questions again.
 | Right answers | 64K (34) | 256K (40) | 1M (69) | 2M (73) | 3M (73) | 4M (73) | First word | Peak RAM |
 |---|---|---|---|---|---|---|---|---|
 | **Engine, Qwen3 4B** | **25** | **26** | **25** | **29** | **29** | **29** | 0.2–0.31 s | 7.5 GB (process) |
-| Bare 4B (newest 64K) | 18 | 14 | 20 | 11 | not run | | 0.34–0.38 s | 14.7 GB |
+| Bare 4B (newest 64K) | 18 | 14 | 20 | 11 | 12 | 13 | 0.32–0.38 s | 15.2 GB (process) |
 | Engine, Qwen3 1.7B, its own wording | 19 | 20 | 21 | 21 | | | 0.10–0.14 s | 4.4 GB |
 | Engine, Qwen3 1.7B, the yardstick's wording | 14 | 20 | 17 | 15 | | | 0.10–0.14 s | 4.4 GB |
 | Bare 1.7B (newest 32K) | 8 | 13 | 14 | 7 | | | 0.13 s | 7.4 GB |
