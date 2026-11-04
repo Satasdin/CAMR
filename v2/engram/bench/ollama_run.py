@@ -56,7 +56,7 @@ import re
 import threading
 import time
 from bisect import bisect_left
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
@@ -345,11 +345,17 @@ class _OllamaContender(Contender):
 
     def answered(self, reply: Reply) -> Reply:
         """The reply, when it did not think. One that did (Ollama's thinking field, or a <think> block in its words)
-        is an error, so it is never graded as an answer given with thinking off."""
-        if reply.thinking.strip() or "</think>" in reply.text or reply.text.lstrip().startswith("<think>"):
-            raise ThinkingError(f"{self.model} thought before answering ({len(reply.thinking)} characters of "
-                                "thinking) though thinking was off")
-        return reply
+        is an error, so it is never graded as an answer given with thinking off. An empty block is no thinking: with
+        a long prompt qwen3 often opens its answer with the "</think>" its think-off template ends the prompt with,
+        and that tag is cut off the answer."""
+        head, closed, tail = reply.text.partition("</think>")
+        thought = head.replace("<think>", "").strip() if closed else ""
+        if (reply.thinking.strip() or thought or "</think>" in tail
+                or (not closed and reply.text.lstrip().startswith("<think>"))):
+            raise ThinkingError(f"{self.model} thought before answering "
+                                f"({len(reply.thinking) or len(thought)} characters of thinking) though thinking "
+                                "was off")
+        return replace(reply, text=tail.lstrip()) if closed else reply
 
     def resident(self) -> tuple[float | None, int | None]:
         """What Ollama holds for this model now: its size in GB (weights and keys and values), and its context."""

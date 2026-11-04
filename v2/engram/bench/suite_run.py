@@ -47,7 +47,9 @@ start. What the run has spent is read from the ledger: every try of every call, 
 is sent only when its worst case still fits under ``--max-usd`` with that, so the run stops before it could pass it.
 ``--max-usd`` holds for each invocation; a resumed record keeps what the earlier ones spent. Claude keeps the
 yardstick's settings (effort medium, adaptive thinking), so each reply gets its limit plus ``--think-room`` tokens to
-think in.
+think in. An Ollama model answers with its thinking off, so it can only work in its words: ``--work-room`` gives each
+of its replies that much more room (0 by default, the shared limits), and the bare contender's context grows by as
+much, so its window of history stays W.
 """
 
 from __future__ import annotations
@@ -475,13 +477,16 @@ def contender_name(name: str) -> str:
 
 
 def make_contender(name: str, *, max_usd: float = 10.0, think_room: int = THINK_ROOM, port: int = PROXY_PORT,
-                   task: str = "suite", claude: Any = None) -> Contender:
+                   task: str = "suite", claude: Any = None, work_room: int = 0) -> Contender:
     """A contender by name: ollama:<model>, ollama-bare:<model>, or claude-<model> (or claude:<model>). The local
-    contenders are refused (LOCAL_REFUSED)."""
+    contenders are refused (LOCAL_REFUSED). ``work_room`` is added to an Ollama contender's every reply limit."""
     if is_ollama(name):
-        from engram.bench.ollama_run import make
+        from engram.bench.ollama_run import NUM_CTX, make
 
-        return make(name, frame=SUITE, **({"port": port} if name.startswith("ollama:") else {}))
+        kw = {"port": port} if name.startswith("ollama:") else {"num_ctx": NUM_CTX + work_room}
+        c = make(name, frame=SUITE, **kw)
+        c.work_room = work_room
+        return c
     if is_claude(name):
         return ClaudeContender(name.removeprefix("claude:"), claude=claude, max_usd=max_usd, think_room=think_room,
                                task=task)
@@ -507,7 +512,7 @@ def truncated(extra: dict, room: int) -> bool | None:
 def ask_one(contender: Contender, ask: Ask, meta: dict) -> dict:
     """Ask, grade, and the answer's record, as the shared runner writes one. A question that fails is recorded with
     verdict "error" and right None (never graded), and the run goes on; a StopRun goes up to the runner."""
-    room = ask.limit
+    room = ask.limit + getattr(contender, "work_room", 0)
     try:
         a = contender.ask(ask.prompt, max_tokens=room, family=ask.family)
         right, verdict, reason = grade_with(lambda _q, text: ask.grade(text), ask, a.text)
@@ -748,6 +753,8 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--max-usd", type=float, default=10.0, help="Claude: this invocation never spends more")
     ap.add_argument("--think-room", type=int, default=THINK_ROOM,
                     help="Claude: tokens to think in, on top of the reply limit")
+    ap.add_argument("--work-room", type=int, default=0,
+                    help="Ollama: tokens to work in (in its words, its thinking off), on top of the reply limit")
     ap.add_argument("--estimate", action="store_true", help="print the plan (and Claude's cost estimate), then stop")
     ap.add_argument("--resume", type=Path, help="an earlier record of this run: its finished contexts are kept and "
                                                 "skipped, the rest are run and added to it")
@@ -784,6 +791,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValueError as e:
         print(e, file=sys.stderr)
         return 2
+    if is_ollama(a.contender) and a.work_room:
+        settings["work_room"] = a.work_room
     resume, todo = None, groups
     if a.resume:
         try:
@@ -813,7 +822,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
     if a.estimate:
         return 0
-    contender = make_contender(a.contender, max_usd=a.max_usd, think_room=a.think_room, port=a.port, task=suite)
+    contender = make_contender(a.contender, max_usd=a.max_usd, think_room=a.think_room, port=a.port, task=suite,
+                               work_room=a.work_room if is_ollama(a.contender) else 0)
     record = run(suite, contender, groups, settings=settings, records=a.records, memories=a.memories, resume=resume)
     s = record.get("summary", {})
     spent = record["contender"].get("spent_usd")

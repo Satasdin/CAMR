@@ -350,6 +350,19 @@ def test_the_command_line_prints_claudes_estimate_and_refuses_a_run_over_its_cap
     assert "not started" in capsys.readouterr().err
 
 
+def test_an_ollama_contender_works_in_its_words_in_the_room_it_is_given():
+    from engram.bench.ollama_run import NUM_CTX, WINDOW
+
+    c = sr.make_contender("ollama-bare:qwen3:1.7b", work_room=8_192)
+    assert c.work_room == 8_192 and c.num_ctx == NUM_CTX + 8_192 and c.window == WINDOW  # the window stays W
+    assert sr.make_contender("ollama-bare:qwen3:1.7b").num_ctx == NUM_CTX
+    r = Recorder()
+    r.work_room = 1_000
+    ask = Ask("harp/1", "Solve it.", "7", "harp", lambda text: ("7" in text, None))
+    out = sr.ask_one(r, ask, {})
+    assert r.log[-1] == ("ask", "harp", ask.limit + 1_000) and out["max_tokens"] == ask.limit + 1_000
+
+
 def test_contenders_by_name():
     assert isinstance(sr.make_contender("ollama-bare:qwen3:1.7b"), OllamaBare)
     assert isinstance(sr.make_contender("claude-haiku-5-5", claude=FakeClaude()), ClaudeContender)

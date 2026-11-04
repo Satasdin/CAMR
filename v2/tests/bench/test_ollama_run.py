@@ -265,6 +265,22 @@ def test_a_reply_that_thought_is_an_error_never_an_answer(tmp_path):
     fake.reply = lambda req: "<think>hmm</think> Nairobi"
     with pytest.raises(ThinkingError):
         c.ask("Where?", max_tokens=10)
+    fake.reply = lambda req: "<think>still thinking"
+    with pytest.raises(ThinkingError):
+        c.ask("Where?", max_tokens=10)
+
+
+def test_an_empty_think_block_is_no_thinking_and_is_cut_off_the_answer(tmp_path):
+    fake = FakeOllama()
+    c = bare(fake)
+    c.open(tmp_path)
+    fake.reply = lambda req: "</think>The most recent location of Sandra is the kitchen."
+    assert c.ask("Where is Sandra?", max_tokens=20).text == "The most recent location of Sandra is the kitchen."
+    fake.reply = lambda req: "<think>\n\n</think>\n\nNairobi"
+    assert c.ask("Where?", max_tokens=10).text == "Nairobi"
+    fake.reply = lambda req: "</think>Nairobi</think>"
+    with pytest.raises(ThinkingError):
+        c.ask("Where?", max_tokens=10)
 
 
 def test_the_model_is_checked_and_loaded_once_per_run(tmp_path):
