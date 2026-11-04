@@ -17,6 +17,12 @@
   - The tensors show while a model fires up, or when you choose to see them (⌘T, or ⌘E for large); otherwise they
     stay hidden.
   - Code streams the step it is writing and lists the files a run wrote; a web page opens in the browser.
+- **Memory no longer bloats the SSD (E-54).** Notes are kept at 8 bits: the same answers on the Long Haul (14 and 19
+  right at 64K and 256K, against 14 and 20 at 16 bits) in half the disk (18.2 GB against 34.3 GB), first word
+  0.094 s. The app's memories were packed in place (`python -m camr_engine.shrink`): 1.7B 34.3 -> 18.2 GB, 4B 44.1
+  -> 23.4 GB, 8B 8.6 -> 4.6 GB awake (its other 540 rooms were already asleep). Each reach now has an 8 GB budget:
+  the first time the 1.7B or 4B opens, their oldest rooms sleep down to 8 GB and are read as words (the Long Haul
+  kept 20 of 40 that way). To keep all 737 awake for the demo, start the app with `CAMR_SHELF_DISK_GB=24`.
 - **Demo order:** `apps/mac/demo.txt`. Suggestions on the empty chat start it with one click.
 - **Shelves (new at midnight):** memory is now kept on four shelves: Projects (the Long Haul), Coding, Research
   and Personal.
