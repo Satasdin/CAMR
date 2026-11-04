@@ -429,6 +429,72 @@ What it shows:
   gemma3:4b pullable).
 - **By rule:** "Six" for 6 is graded wrong (seed 2's 3B engine), as the Long Haul grades numbers.
 
+## Code: café websites
+
+Can the Code agent build from what it was told? `camr_engine.bench.code_run` tells memory six notes about a café,
+one moment each: its name, two brand colours as hex, three menu items with prices in KES, its opening hours, its
+address, and a rule ("prices always show KES and two decimals"). Then, in a fresh empty workspace, the agent (persona
+Coder, at most 12 steps) is asked: "Build a one-page website for our café: index.html and style.css."
+
+- **Off:** the plain model with no memory, and the notes not given.
+- **In the prompt:** the plain model with the six notes pasted under the task: the ceiling.
+- **Memory:** the engine, the notes kept on the Coding shelf the day before.
+- **Note context:** the engine, the notes told ten days before, among 6K tokens of Long Haul events over nine days,
+  all on the Coding shelf, so memory has to find them.
+
+Each site is graded by ten rules, with no model: both files, the HTML parses, it links `style.css`, the name, all
+three items, every price as "KES n.00", the opening and closing times, the address, both colours in the CSS, and
+nothing invented (no price the notes do not hold, and no menu word from a fixed list that they do not hold). Shell
+commands are refused at once, since the sites need only file writes. Five cafés, fixed by seeds 1 to 5.
+
+```sh
+.venv/bin/python -m camr_engine.bench.code_run --model qwen3-4b
+```
+
+Rules passed per site, of ten (records `records/bench/2026-11-05/013817-code-cafe-code-qwen3-4b.json` and
+`014735-code-cafe-code-qwen3-8b.json`; the rules a site missed in brackets):
+
+| Qwen3 4B | Off | In the prompt | Memory | Note context |
+| --- | --- | --- | --- | --- |
+| Kilele Coffee House (1) | 3 | 10 | 10 | 9 (prices) |
+| Mvule Café (2) | 3 | 10 | 10 | 9 (prices) |
+| Pwani Brew (3) | 3 | 10 | 10 | 10 |
+| Baobab Bean (4) | 3 | 9 (prices) | 10 | 10 |
+| Savanna Sip (5) | 3 | 10 | 10 | 8 (address, colours) |
+| **Rules per site** | **3.0** | **9.8** | **10.0** | **9.2** |
+| Sites with all ten | 0 of 5 | 4 of 5 | 5 of 5 | 2 of 5 |
+| Steps, seconds per site | 7.0, 29.1 s | 9.0, 36.0 s | 3.6, 18.0 s | 4.8, 21.1 s |
+
+| Qwen3 8B | Off | In the prompt | Memory | Note context |
+| --- | --- | --- | --- | --- |
+| Kilele Coffee House (1) | 4 | 10 | 8 (files, colours) | 10 |
+| Mvule Café (2) | 4 | 10 | 10 | 9 (colours) |
+| Pwani Brew (3) | 4 | 10 | 10 | 9 (prices) |
+| Baobab Bean (4) | 4 | 10 | 10 | 10 |
+| Savanna Sip (5) | 4 | 10 | 10 | 8 (address, colours) |
+| **Rules per site** | **4.0** | **10.0** | **9.6** | **9.2** |
+| Sites with all ten | 0 of 5 | 5 of 5 | 4 of 5 | 2 of 5 |
+| Steps, seconds per site | 2.0, 5.9 s | 2.2, 13.1 s | 2.2, 13.7 s | 2.0, 11.6 s |
+
+What it shows:
+- **With memory, the sites are as good as with the notes in the prompt.** The 4B got every rule on every café from
+  memory (10.0 against 9.8), in fewer steps (3.6 against 9.0) and half the time. The 8B got 9.6 against 10.0.
+- **Off, the page works but knows nothing.** Both files, a page that parses and links its stylesheet: 3 rules.
+  The 4B also invented a menu every time (cappuccino, espresso, latte), so it fails "nothing invented"; the 8B wrote
+  a two-line welcome page with no menu, and passes it (4).
+- **Told ten days back among noise, memory still found most of it: 9.2 on both models.** The misses are the price
+  rule, a brand colour or the address. Each time the price rule was missed (three runs), its note was among the
+  words memory put on the desk, and the model still wrote "KES 220". Savanna Sip's colours and address were in
+  neither the room memory picked nor its closest words. The 8B also missed Mvule Café's colours, though their note
+  was in the room.
+- **The 8B's one memory miss:** it wrote `index.html`, then said "I will create the style.css file" and stopped,
+  twice, so the site had no stylesheet.
+- **Before the agent's changes** (E-59), with memory on, the 4B answered "I don't know." or listed the empty folder
+  until its 12 steps ran out: 0 of 10 (`records/bench/2026-11-05/003224-code-cafe-code-qwen3-4b.json`, one café).
+- **Greedy decoding:** a second 4B run gave the same rules on every site.
+
+One site per model, built from memory, is in `docs/examples/cafe/` (Mvule Café, 10 of 10 on both).
+
 ## Rules for measuring
 
 - One measuring job at a time. The GPU runs one model, and anything else running skews the times.

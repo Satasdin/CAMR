@@ -702,3 +702,15 @@ def test_after_two_looks_made_again_the_next_step_has_only_tools_that_change_thi
     names = [{t["function"]["name"] for t in p.tools} for p in brain.prompts]
     assert "list_files" in names[2] and "list_files" not in names[3] and "write_file" in names[3]
     assert "list_files" in names[5]  # a write came between
+
+
+def test_an_answer_with_a_named_file_not_written_is_sent_back_once(ws):
+    p = BUILT_IN[0]
+    brain = FakeBrain([call("write_file", path="index.html", content="<p>hi</p>\n"),
+                       "I wrote index.html and will now create style.css.", "I will not write style.css.",
+                       call("write_file", path="never.css", content="x\n")])
+    run = Run("t-1", "Build index.html and style.css", brain=brain, tools=Toolbox(ws, Gate(), allows=p.allows),
+              persona=p, gate=Gate(), workspace=ws.name)
+    run.execute()
+    assert "the task names style.css, not in the workspace yet" in brain.prompts[2].user
+    assert run.state == "done" and run.answer == "I will not write style.css." and len(brain.prompts) == 3

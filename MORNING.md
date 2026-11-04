@@ -23,6 +23,13 @@
   -> 23.4 GB, 8B 8.6 -> 4.6 GB awake (its other 540 rooms were already asleep). Each reach now has an 8 GB budget:
   the first time the 1.7B or 4B opens, their oldest rooms sleep down to 8 GB and are read as words (the Long Haul
   kept 20 of 40 that way). To keep all 737 awake for the demo, start the app with `CAMR_SHELF_DISK_GB=24`.
+- **Code builds café websites from memory (E-58 to E-60).** Six notes about a café (name, colours, menu in KES,
+  hours, address, a price rule), then "Build a one-page website for our café: index.html and style.css". Ten rules
+  per site, five cafés: with memory the 4B passed 10.0 per site, as good as the notes pasted in the prompt (9.8),
+  and the 8B 9.6 (10.0); told ten days back among noise, 9.2 on both; with no memory, 3 and 4 (a working page
+  that knows nothing). Before tonight's agent fixes, the 4B with memory said "I don't know." and passed 0.
+  Open `v2/docs/examples/cafe/qwen3-4b/index.html` or `qwen3-8b/` to see one. Table:
+  `v2/docs/site/benchmarks.md`, "Code: café websites".
 - **Demo order:** `apps/mac/demo.txt`. Suggestions on the empty chat start it with one click.
 - **Shelves (new at midnight):** memory is now kept on four shelves: Projects (the Long Haul), Coding, Research
   and Personal.

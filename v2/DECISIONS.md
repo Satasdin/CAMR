@@ -675,3 +675,43 @@ Qwen3-VL-4B-Thinking (mlx-community, 4-bit, 3.1 GB), loaded the first time a pic
 photographed receipt line by line (total KES 730.00, paid by M-Pesa) in about 25 s with the load, and the 8B then
 answered both questions about it from memory. PDFs are read as text at once; describing their pictures with a
 thinking model would take minutes. A file's moments say they are not the user's words.
+
+**E-58 Code: café websites, a benchmark for building from what was told.** `camr_engine.bench.code_run` tells memory
+six notes about a café (name, two brand colours as hex, three menu items with KES prices, hours, address, and the
+rule "prices always show KES and two decimals"), then asks the Code agent, in an empty workspace, for "a one-page
+website for our café: index.html and style.css". Ten rules grade each site with no model, "nothing invented"
+among them. Four ways: off (no memory, no notes), the notes in the prompt (the ceiling), memory (the notes on the
+Coding shelf the day before), and note context (the notes ten days back among 6K tokens of Long Haul events).
+- **Why these rules:** each one is a fact only the notes hold, or a plain sign the page works. The menu words that
+  count as invented are a fixed list, so a site that adds a latte to a café without one fails.
+- **Shell refused:** the sites need only file writes, so the benchmark's gate denies every command at once and
+  counts the asks.
+- **Results, rules passed per site (of 10), five cafés:** Qwen3 4B: off 3.0, in the prompt 9.8, memory 10.0, note
+  context 9.2. Qwen3 8B: off 4.0, in the prompt 10.0, memory 9.6, note context 9.2. Records
+  `records/bench/2026-11-05/*-code-cafe-*.json`.
+- **What the note-context misses are:** each time the price rule was missed (three runs), its note was among the
+  words memory put on the desk, and the model still wrote "KES 220". One café's colours and address were in neither
+  the room memory picked nor its closest words. The 8B also missed one café's colours that were in its room.
+
+**E-59 The Code agent finishes what it starts.** Before these changes, with memory on, the 4B answered "I don't
+know." or listed the empty folder until its 12 steps ran out: 0 of 10 rules on each café tried. Each change is
+small and has its test (`tests/test_agentic.py`):
+- **The notes' rules no longer end a task.** The engine's header tells the model to answer in one sentence or say
+  "I don't know"; the agent's instructions after the notes now say both do not apply to a task, and to follow every
+  rule the notes give.
+- **Paths:** "a.txt, not {workspace}/a.txt". The 4B wrote `site/index.html` inside the folder `site`.
+- **An empty workspace is named** on the first step, and every step names the files the task asks for that are not
+  written yet.
+- **A look made again with no write since is not run again.** The model reads "the same as [2]: nothing has changed
+  since"; after two of those in a row its next step is offered only the tools that change things.
+- **A reply cut off inside a tool call** (a whole page is long) is told so, and the next reply gets twice the room,
+  up to 4,096 tokens.
+- **An answer that says "I will now create style.css"** while the task's files are not all written is sent back
+  once. The 8B did this on one café, and said it again instead of writing the file, so that site has no stylesheet.
+- **A code step re-reads its 8 closest moments as words** (a short answer reads 4): a page needs more facts.
+
+**E-60 Looks are worked out at once.** The attention each written word pays to the desk was kept lazy, so every
+look held its layer's keys until the answer ended: by our count about 100 MB a word on a 3K-token desk. On one
+café's note-context run the GPU ran out (Metal "Insufficient Memory") at the first step, every time. Each look is now
+evaluated as it is made, and prompt chunks are not looked at at all (nothing reads them). That run now passes 9 of
+10.

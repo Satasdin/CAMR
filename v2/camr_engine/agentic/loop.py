@@ -75,6 +75,7 @@ class Run:
         self.notes, self.notes_title = list(notes or []), notes_title
         self.max_steps, self.step_tokens, self.keep_it = max_steps, step_tokens, keep
         self.room = step_tokens  # the next reply's token limit (doubled after a reply cut off inside a call)
+        self._reminded = False  # told once already that it answered with files the task names not written
         self.measuring, self.on_step, self.on_think = measuring, on_step, on_think
         self.state = "queued"  # queued, thinking, tool, waiting, measuring, keeping, done, stopped, failed
         self.answer: str | None = None
@@ -160,7 +161,7 @@ class Run:
                     "decode_tps": thought.decode_tps, "memory": thought.memory}
             self._turn(turn)
             self._span("model", t0, t1, f"step {k}", ticks=ticks(thought, t0))
-            if not found and self._cut(thought):
+            if not found and (self._cut(thought) or self._not_yet()):
                 continue
             if not found:
                 self.answer = words or "(the model wrote nothing)"
@@ -222,6 +223,19 @@ class Run:
             "whole; for a long file, write the first part with write_file and add the rest with edit_file."), 0.0)))
         self._turn({"kind": "error", "text": f"step {self.steps} was cut off at {self.room} tokens inside a call"})
         self.room = min(self.room * 2, max(ROOM_MAX, self.step_tokens))
+        return True
+
+    def _not_yet(self) -> bool:
+        """An answer while files the task names are still not written ("I will now create style.css"): once a run,
+        the model is told which, and the run goes on."""
+        todo = self.unwritten() if not self._reminded else []
+        if not todo:
+            return False
+        self._reminded = True
+        self.history.append(("(answer)", {}, Done("(answer)", {}, False, (
+            f"you answered, but the task names {', '.join(todo)}, not in the workspace yet. Write "
+            f"{'it' if len(todo) == 1 else 'them'} now with write_file, or answer again saying why not."), 0.0)))
+        self._turn({"kind": "error", "text": f"answered with {', '.join(todo)} not written yet; going on"})
         return True
 
     def _again(self, name: str, args: dict) -> Done | None:
