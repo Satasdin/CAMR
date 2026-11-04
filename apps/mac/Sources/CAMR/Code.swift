@@ -24,6 +24,8 @@ final class CodeModel: ObservableObject {
     @Published var busy = false
     @Published var memoryOn = true
     @Published var error: String?
+    @Published var writing = ""  // the step the model is writing now, word by word
+    @Published var wrote: [String] = []  // files this run wrote
 
     let engine: Engine
     let weights: WeightsModel
@@ -84,6 +86,8 @@ final class CodeModel: ObservableObject {
         error = nil
         defer { busy = false }
         weights.beginAnswer(memory: memoryOn)
+        writing = ""
+        wrote = []
         do {
             if thread == nil {
                 let t = try await engine.post("/api/code/thread", ["title": String(task.prefix(60))])
@@ -117,7 +121,9 @@ final class CodeModel: ObservableObject {
         for e in got.list("events") {
             switch e.str("kind") {
             case "room": weights.roomEvent(e)
-            case "token": weights.token(e)
+            case "token":
+                weights.token(e)
+                writing += e.str("text") ?? ""
             case "read": weights.layersEvent(e["layers"] as? [[Double]])
             default: break
             }
@@ -126,6 +132,9 @@ final class CodeModel: ObservableObject {
     }
 
     private func take(_ s: [String: Any]) {
+        if !s.list("turns").isEmpty { writing = "" }  // a step finished: its words are in the transcript now
+        let files = (s["wrote"] as? [[String: Any]])?.compactMap { $0.str("path") } ?? []
+        for f in files where !wrote.contains(f) { wrote.append(f) }
         state = s.str("state") ?? state
         for t in s.list("turns") {
             let kind = t.str("kind") ?? ""
@@ -155,6 +164,12 @@ final class CodeModel: ObservableObject {
     func stop() async {
         guard let id = run else { return }
         _ = try? await engine.post("/api/code/stop", ["run": id])
+    }
+
+    /// Open a file the run wrote: a web page in the browser, anything else in its app.
+    func reveal(_ path: String) {
+        guard let root else { return }
+        NSWorkspace.shared.open(URL(fileURLWithPath: root).appendingPathComponent(path))
     }
 }
 
@@ -217,6 +232,27 @@ struct CodeView: View {
                         .padding(.top, 40)
                     }
                     ForEach(code.turns) { t in CodeTurnView(turn: t).id(t.id) }
+                    if code.busy && !code.writing.isEmpty {  // the step being written, as it comes
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("WRITING…").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.model)
+                            Text(code.writing.suffix(1200)).font(Theme.mono(11)).foregroundStyle(Theme.dim)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .id("writing")
+                    }
+                    if !code.wrote.isEmpty {
+                        HStack(spacing: 8) {
+                            Text("WROTE").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
+                            ForEach(code.wrote, id: \.self) { f in
+                                Button { code.reveal(f) } label: {
+                                    Label(f, systemImage: f.hasSuffix(".html") ? "safari" : "doc.text")
+                                        .font(Theme.mono(11))
+                                }
+                                .buttonStyle(.plain).foregroundStyle(Theme.memory)
+                                .help(f.hasSuffix(".html") ? "Open the page in the browser" : "Open the file")
+                            }
+                        }
+                    }
                     if !code.term.isEmpty {
                         Text(code.term).font(Theme.mono(11)).foregroundStyle(Theme.dim)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -318,7 +354,19 @@ struct CodeTurnView: View {
             if !turn.detail.isEmpty {
                 Text(turn.detail).font(Theme.mono(11)).foregroundStyle(Theme.model.opacity(0.85)).lineLimit(4)
             }
-            if !turn.text.isEmpty {
+            if turn.kind == "answer" && turn.text.contains("```") {  // an answer with code: each block its own box
+                let parts = turn.text.components(separatedBy: "```")
+                ForEach(Array(parts.enumerated()), id: \.offset) { i, part in
+                    if i % 2 == 1 {
+                        let lines = part.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+                        CodeBlock(code: (lines.count > 1 && !lines[0].contains(" ") ? String(lines[1]) : part)
+                            .trimmingCharacters(in: .newlines))
+                    } else if !part.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(part.trimmingCharacters(in: .newlines)).font(Theme.ui(14)).foregroundStyle(Theme.text)
+                            .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            } else if !turn.text.isEmpty {
                 Text(turn.text).font(turn.kind == "call" ? Theme.mono(11) : Theme.ui(14))
                     .foregroundStyle(turn.kind == "error" ? Theme.error : (turn.kind == "call" ? Theme.dim : Theme.text))
                     .lineLimit(turn.kind == "call" ? 12 : nil)
@@ -331,7 +379,7 @@ struct CodeTurnView: View {
     var label: String {
         switch turn.kind {
         case "you": return "YOU"
-        case "model": return "CAMR · THINKING"
+        case "model": return "CAMR · STEP"
         case "call": return "TOOL"
         case "answer": return "CAMR"
         case "kept": return "KEPT IN MEMORY"
