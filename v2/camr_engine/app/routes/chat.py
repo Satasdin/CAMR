@@ -381,12 +381,11 @@ class Talk:
                 self.sorter = Sorter(session.embedder)
             target = self.sorter.sort(f"{question} {answer[:300]}").name
         reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
-        m = session.remember(text, day, date=today, to=reach)
-        if m is None:
-            return None
-        session.memory(reach).save()
+        m, rv = self._keep_moment(session, reach, text, day, today)
         on = shelf_of(reach.label)
-        return {"reach": reach.label, "shelf": on.name if on else None, "moment": m.mid}
+        if m is None:  # asked and answered before: kept once
+            return {"reach": reach.label, "shelf": on.name if on else None, "moment": rv["old"], "revised": "same"}
+        return {"reach": reach.label, "shelf": on.name if on else None, "moment": m.mid, "revised": rv["verdict"]}
 
     def attach(self, path: str, shelf: str | None = None) -> dict:
         """Read a file into memory: a PDF page by page (camr_engine.media), a text or Markdown file in pieces. An
@@ -446,13 +445,35 @@ class Talk:
             sorted_ = self.sorter.sort(text)
             target = sorted_.name
         reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
-        m = session.remember(f"[{today.isoformat()}] {text}", day, date=today, to=reach)
-        session.memory(reach).save()
         on = shelf_of(reach.label)
-        return {"intent": "tell", "on": True, "reply": f"Noted, on the {on.label} shelf." if on else "Noted.",
-                "kept": True, "reach": reach.label, "shelf": on.name if on else None, "sorted": sorted_ is not None,
-                "moment": m.mid, "room": m.room, "tokens": m.tokens,
+        where = f" on the {on.label} shelf" if on else ""
+        m, rv = self._keep_moment(session, reach, f"[{today.isoformat()}] {text}", day, today)
+        out = {"intent": "tell", "on": True, "reach": reach.label, "shelf": on.name if on else None,
+               "sorted": sorted_ is not None, "revised": rv["verdict"], "old": rv["old"]}
+        if m is None:  # the same thing was already kept
+            return {**out, "kept": False, "reply": f"Already noted{where} (note {rv['old']})."}
+        reply = (f"Noted{where}. This updates note {rv['old']}, which is kept as history." if rv["verdict"] == "update"
+                 else f"Noted{where}.")
+        return {**out, "kept": True, "reply": reply, "moment": m.mid, "room": m.room, "tokens": m.tokens,
                 "event": self._event(session.memory(reach), ("remember",))}
+
+    def _keep_moment(self, session, reach, text: str, day: int, today: dt.date):
+        """Keep a moment after comparing it with the closest one already kept (camr_engine.revise): (the moment, or
+        None when it was the same; the verdict)."""
+        from camr_engine.revise import mark, revise
+
+        memory = session.memory(reach)
+        rv = revise(memory, session.reader, session.embedder, text)
+        live = current()
+        if live is not None and rv["old"] is not None:
+            live.add("revise", verdict=rv["verdict"], old=rv["old"], score=rv["score"], reach=reach.label)
+        if rv["text"] is None:
+            return None, rv
+        m = session.remember(rv["text"], day, date=today, to=reach)
+        if m is not None and rv["verdict"] == "update":
+            mark(memory, rv["old"], m.mid)
+        memory.save()
+        return m, rv
 
     def _ask(self, session, text: str, today: dt.date, day: int) -> dict:
         reply = session.answer(text, today, day=day)
