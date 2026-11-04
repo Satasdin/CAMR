@@ -1,0 +1,1076 @@
+{
+ "kind": "speed",
+ "task": "speed",
+ "contender": {
+  "name": "engine:qwen3-1.7b",
+  "kind": "engine",
+  "model": "qwen3-1.7b",
+  "repo": "mlx-community/Qwen3-1.7B-4bit",
+  "embedder": "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
+  "reach": "project:longhaul",
+  "drives": "engram.memory.Memory at <folder>/project/<project>, as reach.Session drives one reach: choose, then answer with record=True",
+  "layers": [
+   "rooms",
+   "vault",
+   "core",
+   "tiers",
+   "metrics"
+  ],
+  "core": "on, empty: every moment is told untagged, and the core holds only notes tagged core",
+  "ram_bytes": 2000000000,
+  "disk_bytes": 40000000000,
+  "wake": false,
+  "room_tokens": 512,
+  "join": 0.8,
+  "closest": 4,
+  "kv_shape": {
+   "layers": 28,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "rope_base": 1000000.0,
+   "token_bytes": 114688
+  },
+  "moment": "[YYYY-MM-DD, day N] text",
+  "day_lines_kept": false,
+  "nap_days": 5,
+  "enable_thinking": false,
+  "system": "You answer questions about a project's history: one developer's log of chats, decisions, code, notes and lessons. Notes from that history come before each question. Answer from them only. When they never say, answer \"I don't know\". Keep each answer short unless the question asks for code or a page.",
+  "prompt": "system: the instructions, then \"Notes:\" with the core, the room and the closest moments, \"End of notes.\", \"Today is <date>.\" and the family's line; user: the question",
+  "today_line": true,
+  "hint_in": "system, after the notes and the date",
+  "hints": {
+   "page": "Reply with the page as one complete HTML document in a ```html block, its CSS included.",
+   "code": "Reply with the code in one ```python block.",
+   "maths": "Show the working in a few short steps, then give the final number on the last line."
+  },
+  "writes": "Memory.remember for each moment; the index is saved at each nap and before a checkpoint's first question (reach.Session.remember saves after every moment)",
+  "questions": "read-only: each question is answered from the memory as the telling left it",
+  "watch": false,
+  "event_log": true,
+  "peak_ram_gb": "MLX's peak over the answer, retrieval included"
+ },
+ "thinking": false,
+ "marks": [
+  1000,
+  10000,
+  100000
+ ],
+ "questions": 5,
+ "until": null,
+ "folder": "/Users/p3wrky/Desktop/camr-build-wt/work/memories/speed-engine-qwen3-1.7b-20261104-055344.nosync",
+ "haul": {
+  "dir": "../work/haul/s1",
+  "seed": 1,
+  "version": 2,
+  "tokens": 2010094,
+  "events": 17786,
+  "script_sha": "b3ba3aa91a4849b6"
+ },
+ "started": "2026-11-04T05:53:44",
+ "environment": {
+  "machine": "Mac17,9",
+  "chip": "Apple M5 Pro",
+  "memory_gb": 24,
+  "power": "AC Power",
+  "load_1m": 3.17,
+  "python": "3.12.12",
+  "engram_commit": "42ab111",
+  "engram_dirty": true,
+  "engram_source_sha": "6284b801e4617fb8",
+  "mlx": "0.32.4",
+  "mlx_lm": "0.32.2",
+  "numpy": "2.5.4"
+ },
+ "history_tokens": "the Long Haul's own count of the tokens told so far",
+ "points": [
+  {
+   "moments": 1000,
+   "events": 1009,
+   "history_tokens": 111658,
+   "day": 9,
+   "end": false,
+   "ingest": {
+    "events": 1009,
+    "tokens": 111658,
+    "seconds": 94.654,
+    "tell_s": 94.635,
+    "read_s": 0.02,
+    "events_per_s": 10.66,
+    "tokens_per_s": 1179.6,
+    "overall_events_per_s": 10.66,
+    "overall_tokens_per_s": 1179.6
+   },
+   "disk_gb": 14.87315,
+   "status": {
+    "moments": 1000,
+    "rooms": 358,
+    "history_tokens": 129632,
+    "awake_rooms": 358,
+    "asleep_rooms": 0,
+    "hot_rooms": 46,
+    "ram_used_bytes": 1946484736,
+    "disk_awake_bytes": 14867234816,
+    "folder_bytes": 14873150160,
+    "disk_gb": 14.87315,
+    "vault_notes": 1000,
+    "core_tokens": 0,
+    "token_bytes": 114688,
+    "join_hits": {
+     "ssd": 344,
+     "ram": 298
+    },
+    "remember_s": 94.313,
+    "saves_s": 0.02,
+    "naps": {
+     "count": 1,
+     "seconds": 0.174,
+     "faded_notes": 323,
+     "slept_rooms": 0
+    }
+   },
+   "summary": {
+    "questions": 5,
+    "right": 3,
+    "graded": 5,
+    "errors": 0,
+    "truncated": 0,
+    "asked_before": 0,
+    "verdicts": {
+     "declined": 2,
+     "right": 3
+    },
+    "ttft_s": {
+     "p50": 0.1108,
+     "p90": 2.0789
+    },
+    "total_s": {
+     "p50": 0.1398,
+     "p90": 2.1054
+    },
+    "prefill_tps": {
+     "p50": 5116.7,
+     "p90": 5771.2
+    },
+    "decode_tps": {
+     "p50": 181.8,
+     "p90": 185.94
+    },
+    "retrieval_ms": {
+     "p50": 24.48,
+     "p90": 43.131
+    },
+    "bytes_read": {
+     "p50": 58376192.0,
+     "p90": 58582630.4
+    },
+    "gbps": {
+     "p50": 8.81,
+     "p90": 11.932
+    },
+    "read_share": {
+     "p50": 0.0452,
+     "p90": 0.0515
+    },
+    "context_tokens": {
+     "p50": 1068.0,
+     "p90": 1179.2
+    },
+    "history_tokens": 111658,
+    "peak_ram_gb": 4.256,
+    "disk_gb": 14.873149,
+    "tiers": {
+     "ssd": 5
+    }
+   },
+   "answers": [
+    {
+     "id": "fact-237",
+     "family": "fact",
+     "question": "What is the number plate of Garissa Carrots Agencies' delivery truck?",
+     "expected": "KAH 458S",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 3.3671,
+      "total_s": 3.3972,
+      "prefill_tps": 149.0,
+      "decode_tps": 166.1,
+      "retrieval_ms": 52.655,
+      "bytes_read": 58376192,
+      "gbps": 5.59,
+      "read_share": 0.0031,
+      "context_tokens": 1070,
+      "history_tokens": 111658,
+      "peak_ram_gb": 4.227,
+      "disk_gb": 14.873145,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 24.634,
+       "core": 0.282,
+       "fetch": 10.45,
+       "desk": 17.289,
+       "total": 52.655
+      },
+      "room": 144,
+      "new_tokens": 492,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 228.9,
+      "rss_peak_gb": 3.352,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7552,
+      "memory_tokens": 129632
+     }
+    },
+    {
+     "id": "never-30",
+     "family": "never",
+     "question": "How many days' notice does Malindi Millers need for an order?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0919,
+      "total_s": 0.1194,
+      "prefill_tps": 5116.7,
+      "decode_tps": 181.8,
+      "retrieval_ms": 20.72,
+      "bytes_read": 11927552,
+      "gbps": 5.44,
+      "read_share": 0.0239,
+      "context_tokens": 525,
+      "history_tokens": 111658,
+      "peak_ram_gb": 3.91,
+      "disk_gb": 14.873146,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 16.049,
+       "core": 0.041,
+       "fetch": 2.193,
+       "desk": 2.438,
+       "total": 20.72
+      },
+      "room": 162,
+      "new_tokens": 352,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 260.1,
+      "rss_peak_gb": 3.352,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7393,
+      "memory_tokens": 129632
+     }
+    },
+    {
+     "id": "fact-388",
+     "family": "fact",
+     "question": "Which main dish did Mto Water Works choose?",
+     "expected": "arrowroot chips",
+     "answer": "Arrowroot chips.",
+     "verdict": "right",
+     "right": true,
+     "reason": "names arrowroot chips",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1465,
+      "total_s": 0.1677,
+      "prefill_tps": 5817.0,
+      "decode_tps": 188.7,
+      "retrieval_ms": 28.845,
+      "bytes_read": 58376192,
+      "gbps": 8.81,
+      "read_share": 0.0452,
+      "context_tokens": 1252,
+      "history_tokens": 111658,
+      "peak_ram_gb": 4.256,
+      "disk_gb": 14.873147,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 16.215,
+       "core": 0.022,
+       "fetch": 6.625,
+       "desk": 5.983,
+       "total": 28.845
+      },
+      "room": 144,
+      "new_tokens": 674,
+      "answer_tokens": 5,
+      "mlx_decode_tps": 242.7,
+      "rss_peak_gb": 3.352,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.8238,
+      "memory_tokens": 129632
+     }
+    },
+    {
+     "id": "never-60",
+     "family": "never",
+     "question": "What is Sharon Mwiti's job at the kitchen?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1108,
+      "total_s": 0.1398,
+      "prefill_tps": 5702.5,
+      "decode_tps": 172.4,
+      "retrieval_ms": 24.29,
+      "bytes_read": 58720256,
+      "gbps": 11.62,
+      "read_share": 0.0456,
+      "context_tokens": 1068,
+      "history_tokens": 111658,
+      "peak_ram_gb": 4.202,
+      "disk_gb": 14.873148,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.313,
+       "core": 0.043,
+       "fetch": 5.055,
+       "desk": 4.879,
+       "total": 24.29
+      },
+      "room": 111,
+      "new_tokens": 487,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 247.2,
+      "rss_peak_gb": 3.352,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7425,
+      "memory_tokens": 129632
+     }
+    },
+    {
+     "id": "fact-333",
+     "family": "fact",
+     "question": "What does Kiprono Abdalla do at Mama Njeri's Kitchen?",
+     "expected": "security guard",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0828,
+      "total_s": 0.1103,
+      "prefill_tps": 3605.9,
+      "decode_tps": 181.8,
+      "retrieval_ms": 24.48,
+      "bytes_read": 55738368,
+      "gbps": 12.14,
+      "read_share": 0.0554,
+      "context_tokens": 763,
+      "history_tokens": 111658,
+      "peak_ram_gb": 3.827,
+      "disk_gb": 14.873149,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 14.366,
+       "core": 0.024,
+       "fetch": 4.592,
+       "desk": 5.498,
+       "total": 24.48
+      },
+      "room": 112,
+      "new_tokens": 208,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 260.5,
+      "rss_peak_gb": 3.352,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7785,
+      "memory_tokens": 129632
+     }
+    }
+   ]
+  },
+  {
+   "moments": 10000,
+   "events": 10063,
+   "history_tokens": 1146599,
+   "day": 63,
+   "end": false,
+   "ingest": {
+    "events": 9054,
+    "tokens": 1034941,
+    "seconds": 990.246,
+    "tell_s": 990.072,
+    "read_s": 0.174,
+    "events_per_s": 9.14,
+    "tokens_per_s": 1045.1,
+    "overall_events_per_s": 9.28,
+    "overall_tokens_per_s": 1056.9
+   },
+   "disk_gb": 40.037919,
+   "status": {
+    "moments": 10000,
+    "rooms": 3010,
+    "history_tokens": 1335793,
+    "awake_rooms": 864,
+    "asleep_rooms": 2146,
+    "hot_rooms": 51,
+    "ram_used_bytes": 1960591360,
+    "disk_awake_bytes": 39977828352,
+    "folder_bytes": 40037918644,
+    "disk_gb": 40.037919,
+    "vault_notes": 10000,
+    "core_tokens": 0,
+    "token_bytes": 114688,
+    "join_hits": {
+     "ssd": 4246,
+     "ram": 2744
+    },
+    "remember_s": 1059.895,
+    "saves_s": 0.193,
+    "naps": {
+     "count": 12,
+     "seconds": 23.646,
+     "faded_notes": 60662,
+     "slept_rooms": 0
+    }
+   },
+   "summary": {
+    "questions": 5,
+    "right": 1,
+    "graded": 5,
+    "errors": 0,
+    "truncated": 0,
+    "asked_before": 0,
+    "verdicts": {
+     "declined": 3,
+     "stale": 1,
+     "right": 1
+    },
+    "ttft_s": {
+     "p50": 0.1522,
+     "p90": 4.7067
+    },
+    "total_s": {
+     "p50": 0.1816,
+     "p90": 4.7476
+    },
+    "prefill_tps": {
+     "p50": 6281.7,
+     "p90": 6657.98
+    },
+    "decode_tps": {
+     "p50": 174.2,
+     "p90": 187.78
+    },
+    "retrieval_ms": {
+     "p50": 16.877,
+     "p90": 22.9386
+    },
+    "bytes_read": {
+     "p50": 0.0,
+     "p90": 0.0
+    },
+    "gbps": {
+     "p50": null,
+     "p90": null
+    },
+    "read_share": {
+     "p50": 0.0,
+     "p90": 0.0
+    },
+    "context_tokens": {
+     "p50": 872.0,
+     "p90": 962.4
+    },
+    "history_tokens": 1146599,
+    "peak_ram_gb": 4.283,
+    "disk_gb": 40.037918,
+    "tiers": {
+     "vault": 5
+    }
+   },
+   "answers": [
+    {
+     "id": "fact-065",
+     "family": "fact",
+     "question": "Which laptop does Muthoni Wafula use?",
+     "expected": "Lenovo Yoga 7",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 7.7428,
+      "total_s": 7.7708,
+      "prefill_tps": 41.0,
+      "decode_tps": 178.6,
+      "retrieval_ms": 26.155,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 385,
+      "history_tokens": 1146599,
+      "peak_ram_gb": 3.887,
+      "disk_gb": 40.037914,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 26.099,
+       "core": 0.046,
+       "fetch": 0.0,
+       "desk": 0.01,
+       "total": 26.155
+      },
+      "room": 648,
+      "new_tokens": 316,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 254.4,
+      "rss_peak_gb": 3.689,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8434,
+      "memory_tokens": 1335793
+     }
+    },
+    {
+     "id": "changed-02-now",
+     "family": "changed",
+     "question": "What is the production app port now?",
+     "expected": "8000",
+     "answer": "The production app port is now 8001.",
+     "verdict": "stale",
+     "right": false,
+     "reason": "names 8001, which an update replaced",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1509,
+      "total_s": 0.2128,
+      "prefill_tps": 6281.7,
+      "decode_tps": 193.9,
+      "retrieval_ms": 18.114,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 872,
+      "history_tokens": 1146599,
+      "peak_ram_gb": 4.283,
+      "disk_gb": 40.037915,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 18.043,
+       "core": 0.035,
+       "fetch": 0.0,
+       "desk": 0.035,
+       "total": 18.114
+      },
+      "room": 1859,
+      "new_tokens": 803,
+      "answer_tokens": 13,
+      "mlx_decode_tps": 226.9,
+      "rss_peak_gb": 3.689,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8208,
+      "memory_tokens": 1335793
+     }
+    },
+    {
+     "id": "hop-26",
+     "family": "two_hop",
+     "question": "How many days' notice do we have to give for lemons?",
+     "expected": "5",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1526,
+      "total_s": 0.1816,
+      "prefill_tps": 6595.4,
+      "decode_tps": 172.4,
+      "retrieval_ms": 15.744,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 957,
+      "history_tokens": 1146599,
+      "peak_ram_gb": 4.268,
+      "disk_gb": 40.037916,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.698,
+       "core": 0.03,
+       "fetch": 0.0,
+       "desk": 0.016,
+       "total": 15.744
+      },
+      "room": 1003,
+      "new_tokens": 888,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 247.1,
+      "rss_peak_gb": 3.689,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7526,
+      "memory_tokens": 1335793
+     }
+    },
+    {
+     "id": "lookalike-02",
+     "family": "lookalike",
+     "question": "What is Wanjiru Njoroge's job at the kitchen?",
+     "expected": "bookkeeper",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1522,
+      "total_s": 0.1809,
+      "prefill_tps": 6699.7,
+      "decode_tps": 174.2,
+      "retrieval_ms": 15.071,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 966,
+      "history_tokens": 1146599,
+      "peak_ram_gb": 4.279,
+      "disk_gb": 40.037917,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.035,
+       "core": 0.026,
+       "fetch": 0.0,
+       "desk": 0.01,
+       "total": 15.071
+      },
+      "room": 1809,
+      "new_tokens": 897,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 248.7,
+      "rss_peak_gb": 3.689,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7852,
+      "memory_tokens": 1335793
+     }
+    },
+    {
+     "id": "never-04",
+     "family": "never",
+     "question": "What is the Wi-Fi password at the Westlands branch?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0795,
+      "total_s": 0.1083,
+      "prefill_tps": 5480.2,
+      "decode_tps": 173.6,
+      "retrieval_ms": 16.877,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 389,
+      "history_tokens": 1146599,
+      "peak_ram_gb": 3.849,
+      "disk_gb": 40.037918,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 16.843,
+       "core": 0.024,
+       "fetch": 0.0,
+       "desk": 0.01,
+       "total": 16.877
+      },
+      "room": 549,
+      "new_tokens": 320,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 247.9,
+      "rss_peak_gb": 3.689,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.8101,
+      "memory_tokens": 1335793
+     }
+    }
+   ]
+  },
+  {
+   "moments": 17676,
+   "events": 17786,
+   "history_tokens": 2010094,
+   "day": 110,
+   "end": true,
+   "ingest": {
+    "events": 7723,
+    "tokens": 863495,
+    "seconds": 765.268,
+    "tell_s": 764.892,
+    "read_s": 0.376,
+    "events_per_s": 10.09,
+    "tokens_per_s": 1128.4,
+    "overall_events_per_s": 9.61,
+    "overall_tokens_per_s": 1086.4
+   },
+   "disk_gb": 40.0778,
+   "status": {
+    "moments": 17676,
+    "rooms": 5391,
+    "history_tokens": 2347200,
+    "awake_rooms": 920,
+    "asleep_rooms": 4471,
+    "hot_rooms": 48,
+    "ram_used_bytes": 1993392128,
+    "disk_awake_bytes": 39971405824,
+    "folder_bytes": 40077799724,
+    "disk_gb": 40.0778,
+    "vault_notes": 17676,
+    "core_tokens": 0,
+    "token_bytes": 114688,
+    "join_hits": {
+     "ssd": 7670,
+     "ram": 4615
+    },
+    "remember_s": 1778.888,
+    "saves_s": 0.569,
+    "naps": {
+     "count": 21,
+     "seconds": 68.973,
+     "faded_notes": 183397,
+     "slept_rooms": 0
+    }
+   },
+   "summary": {
+    "questions": 5,
+    "right": 1,
+    "graded": 5,
+    "errors": 0,
+    "truncated": 0,
+    "asked_before": 0,
+    "verdicts": {
+     "declined": 3,
+     "wrong": 1,
+     "right": 1
+    },
+    "ttft_s": {
+     "p50": 0.0769,
+     "p90": 3.4235
+    },
+    "total_s": {
+     "p50": 0.1041,
+     "p90": 3.4522
+    },
+    "prefill_tps": {
+     "p50": 4915.1,
+     "p90": 5931.66
+    },
+    "decode_tps": {
+     "p50": 182.5,
+     "p90": 187.16
+    },
+    "retrieval_ms": {
+     "p50": 18.168,
+     "p90": 26.597
+    },
+    "bytes_read": {
+     "p50": 0.0,
+     "p90": 31378636.8
+    },
+    "gbps": {
+     "p50": 11.61,
+     "p90": 11.61
+    },
+    "read_share": {
+     "p50": 0.0,
+     "p90": 0.0364
+    },
+    "context_tokens": {
+     "p50": 706.0,
+     "p90": 824.8
+    },
+    "history_tokens": 2010094,
+    "peak_ram_gb": 4.226,
+    "disk_gb": 40.077799,
+    "tiers": {
+     "vault": 4,
+     "ssd": 1
+    }
+   },
+   "answers": [
+    {
+     "id": "fact-270",
+     "family": "fact",
+     "question": "On which day of the month is the South B rent due?",
+     "expected": "10th",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 5.6157,
+      "total_s": 5.6445,
+      "prefill_tps": 134.4,
+      "decode_tps": 173.6,
+      "retrieval_ms": 27.189,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 820,
+      "history_tokens": 2010094,
+      "peak_ram_gb": 4.218,
+      "disk_gb": 40.077795,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 27.142,
+       "core": 0.038,
+       "fetch": 0.0,
+       "desk": 0.01,
+       "total": 27.189
+      },
+      "room": 4211,
+      "new_tokens": 751,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 246.0,
+      "rss_peak_gb": 3.705,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7949,
+      "memory_tokens": 2347200
+     }
+    },
+    {
+     "id": "changed-48-past",
+     "family": "changed",
+     "question": "What time did Juma Odhiambo's shift start on day 48?",
+     "expected": "07:00",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0769,
+      "total_s": 0.1041,
+      "prefill_tps": 5195.7,
+      "decode_tps": 183.8,
+      "retrieval_ms": 18.168,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 365,
+      "history_tokens": 2010094,
+      "peak_ram_gb": 3.82,
+      "disk_gb": 40.077796,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 18.093,
+       "core": 0.049,
+       "fetch": 0.0,
+       "desk": 0.026,
+       "total": 18.168
+      },
+      "room": 3254,
+      "new_tokens": 296,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 262.5,
+      "rss_peak_gb": 3.705,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.9409,
+      "memory_tokens": 2347200
+     }
+    },
+    {
+     "id": "hop-11",
+     "family": "two_hop",
+     "question": "Where is Silas' training course?",
+     "expected": "Webuye",
+     "answer": "I don't know.",
+     "verdict": "declined",
+     "right": false,
+     "reason": "declined, but the answer was told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0744,
+      "total_s": 0.1018,
+      "prefill_tps": 3809.4,
+      "decode_tps": 182.5,
+      "retrieval_ms": 25.709,
+      "bytes_read": 52297728,
+      "gbps": 11.61,
+      "read_share": 0.0606,
+      "context_tokens": 706,
+      "history_tokens": 2010094,
+      "peak_ram_gb": 3.82,
+      "disk_gb": 40.077797,
+      "tier": "ssd"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 16.781,
+       "core": 0.042,
+       "fetch": 4.504,
+       "desk": 4.382,
+       "total": 25.709
+      },
+      "room": 4722,
+      "new_tokens": 181,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 260.9,
+      "rss_peak_gb": 3.705,
+      "asleep": false,
+      "core_tokens": 0,
+      "score": 0.7266,
+      "memory_tokens": 2347200
+     }
+    },
+    {
+     "id": "lookalike-04",
+     "family": "lookalike",
+     "question": "Which branch does Wanjiru Njoroge work at?",
+     "expected": "Kilimani",
+     "answer": "Nduta Rono.",
+     "verdict": "wrong",
+     "right": false,
+     "reason": "does not name Kilimani",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.1353,
+      "total_s": 0.1638,
+      "prefill_tps": 6422.3,
+      "decode_tps": 175.4,
+      "retrieval_ms": 15.566,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 828,
+      "history_tokens": 2010094,
+      "peak_ram_gb": 4.226,
+      "disk_gb": 40.077798,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.531,
+       "core": 0.026,
+       "fetch": 0.0,
+       "desk": 0.009,
+       "total": 15.566
+      },
+      "room": 546,
+      "new_tokens": 759,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 249.9,
+      "rss_peak_gb": 3.705,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7449,
+      "memory_tokens": 2347200
+     }
+    },
+    {
+     "id": "never-57",
+     "family": "never",
+     "question": "Which branch does Elijah Lagat work at?",
+     "expected": "(never said)",
+     "answer": "I don't know.",
+     "verdict": "right",
+     "right": true,
+     "reason": "declined: it was never told",
+     "max_tokens": 120,
+     "truncated": false,
+     "metrics": {
+      "ttft_s": 0.0721,
+      "total_s": 0.0985,
+      "prefill_tps": 4915.1,
+      "decode_tps": 189.4,
+      "retrieval_ms": 15.385,
+      "bytes_read": 0,
+      "gbps": null,
+      "read_share": 0.0,
+      "context_tokens": 342,
+      "history_tokens": 2010094,
+      "peak_ram_gb": 3.807,
+      "disk_gb": 40.077799,
+      "tier": "vault"
+     },
+     "extra": {
+      "retrieval_steps_ms": {
+       "choose": 15.352,
+       "core": 0.024,
+       "fetch": 0.0,
+       "desk": 0.01,
+       "total": 15.385
+      },
+      "room": 2935,
+      "new_tokens": 273,
+      "answer_tokens": 6,
+      "mlx_decode_tps": 271.6,
+      "rss_peak_gb": 3.705,
+      "asleep": true,
+      "core_tokens": 0,
+      "score": 0.7939,
+      "memory_tokens": 2347200
+     }
+    }
+   ]
+  }
+ ],
+ "finished": "2026-11-04T06:24:56",
+ "path": "/Users/p3wrky/Desktop/camr-build-wt/v2/records/bench/2026-11-04/055344-speed-engine-qwen3-1.7b.json",
+ "not_reached": [
+  100000
+ ]
+}

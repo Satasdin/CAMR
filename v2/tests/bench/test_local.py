@@ -345,6 +345,30 @@ def test_memory_contenders_read_the_same_instructions_with_notes_for_the_history
     assert local.haul_contender("engine:qwen3-8b", NoLoad(), learn=True, watch=True).learn is True
 
 
+def test_the_engines_own_wording_goes_to_every_local_contender_and_is_named():
+    from engram.memory import INTRO
+
+    class NoLoad(local.Loader):
+        def reader(self, repo):
+            raise AssertionError("loaded a model")
+
+    e = local.haul_contender("engine:qwen3-1.7b", NoLoad(), wording="own")
+    b = local.haul_contender("bare:qwen3-1.7b", NoLoad(), wording="own")
+    assert e.intro == INTRO and e.name == "engine:qwen3-1.7b+own" and e.describe()["system"] == INTRO
+    assert b.name == "bare:qwen3-1.7b+own" and b.describe()["system"] == INTRO and b.describe()["opener"] == "Notes:\n"
+    r = BareReader()
+    own = local.Bare("fake", reader=r, window=30, intro=INTRO)
+    own.open(Path("/nowhere"))
+    for i in range(10):
+        own.tell(f"line {i}", 1)
+    own.ask("what?", max_tokens=120, family="fact")
+    assert decode(r.read[0]).startswith("<system>" + INTRO + "\n\nNotes:\nline 7\n\nline 8\n\nline 9\n\nEnd of notes.")
+    with pytest.raises(ValueError):
+        local.haul_contender("engine:qwen3-1.7b", NoLoad(), wording="mine")
+    a = local.parser().parse_args(["longhaul", "--contender", "engine:qwen3-1.7b", "--wording", "own"])
+    assert a.wording == "own" and local.parser().parse_args(["longhaul", "--contender", "x:y"]).wording == "yardstick"
+
+
 def test_the_command_line_takes_contenders_cuts_and_a_limit():
     a = local.parser().parse_args(["longhaul", "--contender", "engine:qwen3-1.7b", "--contender", "bare:qwen3-1.7b",
                                    "--dir", "/tmp/h", "--cuts", "64K", "1M", "--limit", "5"])
@@ -631,6 +655,21 @@ def test_the_engines_questions_leave_its_memory_as_the_telling_left_it(tmp_path)
     assert e.ask("Which brand is the oven?", max_tokens=120, family="fact").metrics["tier"] == "ram"
     assert e.memory.tiers.tick == tick + 2 and e.describe()["questions"].startswith("learn")
     e.close()
+
+
+def test_an_engine_that_wakes_reads_an_asleep_room_as_notes_again(tmp_path):
+    e = engine(room_tokens=60, join=0.99, wake=True)
+    assert e.name == "engine:fake+wake" and e.describe()["wake"] is True
+    e.open(tmp_path / "mem")
+    for day, f in enumerate(FACTS, start=1):
+        e.tell(f, day)
+    tiers = e.memory.tiers
+    assert tiers.wake
+    rid = e.memory.choose("Which brand is the oven?").room
+    tiers.sleep(rid)  # as the disk budget would
+    got = e.ask("Which brand is the oven?", max_tokens=120, family="fact")
+    assert got.metrics["tier"] == "vault" and not tiers.is_asleep(rid)  # woken: its file written again
+    assert engine().describe()["wake"] is False and engine().name == "engine:fake"
 
 
 class FakeLooks:

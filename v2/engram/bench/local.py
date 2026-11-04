@@ -281,14 +281,14 @@ class Engine(Contender):
                  ram_bytes: int = RAM_BYTES, disk_bytes: int = DISK_BYTES, project: str = PROJECT,
                  dates: Callable[[int], dt.date] | None = None, day_numbers: bool = True,
                  nap_days: int | None = NAP_DAYS, intro: str = INTRO, learn: bool = False, watch: bool = False,
-                 log: bool = True, **settings):
+                 log: bool = True, wake: bool = False, **settings):
         if reader is None:
             parse(f"engine:{model}")
-        self.model, self.repo, self.name = model, MODELS.get(model), f"engine:{model}"
+        self.model, self.repo, self.name = model, MODELS.get(model), f"engine:{model}" + ("+wake" if wake else "")
         self.loader, self._reader, self._embedder = loader or Loader(), reader, embedder
         self.ram_bytes, self.disk_bytes, self.project = ram_bytes, disk_bytes, project
         self.days, self.nap_days, self.settings = _Days(dates, day_numbers), nap_days, settings
-        self.intro, self.learn, self.log = intro, learn, log
+        self.intro, self.learn, self.log, self.wake = intro, learn, log, wake
         self.watch = bool(watch and log)  # the watch writes into the event log: without it nothing is watched
         self.memory: _Memory | None = None
         self.folder: Path | None = None
@@ -314,8 +314,8 @@ class Engine(Contender):
         try:
             self.memory = _Memory(reader, embedder, self.folder, intro=self.intro, reach=f"project:{self.project}",
                                   vault=True, core=True,
-                                  tiers=Tiers(ram_bytes=self.ram_bytes, disk_bytes=self.disk_bytes), metrics=True,
-                                  log=self.log, **self.settings)
+                                  tiers=Tiers(ram_bytes=self.ram_bytes, disk_bytes=self.disk_bytes, wake=self.wake),
+                                  metrics=True, log=self.log, **self.settings)
             config = config_of(self.repo) if self.repo else None
             if config is not None and kv_shape(config) != self.memory.notebook.shape:
                 raise ValueError(f"the notes' shape {self.memory.notebook.shape} is not the one {self.repo}'s "
@@ -440,7 +440,7 @@ class Engine(Contender):
                           "choose, then answer with record=True",
                 "layers": ["rooms", "vault", "core", "tiers", "metrics"],
                 "core": "on, empty: every moment is told untagged, and the core holds only notes tagged core",
-                "ram_bytes": self.ram_bytes, "disk_bytes": self.disk_bytes, "wake": False,
+                "ram_bytes": self.ram_bytes, "disk_bytes": self.disk_bytes, "wake": self.wake,
                 "room_tokens": self.settings.get("room_tokens", ROOM_TOKENS), "join": self.settings.get("join", JOIN),
                 "closest": self.settings.get("closest", CLOSEST),
                 "kv_shape": None if shape is None else {"layers": shape.layers, "kv_heads": shape.kv_heads,
@@ -612,9 +612,11 @@ class Bare(Contender):
     """bare:<model>: no memory. The most recent ``window`` tokens of the history are read once per checkpoint, and
     each question is answered after them and then cut off again."""
 
-    def __init__(self, model: str, *, loader: Loader | None = None, reader=None, window: int | None = None):
+    def __init__(self, model: str, *, loader: Loader | None = None, reader=None, window: int | None = None,
+                 intro: str | None = None):
         if reader is None:
             parse(f"bare:{model}")
+        self.intro = intro  # None: the yardstick's wording; else these instructions, the window given as notes
         self.model, self.repo, self.name = model, MODELS.get(model), f"bare:{model}"
         self.window = window or WINDOWS[model]
         self.loader, self._reader = loader or Loader(), reader
@@ -656,8 +658,9 @@ class Bare(Contender):
             start -= 1
             total += self.counts[start]
         self.start = start
-        self.system = (f"{BARE_SYSTEM}\n\n{OPENER}" + "".join(x + JOIN_LINES for x in self.lines[start:])
-                       + "</history>")
+        lines = "".join(x + JOIN_LINES for x in self.lines[start:])
+        self.system = (f"{BARE_SYSTEM}\n\n{OPENER}{lines}</history>" if self.intro is None else
+                       f"{self.intro}\n\nNotes:\n{lines}End of notes.")
         text = self._template("?")
         self.head = tok.encode(text[:text.index(self.system) + len(self.system)])
         peak_reset()
@@ -705,7 +708,8 @@ class Bare(Contender):
 
     def describe(self) -> dict:
         return {"name": self.name, "kind": "bare", "model": self.model, "repo": self.repo, "window": self.window,
-                "system": BARE_SYSTEM, "opener": OPENER, "lines_joined_by": JOIN_LINES,
+                "system": BARE_SYSTEM if self.intro is None else self.intro,
+                "opener": OPENER if self.intro is None else "Notes:\n", "lines_joined_by": JOIN_LINES,
                 "prompt": "system: the instructions, the opener, the window's lines each followed by a blank line, "
                           "then </history>; user: the question, then the family's line",
                 "today_line": False, "hint_in": "user, after the question", "enable_thinking": THINKING,
@@ -724,15 +728,25 @@ def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
     return cls(model, loader=loader or Loader(), **kw)
 
 
-def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = False, watch: bool = False
-                   ) -> Contender:
-    """A contender with the Long Haul's wording: the engine and words read LONGHAUL_INTRO (bare reads the
-    yardstick's own). ``learn`` and ``watch`` are the engine's."""
+def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = False, watch: bool = False,
+                   wake: bool = False, wording: str = "yardstick") -> Contender:
+    """A contender with the Long Haul's wording. ``wording`` "yardstick": the engine and words read LONGHAUL_INTRO,
+    bare reads the yardstick's own. "own": every one reads the engine's own instructions (memory.INTRO), bare with
+    its window as the notes, and the name says so ("+own"). ``learn``, ``watch`` and ``wake`` are the engine's."""
     kind, _ = parse(spec)
-    kw: dict[str, Any] = {} if kind == "bare" else {"intro": LONGHAUL_INTRO}
+    if wording not in WORDINGS:
+        raise ValueError(f"wording is one of {', '.join(WORDINGS)}, not {wording!r}")
+    own = wording == "own"
+    kw: dict[str, Any] = {"intro": INTRO} if own else ({} if kind == "bare" else {"intro": LONGHAUL_INTRO})
     if kind == "engine":
-        kw.update(learn=learn, watch=watch)
-    return make(spec, loader, **kw)
+        kw.update(learn=learn, watch=watch, wake=wake)
+    c = make(spec, loader, **kw)
+    if own:
+        c.name += "+own"
+    return c
+
+
+WORDINGS = ("yardstick", "own")
 
 
 def memory_folder(task: str, name: str, memories: Path = MEMORIES) -> Path:
@@ -773,7 +787,8 @@ def _failure(e: Exception, record: dict, where: str | None, stage: str) -> None:
 
 def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] | None = None, limit: int | None = None,
              memories: Path = MEMORIES, records: Path = RECORDS, loader: Loader | None = None,
-             progress: Callable[[str], None] = print, learn: bool = False, watch: bool = False) -> list[dict]:
+             progress: Callable[[str], None] = print, learn: bool = False, watch: bool = False,
+             wake: bool = False, wording: str = "yardstick") -> list[dict]:
     """Each contender through the Long Haul's checkpoints, one after another; returns their records. A contender
     that fails is recorded with ``failed`` (its checkpoints so far kept) and the next one runs."""
     from engram.bench.longhaul import CUTS, checkpoints, grader
@@ -783,7 +798,7 @@ def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] |
     loader = loader or Loader()
     out = []
     for spec in specs:
-        c = haul_contender(spec, loader, learn=learn, watch=watch)
+        c = haul_contender(spec, loader, learn=learn, watch=watch, wake=wake, wording=wording)
         rec = run(c, events, cps, task="longhaul", grader=grader, limit=limit, records=records,
                   folder=memory_folder("longhaul", c.name, memories), progress=progress,
                   meta={"haul": haul_meta(folder), "cuts": names}, raise_failure=False)
@@ -942,6 +957,12 @@ def parser() -> argparse.ArgumentParser:
                        help="let the engine's questions change its memory, as in the app (off: read-only)")
         p.add_argument("--watch", action="store_true",
                        help="watch the engine's attention while it answers (its peak RAM is then not reported)")
+        p.add_argument("--wording", choices=("yardstick", "own"), default="yardstick",
+                       help="yardstick: Claude's instructions for everyone (the default); own: the engine's own "
+                            "instructions (memory.INTRO) for every local contender")
+        p.add_argument("--wake", action="store_true",
+                       help="wake an asleep room the engine asks (its notes written again from its words) instead of "
+                            "reading it as words")
     return ap
 
 
@@ -951,12 +972,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         parse(spec)  # every name checked before any model is loaded
     if a.cmd == "longhaul":
         for r in longhaul(a.contender, a.dir, cuts=a.cuts, limit=a.limit, memories=a.memories, records=a.records,
-                          learn=a.learn, watch=a.watch):
+                          learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording):
             print(r.get("path"))
         return 0
     loader = Loader()
     for spec in a.contender:
-        c = haul_contender(spec, loader, learn=a.learn, watch=a.watch)
+        c = haul_contender(spec, loader, learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording)
         r = speed(c, a.dir, memory=memory_folder("speed", c.name, a.memories), marks=a.marks, questions=a.questions,
                   until=cut_tokens(a.until) if a.until else None, records=a.records, raise_failure=False)
         if "failed" in r:

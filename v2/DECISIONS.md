@@ -293,3 +293,99 @@ starts from an empty memory.
 Qwen3's JSON form. It now reads both, with a test for each, and every errand record keeps the raw reply so a format
 surprise shows at once. The two runs are kept in `records/superseded/`, and all 27B errands were rerun with the
 fixed parser. The 27B's quiz runs were unaffected: they need no tool calls.
+
+## The rethink: the engine itself, its app and its proof (4 November 2026, overnight)
+
+**E-29 The engine is the project.** Ibrahim's call, 4 Nov. The thesis title stands: "A Lightweight External Memory
+Engine to Bridge the Capability Gap Between On-Device and Cloud Language Models". Everything else exists to show the
+engine or to prove it.
+- **Not a vector database.** Memory is tensors the model reads as if they were its own: saved keys and values.
+- **Three layers**, swapped by what the task needs:
+  - **subconscious:** an always-on core in RAM (`core.py`);
+  - **conscious:** rooms of saved notes on the SSD, burst-read onto the desk; the hot ones stay in RAM (`swap.py`);
+  - **archive:** a vault of linked plain-text notes, browsable like an Obsidian vault (`vault.py`).
+- **Reach** sets who shares a memory: session, project, agent or global (`reach.py`).
+- **Local only.** The engine serves models on this Mac (MLX). The one exception is a test of pairing with Ollama,
+  where memory goes in as words.
+- **Claude is only a yardstick.** It answers the same questions alone, with no memory. Every call logs its tokens and
+  cost against a $60 cap for the night (`bench/cost.py`).
+
+**E-30 Our own hard test: the Long Haul.** One scripted project: a developer building "Mama Njeri's Kitchen" over
+110 working days, deterministic from a seed. It has 17,786 events and 2.01M tokens, cut at 64K, 256K, 1M and 2M.
+Probes are planted early and asked late, and each has one answer a rule can check:
+- facts;
+- changed facts;
+- two-hop links;
+- corrected maths;
+- a page that grows;
+- code that must fit;
+- look-alikes;
+- things never said.
+
+Each cut asks a stratified sample (10 per family, seed 0), so every contender gets the same 216 questions.
+
+**E-31 Asking never teaches.** In the benchmark the engine's questions are read-only (`learn=False`). The hot
+rooms, the LRU clock and the vault strengths are restored after every answer, so a question asked at 64K and again
+at 2M is not helped by the first asking. Answers to questions asked at an earlier cut are flagged `asked_before`.
+`--learn` turns learning back on, as in the app.
+
+**E-32 Everyone reads the same instructions.** The engine, the words reader and Ollama paired read the yardstick's
+wording, with "the history's notes" in place of "the history" (`LONGHAUL_INTRO`). Bare models read Claude's exact
+wording, with lines joined as Claude's are; a test pins them byte for byte. Only what each one can see differs:
+- Claude sees the newest part of the history that fits its 1M window;
+- a bare local model sees the newest part that fits its own window (32K for the 1.7B and 8B, 64K for the 4B);
+- the engine sees its notes.
+
+**E-33 Ollama pairs through a proxy.** Ollama cannot save or restore keys and values, so the engine gives it memory
+as words: a proxy on 11435 looks up the closest moments for each question and puts them in the system message
+(`pair/`). Thinking is kept off. `qwen3:4b` is now the Thinking build, so the 4B runs as
+`qwen3:4b-instruct-2507-q4_K_M`.
+
+**E-34 The app's design is "Instrument".** It is the microscope picked on 2 Nov, with grafts from the other two
+proposals:
+- from Phosphor: rooms drawn as tensors, the RAM ruler and the bus line;
+- from Living: the tensor beam and the reach aperture.
+
+It scored 23 of 25 against 19 and 18 (`design/DECISION.md`). Six screens: Models, Chat, Code, Swarm, Memory, Bench.
+There is no stock photography: the big pictures are live renders of real memory.
+
+**E-35 One measuring job at a time.** Every benchmark runner raises a measuring flag (`~/.engram/measuring.json`).
+While it is up, the app pauses its views and loads, downloads or probes nothing. The GPU queue runs one model at a
+time; Claude runs beside it, since it needs no GPU.
+
+**E-36 The Hugging Face suites run on Claude and Ollama, not yet on the engine.** `suite_run` refuses local MLX
+contenders: the engine's instructions are the Long Haul's, and a suite needs its own frame. The suites are BABILong,
+MATH-500, AIME and HARP correction pairs. Claude and Ollama (paired against bare) run them tonight.
+
+Opus 5.5 sits the suites out. On the Long Haul it scored no better than Sonnet 5.5 (130 against 138 of 216), at
+twice the price.
+
+**E-37 The 1.7B's wording, not its memory, sank recall at 1M and 2M.** With the yardstick's wording the 1.7B engine
+scored on facts 2/10 at 64K, 5/10 at 256K, 1/10 at 1M and 0/10 at 2M. Most of its total came from declining the
+questions on things never said. Three checks on its own 2M memory (`records/bench/2026-11-04/diagnosis/`):
+- **Retrieval was not the cause.** The room holding the planted fact was chosen for 6 of the 10 facts.
+- **Sleep was not the cause.** 37 of the 40 recall answers hit an asleep room. Waking each room first (its notes
+  written again from its words, `--wake`) gave 2/40 both ways.
+- **The wording was the cause.** The desk held the fact, sometimes twice: for example "Muthoni Wafula is working off
+  a Lenovo Yoga 7". The 1.7B still answered "I don't know", even with the same words as plain text in a fresh
+  prompt. The yardstick's "Answer from them only. When they never say, answer I don't know" makes it decline what it
+  can see.
+
+On the same 2M desks, as words, the engine's own wording (`memory.INTRO`, from the 2–3 Nov quiz) got facts 6/10
+against 1/10, but things never said 3/10 against 8/10. It recalls more and invents more. The 1.7B's honesty is a
+property of its wording, not of its memory.
+
+So the 1.7B is run both ways: the yardstick's wording, and its own (`--wording own`, names ending `+own`). Bare gets
+the same wording, with its window as the notes. The 4B, 8B and 27B keep the yardstick's wording, as planned before
+any result: no wording is picked after seeing it work on these questions. A softer wording written during the
+diagnosis is recorded but not used.
+
+**E-38 Speed does not grow with memory.** `local speed` on the 1.7B took points at 1K, 10K and 17.7K moments (112K,
+1.15M and 2.01M tokens of history):
+- first word p50: 0.11, 0.15 and 0.08 s;
+- retrieval p50: 24, 17 and 18 ms;
+- peak RAM: 4.26, 4.28 and 4.23 GB;
+- disk: held at the 40 GB budget, with 920 rooms awake and 4,471 asleep at the end;
+- ingest: about 1,100 tokens a second throughout.
+
+The p90 first word (2–5 s) is a question whose room is asleep or whose answer is long, read as words.

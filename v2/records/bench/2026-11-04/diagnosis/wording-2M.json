@@ -1,0 +1,19 @@
+{
+ "what": "The engine's own 2M memory (qwen3-1.7b). For each Long Haul question of four families, the chosen room and the 4 closest moments were read as plain words, with three instructions, greedy decoding, max 60 tokens. 256K rows use the same 2M memory with today's date at day 16; only the date differs.",
+ "script": "wording.py (this folder)",
+ "wordings": {
+  "longhaul": "engram.bench.local.LONGHAUL_INTRO (the yardstick's wording; what the Long Haul runs used)",
+  "intro": "engram.memory.INTRO (the engine's own wording, from the 2-3 Nov quiz)",
+  "soft": "a softer wording written during the diagnosis; not used in any run, since it was written while looking at these questions"
+ },
+ "results": {
+  "256K": {"longhaul": {"fact": "2/10", "changed": "0/4", "never": "9/10"},
+           "intro": {"fact": "7/10", "changed": "1/4", "never": "3/10"},
+           "soft": {"fact": "6/10", "changed": "1/4", "never": "3/10"}},
+  "2M": {"longhaul": {"fact": "1/10", "changed": "0/10", "lookalike": "2/10", "never": "8/10"},
+         "intro": {"fact": "6/10", "changed": "1/10", "lookalike": "3/10", "never": "3/10"},
+         "soft": {"fact": "5/10", "changed": "1/10", "lookalike": "3/10", "never": "4/10"}}
+ },
+ "wake_test": "wake-test-2M.json: the 40 recall questions at 2M, asleep rooms read as words against woken as notes: 2/40 both ways (facts 0/10 both ways)",
+ "room_chosen": "at 2M the room holding the planted moment was chosen for 16 of 40 recall questions (6 of 10 facts); 37 of 40 hit an asleep room"
+}
