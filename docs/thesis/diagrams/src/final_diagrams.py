@@ -118,9 +118,9 @@ def context() -> Diagram:
         lab(d, 670, cy - 28 - 18 * (top.count("<br>") + 1), 190, top)
         lab(d, 670, cy + 28, 190, bottom)
 
-    left(480, "User<br>" + small("of the Mac app<br>(Chat, Code)"),
-         "moments and files to<br>remember, questions,<br>research, code tasks,<br>approvals, memory<br>on or off",
-         "answers (from memory,<br>the model or the web),<br>code changes, what<br>each answer read")
+    left(480, "User<br>" + small("of the Mac app<br>(Chat)"),
+         "moments and files to<br>remember, questions,<br>research, memory mode<br>(CAMR, RAG or off)",
+         "answers (from memory,<br>the model or the web)<br>with code blocks, what<br>each answer read")
     left(780, "Wikipedia<br>" + small("public API,<br>for research"), "a search for<br>the question",
          "the best page's<br>plain text")
     left(1080, "Researcher<br>" + small("student, supervisor,<br>examiner"),
@@ -158,11 +158,12 @@ def use_cases() -> Diagram:
     L, M, R = 300, 555, 810
     chat = uc(L, 390, "Chat: ask, or<br>research online")
     tell = uc(L, 215, "Tell or attach<br>something to remember")
-    code = uc(L, 550, "Code with a<br>local agent")
+    code = uc(L, 550, "Ask for code<br>in Chat")
     watch = uc(L, 705, "Watch what an<br>answer reads")
     vault = uc(L, 850, "Browse the vault<br>(Obsidian)")
     pair = uc(L, 1150, "Pair Ollama<br>with memory")
-    switch = uc(M, 190, "Switch memory<br>on or off")
+    switch = uc(M, 190, "Choose memory:<br>CAMR, RAG or off")
+    compare = uc(M, 480, "Compare CAMR,<br>RAG and off")
     reach = uc(M, 320, "Choose a reach<br>or a shelf")
     recall = uc(515, 650, "Recall from memory")
     bench = uc(M, 900, "Run a benchmark", italic=True)
@@ -202,7 +203,9 @@ def use_cases() -> Diagram:
 
     rel(switch, chat, "«extend»", side=1, at=0.55)
     rel(reach, chat, "«extend»", pos=(424, 374))
-    rel(chat, recall, "«include»", side=-1, at=0.5)
+    rel(compare, chat, "«extend»", pos=(372, 437))
+    rel(compare, recall, "«include»", side=-1, at=0.5)
+    rel(chat, recall, "«include»", pos=(294, 471))
     rel(code, recall, "«include»", pos=(318, 610))
     rel(pair, recall, "«include»", pos=(468, 772))
     rel(bench, recall, "«include»", pos=(548, 712))
@@ -310,26 +313,21 @@ def architecture() -> Diagram:
     def comp(x, y, w, h, name, det, stereo=None):
         return d.component(x, y, w, h, name, det, stereo=stereo, size=14)
 
-    # the app, its server and the code agent
-    comp(30, 130, 250, 120, "CAMR Mac app", "Chat · Code; starts the<br>engine with its own token", stereo="SwiftUI")
-    comp(350, 130, 300, 120, "App server", "server.py · 127.0.0.1 · Host,<br>Origin and X-CAMR-Token checks")
-    comp(730, 130, 340, 120, "Code agent", "agentic/: workspace, tools,<br>MCP servers, skills; every<br>"
-                                          "command waits for approval")
-    d.path([(280, 172), (350, 172)])
-    lab(d, 282, 116, 66, "HTTP,<br>loopback,<br>token", size=13)
-    d.path([(350, 214), (280, 214)], head="open", dashed=True)
-    lab(d, 282, 222, 66, "answer,<br>live events", size=13)
-    d.path([(650, 190), (730, 190)])
-    lab(d, 652, 166, 76, "code runs", size=13)
+    # the app and its server
+    comp(30, 130, 330, 120, "CAMR Mac app", "Chat · CAMR / RAG / off ·<br>Compare; starts the engine<br>"
+                                            "with its own token", stereo="SwiftUI")
+    comp(450, 130, 320, 120, "App server", "server.py · 127.0.0.1 · Host,<br>Origin and X-CAMR-Token checks")
+    d.path([(360, 172), (450, 172)])
+    lab(d, 362, 116, 86, "HTTP,<br>loopback,<br>token", size=13)
+    d.path([(450, 214), (360, 214)], head="open", dashed=True)
+    lab(d, 362, 222, 86, "answer,<br>live events", size=13)
 
     # the memory engine
     d.band(30, 300, 760, 660, "«subsystem» Memory engine (camr_engine)", style="package")
     comp(50, 345, 720, 72, "Session", "reach.py: reads several reaches (session · project · agent · global),<br>"
                                      "writes one; memory on or off")
-    d.path([(500, 250), (500, 345)])
-    lab(d, 420, 262, 72, "say,<br>settings", align="right", size=13)
-    d.path([(760, 250), (760, 345)])
-    lab(d, 664, 262, 88, "brain with<br>memory", align="right", size=13)
+    d.path([(610, 250), (610, 345)])
+    lab(d, 530, 262, 72, "say,<br>settings", align="right", size=13)
     d.card(50, 460, 720, 480, "", kind="box")
     d.text(64, 470, 640, "<b>Memory</b> · memory.py: remember · choose · recall · answer · fade", size=15,
            align="left", color=INK)
@@ -374,14 +372,22 @@ def architecture() -> Diagram:
     comp(420, 1170, 280, 130, "Benchmark runners", "bench/: longhaul · local ·<br>ollama_run · suite_run ·<br>"
                                                    "reach_run · ram · throughput")
     comp(420, 1370, 280, 80, "CAMR v1 engine", "the baseline, as a library")
-    comp(875, 1190, 195, 110, "Claude client", "bench/claude.py;<br>ledger with a<br>$60 cap")
+    comp(875, 1330, 195, 110, "Claude client", "bench/claude.py;<br>ledger with a<br>$60 cap")
+    # the Code benchmark's agent: driven by the runners, never by the app
+    comp(875, 810, 195, 150, "Code agent", "agentic/: workspace,<br>tools, MCP servers,<br>skills")
+    d.note(880, 990, 185, 46, "benchmark only: used<br>by the Code benchmark", size=13)
+    d.path([(970, 990), (970, 960)], head=None, dashed=True)
+    d.path([(875, 880), (770, 880)])
+    lab(d, 778, 838, 92, "brain with<br>memory", size=13)
+    d.path([(700, 1220), (840, 1220), (840, 930), (875, 930)])
+    lab(d, 848, 1070, 150, "code tasks", align="left", size=13)
     d.path([(560, 1110), (560, 1170)])
     d.path([(560, 1300), (560, 1370)], head="open", dashed=True)
     lab(d, 570, 1322, 80, "baseline", align="left", size=13)
     d.path([(700, 1195), (735, 1195), (735, 940)])
     lab(d, 745, 972, 90, "contender:<br>tell, ask", align="left", size=13)
-    d.path([(700, 1260), (875, 1260)])
-    lab(d, 742, 1218, 130, "Claude alone,<br>the yardstick", size=13)
+    d.path([(700, 1280), (960, 1280), (960, 1330)])
+    lab(d, 750, 1240, 130, "Claude alone,<br>the yardstick", size=13)
     return d
 
 
@@ -626,7 +632,7 @@ def deployment() -> Diagram:
     env = "#f7f9fb"
     d.node(60, 470, 270, 250, small("«executionEnvironment»") + "<br><b>CAMR Mac app</b> (SwiftUI)", depth=12,
            fill=env)
-    d.artifact(80, 550, 230, 140, "CAMR.app", "Chat · Code;<br>its own launch token;<br>picks the model")
+    d.artifact(80, 550, 230, 140, "CAMR.app", "Chat · CAMR / RAG /<br>off; its own launch<br>token; picks the model")
     d.node(420, 470, 590, 330, small("«executionEnvironment»") + "<br><b>Python 3.12 virtual environment</b>",
            depth=12, fill=env)
     for x, y, n, t in ((440, 545, "App server", "127.0.0.1, a free port<br>picked by the app"),

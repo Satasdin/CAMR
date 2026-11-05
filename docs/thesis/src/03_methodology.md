@@ -156,7 +156,7 @@ The measured results of the engine and the baseline, with the dated records that
 
 ### The Application and System Documentation
 
-The native Mac application with its Chat and Code parts, the user guide, the decision log and this report, including the instructions sufficient for an independent reader to reproduce the results (Appendix A).
+The native Mac chat application, which can answer with CAMR's memory, with RAG or with no memory, the user guide, the decision log and this report, including the instructions sufficient for an independent reader to reproduce the results (Appendix A).
 
 ## Ethical Considerations {#ethics}
 

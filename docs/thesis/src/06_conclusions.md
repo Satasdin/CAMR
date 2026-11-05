@@ -47,7 +47,7 @@ The study contributes:
 1. An open memory engine that keeps a frozen model's own keys and values in rooms on the SSD, with a core in RAM, tiers and sleep under fixed budgets, a vault a person can read, and reach, whose wait and RAM stayed flat as memory grew to 2 million tokens.
 2. The Long Haul, a scripted project of 2 to 4 million tokens with questions graded by rule in eight families that each isolate one way of failing, and a harness in which every answer records what it cost and every number names the code that made it.
 3. A measured comparison of 1.7B to 27B local models with memory against Claude Haiku, Sonnet and Opus alone, within and past the cloud model's window, with time, RAM and cost per answer.
-4. A native Mac application, installed like any other, with Chat and Code that route, research, read files, revise their memory and file it on topic shelves, and that show the engine at work; and a pairing that gives Ollama and other local servers memory as words.
+4. A native Mac chat application, installed like any other, that routes, researches, reads files, revises its memory and files it on topic shelves, answers code in the conversation, compares CAMR with RAG on any question, and shows the engine's tensors at work; and a pairing that gives Ollama and other local servers memory as words.
 
 ### Conditions Within Which the Conclusions Hold
 

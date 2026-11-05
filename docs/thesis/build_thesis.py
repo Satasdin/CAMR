@@ -282,13 +282,17 @@ class Thesis:
 
     def runs(self, p, text: str, size: float | None = None, bold_all: bool = False) -> None:
         text = self.resolve(text)
-        for part in re.split(r"(\\\(.+?\\\)|\*\*.+?\*\*|\*[^*\s][^*]*?\*|`[^`]+`|\[\[.+?\]\])", text):
+        for part in re.split(r"(\\\(.+?\\\)|\*\*\*.+?\*\*\*|\*\*.+?\*\*|\*[^*\s][^*]*?\*|`[^`]+`|\[\[.+?\]\])", text):
             if not part:
                 continue
             if part.startswith("\\(") and part.endswith("\\)"):  # inline maths \( ... \), as a Word equation
                 p._p.append(omath(part[2:-2].strip()))
                 continue
-            if part.startswith("**") and part.endswith("**") and len(part) > 4:
+            if part.startswith("***") and part.endswith("***") and len(part) > 6:
+                r = p.add_run(part[3:-3])
+                r.bold = True
+                r.italic = True
+            elif part.startswith("**") and part.endswith("**") and len(part) > 4:
                 r = p.add_run(part[2:-2])
                 r.bold = True
             elif part.startswith("[[") and part.endswith("]]"):

@@ -208,37 +208,41 @@ The assistant of Section {sec:assistant-design} was implemented in `assistant.py
 
 ### The Application: Modules, Integration and User Workflows {#app-impl}
 
-The application is a Swift package of eight source files (2,122 lines) that builds into `CAMR.app`, signed for the Mac it was built on and installed in the Applications folder. Its modules are the engine process (`Engine.swift`), Chat (`Chat.swift`), Code (`Code.swift`), the weights view (`Weights.swift`), the settings window, the theme, the app shell, and a rehearsal script runner used to capture the screens. When it starts, it starts the engine as a local process with the chosen model (Qwen3 1.7B, 4B or 8B), a free port and a token only it knows, waits for the engine's line saying it holds that port before it sends the token, and then talks to it over the loopback address (IR-04). Each model has its own memory folder, since notes belong to the model that wrote them. The application has two parts, Chat and Code (E-50); an earlier Swarm screen, which ran several agents with their own memories, was removed so that the app does two things well. Colour carries meaning only: memory is cyan, the model amber and the cloud yardstick grey (E-34, E-49). The screens below were captured from the running app with a real memory of 737 rooms; they illustrate the workflows, and the evidence that each requirement was met is in the test cases (Section {sec:testing}).
+The application is a Swift package of eight source files that builds into `CAMR.app`, signed for the Mac it was built on and installed in the Applications folder; the build script installs each new build there and keeps only a zip elsewhere, so one copy of the application is registered on the Mac. Its modules are the engine process (`Engine.swift`), Chat (`Chat.swift`), the weights view (`Weights.swift`), the settings window, the theme, the application shell, and a rehearsal script runner used to capture the screens. When it starts, it starts the engine as a local process with the chosen model (Qwen3 1.7B, 4B or 8B), a free port and a token only it knows, waits for the engine's line saying it holds that port before it sends the token, and then talks to it over the loopback address (IR-04). Each model has its own memory folder, since notes belong to the model that wrote them.
 
-**Starting.** When the app starts, it draws the model's layers filling as their weights load (Figure {fig:app-load}); the memory panel above them shows how many rooms the memory holds. If the engine cannot start, the window says why and where it looked, instead of waiting without end.
+The application is Chat only. An earlier Swarm screen was removed (E-50), and the Code screen was folded into Chat, so that a coding request is answered in the conversation as other chat assistants answer it, while the Code agent remains in the engine for the Code benchmark. Colour carries meaning only: memory is cyan, the model amber and the cloud yardstick grey (E-34, E-49). The screens below were captured from the running application with a real memory of the Long Haul (737 to 742 rooms); they illustrate the workflows, and the evidence that each requirement was met is in the test cases (Section {sec:testing}).
+
+**Starting.** When the app starts, it draws the model's layers filling as their weights load (Figure {fig:app-load}); the memory panel shows how many rooms the memory holds. If the engine cannot start, the window says why and where it looked, instead of waiting without end.
 
 ![{#app-load} Starting the app: the model's 36 layers fill as their weights arrive ("loading 14/36"), before the first question](figures/app/loading-weights.png)
 
-**Telling and asking.** In Chat, the user tells the model something with Remember and asks with Ask (Figure {fig:app-chat}). A remembered moment is judged by revision, filed on its shelf and read once by the model; a question is routed, its room is read, and the answer is written. Under each answer the app shows where it came from (memory, the model's own knowledge or the web), the time to the first word, and, from memory, the note read and whether it came from RAM or the SSD; under each remembered fact, the shelf it was kept on. A switch turns memory off, so the same question can be asked of the model alone, which then answers "I don't know" about the user's own facts.
+**Telling and asking.** The user tells the model something with Remember and asks with Ask (Figure {fig:app-chat}). A remembered moment is judged by revision, filed on its shelf and read once by the model; a question is routed, its room is read, and the answer is written. Under each answer the app shows where it came from (memory, the model's own knowledge or the web), the time to the first word, the text read, and, from memory, the note read and whether it came from RAM or the SSD. With memory off, the same question gets "I don't know" about the user's own facts. Moments told on "Auto" are filed by meaning (Figure {fig:app-shelves}).
 
 ![{#app-chat} Chat with memory on and off: a fact told earlier is answered from the room it was kept in ("room 609 · read from the SSD"); with memory off, the same question gets "I don't know"](figures/app/chat-memory-on-off.png)
 
-**Shelves.** Moments told on "Auto" are filed by meaning (Figure {fig:app-shelves}), and each answer names the note and the shelf it read.
+![{#app-shelves} Shelves in Chat (Qwen3 4B): moments told on "Auto" are filed on the Research and Personal shelves by meaning, and each answer names the note and shelf it read](figures/app/chat-shelves.png)
 
-![{#app-shelves} Shelves in Chat (Qwen3 4B): moments told on "Auto" are filed on the Research and Personal shelves by meaning, and each answer names the note and shelf it read ("note 0 on Coding · read from the SSD")](figures/app/chat-shelves.png)
+**CAMR, RAG or off, and Compare.** A switch chooses how memory is used: CAMR (one room laid on the desk already read, and its closest moments as words), RAG (the eight closest moments pasted in as text and read again for this question, up to 1,024 tokens) or off. Compare asks the question all three ways, with the same model, the same memory and the same instructions and without the conversation, and sets the answers side by side with what each had to read (Figure {fig:app-compare}). Compare answers are never kept in memory.
 
-**General questions and reasoning.** A question that needs no memory is answered from the model's own knowledge; a thinking model's reasoning streams into a block that folds once the answer is written (Figures {fig:app-maths} and {fig:app-reasoning}), and what was learnt is kept on the Research shelf. Conversations are saved and listed, a new one can be started, and an answer can be stopped mid-way.
+![{#app-compare} Compare on Qwen3 4B: CAMR and RAG both answer "Patrick Chacha"; CAMR's first word comes at 257 ms with 458 tokens read as text and 492 tokens already read as notes (room 454), RAG's at 304 ms with 749 tokens read as text, and with no memory the model does not know](figures/app/chat-compare-camr-rag-off.png)
 
-![{#app-maths} A general question answered by the 8B from its own knowledge, its reasoning folded ("Thought for 18.5 seconds"), labelled "from the model" and kept on the Research shelf](figures/app/chat-maths.png)
+**Code in Chat.** A request for code is answered from the model's own knowledge with room for a full file, and code is shown in formatted blocks with its language, its length and a Copy button (Figures {fig:app-code} and {fig:app-cafe}).
+
+![{#app-code} Code in Chat: a Python function written by Qwen3 4B, shown as a formatted block with its language, 39 lines and a Copy button](figures/app/chat-code-block.png)
+
+![{#app-cafe} A one-page café website requested in Chat, returned as an HTML file in a code block](figures/app/chat-code-cafe-site.png)
+
+**General questions and reasoning.** A question that needs no memory is answered from the model's own knowledge; a thinking model's reasoning streams into a block that folds once the answer is written (Figures {fig:app-maths} and {fig:app-reasoning}), and what was learnt is kept on the Research shelf. Conversations are saved and listed, and an answer can be stopped mid-way.
+
+![{#app-maths} A general question answered by the 8B from its own knowledge, its reasoning folded ("Thought for 18.5 seconds") and labelled "from the model"](figures/app/chat-maths.png)
 
 ![{#app-reasoning} The 8B's reasoning, folded once the answer is written ("Thought for 27.8 seconds")](figures/app/chat-reasoning-folded.png)
 
-**The weights view.** The tensors are drawn only while a model loads or when the user asks for them (Command-T), and can be shown large beside the chat (Figure {fig:app-weights}). While the model answers, the room it reads is marked and travels into the model, and each layer's row lights with how strongly that layer fired for each word: 32 measured numbers per layer per word, sent by the engine only while the app listens, so the benchmarks pay nothing for them (FR-19). With memory off, the memory stays dark and only the model's layers light (Figure {fig:app-onoff}).
+**The tensors.** The weights view is drawn only while a model loads or when the user asks for it (Command-T), and can be shown large beside the chat (Command-E). It draws only what the engine measures (FR-19): the shelves and their rooms on top, with the room read marked by its id and tier; a strip that sets the memory already read as notes against the text read now; and the model's 36 layers below, each column a layer and each row one of 32 slices of its hidden state, lit where a slice stands out for the word being written. In CAMR mode the room flows from the memory into every layer, and only the closest moments, the date and the question are read as text (Figure {fig:app-tensors-camr}). In RAG mode the chunks drop in as text and must be read from the first layer up before the first word (Figure {fig:app-tensors-rag}). With memory off, the memory stays dark.
 
-![{#app-weights} The weights view, large beside the chat: the room an answer reads travels from the memory (rooms, top) into the model's 36 layers (bottom)](figures/app/weights-large.png)
+![{#app-tensors-camr} The tensors in CAMR mode: room 609 is read from the SSD and flows into the model's 36 layers; 461 tokens are already read as notes and 458 are read as text, and the first word comes 0.24 s later](figures/app/weights-camr.png)
 
-![{#app-onoff} The weights view with memory on (left), where the room read lights and flows into the model, and off (right), where the model answers alone and the memory stays dark](figures/app/weights-on-off.png)
-
-**Code.** Code is a coding agent on the same local model (Figure {fig:app-code}). The user picks a folder; the agent can list, search, read and edit files and run commands there, and every shell command waits for an explicit Allow. Its turns, tool calls and the files it opened or wrote are shown as it works, and with memory on what it learns about the project is kept on the Coding shelf for the next task (Figure {fig:app-cafe}). Building from memory needed small fixes to the agent, each with its test: the notes' answer rules no longer end a task; an empty workspace and the files still to write are named at every step; a look repeated with nothing changed is not run again; a reply cut off inside a tool call gets more room; a code step re-reads its eight closest moments (E-59); an answer that leaves the task's files unwritten is sent back once; and the attention record is worked out as each look is made, so a long desk no longer runs the graphics memory out (E-60).
-
-![{#app-code} Code: the agent lists the files of a project folder, reads `money.py` and answers from what it read; the answer is kept in memory](figures/app/code-reads-then-answers.png)
-
-![{#app-cafe} Code with the 8B: a one-page café website written as `index.html` and `style.css` in two tool calls, and kept in memory](figures/app/code-cafe-site.png)
+![{#app-tensors-rag} The tensors in RAG mode on the same question: eight chunks from the shelves are pasted in as text, so 801 tokens must be read before the first word, which comes 0.35 s later](figures/app/weights-rag.png)
 
 ### Memory for Other Runtimes: the Ollama Pairing
 
@@ -272,7 +276,7 @@ The purpose of testing was to show whether the implemented system satisfies the 
 2. **System tests.** The benchmark runs were judged against the non-functional requirements of Table {tab:nfr}, whose thresholds were written before the runs that tested them (E-19, E-40).
 3. **Security tests.** Requests with a foreign host, a foreign origin, no token or a non-JSON body were sent to the engine's server and the proxies.
 4. **Deployment test.** The installer and the health check were run, and the Mac app was built, installed in the Applications folder and run with the 1.7B, 4B and 8B models.
-5. **Demonstration.** Chat and Code were used with a real memory, and the screens were captured from the running app (Section {sec:app-impl}). Black-box positive, negative and boundary cases were included: memory off, never-told questions, foreign requests, a second process, a cost cap, and a never-said name.
+5. **Demonstration.** Chat, Compare and the tensors were used with a real memory, and the screens were captured from the running app (Section {sec:app-impl}). Black-box positive, negative and boundary cases were included: memory off, never-told questions, foreign requests, a second process, a cost cap, and a never-said name.
 
 User acceptance testing and an accessibility audit were not done.
 
@@ -298,7 +302,7 @@ Table: {#testcases} Test cases and results
 | T-12 | NFR-12 | A second process opens a reach folder | Refused | Refused with `ReachBusy` (reach tests) | Pass |
 | T-13 | NFR-14 | The night's yardstick runs | Spend under $60 | $28.71, every call in the ledger | Pass |
 | T-14 | NFR-15 | Inspection of the records of 4 November | Machine, load, versions, commit and code hash in each | Present in every record | Pass |
-| T-15 | FR-18, FR-19 | The Mac app with Qwen3 4B and 8B | Chat and Code work with memory on and off; the weights view moves only with measured events | Figures {fig:app-load} to {fig:app-cafe} | Pass (demonstration) |
+| T-15 | FR-18, FR-19 | The Mac app with Qwen3 4B and 8B | Chat works with memory on and off and returns code as formatted blocks; the weights view moves only with measured events | Figures {fig:app-load} to {fig:app-tensors-rag} | Pass (demonstration) |
 | T-16 | FR-20 | A fact told through the OpenAI-compatible endpoint, asked back through the real Ollama | The fact comes back | "Pilipili", with 187 characters of notes (E-47) | Pass |
 | T-17 | FR-22 | The Long Haul built twice from seed 1, and extended | Identical scripts; the first 110 days unchanged by the extension | Generator tests pass; checked event for event (E-39) | Pass |
 | T-18 | FR-27 | 14 routing questions on the 8B's Long Haul memory, including one never-said name | Questions about the user's records go to memory; others to the model | 13 of 14 routed right; the miss, the never-said name, was then answered honestly (E-55) | Pass |
@@ -306,11 +310,12 @@ Table: {#testcases} Test cases and results
 | T-20 | FR-31 | Twelve test sentences told on "Auto" | Each filed on its shelf | 12 of 12, including the 8 not close to any shelf's examples (E-51) | Pass |
 | T-21 | FR-29 | A photographed receipt attached, then asked about later | Its total and an item answered from memory | KES 730.00 and the item, "from memory · note 549" (Figure {fig:app-receipt}) | Pass (demonstration) |
 | T-22 | FR-28 | A web page whose text tries to close its markers or give orders | The page is read as data only | Angle brackets neutralised and links limited to http(s), by the research tests | Pass |
-| T-23 | Users | User acceptance; accessibility audit | Agreed criteria with representative users | Not run | Not tested |
+| T-23 | FR-32 | Compare on two Long Haul facts (the Karen landlord; Kitengela Ventures' truck plate), Qwen3 4B | CAMR and RAG give the told answer; off does not know; every figure shown is measured | Both answered by CAMR and RAG; CAMR's first word 257 and 230 ms against RAG's 304 and 308 ms, with 458 and 421 tokens read as text against 749 and 734; off declined (Figure {fig:app-compare}) | Pass (demonstration) |
+| T-24 | Users | User acceptance; accessibility audit | Agreed criteria with representative users | Not run | Not tested |
 
 ### Defects Found and Retests
 
-The measurements and the demonstrations found nine defects in the system or in its measurement (Table {tab:defects}). Each was fixed or bounded, and the affected runs were repeated or reported both ways.
+The measurements and the demonstrations found ten defects in the system or in its measurement (Table {tab:defects}). Each was fixed or bounded, and the affected runs were repeated or reported both ways.
 
 Table: {#defects} Defects found and retests
 
@@ -325,6 +330,7 @@ Table: {#defects} Defects found and retests
 | D-07 | Routing blind, the 8B sent "the number plate of Kitengela Ventures' delivery truck" to its own knowledge (E-55) | The router sees the closest note; a question naming a person or business in the closest notes goes to memory | 13 of 14 (T-18) |
 | D-08 | A photographed receipt was not recalled: 737 Long Haul notes outscored it on its own shelf (0.81 against 0.70) | The closest moment of every other shelf within 0.12 of the best is read too | Recalled (T-21) |
 | D-09 | Switching models in the app marked the new engine failed ("exit 15"): the old process's exit handler ran late | The handler acts only for the process it was attached to | Pass: 1.7B, 4B and 8B switched in turn |
+| D-10 | "Python", "HTML" and "CSS" in a coding request were taken for names in the closest notes, so the request went to memory | Common technical words are not counted as names | A Python request answered in full (Figure {fig:app-code}) |
 
 ## Version Control and Implementation Evidence {#vc}
 
@@ -332,7 +338,13 @@ Table: {#defects} Defects found and retests
 
 ## Author Oversight and Use of AI-Assisted Tools {#ai-use}
 
-Claude (Anthropic), used through Claude Code, assisted with this project. Under the student's direction it wrote and revised the engine, the app, the harness and their tests; ran the experiments; and drafted the documentation, including the decision log, the user guide and drafts of this report. The student set the problem, the objectives, the scope and the direction of the work, and made the calls recorded as the student's own, such as making the engine the project (E-29), pushing the Long Haul past 2 million tokens (E-39), asking for the RAM to be optimised (E-40) and removing Swarm from the app (E-50). The output was checked by running the automated tests, by the records, which name the machine and the code behind every number, and by reading the outputs themselves. Requirements were written before the runs that tested them, and the requirements that were not met are reported as measured. Claude also served, separately, as the yardstick in the benchmarks; that role is unrelated to its role as a tool. The student made the final decisions and takes full responsibility for the work. The tool was Claude Code with Claude Opus models (Opus 5.5 in the final weeks). [[Student to confirm this statement and the model versions.]]
+Three AI tools were used in this project, each in a defined role.
+
+- **Kimi K3 (Moonshot AI), through the Moonshot API.** In the baseline stage, Kimi K3 served as the cloud reference model in the benchmarks: the closed-book ceiling against which CAMR v1 was measured on PopQA, HotpotQA, 2WikiMultiHopQA and GSM8K, and the model to which hard questions were escalated. Its answers are results, not authorship.
+- **Claude Haiku, Sonnet and Opus 5.5 (Anthropic), through the Claude API.** In the final stage, these models served only as the yardstick in the benchmarks: they answered the Long Haul and the public suites alone, with no memory, every call logged with its tokens and cost and held under a $60 cap.
+- **Claude Code (Anthropic), with Claude Opus models (Opus 5.5 in the final weeks).** Claude Code assisted with refining the project's goal into a measurable engine study, with designing and building the engine, the benchmark harness and the native Mac application, with running the benchmarks and analysing their records, and with drafting the documentation, including the decision log, the user guide, the generator scripts of the diagrams and charts, and drafts of this report.
+
+The student set the problem, the objectives, the scope and the direction of the work, and made the decisions recorded as the student's own, such as making the engine the project (E-29), pushing the Long Haul past 2 million tokens (E-39), asking for the RAM to be optimised (E-40), removing Swarm from the app (E-50) and showing memory through Chat against RAG. Every output was checked: code by the automated tests (792 passing), every number by the dated records that name the machine and the code behind it, and the text against those records. Requirements were written before the runs that tested them, and requirements that were not met are reported as measured; no result, record or screenshot was fabricated. The decision log and the repository's commit history serve as the AI-use log. Material AI use is disclosed here, and the student made the final decisions and takes full responsibility for the submitted work.
 
 ## Evaluation Results {#eval}
 
