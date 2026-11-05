@@ -17,6 +17,68 @@ struct Turn: Identifiable {
     var model = ""  // which model wrote it
     var thinkStart: Date?
     var thinkEnd: Date?
+    var pipe: Measured?  // how this answer read memory, as the engine measured it
+    var runs: [Run] = []  // a comparison: the same question answered by CAMR, RAG and the model alone
+}
+
+/// One answer's pipeline, as the engine measured it (camr_engine.app.routes.chat, ``pipeline``).
+struct Measured {
+    var mode = "camr"
+    var route = ""
+    var firstWord: Double?
+    var retrievalMs: Double?
+    var prefill = 0  // tokens read as text before the first word
+    var memoryText = 0  // of which memory, as words
+    var notes = 0  // tokens found already read, as notes
+    var notesBytes = 0.0
+    var readBytes = 0.0
+    var answerTokens = 0
+    var decodeTps: Double?
+    var source = ""  // the room, or the chunks, it answered from
+
+    init() {}
+
+    init(_ d: [String: Any], shelves: [ShelfInfo]) {
+        mode = d.str("mode") ?? "camr"
+        route = d.str("route") ?? ""
+        firstWord = d.num("first_word_s")
+        retrievalMs = d.num("retrieval_ms")
+        prefill = Int(d.num("prefill_tokens") ?? 0)
+        memoryText = Int(d.num("memory_text_tokens") ?? 0)
+        notes = Int(d.num("notes_tokens") ?? 0)
+        notesBytes = d.num("notes_bytes") ?? 0
+        readBytes = d.num("read_bytes") ?? 0
+        answerTokens = Int(d.num("answer_tokens") ?? 0)
+        decodeTps = d.num("decode_tps")
+        func shelf(_ name: String?) -> String? { shelves.first(where: { $0.name == name })?.label }
+        if let src = d.dict("source") {
+            if let room = src.num("room") {
+                let tier = (src["asleep"] as? Bool) == true ? "asleep, read as words"
+                    : src.str("tier") == "ssd" ? "read from the SSD" : src.str("tier") == "ram" ? "hot in RAM" : "as words"
+                source = "room \(Int(room))" + (shelf(src.str("shelf")).map { " on \($0)" } ?? "") + " · \(tier)"
+                    + " · +\(Int(src.num("closest") ?? 0)) closest as words"
+            } else {
+                let chunks = src.list("chunks")
+                var by: [String: Int] = [:]
+                for c in chunks { by[shelf(c.str("shelf")) ?? "memory", default: 0] += 1 }
+                let on = by.sorted { $0.value > $1.value }.map { "\($0.value) \($0.key)" }.joined(separator: ", ")
+                source = "\(chunks.count) chunks pasted as text (\(on))"
+            }
+        } else {
+            source = route == "general" && mode != "off" ? "routed to the model's own knowledge" : "no memory"
+        }
+    }
+}
+
+/// One of a comparison's three answers.
+struct Run: Identifiable {
+    let mode: String
+    var id: String { mode }
+    var text = ""
+    var pending = true
+    var started = false
+    var failed = false
+    var pipe: Measured?
 }
 
 /// One chat with the engine: each message is started at once and its live events are read as they come, so the
@@ -27,6 +89,7 @@ final class ChatModel: ObservableObject {
 
     @Published var turns: [Turn] = []
     @Published var memoryOn = true
+    @Published var mode = "camr"  // how answers read memory: camr (notes), rag (text) or off
     @Published var busy = false
     @Published var draft = ""
     @Published var reach = ""
@@ -47,7 +110,11 @@ final class ChatModel: ObservableObject {
 
     func refresh() async {
         guard let st = try? await engine.get("/api/chat/state") else { return }
-        if let on = st["on"] as? Bool { memoryOn = on; weights.memoryOn = on }
+        if let on = st["on"] as? Bool {
+            memoryOn = on
+            if !on { mode = "off" } else if mode == "off" { mode = "camr" }
+            if !weights.answering { weights.mode = mode }
+        }
         thinks = (st.dict("model")?["thinks"] as? Bool) ?? false
         let reaches = st.list("reaches")
         let rooms = reaches.compactMap { $0.num("rooms") }.reduce(0, +)
@@ -80,12 +147,18 @@ final class ChatModel: ObservableObject {
         _ = try? await engine.post("/api/chat/settings", ["shelf": name])
     }
 
-    func setMemory(_ on: Bool) async {
-        memoryOn = on
-        weights.memoryOn = on
-        _ = try? await engine.post("/api/chat/settings", ["on": on])
+    func setMemory(_ on: Bool) async { await setMode(on ? "camr" : "off") }
+
+    /// CAMR, RAG or Off: how every answer reads memory from now on. Off also keeps nothing new.
+    func setMode(_ m: String) async {
+        mode = m
+        memoryOn = m != "off"
+        weights.mode = m
+        _ = try? await engine.post("/api/chat/settings", ["on": m != "off"])
         await refresh()
     }
+
+    static func modeName(_ m: String) -> String { m == "rag" ? "RAG" : m == "off" ? "Off" : "CAMR" }
 
     /// Old callers: remember, or ask.
     func send(remember: Bool) async { await send(remember ? .remember : .ask) }
@@ -100,13 +173,14 @@ final class ChatModel: ObservableObject {
         turns.append(Turn(who: .you, text: text, meta: label))
         turns.append(Turn(who: .camr, text: "", memory: memoryOn, pending: true, model: engine.model.name))
         let k = turns.count - 1
-        weights.beginAnswer(memory: memoryOn)
         let intent = mode == .remember ? "tell" : mode == .research ? "research" : "chat"
+        weights.beginAnswer(mode: intent == "chat" ? self.mode : (memoryOn ? "camr" : "off"))
         do {
             let prefs = Prefs.shared
-            let job = try await engine.post("/api/chat/message", ["text": text, "intent": intent, "shelf": shelf,
-                                                                 "thinking": thinks && reasoning,
-                                                                 "turns": prefs.turns, "max_tokens": prefs.maxTokens])
+            var body: [String: Any] = ["text": text, "intent": intent, "shelf": shelf, "thinking": thinks && reasoning,
+                                       "turns": prefs.turns, "max_tokens": prefs.maxTokens]
+            if intent == "chat" { body["memory"] = self.mode }
+            let job = try await engine.post("/api/chat/message", body)
             guard let id = job.str("id") else { throw Engine.Failure(message: "no job id") }
             self.job = id
             defer { self.job = nil }
@@ -126,6 +200,80 @@ final class ChatModel: ObservableObject {
             weights.finish(nil)
         }
         await refresh()
+    }
+
+    /// The same question answered three ways, one after another, on the same memory and the same model: CAMR (a
+    /// room's notes already read), RAG (the closest moments pasted in as text) and the model alone. Each answer's
+    /// numbers are the engine's own measurements. Nothing is learned from them.
+    func compare() async {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !busy else { return }
+        draft = ""
+        busy = true
+        defer { busy = false }
+        turns.append(Turn(who: .you, text: text, meta: "compare · CAMR · RAG · Off"))
+        var t = Turn(who: .camr, text: "", pending: true, model: engine.model.name)
+        t.runs = ["camr", "rag", "off"].map { Run(mode: $0) }
+        turns.append(t)
+        let k = turns.count - 1
+        let prefs = Prefs.shared
+        for i in 0..<3 {
+            let m = turns[k].runs[i].mode
+            turns[k].runs[i].started = true
+            weights.beginAnswer(mode: m)
+            do {
+                let job = try await engine.post("/api/chat/message", [
+                    "text": text, "intent": "chat", "shelf": shelf, "thinking": false, "turns": prefs.turns,
+                    "max_tokens": prefs.maxTokens, "memory": m, "compare": true])
+                guard let id = job.str("id") else { throw Engine.Failure(message: "no job id") }
+                self.job = id
+                var next = 0
+                var done = false
+                while !done {
+                    let got = try await engine.get("/api/live?id=\(id)&from=\(next)")
+                    for e in got.list("events") { handleRun(e, at: k, i) }
+                    next = Int(got.num("next") ?? Double(next))
+                    done = (got["done"] as? Bool) ?? false
+                    if !done { try await Task.sleep(nanoseconds: 30_000_000) }
+                }
+                self.job = nil
+            } catch {
+                self.job = nil
+                turns[k].runs[i].text = error.localizedDescription
+                turns[k].runs[i].failed = true
+                turns[k].runs[i].pending = false
+                weights.finish(nil)
+            }
+            try? await Task.sleep(nanoseconds: 400_000_000)  // the weights view settles between answers
+        }
+        turns[k].pending = false
+        await refresh()
+        await loadChats()
+    }
+
+    private func handleRun(_ e: [String: Any], at k: Int, _ i: Int) {
+        switch e.str("kind") {
+        case "room": weights.roomEvent(e)
+        case "chunks": weights.chunksEvent(e)
+        case "prefill": weights.prefillEvent(e)
+        case "token":
+            turns[k].runs[i].text += e.str("text") ?? ""
+            weights.token(e)
+        case "read": weights.layersEvent(e["layers"] as? [[Double]], learn: false)
+        case "done":
+            turns[k].runs[i].pending = false
+            if let err = e.str("error") {
+                turns[k].runs[i].text = err
+                turns[k].runs[i].failed = true
+                weights.finish(nil)
+                return
+            }
+            turns[k].runs[i].text = (e.str("reply") ?? turns[k].runs[i].text).trimmingCharacters(in: .whitespacesAndNewlines)
+            if let p = e.dict("pipeline") { turns[k].runs[i].pipe = Measured(p, shelves: shelves) }
+            weights.finish(e.dict("metric"))
+        default:
+            break
+        }
     }
 
     /// Stop the answer being written: the model ends at its next word.
@@ -225,13 +373,18 @@ final class ChatModel: ObservableObject {
                 let on = shelves.first(where: { $0.reach == e.str("reach") }).map { " on \($0.label)" } ?? ""
                 turns[k].meta = "note \(Int(r))\(on) · " + (tier == "ssd" ? "read from the SSD" : tier == "ram" ? "hot in RAM" : "read as words")
             }
+        case "chunks":
+            weights.chunksEvent(e)
+        case "prefill":
+            weights.prefillEvent(e)
         case "token":
             stream(e.str("text") ?? "", at: k)
             weights.token(e)
         case "read":
-            weights.layersEvent(e["layers"] as? [[Double]])
+            weights.layersEvent(e["layers"] as? [[Double]], learn: false)
         case "done":
             turns[k].pending = false
+            if let p = e.dict("pipeline") { turns[k].pipe = Measured(p, shelves: shelves) }
             if let err = e.str("error") {
                 turns[k].text = err
                 turns[k].failed = true
@@ -255,15 +408,21 @@ final class ChatModel: ObservableObject {
                     parts.append("not kept")
                 }
             } else {
+                let how = turns[k].pipe.map { ChatModel.modeName($0.mode) } ?? ""
                 switch turns[k].route {
-                case "memory": parts.append("from memory")
+                case "memory": parts.append("from memory · \(how)")
                 case "web": parts.append("from the web")
                 case "general": parts.append("from the model")
                 default: break
                 }
                 if let f = m?.num("first_word_s") ?? e.num("wait_s") { parts.append("first word \(secondsText(f))") }
-                if !turns[k].meta.isEmpty { parts.append(turns[k].meta) }
-                if turns[k].memory == false { parts.append("memory off") }
+                if let p = turns[k].pipe {
+                    parts.append("\(p.prefill) tokens read as text")
+                    if p.notes > 0 { parts.append("\(p.notes) as notes") }
+                    if p.mode == "rag", turns[k].route == "memory" { parts.append(p.source) }
+                }
+                if !turns[k].meta.isEmpty, turns[k].pipe?.mode != "rag" { parts.append(turns[k].meta) }
+                if turns[k].pipe?.mode == "off" || turns[k].memory == false { parts.append("memory off") }
                 if let l = e.dict("learned") {
                     let on = shelves.first(where: { $0.name == l.str("shelf") })?.label
                     parts.append("learned" + (on.map { " on \($0)" } ?? ""))
@@ -286,13 +445,13 @@ struct ChatView: View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 18) {
                         if chat.turns.isEmpty { empty }
                         ForEach(chat.turns) { t in TurnView(turn: t).id(t.id) }
                     }
                     .padding(.horizontal, 32)
                     .padding(.vertical, 28)
-                    .frame(maxWidth: 820, alignment: .leading)
+                    .frame(maxWidth: 1100, alignment: .leading)
                     .frame(maxWidth: .infinity)
                 }
                 .onChange(of: chat.turns.count) { _, n in  // once per message: yours at the top, the answer below
@@ -312,23 +471,27 @@ struct ChatView: View {
     private var empty: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Ask anything. It remembers.").font(Theme.ui(26, .semibold)).foregroundStyle(Theme.text)
-            Text("It answers from its own knowledge, reaches into memory when a question is about your work or life, and keeps what you discuss on its shelves. Research looks things up online; drop a PDF, image or video to read it into memory.")
-                .font(Theme.ui(14)).foregroundStyle(Theme.dim).frame(maxWidth: 520, alignment: .leading)
+            Text("Memory questions are answered from a room of notes the model has already read. Compare asks the same question three ways: CAMR, a conventional RAG pipeline over the same memory, and the model alone.")
+                .font(Theme.ui(14)).foregroundStyle(Theme.dim).frame(maxWidth: 560, alignment: .leading)
             VStack(alignment: .leading, spacing: 8) {
-                suggestion("Who is the landlord of the Karen branch?", "from memory", .ask)
-                suggestion("What is the square root of 56? Show your working.", "the model's own knowledge", .ask)
-                suggestion("Who founded the Kenya Wildlife Service?", "researched online, then kept", .research)
+                suggestion("Who is the landlord of the Karen branch?", "compare CAMR · RAG · Off", compare: true)
+                suggestion("What is the number plate of Kitengela Ventures' delivery truck?", "from memory")
+                suggestion("Write a Python function that groups orders by customer and totals them.", "code, in the chat")
+                suggestion("Build a one-page café website in HTML and CSS.", "code, in the chat")
             }
             .padding(.top, 12)
         }
         .padding(.top, 60)
     }
 
-    private func suggestion(_ text: String, _ how: String, _ mode: ChatModel.Mode) -> some View {
-        Button { Task { await chat.ask(text, mode) } } label: {
+    private func suggestion(_ text: String, _ how: String, compare: Bool = false) -> some View {
+        Button {
+            chat.draft = text
+            Task { if compare { await chat.compare() } else { await chat.send(.ask) } }
+        } label: {
             HStack(spacing: 10) {
-                Image(systemName: mode == .research ? "globe" : "arrow.up.right").font(.system(size: 11))
-                    .foregroundStyle(mode == .research ? Theme.text : Theme.model)
+                Image(systemName: compare ? "rectangle.split.3x1" : "arrow.up.right").font(.system(size: 11))
+                    .foregroundStyle(compare ? Theme.memory : Theme.model)
                 Text(text).font(Theme.ui(14)).foregroundStyle(Theme.text)
                 Text(how).font(Theme.mono(10)).foregroundStyle(Theme.faint)
             }
@@ -346,7 +509,7 @@ struct ChatView: View {
                 Button { chat.attach() } label: { Image(systemName: "paperclip").font(.system(size: 15, weight: .semibold)) }
                     .buttonStyle(.plain).foregroundStyle(Theme.dim).padding(.bottom, 12)
                     .help("Read a PDF, text or Markdown file into memory")
-                TextField(engine.phase == .ready ? "Ask anything, remember something, or research it online…"
+                TextField(engine.phase == .ready ? "Ask anything, ask for code, remember something, or compare…"
                           : "Loading the model…", text: $chat.draft, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(Theme.ui(15))
@@ -368,6 +531,13 @@ struct ChatView: View {
                 .buttonStyle(Pill(color: Theme.memory))
                 .keyboardShortcut(.return, modifiers: .command)
                 .help("Keep this in memory (⌘↩)")
+                Button { Task { await chat.compare() } } label: {
+                    Label("Compare", systemImage: "rectangle.split.3x1").labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(Pill(color: Theme.text.opacity(0.85)))
+                .keyboardShortcut(.return, modifiers: .option)
+                .help("Ask with CAMR, RAG and no memory, one after another, and show them side by side (⌥↩)")
+                .disabled(engine.phase != .ready || chat.busy)
                 if chat.busy {
                     Button { Task { await chat.stop() } } label: {
                         Label("Stop", systemImage: "stop.fill").labelStyle(.titleAndIcon)
@@ -385,7 +555,8 @@ struct ChatView: View {
                 }
             }
             HStack {
-                Text("↩ ask · ⌘↩ remember · ⇧⌘↩ research online").font(Theme.mono(10)).foregroundStyle(Theme.faint)
+                Text("↩ ask · ⌥↩ compare · ⌘↩ remember · ⇧⌘↩ research · memory: \(ChatModel.modeName(chat.mode))")
+                    .font(Theme.mono(10)).foregroundStyle(Theme.faint)
                 Spacer()
                 if chat.thinks {
                     Toggle("Show reasoning", isOn: $chat.reasoning).toggleStyle(.checkbox).font(Theme.mono(10))
@@ -397,7 +568,7 @@ struct ChatView: View {
         }
         .padding(.horizontal, 32)
         .padding(.vertical, 16)
-        .frame(maxWidth: 860)
+        .frame(maxWidth: 1100)
         .frame(maxWidth: .infinity)
         .background(Theme.ink)
         .onAppear { focused = true }
@@ -410,61 +581,59 @@ struct TurnView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text(turn.who == .you ? "YOU" : "CAMR").font(Theme.mono(10, .semibold))
-                    .foregroundStyle(turn.who == .you ? Theme.dim : (turn.route == "memory" ? Theme.memory : Theme.model))
-                if turn.pending { ProgressView().controlSize(.mini) }
+                Text(turn.who == .you ? "YOU" : turn.runs.isEmpty ? "CAMR" : "SAME QUESTION · SAME MODEL · SAME MEMORY")
+                    .font(Theme.mono(10, .semibold))
+                    .foregroundStyle(turn.who == .you || !turn.runs.isEmpty ? Theme.dim : (turn.route == "memory" ? Theme.memory : Theme.model))
+                if turn.pending && turn.runs.isEmpty { ProgressView().controlSize(.mini) }
                 if !turn.meta.isEmpty && turn.who == .you {
                     Text(turn.meta).font(Theme.mono(10)).foregroundStyle(Theme.memory.opacity(0.8))
                 }
             }
-            if !turn.thinking.isEmpty {
-                if turn.pending && turn.text.isEmpty {  // thinking now: the newest lines in view, as Ollama shows it
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Thinking…").font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
-                        ScrollView { reasoning }
-                            .defaultScrollAnchor(.bottom)
-                            .frame(maxHeight: 160)
-                            .mask(LinearGradient(colors: [.clear, .black, .black], startPoint: .top, endPoint: .init(x: 0.5, y: 0.25)))
-                    }
-                } else {
-                    DisclosureGroup {
-                        reasoning
-                    } label: {
-                        Text(thoughtFor).font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
-                    }
-                    .tint(Theme.model)
-                }
+            if !turn.runs.isEmpty {
+                CompareView(runs: turn.runs)
+            } else {
+                answer
             }
-            if !(turn.text.isEmpty && !turn.thinking.isEmpty) {
-                let text = turn.text.isEmpty && turn.pending ? "…" : turn.text
-                ForEach(Array(blocks(text).enumerated()), id: \.offset) { _, b in
-                    if b.code {
-                        CodeBlock(code: b.text)
-                    } else {
-                        Text(rendered(b.text))
-                            .font(Theme.ui(15))
-                            .foregroundStyle(turn.failed ? Theme.error : Theme.text)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+        }
+    }
+
+    @ViewBuilder private var answer: some View {
+        if !turn.thinking.isEmpty {
+            if turn.pending && turn.text.isEmpty {  // thinking now: the newest lines in view, as Ollama shows it
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Thinking…").font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
+                    ScrollView { reasoning }
+                        .defaultScrollAnchor(.bottom)
+                        .frame(maxHeight: 160)
+                        .mask(LinearGradient(colors: [.clear, .black, .black], startPoint: .top, endPoint: .init(x: 0.5, y: 0.25)))
                 }
+            } else {
+                DisclosureGroup {
+                    reasoning
+                } label: {
+                    Text(thoughtFor).font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
+                }
+                .tint(Theme.model)
             }
-            if let s = turn.source, let url = URL(string: s.url) {
-                Link(destination: url) {
-                    Label("Source: \(s.title)", systemImage: "globe").font(Theme.mono(10))
-                }
-                .foregroundStyle(Theme.memory)
+        }
+        if !(turn.text.isEmpty && !turn.thinking.isEmpty) {
+            AnswerText(text: turn.text.isEmpty && turn.pending ? "…" : turn.text, failed: turn.failed)
+        }
+        if let s = turn.source, let url = URL(string: s.url) {
+            Link(destination: url) {
+                Label("Source: \(s.title)", systemImage: "globe").font(Theme.mono(10))
             }
-            if turn.who == .camr, !turn.pending {
-                HStack(spacing: 10) {
-                    if !turn.meta.isEmpty { Text(turn.meta).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
-                    if !turn.model.isEmpty { Text(turn.model).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
-                    Button {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(turn.text, forType: .string)
-                    } label: { Image(systemName: "doc.on.doc").font(.system(size: 10)) }
-                    .buttonStyle(.plain).foregroundStyle(Theme.faint).help("Copy the answer")
-                }
+            .foregroundStyle(Theme.memory)
+        }
+        if turn.who == .camr, !turn.pending {
+            HStack(spacing: 10) {
+                if !turn.meta.isEmpty { Text(turn.meta).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
+                if !turn.model.isEmpty { Text(turn.model).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(turn.text, forType: .string)
+                } label: { Image(systemName: "doc.on.doc").font(.system(size: 10)) }
+                .buttonStyle(.plain).foregroundStyle(Theme.faint).help("Copy the answer")
             }
         }
     }
@@ -480,6 +649,171 @@ struct TurnView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, 10)
             .overlay(alignment: .leading) { Rectangle().fill(Theme.model.opacity(0.35)).frame(width: 2) }
+    }
+}
+
+/// The three answers of a comparison, side by side, each with what the engine measured for it, and bars on one
+/// scale so the difference is seen at a glance.
+struct CompareView: View {
+    let runs: [Run]
+
+    var body: some View {
+        let maxFirst = max(0.05, runs.compactMap { $0.pipe?.firstWord }.max() ?? 0)
+        let maxText = max(1, runs.compactMap { $0.pipe?.prefill }.max() ?? 0)
+        HStack(alignment: .top, spacing: 12) {
+            ForEach(runs) { r in card(r, maxFirst, Double(maxText)) }
+        }
+    }
+
+    private func color(_ m: String) -> Color { m == "off" ? Theme.faint : Theme.memory }
+
+    private func title(_ m: String) -> String {
+        switch m {
+        case "camr": return "CAMR · notes"
+        case "rag": return "RAG · text"
+        default: return "OFF · no memory"
+        }
+    }
+
+    private func subtitle(_ m: String) -> String {
+        switch m {
+        case "camr": return "one room laid on the desk already read, its closest moments as words"
+        case "rag": return "the 8 closest moments pasted in as text, read again every question"
+        default: return "the model alone"
+        }
+    }
+
+    private func card(_ r: Run, _ maxFirst: Double, _ maxText: Double) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                Group {
+                    if r.mode == "camr" {
+                        RoundedRectangle(cornerRadius: 2).fill(Theme.memory)
+                    } else if r.mode == "rag" {
+                        RoundedRectangle(cornerRadius: 2).stroke(Theme.memory, lineWidth: 1.5)
+                    } else {
+                        RoundedRectangle(cornerRadius: 2).fill(Theme.faint)
+                    }
+                }
+                .frame(width: 11, height: 11)
+                Text(title(r.mode)).font(Theme.mono(13, .bold)).foregroundStyle(color(r.mode))
+                Spacer()
+                if r.pending && r.started { ProgressView().controlSize(.mini) }
+            }
+            Text(subtitle(r.mode)).font(Theme.ui(11)).foregroundStyle(Theme.faint)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 7) {
+                bar("first word", r.pipe?.firstWord.map { secondsText($0) } ?? "—",
+                    (r.pipe?.firstWord ?? 0) / maxFirst, filled: true, r.mode)
+                bar("read as text", r.pipe.map { "\($0.prefill) tokens" } ?? "—",
+                    Double(r.pipe?.prefill ?? 0) / maxText, filled: false, r.mode)
+                stat("memory as text", r.pipe.map { "\($0.memoryText) tokens" } ?? "—")
+                stat("notes already read", r.pipe.map { $0.notes > 0 ? "\($0.notes) tokens · \(bytesText($0.notesBytes))" : "none" } ?? "—")
+                stat("memory in view", r.pipe.map { $0.notes + $0.memoryText > 0 ? "\($0.notes + $0.memoryText) tokens" : "none" } ?? "—")
+                stat("retrieval", r.pipe?.retrievalMs.map { String(format: "%.0f ms", $0) } ?? "—")
+                if let p = r.pipe {
+                    Text(p.source).font(Theme.mono(10)).foregroundStyle(r.mode == "off" ? Theme.faint : Theme.memory.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.55)))
+            if r.started || !r.text.isEmpty {
+                AnswerText(text: r.text.isEmpty ? (r.pending ? "…" : "") : r.text, failed: r.failed, size: 14)
+            } else {
+                Text("waits its turn").font(Theme.mono(10)).foregroundStyle(Theme.faint)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(r.mode == "off" ? Theme.line : Theme.memory.opacity(0.3)))
+    }
+
+    private func bar(_ name: String, _ value: String, _ share: Double, filled: Bool, _ mode: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(name).font(Theme.mono(10)).foregroundStyle(Theme.dim)
+                Spacer()
+                Text(value).font(Theme.mono(13, .semibold)).foregroundStyle(Theme.text)
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.06))
+                    Capsule().fill(filled ? (mode == "off" ? Theme.faint : Theme.memory) : Color.white.opacity(0.7))
+                        .frame(width: max(2, g.size.width * CGFloat(min(1, max(0, share)))))
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
+    private func stat(_ name: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(name).font(Theme.mono(10)).foregroundStyle(Theme.dim)
+            Spacer(minLength: 8)
+            Text(value).font(Theme.mono(10)).foregroundStyle(Theme.text).multilineTextAlignment(.trailing)
+        }
+    }
+}
+
+/// An answer as the model wrote it: prose with Markdown (bold, inline code, links, headings, bullets, readable
+/// maths) and fenced code blocks shown as code, never run through Markdown.
+struct AnswerText: View {
+    let text: String
+    var failed = false
+    var size: CGFloat = 15
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(AnswerText.blocks(text).enumerated()), id: \.offset) { _, b in
+                if b.code {
+                    CodeBlock(code: b.text, language: b.language)
+                } else {
+                    Text(rendered(b.text))
+                        .font(Theme.ui(size))
+                        .foregroundStyle(failed ? Theme.error : Theme.text)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    /// The answer split at its fenced code blocks: prose and code in turn. A fence still open (the answer is being
+    /// written) is code up to the end. A fence's first line names its language.
+    static func blocks(_ text: String) -> [(code: Bool, language: String, text: String)] {
+        var out: [(Bool, String, String)] = []
+        var prose: [Substring] = []
+        var code: [Substring] = []
+        var language = ""
+        var inside = false
+        func flushProse() {
+            let p = prose.joined(separator: "\n").trimmingCharacters(in: .newlines)
+            if !p.trimmingCharacters(in: .whitespaces).isEmpty { out.append((false, "", p)) }
+            prose = []
+        }
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            if t.hasPrefix("```") {
+                if inside {
+                    out.append((true, language, code.joined(separator: "\n")))
+                    code = []
+                    inside = false
+                } else {
+                    flushProse()
+                    language = String(t.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                    inside = true
+                }
+            } else if inside {
+                code.append(line)
+            } else {
+                prose.append(line)
+            }
+        }
+        if inside { out.append((true, language, code.joined(separator: "\n"))) }
+        flushProse()
+        return out.isEmpty ? [(false, "", text)] : out
     }
 
     /// LaTeX as the model writes maths, made readable: √, ×, ≈, ², fractions; $ and $$ fences dropped.
@@ -505,22 +839,6 @@ struct TurnView: View {
         return t.replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
     }
 
-    /// The answer split at its fenced code blocks: prose and code in turn.
-    private func blocks(_ text: String) -> [(code: Bool, text: String)] {
-        var out: [(Bool, String)] = []
-        let parts = text.components(separatedBy: "```")
-        for (i, part) in parts.enumerated() {
-            if i % 2 == 1 {  // inside a fence: drop the language line
-                let body = part.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
-                let code = body.count > 1 && !body[0].contains(" ") ? String(body[1]) : part
-                out.append((true, code.trimmingCharacters(in: .newlines)))
-            } else if !part.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                out.append((false, part.trimmingCharacters(in: .newlines)))
-            }
-        }
-        return out.isEmpty ? [(false, text)] : out
-    }
-
     /// Markdown as the model writes it (bold, code, links), line breaks kept.
     private func rendered(_ text: String) -> AttributedString {
         // headings and bullets, as the model writes them: a heading bold, a "- " item a bullet; maths readable
@@ -543,6 +861,10 @@ struct TurnView: View {
             if let url = run.link, !["http", "https"].contains(url.scheme?.lowercased() ?? "") {
                 out[run.range].link = nil
             }
+            if run.inlinePresentationIntent?.contains(.code) == true {  // `inline code`: monospaced, amber-tinted
+                out[run.range].font = Theme.mono(13)
+                out[run.range].foregroundColor = Color(red: 1.0, green: 0.82, blue: 0.6)
+            }
         }
         return out
     }
@@ -562,27 +884,48 @@ struct Pill: ButtonStyle {
     }
 }
 
-/// A code block in an answer: monospaced, scrolling sideways, with its own Copy button.
+/// A code block in an answer: its language named, monospaced on its own dark panel, scrolling sideways (never
+/// wrapped), with a Copy button that says when it copied.
 struct CodeBlock: View {
     let code: String
+    var language = ""
+    @StateObject private var copied = Flag()
+
+    final class Flag: ObservableObject { @Published var on = false }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
+                Text(language.isEmpty ? "code" : language.lowercased()).font(Theme.mono(11, .semibold))
+                    .foregroundStyle(Theme.dim)
+                Text("\(code.split(separator: "\n", omittingEmptySubsequences: false).count) lines")
+                    .font(Theme.mono(10)).foregroundStyle(Theme.faint)
                 Spacer()
                 Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(code, forType: .string)
-                } label: { Label("Copy", systemImage: "doc.on.doc").font(Theme.mono(10)) }
-                .buttonStyle(.plain).foregroundStyle(Theme.dim)
+                    copied.on = true
+                    let flag = copied
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { flag.on = false }
+                } label: {
+                    Label(copied.on ? "Copied" : "Copy", systemImage: copied.on ? "checkmark" : "doc.on.doc")
+                        .font(Theme.mono(11))
+                }
+                .buttonStyle(.plain).foregroundStyle(copied.on ? Theme.memory : Theme.dim)
             }
-            .padding(.horizontal, 10).padding(.top, 6)
-            ScrollView(.horizontal) {
-                Text(code).font(Theme.mono(12)).foregroundStyle(Theme.text).textSelection(.enabled)
-                    .padding(.horizontal, 12).padding(.bottom, 10).padding(.top, 2)
+            .padding(.horizontal, 12).padding(.vertical, 7)
+            .background(Color.white.opacity(0.045))
+            Rectangle().fill(Theme.line).frame(height: 1)
+            ScrollView(.horizontal, showsIndicators: true) {
+                Text(code.isEmpty ? " " : code).font(Theme.mono(12.5)).foregroundStyle(Color.white.opacity(0.88))
+                    .lineSpacing(2)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: true, vertical: true)
+                    .padding(.horizontal, 14).padding(.vertical, 12)
             }
         }
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.black))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.line))
+        .background(RoundedRectangle(cornerRadius: 9).fill(Color(red: 0.035, green: 0.04, blue: 0.055)))
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.white.opacity(0.1)))
     }
 }

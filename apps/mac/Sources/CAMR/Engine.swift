@@ -90,7 +90,11 @@ final class Engine: ObservableObject {
 
     func memoryFolder(_ m: ModelChoice) -> String {
         let slug = m.id.split(separator: "/").last.map(String.init) ?? "model"
-        // the reaches live beside this folder, so each model has its own: its rooms are its own notes
+        // the reaches live beside this folder, so each model has its own: its rooms are its own notes.
+        // CAMR_APP_MEMORY names another home for every model's folder (a rehearsal on a copy).
+        if let home = ProcessInfo.processInfo.environment["CAMR_APP_MEMORY"] {
+            return URL(fileURLWithPath: home).appendingPathComponent("\(slug)/default").path
+        }
         return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".camr/app/\(slug)/default").path
     }
 

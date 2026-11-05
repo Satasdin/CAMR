@@ -1,5 +1,9 @@
-# The 8am demo, played by the app itself: CAMR_SCRIPT=apps/mac/demo.txt dist/CAMR.app/Contents/MacOS/CAMR
+# The demo, played by the app itself: CAMR_SCRIPT=apps/mac/demo.txt /Applications/CAMR.app/Contents/MacOS/CAMR
 # Each model's Projects shelf holds the Long Haul's first 256K tokens (python -m camr_engine.app.seed).
+# 0. CAMR against conventional RAG and no memory: the same question, the same model, the same memory
+compare: Who is the landlord of the Karen branch?
+compare: What is the number plate of Kitengela Ventures' delivery truck?
+new: chat
 # 1. Memory: facts from months of a project, and honesty about what was never said
 ask: Who is the landlord of the Karen branch?
 ask: What is the number plate of Kitengela Ventures' delivery truck?
@@ -17,6 +21,12 @@ research: Who founded the Kenya Wildlife Service?
 memory: off
 ask: What is the number plate of Kitengela Ventures' delivery truck?
 memory: on
-# 6. The tensors, large
+# 6. The tensors, large: a room of notes flows into every layer; RAG's chunks are read as text from layer 1
 view: large
 ask: What locker number does Ndinda Kerubo have?
+mode: rag
+ask: What locker number does Ndinda Kerubo have?
+mode: camr
+# 7. Code, in the chat
+view: off
+ask: Build a one-page café website in HTML and CSS.

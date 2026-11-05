@@ -8,7 +8,7 @@ struct CAMRApp: App {
 
     var body: some Scene {
         WindowGroup("CAMR") {
-            RootView(world: world, engine: world.engine, chat: world.chat, code: world.code, weights: world.weights)
+            RootView(world: world, engine: world.engine, chat: world.chat, weights: world.weights)
                 .frame(minWidth: 1100, minHeight: 700)
                 .preferredColorScheme(.dark)
                 .onAppear { delegate.world = world }
@@ -24,9 +24,15 @@ struct CAMRApp: App {
                     .keyboardShortcut("e", modifiers: [.command])
             }
             CommandMenu("Memory") {
-                Button("Memory On") { Task { await world.chat.setMemory(true) } }.keyboardShortcut("m", modifiers: [.command])
-                Button("Memory Off") { Task { await world.chat.setMemory(false) } }
-                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                Button("CAMR: Notes Already Read") { Task { await world.chat.setMode("camr") } }
+                    .keyboardShortcut("1", modifiers: [.command])
+                Button("RAG: Chunks Pasted as Text") { Task { await world.chat.setMode("rag") } }
+                    .keyboardShortcut("2", modifiers: [.command])
+                Button("Off: The Model Alone") { Task { await world.chat.setMode("off") } }
+                    .keyboardShortcut("3", modifiers: [.command])
+                Divider()
+                Button("Compare CAMR · RAG · Off") { Task { await world.chat.compare() } }
+                    .keyboardShortcut(.return, modifiers: [.option])
             }
         }
     }
@@ -53,8 +59,6 @@ final class World: ObservableObject {
     let weights = WeightsModel()
     let engine: Engine
     let chat: ChatModel
-    let code: CodeModel
-    @Published var tab = "chat"
     @Published var expanded = false  // the weights view large, beside the chat, for a projector
     @Published var showTensors = false  // the weights view in the sidebar; it also shows itself while a model loads
     var played = false
@@ -62,9 +66,9 @@ final class World: ObservableObject {
     init() {
         engine = Engine(weights: weights)
         chat = ChatModel(engine: engine, weights: weights)
-        code = CodeModel(engine: engine, weights: weights)
-        let saved = UserDefaults.standard.string(forKey: "model")
-        if let m = MODELS.first(where: { $0.id == saved }) { engine.model = m }
+        // CAMR_MODEL (a rehearsal's choice, never saved), else the model picked before
+        let wanted = ProcessInfo.processInfo.environment["CAMR_MODEL"] ?? UserDefaults.standard.string(forKey: "model")
+        if let m = MODELS.first(where: { $0.id == wanted || $0.name == wanted }) { engine.model = m }
         engine.start()
         Script.startShots()
     }
@@ -79,7 +83,6 @@ struct RootView: View {
     @ObservedObject var world: World
     @ObservedObject var engine: Engine
     @ObservedObject var chat: ChatModel
-    @ObservedObject var code: CodeModel
     @ObservedObject var weights: WeightsModel
 
     var body: some View {
@@ -89,11 +92,7 @@ struct RootView: View {
                 Rectangle().fill(Theme.line).frame(width: 1)
             }
             ZStack {
-                if world.tab == "chat" {
-                    ChatView(chat: chat, engine: engine)
-                } else {
-                    CodeView(code: code, engine: engine)
-                }
+                ChatView(chat: chat, engine: engine)
                 if case .failed(let why) = engine.phase { failure(why) }
             }
             .frame(minWidth: 480)
@@ -110,7 +109,7 @@ struct RootView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(.top, 20)
-                    WeightsView(w: weights)
+                    WeightsView(w: weights, large: true)
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 24)
@@ -121,7 +120,7 @@ struct RootView: View {
         .background(Theme.ink)
         .onChange(of: engine.phase) { _, p in
             if p == .ready {
-                Task { await chat.useShelves(); await chat.loadChats(); await code.refresh() }
+                Task { await chat.useShelves(); await chat.loadChats() }
                 if !world.played { world.played = true; Script.play(world) }
             }
         }
@@ -137,13 +136,6 @@ struct RootView: View {
                 Text(phaseText).font(Theme.mono(10)).foregroundStyle(Theme.faint)
             }
             .padding(.top, 28)
-
-            HStack(spacing: 4) {
-                tabButton("chat", "Chat", "bubble.left.and.bubble.right")
-                tabButton("code", "Code", "chevron.left.forwardslash.chevron.right")
-            }
-            .padding(3)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("MODEL").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
@@ -181,7 +173,7 @@ struct RootView: View {
             }
             .disabled(engine.phase != .ready)
 
-            if world.tab == "chat" {
+            do {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("CHATS").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
@@ -202,19 +194,18 @@ struct RootView: View {
                 }
             }
 
-            Toggle(isOn: Binding(get: { world.tab == "chat" ? chat.memoryOn : code.memoryOn }, set: { on in
-                if world.tab == "chat" { Task { await chat.setMemory(on) } } else { code.memoryOn = on; weights.memoryOn = on }
-            })) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Memory").font(Theme.ui(14, .semibold)).foregroundStyle(Theme.text)
-                    Text((world.tab == "chat" ? chat.memoryOn : code.memoryOn) ? "answers read what it remembers"
-                         : "the model answers alone")
-                        .font(Theme.ui(11)).foregroundStyle(Theme.dim)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("MEMORY").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
+                HStack(spacing: 4) {
+                    modeButton("camr", "CAMR")
+                    modeButton("rag", "RAG")
+                    modeButton("off", "Off")
                 }
+                .padding(3)
+                .background(RoundedRectangle(cornerRadius: 9).fill(Theme.panel))
+                Text(modeText).font(Theme.ui(11)).foregroundStyle(Theme.dim).fixedSize(horizontal: false, vertical: true)
             }
-            .toggleStyle(.switch)
-            .tint(Theme.memory)
-            .disabled(engine.phase != .ready)
+            .disabled(engine.phase != .ready || chat.busy)
 
             if !world.expanded && (world.showTensors || engine.phase != .ready) {  // shown firing up, or when chosen
                 WeightsView(w: weights)
@@ -266,15 +257,25 @@ struct RootView: View {
         .help(id == "auto" ? "Put each remembered moment on the shelf it is closest to by meaning" : "Remember on \(title)")
     }
 
-    private func tabButton(_ id: String, _ title: String, _ icon: String) -> some View {
-        Button { world.tab = id } label: {
-            Label(title, systemImage: icon).font(Theme.ui(13, .semibold))
+    private var modeText: String {
+        switch chat.mode {
+        case "rag": return "Conventional RAG: the 8 closest moments pasted in as text, read again every question."
+        case "off": return "The model alone: nothing read, nothing kept."
+        default: return "CAMR: one room of notes laid on the desk already read, its closest moments as words."
+        }
+    }
+
+    private func modeButton(_ id: String, _ title: String) -> some View {
+        Button { Task { await chat.setMode(id) } } label: {
+            Text(title).font(Theme.ui(12, .semibold))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .foregroundStyle(world.tab == id ? Color.black : Theme.dim)
-                .background(RoundedRectangle(cornerRadius: 8).fill(world.tab == id ? Theme.text : .clear))
+                .padding(.vertical, 7)
+                .foregroundStyle(chat.mode == id ? Color.black : Theme.dim)
+                .background(RoundedRectangle(cornerRadius: 7).fill(chat.mode == id ? (id == "off" ? Theme.text : Theme.memory) : .clear))
         }
         .buttonStyle(.plain)
+        .help(id == "camr" ? "Answer from a room of saved notes (⌘1)" : id == "rag" ? "Answer from chunks pasted as text (⌘2)"
+              : "Answer with no memory (⌘3)")
     }
 
     private func failure(_ why: String) -> some View {
