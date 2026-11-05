@@ -309,4 +309,29 @@ def serve(app, port: int) -> None:
     print(f"CAMR is listening on http://127.0.0.1:{port}  (memory: {where})", flush=True)
     if os.environ.get("CAMR_TOKEN"):  # the Mac app sends its token only once its own engine has said this
         print(f"CAMR-PORT {httpd.server_address[1]}", flush=True)
-    httpd.serve_forever()
+        _follow_parent(httpd)
+    try:
+        httpd.serve_forever()
+    finally:
+        talk = getattr(app, "talk", None)  # the chat's session holds the reach locks: close it so it saves
+        if talk is not None:
+            try:
+                talk.close()
+            except Exception:  # noqa: BLE001 - leaving anyway; the locks go with the process
+                pass
+
+
+def _follow_parent(httpd, every: float = 1.0) -> None:
+    """Stop serving when the app that started this engine is gone (force-quit or crashed), so the engine does not
+    live on holding the memory's locks and the next launch can open it."""
+    import threading
+    import time
+
+    parent = os.getppid()
+
+    def watch() -> None:
+        while os.getppid() == parent:
+            time.sleep(every)
+        httpd.shutdown()
+
+    threading.Thread(target=watch, name="follow-parent", daemon=True).start()

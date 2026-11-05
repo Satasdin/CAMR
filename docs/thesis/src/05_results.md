@@ -214,13 +214,13 @@ The application is Chat only. An earlier Swarm screen was removed (E-50), and th
 
 **Starting.** When the app starts, it draws the model's layers filling as their weights load (Figure {fig:app-load}); the memory panel shows how many rooms the memory holds. If the engine cannot start, the window says why and where it looked, instead of waiting without end.
 
-![{#app-load} Starting the app: the model's 36 layers fill as their weights arrive ("loading 14/36"), before the first question](figures/app/loading-weights.png)
+![{#app-load} Starting the app: the model's layers fill in the tensor panel as their weights arrive ("loading weights"), while Chat offers questions to start with](figures/app/loading-weights.png)
 
-**Telling and asking.** The user tells the model something with Remember and asks with Ask (Figure {fig:app-chat}). A remembered moment is judged by revision, filed on its shelf and read once by the model; a question is routed, its room is read, and the answer is written. Under each answer the app shows where it came from (memory, the model's own knowledge or the web), the time to the first word, the text read, and, from memory, the note read and whether it came from RAM or the SSD. With memory off, the same question gets "I don't know" about the user's own facts. Moments told on "Auto" are filed by meaning (Figure {fig:app-shelves}).
+**Telling and asking.** The user tells the model something with Remember and asks with Ask (Figure {fig:app-chat}). A remembered moment is judged by revision, filed on its shelf and read once by the model; a question is routed, its room is read, and the answer is written. Under each answer the app shows where it came from (memory, the model's own knowledge or the web), the time to the first word, the text read, and, from memory, the note read and whether it came from RAM or the SSD. With memory off, the same question gets "I don't know" about the user's own facts. Moments told on "Auto" are filed by meaning, though not always on the shelf a person would choose (Figure {fig:app-shelves}).
 
-![{#app-chat} Chat with memory on and off: a fact told earlier is answered from the room it was kept in ("room 609 · read from the SSD"); with memory off, the same question gets "I don't know"](figures/app/chat-memory-on-off.png)
+![{#app-chat} Chat with memory on (top) and off (bottom), each in a new conversation: with memory, a fact from the Long Haul is answered from note 609 on the Projects shelf, read from the SSD; with memory off, the model alone does not know it](figures/app/chat-memory-on-off.png)
 
-![{#app-shelves} Shelves in Chat (Qwen3 4B): moments told on "Auto" are filed on the Research and Personal shelves by meaning, and each answer names the note and shelf it read](figures/app/chat-shelves.png)
+![{#app-shelves} Shelves on "Auto" (Qwen3 4B): a note about Python is filed on the Coding shelf by meaning, while a personal moment about Spanish lessons falls to Projects; the answer names the note and shelf it read](figures/app/chat-shelves.png)
 
 **CAMR, RAG or off, and Compare.** A switch chooses how memory is used: CAMR (one room laid on the desk already read, and its closest moments as words), RAG (the eight closest moments pasted in as text and read again for this question, up to 1,024 tokens) or off. Compare asks the question all three ways, with the same model, the same memory and the same instructions and without the conversation, and sets the answers side by side with what each had to read (Figure {fig:app-compare}). Compare answers are never kept in memory.
 
@@ -234,9 +234,9 @@ The application is Chat only. An earlier Swarm screen was removed (E-50), and th
 
 **General questions and reasoning.** A question that needs no memory is answered from the model's own knowledge; a thinking model's reasoning streams into a block that folds once the answer is written (Figures {fig:app-maths} and {fig:app-reasoning}), and what was learnt is kept on the Research shelf. Conversations are saved and listed, and an answer can be stopped mid-way.
 
-![{#app-maths} A general question answered by the 8B from its own knowledge, its reasoning folded ("Thought for 18.5 seconds") and labelled "from the model"](figures/app/chat-maths.png)
+![{#app-maths} A general question answered by the 4B from its own knowledge, with its working, labelled "from the model" and learned on the Research shelf](figures/app/chat-maths.png)
 
-![{#app-reasoning} The 8B's reasoning, folded once the answer is written ("Thought for 27.8 seconds")](figures/app/chat-reasoning-folded.png)
+![{#app-reasoning} The 8B's reasoning, folded once the answer is written ("Thought for 10.9 seconds"); some of its LaTeX is shown as written rather than typeset](figures/app/chat-reasoning-folded.png)
 
 **The tensors.** The weights view is drawn only while a model loads or when the user asks for it (Command-T), and can be shown large beside the chat (Command-E). It draws only what the engine measures (FR-19): the shelves and their rooms on top, with the room read marked by its id and tier; a strip that sets the memory already read as notes against the text read now; and the model's 36 layers below, each column a layer and each row one of 32 slices of its hidden state, lit where a slice stands out for the word being written. In CAMR mode the room flows from the memory into every layer, and only the closest moments, the date and the question are read as text (Figure {fig:app-tensors-camr}). In RAG mode the chunks drop in as text and must be read from the first layer up before the first word (Figure {fig:app-tensors-rag}). With memory off, the memory stays dark.
 
@@ -272,7 +272,7 @@ The yardstick runner sends a checkpoint's questions in one streamed request that
 
 The purpose of testing was to show whether the implemented system satisfies the requirements of Chapter 4. The scope was the engine, the assistant, the application, the pairing and the benchmark harness; the environment was the MacBook Pro of Table {tab:hardware}; the test data were the scripted lives, the Long Haul, the public suites and the multimodal files, none of them personal. A test passed only when its observed result met an expected result written beforehand: for the non-functional requirements, the thresholds of Table {tab:nfr}, written before the runs that tested them (E-19, E-40); for the functional requirements, the behaviour the requirement states. Testing was complete when every automated test passed, every requirement with a threshold had been measured, and every defect found had been fixed and retested or bounded and reported. Testing used five levels:
 
-1. **Unit and integration tests.** White-box pytest tests in 49 files cover the rooms, notes, tiers, vault, core, reach, metrics, events, pairing, the app's routes and security, the Code agent, the assistant's router, research, revision and shelves, and every part of the benchmark harness (the Long Haul's generator and grader, the runners, the suites and the cost ledger). On 5 November, 788 tests passed and 5 were skipped.
+1. **Unit and integration tests.** White-box pytest tests in 49 files cover the rooms, notes, tiers, vault, core, reach, metrics, events, pairing, the app's routes and security, the Code agent, the assistant's router, research, revision and shelves, and every part of the benchmark harness (the Long Haul's generator and grader, the runners, the suites and the cost ledger). On 5 November, 803 tests passed and 5 were skipped.
 2. **System tests.** The benchmark runs were judged against the non-functional requirements of Table {tab:nfr}, whose thresholds were written before the runs that tested them (E-19, E-40).
 3. **Security tests.** Requests with a foreign host, a foreign origin, no token or a non-JSON body were sent to the engine's server and the proxies.
 4. **Deployment test.** The installer and the health check were run, and the Mac app was built, installed in the Applications folder and run with the 1.7B, 4B and 8B models.
@@ -288,7 +288,7 @@ Table: {#testcases} Test cases and results
 
 | Test ID | Traceability | Scenario | Expected result | Actual result and evidence | Verdict |
 |---|---|---|---|---|---|
-| T-01 | All FR | The automated suite | Every test passes | 788 passed, 5 skipped (5 November) | Pass |
+| T-01 | All FR | The automated suite | Every test passes | 803 passed, 5 skipped (5 November) | Pass |
 | T-02 | NFR-01 | Speed bench, 2,000 words in the room, cache bypassed, five tries | Median first word under 0.5 s | 0.233 s (E-20) | Pass |
 | T-03 | NFR-02 | The same bench, notes against words | At least 10 times sooner | 4.6 times (E-20) | Fail (kept) |
 | T-04 | NFR-03 | The 1.7B told the whole Long Haul, measured at 1K, 10K and 17.7K moments | First word and RAM do not climb | First word 0.11, 0.15, 0.08 s; RAM 4.26, 4.28, 4.23 GB (E-38) | Pass |
@@ -315,7 +315,7 @@ Table: {#testcases} Test cases and results
 
 ### Defects Found and Retests
 
-The measurements and the demonstrations found ten defects in the system or in its measurement (Table {tab:defects}). Each was fixed or bounded, and the affected runs were repeated or reported both ways.
+The measurements and the demonstrations found eleven defects in the system or in its measurement (Table {tab:defects}). Each was fixed or bounded, and the affected runs were repeated or reported both ways.
 
 Table: {#defects} Defects found and retests
 
@@ -331,6 +331,7 @@ Table: {#defects} Defects found and retests
 | D-08 | A photographed receipt was not recalled: 737 Long Haul notes outscored it on its own shelf (0.81 against 0.70) | The closest moment of every other shelf within 0.12 of the best is read too | Recalled (T-21) |
 | D-09 | Switching models in the app marked the new engine failed ("exit 15"): the old process's exit handler ran late | The handler acts only for the process it was attached to | Pass: 1.7B, 4B and 8B switched in turn |
 | D-10 | "Python", "HTML" and "CSS" in a coding request were taken for names in the closest notes, so the request went to memory | Common technical words are not counted as names | A Python request answered in full (Figure {fig:app-code}) |
+| D-11 | A force-quit app left its engine running and holding the memory's locks, so the next launch could not open the memory ("ReachBusy") | The engine stops serving and closes its memory when the app that started it is gone | Pass: the app killed outright, no engine left behind |
 
 ## Version Control and Implementation Evidence {#vc}
 
@@ -344,7 +345,7 @@ Three AI tools were used in this project, each in a defined role.
 - **Claude Haiku, Sonnet and Opus 5.5 (Anthropic), through the Claude API.** In the final stage, these models served only as the yardstick in the benchmarks: they answered the Long Haul and the public suites alone, with no memory, every call logged with its tokens and cost and held under a $60 cap.
 - **Claude Code (Anthropic), with Claude Opus models (Opus 5.5 in the final weeks).** Claude Code assisted with refining the project's goal into a measurable engine study, with designing and building the engine, the benchmark harness and the native Mac application, with running the benchmarks and analysing their records, and with drafting the documentation, including the decision log, the user guide, the generator scripts of the diagrams and charts, and drafts of this report.
 
-The student set the problem, the objectives, the scope and the direction of the work, and made the decisions recorded as the student's own, such as making the engine the project (E-29), pushing the Long Haul past 2 million tokens (E-39), asking for the RAM to be optimised (E-40), removing Swarm from the app (E-50) and showing memory through Chat against RAG. Every output was checked: code by the automated tests (792 passing), every number by the dated records that name the machine and the code behind it, and the text against those records. Requirements were written before the runs that tested them, and requirements that were not met are reported as measured; no result, record or screenshot was fabricated. The decision log and the repository's commit history serve as the AI-use log. Material AI use is disclosed here, and the student made the final decisions and takes full responsibility for the submitted work.
+The student set the problem, the objectives, the scope and the direction of the work, and made the decisions recorded as the student's own, such as making the engine the project (E-29), pushing the Long Haul past 2 million tokens (E-39), asking for the RAM to be optimised (E-40), removing Swarm from the app (E-50) and showing memory through Chat against RAG. Every output was checked: code by the automated tests (803 passing), every number by the dated records that name the machine and the code behind it, and the text against those records. Requirements were written before the runs that tested them, and requirements that were not met are reported as measured; no result, record or screenshot was fabricated. The decision log and the repository's commit history serve as the AI-use log. Material AI use is disclosed here, and the student made the final decisions and takes full responsibility for the submitted work.
 
 ## Evaluation Results {#eval}
 
@@ -586,7 +587,7 @@ On twelve test sentences, "Auto" filed all 12 on the right shelf, including all 
 
 The assistant's parts were checked in the app on the night of 4 November (E-55 to E-57). The router adds about 0.1 s to a question. Reading the closest moment of every other shelf when it is within 0.12 of the best found a photographed receipt that the 737 Long Haul notes had outscored (closeness 0.70 against 0.81). Revision judged five test moments on the 4B correctly, 5 of 5: a raised minimum order and new opening hours as updates, a repeat as the same, and a birthday and another branch's hours as new. The eyes read a photographed receipt line by line (a total of KES 730.00, paid by M-Pesa) in about 25 s including loading the vision model, and the 8B then answered both questions about it from memory. When the router sees memory, a question naming a person or business found in its five closest notes goes to memory outright, and otherwise the model judges with the closest note in view; routing blind, the 8B had sent "the number plate of Kitengela Ventures' delivery truck" to its own knowledge, and seeing memory it routed 13 of 14 test questions right on its Long Haul memory, the miss being a never-said name that it then answered honestly (E-55). Figure {fig:app-receipt} shows the receipt answered later from memory. These are demonstrations on a handful of cases, not benchmarks.
 
-![{#app-receipt} A photographed receipt read into memory by Qwen3-VL-4B-Thinking, its total and an item answered later by the 8B from memory ("from memory · note 549 · read from the SSD")](figures/app/chat-receipt-photo-recalled.png){width=15.9}
+![{#app-receipt} (Captured on 4 November, before the Code screen was folded into Chat.) A photographed receipt read into memory by Qwen3-VL-4B-Thinking, its total and an item answered later by the 8B from memory ("from memory · note 549 · read from the SSD")](figures/app/chat-receipt-photo-recalled.png){width=15.9}
 
 ### The Public Suites {#suites-results}
 
@@ -812,6 +813,6 @@ Limitations are weaknesses of the evidence; each is stated with its likely effec
 4. **RAM before the cap is understated.** The 1.7B's and the 4B's RAM figures up to 2M were measured as MLX's peak, before the buffer-cache cap; the process held more (E-40). Their scores are unaffected.
 5. **One machine.** Every Long Haul, suite and speed number was measured on one MacBook Pro M5 Pro with 24 GB (the desk design on the MacBook Air, and the baseline on CPU-only machines); answers also differ slightly between chips (158 facts on the Air and 164 on the Pro for the same design; E-17).
 6. **Grading by rule.** A rule can miss a right answer worded in an unexpected way. Every raw answer is kept in the records, so any verdict can be checked by hand, but no hand audit was done for this report.
-7. **What was not measured.** The engine's own contenders were not run on the public suites (E-36); LongMemEval and two further suites have loaders but no runs; the Code agent was measured only on five café websites per model; no user study and no accessibility audit were done; the app's screenshots come from one session.
+7. **What was not measured.** The engine's own contenders were not run on the public suites (E-36); LongMemEval and two further suites have loaders but no runs; the Code agent was measured only on five café websites per model; a held-out Long Haul comparison of CAMR against conventional RAG with the same reader and memory was pre-registered (E-61) and its harness built, but it was stopped before any held-out run, so the RAG comparison rests on the earlier experiments of Table {tab:ragcompare}; no user study and no accessibility audit were done; the app's screenshots come from one session.
 
 Delimitations are boundaries chosen for the study: Apple-silicon Macs only; English text; frozen, quantised open models; no fine-tuning; memory on the device, with the cloud only as a yardstick. Threats to validity: internally, every contender read the same instructions and the same questions, and the one wording change (the 1.7B's) is reported both ways; externally, the results hold for one scripted project, one Mac and the models named.
