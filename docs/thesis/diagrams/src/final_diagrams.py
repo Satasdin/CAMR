@@ -20,7 +20,7 @@ OUT = HERE.parent
 UML = HERE.parents[3] / "v2" / "docs" / "thesis" / "uml"
 sys.path.insert(0, str(UML))
 
-from kit import INK, MUTED, Box, Diagram  # noqa: E402
+from kit import INK, LINE, MUTED, Box, Diagram  # noqa: E402
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 TOP = 104  # the title band left out of the capture
@@ -34,118 +34,178 @@ def small(t: str) -> str:
     return f'<span style="font-size:13px;color:{MUTED}">{t}</span>'
 
 
+def gs_store(d: Diagram, x, y, w, h, sid: str, label: str, duplicate=False) -> Box:
+    """A Gane–Sarson data store: an open-ended box, its id in a cell at the left (a second line marks a copy)."""
+    d.raw(x, y, w, h, f"background:#ffffff;border:1.5px solid {LINE};border-right:none")
+    d.raw(x, y, 48, h, f"background:#f1f4f7;border:1.5px solid {LINE}")
+    if duplicate:
+        d.raw(x + 8, y, 1.5, h, f"background:{LINE}")
+    d.card(x + (6 if duplicate else 0), y, 48 - (6 if duplicate else 0), h, f"<b>{sid}</b>", kind="bare", size=15, pad=2)
+    d.card(x + 48, y, w - 48, h, label, kind="bare", size=15, align="left", pad=10)
+    return Box(x, y, w, h)
+
+
+def diamond(d: Diagram, p, q, filled=True):
+    """A UML aggregation (hollow) or composition (filled) diamond at p, on the straight line p→q; returns where the
+    line should start (the diamond's far tip)."""
+    (x1, y1), (x2, y2) = p, q
+    L, W = 22, 13
+    if y1 == y2:  # horizontal
+        s = 1 if x2 > x1 else -1
+        left = x1 if s > 0 else x1 - L
+        box = (left, y1 - W / 2, L, W)
+        tip = (x1 + s * L, y1)
+    else:
+        s = 1 if y2 > y1 else -1
+        top = y1 if s > 0 else y1 - L
+        box = (x1 - W / 2, top, W, L)
+        tip = (x1, y1 + s * L)
+    bx, by, bw, bh = box
+    poly = "clip-path:polygon(50% 0, 100% 50%, 50% 100%, 0 50%)"
+    d.raw(bx, by, bw, bh, f"background:{LINE};{poly}", layer=3)
+    if not filled:
+        d.raw(bx + 2.2, by + 2.2, bw - 4.4, bh - 4.4, f"background:#ffffff;{poly}", layer=3)
+    return tip
+
+
+def rel(d: Diagram, pts, start=None, head="open", dashed=False):
+    """A class-diagram line: ``start`` 'comp' or 'agg' puts a diamond at the first point; ``head`` at the last."""
+    pts = [tuple(p) for p in pts]
+    if start:
+        pts[0] = diamond(d, pts[0], pts[1], filled=start == "comp")
+    d.path(pts, head=head, dashed=dashed)
+
+
+def klass3(d: Diagram, x, y, w, name, attrs, ops, stereo=None, size=13) -> Box:
+    """A UML class with its three compartments: name (and «stereotype»), attributes, operations. ``attrs`` None
+    leaves the attribute compartment out (a «module» of functions)."""
+    head_h = 46 if stereo else 30
+    label = (f'<span style="font-size:12px;color:{MUTED}">«{stereo}»</span><br><b>{name}</b>' if stereo
+             else f"<b>{name}</b>")
+    d.card(x, y, w, head_h, label, kind="class_name", size=15, pad=4)
+    yy = y + head_h
+    for rows in ([attrs] if attrs is not None else []) + [ops]:
+        hh = round(12 + size * 1.3 * max(1, len(rows)))
+        d.card(x, yy, w, hh, "<br>".join(rows), kind="class_body", size=size, align="left", pad=7, valign="top")
+        yy += hh
+    return Box(x, y, w, yy - y)
+
+
 # --------------------------------------------------------------------- context
 def context() -> Diagram:
-    d = Diagram("Context", "Context diagram of CAMR (Gane–Sarson)", 1500, 1000,
+    d = Diagram("Context", "Context diagram of CAMR (Gane–Sarson)", 1100, 1265,
                 "Solid: CAMR · dashed: the CAMR v1 baseline only")
-    p = d.gs_process(600, 300, 300, 660, "0", '<span style="font-size:22px"><b>CAMR</b></span><br>the memory engine,'
-                     '<br>its app and its<br>benchmarks, on the Mac')
+    p = d.gs_process(430, 300, 230, 920, "0", '<span style="font-size:22px"><b>CAMR</b></span><br>the memory engine,'
+                     '<br>its app and its<br>benchmarks,<br>on the Mac')
+    LW = 176  # the width of a flow's label, between an entity and the process
 
-    def left(cy, name, into, out):
-        d.gs_entity(40, cy - 50, 280, 100, name)
-        d.path([(320, cy - 20), (p.x, cy - 20)])
-        lab(d, 330, cy - 28 - 18 * (into.count("<br>") + 1), 260, into)
-        d.path([(p.x, cy + 20), (320, cy + 20)])
-        lab(d, 330, cy + 28, 260, out)
+    def left(cy, name, into, out, h=100):
+        d.gs_entity(30, cy - h / 2, 210, h, name)
+        d.path([(240, cy - 20), (p.x, cy - 20)])
+        lab(d, 247, cy - 28 - 18 * (into.count("<br>") + 1), LW, into)
+        d.path([(p.x, cy + 20), (240, cy + 20)])
+        lab(d, 247, cy + 28, LW, out)
 
-    def right(cy, name, out, into, dashed=False, out_first=True):
-        d.gs_entity(1180, cy - 50, 280, 100, name)
+    def right(cy, name, out, into, dashed=False, out_first=True, h=100):
+        d.gs_entity(860, cy - h / 2, 210, h, name)
         top, bottom = (out, into) if out_first else (into, out)
         if out_first:
-            d.path([(p.x + p.w, cy - 20), (1186, cy - 20)], dashed=dashed)
-            d.path([(1186, cy + 20), (p.x + p.w, cy + 20)], dashed=dashed)
+            d.path([(p.x + p.w, cy - 20), (866, cy - 20)], dashed=dashed)
+            d.path([(866, cy + 20), (p.x + p.w, cy + 20)], dashed=dashed)
         else:
-            d.path([(1186, cy - 20), (p.x + p.w, cy - 20)], dashed=dashed)
-            d.path([(p.x + p.w, cy + 20), (1186, cy + 20)], dashed=dashed)
-        lab(d, 910, cy - 28 - 18 * (top.count("<br>") + 1), 266, top)
-        lab(d, 910, cy + 28, 266, bottom)
+            d.path([(866, cy - 20), (p.x + p.w, cy - 20)], dashed=dashed)
+            d.path([(p.x + p.w, cy + 20), (866, cy + 20)], dashed=dashed)
+        lab(d, 670, cy - 28 - 18 * (top.count("<br>") + 1), 190, top)
+        lab(d, 670, cy + 28, 190, bottom)
 
-    left(450, "User<br>" + small("of the Mac app (Chat, Code)"),
-         "moments and files to remember,<br>questions, research, code tasks,<br>approvals, memory on or off",
-         "answers (from memory, the model<br>or the web), code changes,<br>what each answer read")
-    left(640, "Wikipedia<br>" + small("public API, for research"), "a search for the question",
-         "the best page's plain text")
-    left(800, "Researcher<br>" + small("student, supervisor, examiner"),
-         "contender, model, cut, seed,<br>benchmark commands", "dated records, tables,<br>charts, cost ledger")
+    left(480, "User<br>" + small("of the Mac app<br>(Chat, Code)"),
+         "moments and files to<br>remember, questions,<br>research, code tasks,<br>approvals, memory<br>on or off",
+         "answers (from memory,<br>the model or the web),<br>code changes, what<br>each answer read")
+    left(780, "Wikipedia<br>" + small("public API,<br>for research"), "a search for<br>the question",
+         "the best page's<br>plain text")
+    left(1080, "Researcher<br>" + small("student, supervisor,<br>examiner"),
+         "contender, model, cut,<br>seed, benchmark<br>commands", "dated records, tables,<br>charts, cost ledger")
 
-    d.gs_entity(440, 130, 300, 100, "Hugging Face Hub<br>" + small("model weights · benchmark datasets"))
-    d.path([(590, 230), (590, p.y)])
-    lab(d, 600, 244, 200, "weights and datasets<br>(first download only)", align="left")
-    d.gs_entity(800, 130, 280, 100, "Public benchmark files<br>" + small("PopQA · HotpotQA · 2Wiki · GSM8K<br>"
+    d.gs_entity(170, 130, 300, 100, "Hugging Face Hub<br>" + small("model weights · benchmark datasets"))
+    d.path([(455, 230), (455, p.y)])
+    lab(d, 230, 246, 216, "weights and datasets<br>(first download only)", align="right")
+    d.gs_entity(620, 130, 300, 100, "Public benchmark files<br>" + small("PopQA · HotpotQA · 2Wiki · GSM8K<br>"
                                                                           "(baseline)"))
-    d.path([(950, 230), (950, 268), (860, 268), (860, p.y)], dashed=True)
-    lab(d, 870, 274, 200, "questions, documents", align="left")
+    d.path([(770, 230), (770, 264), (630, 264), (630, p.y)], dashed=True)
+    lab(d, 780, 240, 200, "questions, documents", align="left")
 
-    right(390, "Ollama<br>" + small("a separate program on the Mac"), "a chat with recalled<br>notes as words",
+    right(430, "Ollama<br>" + small("a separate program<br>on the Mac"), "a chat with recalled<br>notes as words",
           "the streamed answer,<br>its timings")
-    right(560, "Anthropic API<br>" + small("Claude Haiku, Sonnet, Opus 5.5:<br>the yardstick, benchmarks only"),
-          "the scripted history<br>and its questions", "answers, tokens, cost<br>(kept in the ledger)")
-    right(730, "Cloud model (baseline)<br>" + small("Kimi K3, Moonshot API"), "prompts: ceiling,<br>escalations",
-          "answers, token counts", dashed=True)
-    right(880, "Automation platform<br>" + small("n8n workflows (baseline)"), "answers", "teach, forget, ask",
+    right(670, "Anthropic API<br>" + small("Claude Haiku, Sonnet,<br>Opus 5.5: the yardstick,<br>benchmarks only"),
+          "the scripted history<br>and its questions", "answers, tokens, cost<br>(kept in the ledger)", h=120)
+    right(910, "Cloud model<br>(baseline)<br>" + small("Kimi K3, Moonshot API"), "prompts: ceiling,<br>escalations",
+          "answers, token counts", dashed=True, h=110)
+    right(1140, "Automation platform<br>" + small("n8n workflows<br>(baseline)"), "answers", "teach, forget, ask",
           dashed=True, out_first=False)
     return d
 
 
 # --------------------------------------------------------------------- use cases
 def use_cases() -> Diagram:
-    d = Diagram("UseCases", "Use case diagram of CAMR", 1500, 1100,
+    d = Diagram("UseCases", "Use case diagram of CAMR", 1100, 1330,
                 "An italic name is abstract · dashed arrows: «include» and «extend» · hollow triangle: generalisation")
-    d.band(330, 120, 930, 960, "CAMR", style="boundary")
+    d.band(160, 120, 790, 1180, "CAMR", style="boundary")
 
     def uc(cx, cy, name, italic=False):
         label = f"<i>{name}</i>" if italic else name
-        return d.card(cx - 125, cy - 38, 250, 76, label, kind="usecase", size=16, pad=16)
+        return d.card(cx - 115, cy - 38, 230, 76, label, kind="usecase", size=16, pad=16)
 
-    L, M, R = 470, 795, 1115
-    chat = uc(L, 210, "Chat: ask, or<br>research online")
-    tell = uc(L, 340, "Tell or attach<br>something to remember")
-    code = uc(L, 470, "Code with a<br>local agent")
-    watch = uc(L, 600, "Watch what an<br>answer reads")
-    vault = uc(L, 730, "Browse the vault<br>(Obsidian)")
-    pair = uc(L, 900, "Pair Ollama<br>with memory")
+    L, M, R = 300, 555, 810
+    chat = uc(L, 390, "Chat: ask, or<br>research online")
+    tell = uc(L, 215, "Tell or attach<br>something to remember")
+    code = uc(L, 550, "Code with a<br>local agent")
+    watch = uc(L, 705, "Watch what an<br>answer reads")
+    vault = uc(L, 850, "Browse the vault<br>(Obsidian)")
+    pair = uc(L, 1150, "Pair Ollama<br>with memory")
     switch = uc(M, 190, "Switch memory<br>on or off")
     reach = uc(M, 320, "Choose a reach<br>or a shelf")
-    recall = uc(M, 520, "Recall from memory")
-    bench = uc(M, 760, "Run a benchmark", italic=True)
-    grade = uc(M, 990, "Grade answers<br>by rule")
-    claude = uc(R, 200, "Ask Claude alone<br>(the yardstick)")
-    haul = uc(R, 560, "Run the Long Haul")
-    suites = uc(R, 700, "Run the Hugging<br>Face suites")
-    speed = uc(R, 850, "Measure speed<br>and RAM")
-    record = uc(R, 1000, "Write a dated record")
+    recall = uc(515, 650, "Recall from memory")
+    bench = uc(M, 900, "Run a benchmark", italic=True)
+    grade = uc(M, 1220, "Grade answers<br>by rule")
+    claude = uc(R, 330, "Ask Claude alone<br>(the yardstick)")
+    haul = uc(R, 640, "Run the Long Haul")
+    suites = uc(R, 790, "Run the Hugging<br>Face suites")
+    speed = uc(R, 1020, "Measure speed<br>and RAM")
+    record = uc(R, 1220, "Write a dated record")
 
     def actor(cx, top, name, right=False):
-        d.actor(cx, top, name)
+        d.actor(cx, top, name, width=140)
         return cx - 26 if right else cx + 26, top + 40
 
-    user = actor(80, 470, "User")
-    ollama = actor(200, 900, "«system»<br>Ollama")
-    researcher = actor(1400, 640, "Researcher", right=True)
-    api = actor(1400, 150, "«system»<br>Claude API", right=True)
+    user = actor(80, 560, "User")
+    ollama = actor(80, 1160, "«system»<br>Ollama")
+    researcher = actor(1025, 760, "Researcher", right=True)
+    api = actor(1025, 280, "«system»<br>Claude API", right=True)
 
     def assoc(who, case: Box, aim=0):
         d.path([who, case.hit(*who, case.cx + aim, case.cy)], head=None)
 
-    for c in (chat, tell, code, watch, vault, pair):
-        assoc(user, c)
+    for c in (chat, tell, code, watch, vault, pair):  # aimed at the near end, so no line crosses another case
+        assoc(user, c, aim=-95)
     assoc(ollama, pair)
     for c in (haul, suites, speed):
         assoc(researcher, c)
     assoc(api, claude)
 
-    def rel(src: Box, dst: Box, label, side=1, at=0.5, head="open"):
+    def rel(src: Box, dst: Box, label, side=1, at=0.5, head="open", pos=None):
         p, q = src.toward(dst.cx, dst.cy), dst.toward(src.cx, src.cy)
         d.path([p, q], head=head, dashed=label is not None)
-        if label:
+        if label and pos:  # placed by hand where the lines are close together
+            d.text(pos[0], pos[1], 70, label, size=14, color=MUTED)
+        elif label:
             d.along(p, q, label, side=side, at=at)
 
-    rel(switch, chat, "«extend»", side=1)
-    rel(reach, chat, "«extend»", side=-1, at=0.45)
-    rel(chat, recall, "«include»", side=1, at=0.6)
-    rel(code, recall, "«include»", side=-1, at=0.55)
-    rel(pair, recall, "«include»", side=-1, at=0.6)
-    rel(bench, recall, "«include»", side=-1)
+    rel(switch, chat, "«extend»", side=1, at=0.55)
+    rel(reach, chat, "«extend»", pos=(424, 374))
+    rel(chat, recall, "«include»", side=-1, at=0.5)
+    rel(code, recall, "«include»", pos=(318, 610))
+    rel(pair, recall, "«include»", pos=(468, 772))
+    rel(bench, recall, "«include»", pos=(548, 712))
     rel(bench, grade, "«include»", side=-1)
     rel(bench, record, "«include»", side=1)
     rel(speed, record, "«include»", side=-1, at=0.6)
@@ -244,34 +304,41 @@ def activity() -> Diagram:
 
 # --------------------------------------------------------------------- architecture
 def architecture() -> Diagram:
-    d = Diagram("Architecture", "Component diagram of CAMR", 1560, 1100,
+    d = Diagram("Architecture", "Component diagram of CAMR", 1100, 1500,
                 "Solid arrow: calls or passes data · dashed arrow: the CAMR v1 baseline, used only by the benchmarks")
 
     def comp(x, y, w, h, name, det, stereo=None):
         return d.component(x, y, w, h, name, det, stereo=stereo, size=14)
 
-    comp(40, 150, 250, 120, "CAMR Mac app", "Chat · Code; starts the<br>engine with its own token", stereo="SwiftUI")
-    comp(40, 520, 250, 90, "ollama CLI", "OLLAMA_HOST=<br>127.0.0.1:11435")
-    comp(40, 660, 250, 80, "Ollama", "127.0.0.1:11434", stereo="program")
-    comp(40, 800, 250, 90, "Benchmark command line", "python -m<br>camr_engine.bench.…")
-    comp(360, 150, 250, 120, "App server", "server.py · 127.0.0.1 · Host,<br>Origin and X-CAMR-Token checks")
-    comp(360, 330, 250, 120, "Code agent", "agentic/: workspace, tools,<br>MCP servers, skills; every<br>"
+    # the app, its server and the code agent
+    comp(30, 130, 250, 120, "CAMR Mac app", "Chat · Code; starts the<br>engine with its own token", stereo="SwiftUI")
+    comp(350, 130, 300, 120, "App server", "server.py · 127.0.0.1 · Host,<br>Origin and X-CAMR-Token checks")
+    comp(730, 130, 340, 120, "Code agent", "agentic/: workspace, tools,<br>MCP servers, skills; every<br>"
                                           "command waits for approval")
-    comp(360, 520, 250, 90, "Ollama pairing", "pair/ollama.py · proxy on<br>127.0.0.1:11435")
-    comp(360, 780, 250, 130, "Benchmark runners", "bench/: longhaul · local ·<br>ollama_run · suite_run ·<br>"
-                                                  "reach_run · ram · throughput")
-    comp(360, 980, 250, 80, "CAMR v1 engine", "the baseline, as a library")
+    d.path([(280, 172), (350, 172)])
+    lab(d, 282, 116, 66, "HTTP,<br>loopback,<br>token", size=13)
+    d.path([(350, 214), (280, 214)], head="open", dashed=True)
+    lab(d, 282, 222, 66, "answer,<br>live events", size=13)
+    d.path([(650, 190), (730, 190)])
+    lab(d, 652, 166, 76, "code runs", size=13)
 
-    d.band(680, 130, 840, 560, "«subsystem» Memory engine (camr_engine)", style="package", label_side="right")
-    comp(700, 175, 800, 64, "Session", "reach.py: reads several reaches (session · project · agent · global), "
-                                       "writes one; memory on or off")
-    d.card(700, 280, 800, 390, "", kind="box")
-    d.text(714, 290, 600, "<b>Memory</b> · memory.py: remember · choose · recall · answer · fade", size=15,
+    # the memory engine
+    d.band(30, 300, 760, 660, "«subsystem» Memory engine (camr_engine)", style="package")
+    comp(50, 345, 720, 72, "Session", "reach.py: reads several reaches (session · project · agent · global),<br>"
+                                     "writes one; memory on or off")
+    d.path([(500, 250), (500, 345)])
+    lab(d, 420, 262, 72, "say,<br>settings", align="right", size=13)
+    d.path([(760, 250), (760, 345)])
+    lab(d, 664, 262, 88, "brain with<br>memory", align="right", size=13)
+    d.card(50, 460, 720, 480, "", kind="box")
+    d.text(64, 470, 640, "<b>Memory</b> · memory.py: remember · choose · recall · answer · fade", size=15,
            align="left", color=INK)
-    ix, iy = 700 + 800 - 24, 288
+    ix, iy = 50 + 720 - 24, 468
     d.deco(ix, iy, 14, 18, "icon", layer=3)
     d.deco(ix - 4, iy + 3, 9, 5, "icon", layer=3)
     d.deco(ix - 4, iy + 10, 9, 5, "icon", layer=3)
+    d.path([(410, 417), (410, 460)])
+    lab(d, 420, 426, 200, "one Memory per reach", align="left", size=13)
     parts = [("Core", "«subconscious» core.py:<br>≤ 256 tokens of core<br>notes, kept in RAM"),
              ("Rooms", "«conscious» rooms.py:<br>≤ 512-token rooms,<br>join 0.80, burst read"),
              ("Tiers", "swap.py: hot rooms in<br>RAM, awake on the SSD,<br>asleep past the budget"),
@@ -281,100 +348,106 @@ def architecture() -> Diagram:
              ("Metrics", "metrics.py: first word,<br>retrieval, tier, GB/s,<br>RAM, disk"),
              ("Live", "live.py: weights loading,<br>the room read, words,<br>layer activity")]
     for i, (name, det) in enumerate(parts):
-        x, y = 715 + 195 * (i % 4), 330 + 160 * (i // 4)
-        d.card(x, y, 185, 140, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=8)
+        x, y = 66 + 233 * (i % 3), 505 + 142 * (i // 3)
+        d.card(x, y, 220, 130, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=8)
 
-    comp(700, 760, 300, 110, "Reader", "Qwen3 1.7B · 4B · 8B, 4-bit;<br>frozen, thinking off", stereo="MLX model")
-    comp(1040, 760, 250, 110, "Embedder", "Qwen3-Embedding-0.6B;<br>frozen", stereo="MLX model")
-    comp(1320, 760, 200, 110, "Claude client", "bench/claude.py; ledger<br>with a $60 cap")
+    # the models, beside the engine
+    comp(875, 470, 195, 120, "Reader", "Qwen3 1.7B · 4B · 8B,<br>4-bit; frozen,<br>thinking off", stereo="MLX model")
+    comp(875, 650, 195, 110, "Embedder", "Qwen3-Embedding-<br>0.6B; frozen", stereo="MLX model")
+    d.path([(770, 530), (875, 530)])
+    lab(d, 778, 488, 92, "generate,<br>write notes", size=13)
+    d.path([(770, 705), (875, 705)])
+    lab(d, 778, 682, 92, "embed", size=13)
 
-    d.path([(290, 200), (360, 200)])
-    lab(d, 292, 130, 66, "HTTP,<br>loopback,<br>token", size=13)
-    d.path([(360, 230), (290, 230)], head="open", dashed=True)
-    lab(d, 292, 238, 66, "answer,<br>live events", size=13)
-    d.path([(610, 195), (700, 195)])
-    lab(d, 612, 152, 64, "say,<br>settings", size=13)
-    d.path([(1100, 239), (1100, 280)])
-    lab(d, 1110, 246, 200, "one Memory per reach", align="left", size=13)
-    d.path([(485, 270), (485, 330)])
-    lab(d, 495, 286, 80, "code runs", align="left")
-    d.path([(610, 390), (650, 390), (650, 225), (700, 225)])
-    lab(d, 614, 398, 80, "brain with<br>memory", align="left")
-    d.path([(290, 565), (360, 565)])
-    d.path([(485, 610), (485, 700), (290, 700)])
-    lab(d, 300, 706, 180, "the chat, notes in front<br>of the last message", align="left")
-    d.path([(610, 565), (700, 565)])
-    lab(d, 612, 524, 64, "recall<br>as words", size=13)
-    d.path([(290, 845), (360, 845)])
-    d.path([(610, 830), (660, 830), (660, 640), (700, 640)])
-    lab(d, 614, 838, 120, "contender:<br>tell, ask", align="left")
-    d.path([(485, 910), (485, 980)], head="open", dashed=True)
-    lab(d, 495, 930, 80, "baseline", align="left")
-    d.path([(610, 890), (1420, 890), (1420, 870)])
-    lab(d, 1080, 896, 230, "Claude alone, the yardstick")
-    d.path([(850, 670), (850, 760)])
-    lab(d, 860, 700, 130, "generate,<br>write notes", align="left")
-    d.path([(1165, 670), (1165, 760)])
-    lab(d, 1175, 708, 60, "embed", align="left")
+    # Ollama, paired
+    comp(30, 1020, 260, 90, "ollama CLI", "OLLAMA_HOST=<br>127.0.0.1:11435")
+    comp(30, 1170, 260, 90, "Ollama pairing", "pair/ollama.py · proxy on<br>127.0.0.1:11435")
+    comp(30, 1330, 260, 80, "Ollama", "127.0.0.1:11434", stereo="program")
+    d.path([(160, 1110), (160, 1170)])
+    d.path([(160, 1260), (160, 1330)])
+    lab(d, 170, 1272, 190, "the chat, notes in front<br>of the last message", align="left", size=13)
+    d.path([(290, 1200), (340, 1200), (340, 940)])
+    lab(d, 350, 972, 80, "recall<br>as words", align="left", size=13)
+
+    # the benchmarks
+    comp(420, 1020, 280, 90, "Benchmark command line", "python -m<br>camr_engine.bench.…")
+    comp(420, 1170, 280, 130, "Benchmark runners", "bench/: longhaul · local ·<br>ollama_run · suite_run ·<br>"
+                                                   "reach_run · ram · throughput")
+    comp(420, 1370, 280, 80, "CAMR v1 engine", "the baseline, as a library")
+    comp(875, 1190, 195, 110, "Claude client", "bench/claude.py;<br>ledger with a<br>$60 cap")
+    d.path([(560, 1110), (560, 1170)])
+    d.path([(560, 1300), (560, 1370)], head="open", dashed=True)
+    lab(d, 570, 1322, 80, "baseline", align="left", size=13)
+    d.path([(700, 1195), (735, 1195), (735, 940)])
+    lab(d, 745, 972, 90, "contender:<br>tell, ask", align="left", size=13)
+    d.path([(700, 1260), (875, 1260)])
+    lab(d, 742, 1218, 130, "Claude alone,<br>the yardstick", size=13)
     return d
 
 
 # --------------------------------------------------------------------- sequence
 def sequence() -> Diagram:
-    d = Diagram("Sequence", "Sequence diagram: one question answered in Chat", 1560, 1460,
+    W = 1100
+    d = Diagram("Sequence", "Sequence diagram: one question answered in Chat", W, 1500,
                 "Solid line, filled head: a call · dashed line, open head: its return · bars: while a part is working")
-    xs = [90, 270, 455, 640, 825, 1010, 1195, 1400]
-    d.actor(xs[0], 150, "User")
-    heads = ["<b>Mac app</b><br>" + small("Chat"), "<b>App server</b><br>" + small("server.py, routes/chat.py"),
+    xs = [60, 185, 340, 490, 635, 765, 885, 1005]  # wider gaps where the labels are long
+    d.actor(xs[0], 150, "User", width=100)
+    heads = ["<b>Mac app</b><br>" + small("Chat"), "<b>App server</b><br>" + small("server.py,<br>routes/chat.py"),
              "<b>Session</b><br>" + small("reach.py"), "<b>Memory</b><br>" + small("memory.py"),
-             "<b>Tiers, Rooms</b><br>" + small("swap.py, rooms.py"), "<b>Core, Notebook</b><br>" +
-             small("core.py, notes.py"), "<b>MLX models</b><br>" + small("embedder · reader")]
+             "<b>Tiers, Rooms</b><br>" + small("swap.py,<br>rooms.py"), "<b>Core,<br>Notebook</b><br>" +
+             small("core.py,<br>notes.py"), "<b>MLX models</b><br>" + small("embedder ·<br>reader")]
     for x, h in zip(xs[1:], heads):
-        d.card(x - 88, 160, 176, 56, h, kind="head", size=15, pad=6)
-    msgs = [(0, 1, "1. types a question, presses Send"),
-            (1, 2, "2. POST /api/chat/message {text, ask} + X-CAMR-Token"),
+        d.card(x - 53, 150, 106, 92, h, kind="head", size=14, pad=4)
+    # long messages are written on two or three lines, so each fits between its lifelines
+    msgs = [(0, 1, "1. types a<br>question,<br>presses Send"),
+            (1, 2, "2. POST /api/chat/<br>message {text, ask}<br>+ X-CAMR-Token"),
             (2, 2, "3. check host, origin, token; start a job"), (2, 1, "4. {id}"),
-            (2, 3, "5. answer(question, today)"), (3, 7, "6. embed the question, once"), (7, 3, "7. unit vector q"),
-            (3, 3, "8. choose(): the closest moment in every reach read"), (3, 4, "9. recall(question, chosen)"),
+            (2, 3, "5. answer(question,<br>today)"), (3, 7, "6. embed the question, once"), (7, 3, "7. unit vector q"),
+            (3, 3, "8. choose(): the closest moment<br>in every reach read"), (3, 4, "9. recall(question,<br>chosen)"),
             (4, 5, "10. fetch(room)"),
-            (5, 5, "11. [hot] RAM · [awake] one SSD burst · [asleep] words"),
-            (5, 4, "12. notes, tier, bytes, seconds"), (4, 6, "13. desk(header, core, room)"),
-            (6, 4, "14. cache: header | core | room, already read"),
-            (4, 7, "15. generate(4 closest moments, date, question as words; cache = desk)"),
-            (7, 7, "16. read the new words, then write the answer"),
-            (1, 2, "17. GET /api/live?id=&from=N, again and again"),
-            (2, 1, "18. events: room, each word, each layer's activity"),
+            (5, 5, "11. [hot] RAM · [awake] one SSD<br>burst · [asleep] words"),
+            (5, 4, "12. notes, tier,<br>bytes, seconds"), (4, 6, "13. desk(header, core, room)"),
+            (6, 4, "14. cache: header | core | room,<br>already read"),
+            (4, 7, "15. generate(4 closest moments, date,<br>question as words; cache = desk)"),
+            (7, 7, "16. read the new words,<br>then write the answer"),
+            (1, 2, "17. GET /api/live?<br>id=&amp;from=N,<br>again and again"),
+            (2, 1, "18. events: room,<br>each word, each<br>layer's activity"),
             (7, 4, "19. words, first word, attention per word"),
-            (4, 4, "20. one metrics record; one line to events.jsonl"), (4, 3, "21. reply"), (3, 2, "22. reply"),
-            (1, 0, "23. the answer, the room it read, its wait")]
+            (4, 4, "20. one metrics record;<br>one line to events.jsonl"), (4, 3, "21. reply"), (3, 2, "22. reply"),
+            (1, 0, "23. the answer,<br>the room it read,<br>its wait")]
     returns = {3, 6, 11, 13, 17, 18, 20, 21}
-    ys, y = [], 292
-    for a, b, _ in msgs:
+    lines = [t.count("<br>") + 1 for _, _, t in msgs]
+    ys, end = [], 262  # each message starts 10px below where the one before it ends (its label included)
+    for (a, b, _), n in zip(msgs, lines):
+        y = end + 10 + (6 if a == b else 6 + 18 * n)
         ys.append(y)
-        y += 58 if a == b else 42
-    bottom = y + 10
-    d.frame(30, 112, 1500, bottom + 24 - 112, "sd Answer one question")
+        end = max(y + 24, y + 3 + 18 * n) if a == b else y
+    bottom = end + 24
+    d.frame(30, 112, W - 60, bottom + 24 - 112, "sd Answer one question")
     for x in xs:
-        d.path([(x, 230 if x == xs[0] else 216), (x, bottom)], head=None, dashed=True, color="#8a94a0")
+        d.path([(x, 258 if x == xs[0] else 242), (x, bottom)], head=None, dashed=True, color="#8a94a0")
     spans = {1: [(1, 22)], 2: [(1, 21)], 3: [(4, 21)], 4: [(8, 20)], 5: [(9, 11)], 6: [(12, 13)], 7: [(5, 6), (14, 18)]}
     for lane, ranges in spans.items():
         for i, j in ranges:
             d.card(xs[lane] - 6, ys[i] - 4, 12, ys[j] - ys[i] + 8 + (26 if msgs[j][0] == msgs[j][1] else 0), "",
                    kind="act")
     for i, ((a, b, t), y) in enumerate(zip(msgs, ys)):
-        w = 7.4 * len(t) + 8
+        n = lines[i]
+        tb = f'<span style="background:#ffffff;padding:0 2px">{t}</span>'  # white only behind the words
+        w = 7.3 * max(len(s) for s in t.replace("&amp;", "&").split("<br>")) + 10
         if a == b:
             x = xs[a] + 6
             d.path([(x, y), (x + 34, y), (x + 34, y + 24), (x + 2, y + 24)])
             if a == 7:
-                lab(d, xs[a] - 16 - w, y + 3, w, t, align="right", bg="#ffffff")
+                lab(d, xs[a] - 16 - w, y + 3, w, tb, align="right")
             else:
-                lab(d, x + 44, y + 3, w, t, align="left", bg="#ffffff")
+                lab(d, x + 44, y + 3, w, tb, align="left")
             continue
         x1 = xs[a] + (6 if b > a else -6) * (a != 0)
         x2 = xs[b] - (6 if b > a else -6) * (b != 0)
         d.path([(x1, y), (x2, y)], head="open" if i in returns else "filled", dashed=i in returns)
-        lab(d, (x1 + x2) / 2 - w / 2, y - 24, w, t, bg="#ffffff")
+        lx = min(max((x1 + x2) / 2 - w / 2, 40), W - 40 - w)
+        lab(d, lx, y - 6 - 18 * n, w, tb)
     d.h = bottom + 40
     return d
 
@@ -540,85 +613,116 @@ def files() -> Diagram:
 
 # --------------------------------------------------------------------- deployment
 def deployment() -> Diagram:
-    d = Diagram("Deployment", "Deployment diagram of CAMR on the Mac", 1560, 1060,
+    d = Diagram("Deployment", "Deployment diagram of CAMR on the Mac", 1100, 1600,
                 "3-D boxes: nodes (devices and execution environments) · lines: communication paths")
-    d.node(40, 170, 1200, 860, small("«device»") + "<br><b>MacBook Pro M5 Pro (Mac17,9)</b> · macOS · 24 GB unified "
+    # outside the Mac, above it
+    d.node(520, 140, 250, 160, small("«device»") + "<br><b>Anthropic API</b><br>external<br><br>"
+           + small("«HTTPS», benchmarks<br>only: Claude Haiku,<br>Sonnet, Opus 5.5"), depth=14)
+    d.node(820, 140, 230, 160, small("«device»") + "<br><b>GitHub Actions</b><br>ubuntu-latest,<br>external<br>"
+           + small("tests that need no<br>MLX, on every push"), depth=14)
+
+    d.node(30, 370, 1030, 1050, small("«device»") + "<br><b>MacBook Pro M5 Pro (Mac17,9)</b> · macOS · 24 GB unified "
            "memory", depth=20)
     env = "#f7f9fb"
-    d.node(80, 290, 260, 240, small("«executionEnvironment»") + "<br><b>CAMR Mac app</b> (SwiftUI)", depth=12,
+    d.node(60, 470, 270, 250, small("«executionEnvironment»") + "<br><b>CAMR Mac app</b> (SwiftUI)", depth=12,
            fill=env)
-    d.artifact(100, 370, 220, 130, "CAMR.app", "Chat · Code;<br>its own launch token;<br>picks the model")
-    d.node(440, 290, 370, 330, small("«executionEnvironment»") + "<br><b>Python 3.12 virtual environment</b>",
+    d.artifact(80, 550, 230, 140, "CAMR.app", "Chat · Code;<br>its own launch token;<br>picks the model")
+    d.node(420, 470, 590, 330, small("«executionEnvironment»") + "<br><b>Python 3.12 virtual environment</b>",
            depth=12, fill=env)
-    for x, y, n, t in ((455, 360, "App server", "127.0.0.1, a free port<br>picked by the app"),
-                       (635, 360, "Memory engine", "Session · Memory ·<br>Core · Rooms ·<br>Tiers · Vault"),
-                       (455, 480, "Ollama pairing", "127.0.0.1:11435"),
-                       (635, 480, "Benchmarks", "bench/ runners,<br>Claude client")):
-        d.component(x, y, 165, 100, n, t, size=14)
-    d.node(900, 290, 300, 330, small("«executionEnvironment»") + "<br><b>MLX</b> on the Apple-silicon<br>GPU (Metal)",
+    for x, y, n, t in ((440, 545, "App server", "127.0.0.1, a free port<br>picked by the app"),
+                       (725, 545, "Memory engine", "Session · Memory · Core ·<br>Rooms · Tiers · Vault"),
+                       (440, 670, "Ollama pairing", "127.0.0.1:11435"),
+                       (725, 670, "Benchmarks", "bench/ runners,<br>Claude client")):
+        d.component(x, y, 265, 108, n, t, size=14)
+    d.node(60, 870, 270, 160, small("«executionEnvironment»") + "<br><b>Ollama</b>", depth=12, fill=env)
+    d.artifact(80, 930, 230, 80, "ollama serve", "127.0.0.1:11434 · qwen3")
+    d.node(600, 870, 410, 230, small("«executionEnvironment»") + "<br><b>MLX</b> on the Apple-silicon GPU (Metal)",
            depth=12, fill=env)
-    d.artifact(920, 390, 260, 96, "Reader", "Qwen3 1.7B · 4B · 8B,<br>4-bit, frozen")
-    d.artifact(920, 500, 260, 96, "Embedder", "Qwen3-Embedding-0.6B,<br>frozen")
-    d.node(80, 640, 260, 160, small("«executionEnvironment»") + "<br><b>Ollama</b>", depth=12, fill=env)
-    d.artifact(100, 700, 220, 80, "ollama serve", "127.0.0.1:11434 · qwen3")
-    d.node(420, 720, 780, 280, small("«device»") + "<br><b>Internal SSD</b>", depth=12, fill=env)
-    d.artifact(440, 800, 175, 170, "~/.camr/", "memories: one<br>folder per reach,<br>rooms, index,<br>vault")
-    d.artifact(630, 800, 175, 170, "records/", "dated records<br>(JSON) and<br>claude-ledger<br>.jsonl")
-    d.artifact(820, 800, 175, 170, "~/.cache/<br>huggingface/", "model weights<br>and datasets")
-    d.artifact(1010, 800, 175, 170, "~/.config/camr/<br>anthropic.env", "the key, read<br>only by the<br>"
-                                                                          "Claude client")
-    d.node(1310, 190, 220, 170, small("«device»") + "<br><b>Anthropic API</b><br>external<br><br>"
-           + small("«HTTPS», benchmarks<br>only: Claude Haiku,<br>Sonnet, Opus 5.5"), depth=14)
-    d.node(1310, 460, 220, 160, small("«device»") + "<br><b>GitHub Actions</b><br>ubuntu-latest, external<br><br>"
-           + small("tests that need no<br>MLX, on every push"), depth=14)
-    d.node(1310, 780, 220, 150, small("«device»") + "<br><b>Hugging Face Hub</b><br>external<br>"
+    d.artifact(615, 950, 185, 120, "Reader", "Qwen3 1.7B · 4B ·<br>8B, 4-bit, frozen")
+    d.artifact(812, 950, 185, 120, "Embedder", "Qwen3-Embedding-<br>0.6B, frozen")
+    d.node(60, 1170, 950, 220, small("«device»") + "<br><b>Internal SSD</b>", depth=12, fill=env)
+    for i, (n, t) in enumerate((("~/.camr/", "memories: one folder<br>per reach, rooms,<br>index, vault"),
+                                ("records/", "dated records<br>(JSON) and<br>claude-ledger.jsonl"),
+                                ("~/.cache/<br>huggingface/", "model weights<br>and datasets"),
+                                ("~/.config/camr/<br>anthropic.env", "the key, read only<br>by the Claude client"))):
+        d.artifact(80 + 232 * i, 1225, 215, 150, n, t)
+    d.node(560, 1490, 260, 100, small("«device»") + "<br><b>Hugging Face Hub</b> · external<br>"
            + small("«HTTPS», first run only;<br>then HF_HUB_OFFLINE=1"), depth=14)
-    d.path([(340, 420), (440, 420)], head=None)
-    lab(d, 354, 350, 82, "«HTTP»<br>loopback,<br>token", size=13)
-    lab(d, 354, 428, 82, "starts it:<br>--model<br>--live", size=13)
-    d.path([(810, 440), (900, 440)], head=None)
-    lab(d, 824, 400, 74, "generate,<br>encode", size=13)
-    lab(d, 824, 448, 74, "in-process", size=13)
-    d.path([(455, 560), (400, 560), (400, 690), (340, 690)], head=None)
-    lab(d, 150, 580, 242, "chat with notes as words", align="right", size=13)
-    d.path([(620, 620), (620, 708)], head=None)
-    lab(d, 630, 640, 200, "append, burst read<br>(F_NOCACHE), records", align="left")
-    d.path([(1050, 708), (1050, 620)], head=None)
-    lab(d, 1060, 650, 100, "load weights", align="left")
-    d.path([(760, 278), (760, 240), (1310, 240)], head=None)
-    lab(d, 900, 214, 260, "«HTTPS» the Long Haul, questions")
-    d.path([(1200, 860), (1310, 860)], head=None)
+
+    # communication paths
+    d.path([(330, 610), (420, 610)], head=None)
+    lab(d, 332, 548, 86, "«HTTP»<br>loopback,<br>token", size=13)
+    lab(d, 332, 618, 86, "starts it:<br>--model<br>--live", size=13)
+    d.path([(440, 724), (390, 724), (390, 950), (330, 950)], head=None)
+    lab(d, 120, 790, 262, "chat with notes as words", align="right", size=13)
+    d.path([(860, 800), (860, 870)], head=None)
+    lab(d, 690, 818, 160, "generate, encode", align="right", size=13)
+    lab(d, 870, 818, 120, "in-process", align="left", size=13)
+    d.path([(480, 800), (480, 1170)], head=None)
+    lab(d, 340, 1096, 132, "append, burst read<br>(F_NOCACHE),<br>records", align="right", size=13)
+    d.path([(805, 1100), (805, 1170)], head=None)
+    lab(d, 815, 1120, 120, "load weights", align="left", size=13)
+    d.path([(690, 300), (690, 470)], head=None)
+    lab(d, 700, 318, 260, "«HTTPS» the Long Haul, questions", align="left", size=13)
+    d.path([(690, 1390), (690, 1490)], head=None)
     return d
 
 
 # --------------------------------------------------------------------- the assistant
 def assistant() -> Diagram:
-    d = Diagram("Assistant", "Component diagram of the CAMR assistant", 1560, 1110,
+    d = Diagram("Assistant", "Component diagram of the CAMR assistant", 1100, 1460,
                 "Solid arrow: calls or passes data · dashed arrow: events the app watches · «external»: off the Mac")
 
     def comp(x, y, w, h, name, det, stereo=None):
         return d.component(x, y, w, h, name, det, stereo=stereo, size=14)
 
-    comp(40, 140, 300, 140, "CAMR Mac app", "Chat: Ask · Remember · Research online<br>· Attach a file; Code; "
+    comp(30, 130, 360, 140, "CAMR Mac app", "Chat: Ask · Remember · Research online<br>· Attach a file; Code; "
          "the live<br>weights view", stereo="SwiftUI")
-    comp(420, 150, 320, 120, "App server", "routes/chat.py · 127.0.0.1;<br>launch token; one job at a time")
-    comp(40, 390, 220, 130, "Files", "media.py: PDF pages<br>as text; images and<br>video via the eyes")
-    comp(280, 390, 220, 130, "Research", "assistant.research:<br>the page as marked<br>data, never orders")
-    comp(520, 390, 220, 130, "Router", "assistant.route: one<br>word, MEMORY or<br>GENERAL")
-    comp(280, 610, 190, 110, "Wikipedia", "search, then the<br>page's plain text", stereo="external")
+    comp(520, 140, 340, 120, "App server", "routes/chat.py · 127.0.0.1;<br>launch token; one job at a time")
+    d.path([(390, 180), (520, 180)])
+    lab(d, 400, 126, 110, "HTTP, loopback,<br>token", size=13)
+    d.path([(520, 235), (390, 235)], head="open", dashed=True)
+    lab(d, 400, 242, 110, "answers,<br>live events", size=13)
 
-    d.band(800, 120, 720, 700, "«subsystem» Memory engine (camr_engine)", style="package", label_side="right")
-    d.card(820, 165, 680, 235, "", kind="box")
-    d.text(834, 175, 650, "<b>Shelves</b> · shelves.py: each shelf a reach; Auto files a moment by meaning; "
-           "every question reads all four; warm() builds the kernels and reads the newest notes into RAM",
-           size=14, align="left", color=INK)
-    for i, (name, det) in enumerate([("Projects", "global reach:<br>the project"),
-                                     ("Coding", "project:coding:<br>what Code learns"),
-                                     ("Research", "project:research:<br>from the web"),
-                                     ("Personal", "project:personal:<br>the user's life")]):
-        d.card(832 + 167 * i, 255, 156, 125, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=6)
-    d.card(820, 420, 680, 380, "", kind="box")
-    d.text(834, 430, 650, "<b>Memory</b> · memory.py, one per shelf: remember · choose · recall · answer · fade",
+    # the server's three doors
+    files = comp(40, 370, 230, 140, "Files", "media.py: PDF pages<br>as text; images and<br>video via the eyes")
+    router = comp(310, 370, 230, 140, "Router", "assistant.route: one<br>word, MEMORY or<br>GENERAL")
+    research = comp(580, 370, 230, 140, "Research", "assistant.research:<br>the page as marked<br>data, "
+                                                "never orders")
+    comp(880, 380, 190, 120, "Wikipedia", "search, then the<br>page's plain text", stereo="external")
+    d.path([(690, 260), (690, 310), (155, 310), (155, 370)])
+    d.path([(425, 310), (425, 370)])
+    d.path([(690, 310), (695, 310), (695, 370)])
+    lab(d, 163, 318, 110, "Attach a file", align="left", size=13)
+    lab(d, 433, 318, 60, "Ask", align="left", size=13)
+    lab(d, 703, 318, 140, "Research online", align="left", size=13)
+    d.path([(810, 415), (880, 415)])
+    lab(d, 812, 374, 66, "HTTPS<br>search", size=13)
+    d.path([(880, 465), (810, 465)])
+    lab(d, 812, 472, 66, "page<br>text", size=13)
+
+    # the models
+    comp(40, 640, 230, 130, "Eyes", "Qwen3-VL-4B-Thinking:<br>sees and reasons;<br>images, video frames",
+         stereo="MLX vision model")
+    comp(310, 640, 230, 130, "Reader", "Qwen3 1.7B · 4B · 8B,<br>4-bit; frozen", stereo="MLX model")
+    comp(860, 640, 210, 130, "Embedder", "Qwen3-Embedding-<br>0.6B; frozen", stereo="MLX model")
+    d.path([(155, 510), (155, 640)])
+    lab(d, 50, 534, 98, "images and<br>video frames<br>described", align="right", size=13)
+    d.path([(350, 510), (350, 640)])
+    lab(d, 358, 584, 170, "GENERAL: the model's<br>own knowledge", align="left", size=13)
+    d.path([(510, 510), (510, 545), (575, 545), (575, 860)])
+    lab(d, 583, 600, 80, "MEMORY", align="left", size=12)
+    d.path([(255, 510), (255, 530), (290, 530), (290, 860)])
+    lab(d, 120, 784, 162, "kept on a shelf", align="right", size=13)
+    d.path([(745, 510), (745, 860)])
+    lab(d, 753, 760, 100, "kept on a shelf<br>(marked as<br>from the web)", align="left", size=13)
+
+    # the engine: one Memory per shelf
+    d.band(30, 815, 1040, 615, None, style="package")  # named at its foot: the lines into it cross its top
+    d.text(44, 1396, 600, "«subsystem» Memory engine (camr_engine)", size=15, weight=600, align="left", color=INK,
+           layer=0)
+    d.card(50, 860, 1000, 312, "", kind="box")
+    d.text(64, 870, 900, "<b>Memory</b> · memory.py, one per shelf: remember · choose · recall · answer · fade",
            size=14, align="left", color=INK)
     parts = [("Core", "core.py: standing<br>facts, in RAM"),
              ("Rooms (notes)", "rooms.py: the<br>model's keys and<br>values, on the SSD"),
@@ -629,52 +733,286 @@ def assistant() -> Diagram:
              ("Metrics", "metrics.py: first<br>word, tier, GB/s"),
              ("Live", "live.py: layers<br>loading, firing")]
     for i, (name, det) in enumerate(parts):
-        x, y = 832 + 167 * (i % 4), 470 + 160 * (i // 4)
-        d.card(x, y, 156, 145, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=6)
+        x, y = 66 + 247 * (i % 4), 905 + 132 * (i // 4)
+        d.card(x, y, 233, 120, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=6)
+    d.card(50, 1192, 1000, 188, "", kind="box")
+    d.text(64, 1202, 970, "<b>Shelves</b> · shelves.py: each shelf a reach; Auto files a moment by meaning; every "
+           "question reads all four;<br>warm() builds the kernels and reads the newest notes into RAM", size=14,
+           align="left", color=INK)
+    for i, (name, det) in enumerate([("Projects", "global reach:<br>the project"),
+                                     ("Coding", "project:coding:<br>what Code learns"),
+                                     ("Research", "project:research:<br>from the web"),
+                                     ("Personal", "project:personal:<br>the user's life")]):
+        d.card(66 + 247 * i, 1255, 233, 110, f"<b>{name}</b><br>" + small(det), kind="box", size=14, pad=6)
 
-    comp(800, 880, 230, 120, "Reader", "Qwen3 1.7B · 4B · 8B,<br>4-bit; frozen", stereo="MLX model")
-    comp(1045, 880, 230, 120, "Eyes", "Qwen3-VL-4B-Thinking:<br>sees and reasons; images,<br>video frames", stereo="MLX vision model")
-    comp(1290, 880, 230, 120, "Embedder", "Qwen3-Embedding-0.6B;<br>frozen", stereo="MLX model")
-
-    # app and server
-    d.path([(340, 190), (420, 190)])
-    lab(d, 342, 120, 76, "HTTP,<br>loopback,<br>token", size=13)
-    d.path([(420, 245), (340, 245)], head="open", dashed=True)
-    lab(d, 342, 252, 76, "answers,<br>live events", size=13)
-    # the server's three doors
-    d.path([(580, 270), (580, 330), (150, 330), (150, 390)])
-    d.path([(390, 330), (390, 390)])
-    d.path([(580, 330), (630, 330), (630, 390)])
-    lab(d, 158, 340, 110, "Attach a file", align="left", size=13)
-    lab(d, 398, 340, 120, "Research online", align="left", size=13)
-    lab(d, 638, 340, 60, "Ask", align="left", size=13)
-    # research and the web
-    d.path([(330, 520), (330, 610)])
-    lab(d, 336, 530, 90, "HTTPS<br>search", size=13)
-    d.path([(430, 610), (430, 520)])
-    lab(d, 336, 590, 90, "page text", size=13)
-    # the router: memory or the model's own knowledge
-    d.path([(740, 450), (800, 450)])
-    lab(d, 742, 424, 58, "MEMORY", size=12)
-    d.path([(630, 520), (630, 940), (800, 940)])
-    lab(d, 640, 860, 150, "GENERAL: the<br>model's own knowledge", align="left", size=13)
-    # what is kept goes on a shelf
-    d.path([(230, 520), (230, 780), (800, 780)])
-    d.path([(490, 520), (490, 780)], head=None)
-    lab(d, 238, 786, 380, "kept on a shelf (web pages marked as from the web)", align="left", size=13)
-    # files are read by the eyes
-    d.path([(110, 520), (110, 1060), (1160, 1060), (1160, 1000)])
-    lab(d, 120, 1066, 300, "images and video frames described", align="left", size=13)
     # the engine and the models
-    d.path([(915, 800), (915, 880)])
-    lab(d, 925, 822, 90, "the desk", align="left", size=13)
-    d.path([(1405, 800), (1405, 880)])
-    lab(d, 1415, 822, 70, "embed", align="left", size=13)
+    d.path([(440, 860), (440, 770)])
+    lab(d, 448, 790, 80, "the desk", align="left", size=13)
+    d.path([(965, 860), (965, 770)])
+    lab(d, 973, 790, 80, "embed", align="left", size=13)
     return d
+
+
+# --------------------------------------------------------------------- class diagram of the engine
+def class_engine() -> Diagram:
+    """The engine's classes as built (v2/camr_engine), each with a few of its real attributes and operations."""
+    d = Diagram("ClassEngine", "Class diagram of the CAMR engine (camr_engine)", 1100, 1700,
+                "◆ composition · ◇ aggregation · → association · ⇢ dependency · underlined: a class method")
+    X, CW = [30, 303, 577, 850], 220
+    ind = "&nbsp;&nbsp;&nbsp;&nbsp;"
+
+    def k(col, y, name, attrs, ops, stereo=None):
+        return klass3(d, X[col], y, CW, name, attrs, ops, stereo=stereo)
+
+    def m(x, y, t, align="left", w=120):  # a multiplicity or role name, small, beside a line's end
+        d.text(round(x if align == "left" else x - w), round(y), w, t, size=12, color=MUTED, align=align)
+
+    y1 = 180
+    reach = k(0, y1, "Reach", ["kind: str", "name: str", "/label: str"], ["path(root): Path",
+                                                                         "<u>parse(text): Reach</u>"],
+              stereo="dataclass")
+    session = k(1, y1, "Session", ["on: bool", "home: Reach", "memories: dict[Reach,", ind + "Memory]"],
+                ["switch(on)", "memory(reach): Memory", "remember(text, day)", "recall(question)",
+                 "answer(question, today)", "plain(question, today)"])
+    shelf = k(2, y1, "Shelf", ["name: str", "label: str", "reach: str", "about: str", "like: tuple[str, ...]"], [],
+              stereo="dataclass, frozen")
+    sorter = k(3, y1, "Sorter", ["shelves: list[Shelf]", "vecs: ndarray"], ["scores(text)", "sort(text)"])
+    y2 = max(b.y + b.h for b in (reach, session, shelf, sorter)) + 80
+    vault = k(0, y2, "Vault", ["path: Path", "reach: str | None", "prefix: str"],
+              ["write(text, …)", "link(a, b, by)", "use(nids, day)", "fade(today): int", "pin(nid, on)",
+               "neighbours(nid, n)"])
+    memory = k(1, y2, "Memory", ["path: Path", "reach: str | None", "closest: int = 4", "allowance: int"],
+               ["remember(text, day)", "choose(question)", "recall(question)", "answer(question, today)",
+                "use(moments, today, day)", "fade(today)"])
+    tiers = k(2, y2, "Tiers", ["disk_budget: int | None", "wake: bool", "sleeping: set[int]", "used: dict",
+                               "tick: int"],
+              ["bind(rooms, …)", "load(rid): Read", "touch(rid)", "enforce(keep): list[int]", "sleep(rid)",
+               "wake_room(rid): bytes"])
+    embedder = k(3, y2, "Embedder", ["model", "tok", "name: str", "dim: int"], ["encode(texts)", "encode_one(text)"],
+                 stereo="MLX model")
+    y3 = max(b.y + b.h for b in (vault, memory, tiers, embedder)) + 80
+    core = k(0, y3, "Core", ["budget: int", "members: list", "tokens: int", "/bytes: int"],
+             ["candidates()", "refresh(): bool", "text(): str"])
+    notebook = k(1, y3, "Notebook", ["header: list[int]", "shape: Shape", "core: list"],
+                 ["write(ids, after)", "desk(rooms)"])
+    rooms = k(2, y3, "Rooms", ["token_bytes: int", "room_tokens: int", "join: float", "moments: list[Moment]",
+                               "rooms: list[Room]", "vectors: ndarray"],
+              ["place(vec, tokens): int | None", "add(text, day, vec,", ind + "notes, rid): Moment",
+               "fetch(rids): dict", "disk_bytes(): int", "save()"])
+    revise = k(3, y3, "revise", None, ["revise(memory, reader,", ind + "embedder, text, source)",
+                                       "judge(reader, old, new)", "mark(memory, old, new)",
+                                       "closest(memory, text,", ind + "embedder, source)"], stereo="module")
+    y4 = max(b.y + b.h for b in (core, notebook, rooms, revise)) + 80
+    assistant = k(0, y4, "assistant", None, ["route(reader, question,", ind + "turns, closest)", "research(question)",
+                                             "named_in(question, notes)", "chat_ids(reader, system,", ind +
+                                             "turns, question)"], stereo="module")
+    reader = k(1, y4, "Reader", ["repo: str", "max_tokens: int", "model", "tok"],
+               ["chat_ids(system, user, tools)", "generate(ids, cache,", ind + "max_tokens): Reply",
+                "new_cache(ids)", "<u>rewind(cache, length)</u>"], stereo="MLX model")
+    live = k(2, y4, "Live", ["kind: str", "events: list[dict]", "done: bool", "stopped: bool"],
+             ["add(kind, **data): dict", "finish(**data)", "since(i): dict"])
+    seer = k(3, y4, "Seer", ["repo: str", "model", "processor"], ["see(images, system, user)",
+                                                                 "describe(image, ask): str"], stereo="MLX vision model")
+    bottom = max(b.y + b.h for b in (assistant, reader, live, seer))
+
+    def right(b):
+        return b.x + b.w
+
+    # row 1: a session reads reaches; a shelf names one; the sorter holds the shelves
+    yy = session.y + 40
+    rel(d, [(session.x, yy), (right(reach), yy)])
+    m(right(reach) + 3, yy - 18, "reaches", w=52)
+    m(right(reach) + 3, yy + 3, "1..*", w=52)
+    rel(d, [(shelf.cx, shelf.y), (shelf.cx, 140), (reach.cx, 140), (reach.cx, reach.y)], dashed=True)
+    d.text(round(session.x), 118, CW, "«names» (reach: str)", size=12, color=MUTED)
+    yy = sorter.y + 40
+    rel(d, [(sorter.x, yy), (right(shelf), yy)])
+    m(sorter.x - 3, yy - 18, "shelves", align="right", w=52)
+    m(right(shelf) + 3, yy + 3, "1..*", w=52)
+    xs_ = embedder.x + 0.7 * CW
+    rel(d, [(xs_, sorter.y + sorter.h), (xs_, embedder.y)])
+    m(xs_ + 6, embedder.y - 22, "1")
+
+    # Session ◇— Memory, one per reach
+    rel(d, [(memory.cx, session.y + session.h), (memory.cx, memory.y)], start="agg")
+    m(memory.cx + 8, memory.y - 22, "1..*")
+    m(memory.cx - 8, session.y + session.h + 26, "memories<br>{one per reach}", align="right", w=130)
+    # Memory → Embedder, over the gap between rows 1 and 2
+    gx, gy = memory.x + 0.85 * CW, memory.y - 26
+    rel(d, [(gx, memory.y), (gx, gy), (embedder.x + 0.3 * CW, gy), (embedder.x + 0.3 * CW, embedder.y)])
+    m(embedder.x + 0.3 * CW - 6, embedder.y - 22, "embedder 1", align="right")
+
+    # Memory ◆— Vault, ◆— Tiers (row 2)
+    yy = memory.y + 60
+    rel(d, [(memory.x, yy), (right(vault), yy)], start="comp", head=None)
+    m(right(vault) + 4, yy + 4, "0..1")
+    rel(d, [(right(memory), yy), (tiers.x, yy)], start="comp", head=None)
+    m(tiers.x - 4, yy + 4, "0..1", align="right", w=40)
+
+    # Memory ◇— Notebook (shared by every reach), ◇— Core
+    rel(d, [(memory.cx, memory.y + memory.h), (memory.cx, notebook.y)], start="agg", head=None)
+    m(memory.cx + 8, notebook.y - 22, "1")
+    m(memory.cx + 8, memory.y + memory.h + 24, "shared", w=80)
+    by = notebook.y - 34
+    cx0, cxc = memory.x + 0.15 * CW, core.x + 0.7 * CW
+    rel(d, [(cx0, memory.y + memory.h), (cx0, by), (cxc, by), (cxc, core.y)], start="agg", head=None)
+    m(cxc + 6, core.y - 22, "0..1")
+    # Core → Vault (vaults 1..*), Core → Notebook
+    vx = core.x + 0.3 * CW
+    rel(d, [(vx, core.y), (vx, vault.y + vault.h)])
+    m(vx - 6, vault.y + vault.h + 4, "vaults<br>1..*", align="right", w=60)
+    yy = notebook.y + 50
+    rel(d, [(right(core), yy), (notebook.x, yy)])
+    m(notebook.x - 4, yy + 3, "1", align="right", w=20)
+
+    # Memory ◆— Rooms and Memory → Reader, down the gap between columns 2 and 3
+    xa, xb = right(memory) + 16, right(memory) + 34
+    ya, yb = memory.y + memory.h - 30, memory.y + memory.h - 12
+    rel(d, [(right(memory), ya), (xb, ya), (xb, rooms.y + 40), (rooms.x, rooms.y + 40)], start="comp", head=None)
+    m(rooms.x - 3, rooms.y + 22, "1", align="right", w=12)
+    rel(d, [(right(memory), yb), (xa, yb), (xa, reader.y + 30), (right(reader), reader.y + 30)])
+    m(right(reader) + 3, reader.y + 34, "reader 1", w=52)
+    # Tiers → Rooms (bind)
+    rel(d, [(rooms.cx, tiers.y + tiers.h), (rooms.cx, rooms.y)])
+    m(rooms.cx + 6, rooms.y - 22, "rooms 0..1")
+    # Notebook → Reader
+    rel(d, [(notebook.cx, notebook.y + notebook.h), (notebook.cx, reader.y)])
+    m(notebook.cx + 6, reader.y - 22, "reader 1")
+
+    # revise ⇢ Rooms, ⇢ Embedder
+    yy = rooms.y + 90
+    rel(d, [(revise.x, yy), (right(rooms), yy)], dashed=True)
+    m(revise.x - 4, yy - 18, "«use»", align="right", w=50)
+    rel(d, [(revise.cx, revise.y), (revise.cx, embedder.y + embedder.h)], dashed=True)
+    m(revise.cx + 6, revise.y - 26, "«use»")
+    # assistant ⇢ Reader, ⇢ Live; Reader ⇢ Live
+    yy = reader.y + 60
+    rel(d, [(right(assistant), yy), (reader.x, yy)], dashed=True)
+    m(right(assistant) + 2, yy - 18, "«use»", w=40)
+    yy = reader.y + 110
+    rel(d, [(right(reader), yy), (live.x, yy)], dashed=True)
+    m(right(reader) + 3, yy + 4, "«reports<br>to»", w=52)
+    ly = bottom + 30
+    rel(d, [(assistant.cx, assistant.y + assistant.h), (assistant.cx, ly), (live.cx, ly),
+            (live.cx, live.y + live.h)], dashed=True)
+    m(live.cx + 6, live.y + live.h + 4, "«use» (reporting)", w=130)
+    d.h = ly + 40
+    return d
+
+
+# --------------------------------------------------------------------- DFD level 0
+def dfd0() -> Diagram:
+    """Process 0 of the context diagram, opened into its five processes and five data stores (Gane–Sarson). Every
+    flow that crosses the boundary in the context diagram appears here, split where two processes share it."""
+    d = Diagram("DFD0", "Level 0 data flow diagram of CAMR (Gane–Sarson)", 1100, 1665,
+                "Dashed: the CAMR v1 baseline only · a second line: a store or entity drawn twice")
+
+    def f(pts, label=None, at=None, w=150, align="center", dashed=False):
+        d.path(pts, dashed=dashed)
+        if label:
+            lab(d, at[0], at[1], w, label, align=align, size=13)
+
+    def copy_mark(x, y, w, h):  # Gane–Sarson: an entity drawn a second time has a stroke across its corner
+        d.raw(x + w - 22, y + h - 11.5, 26, 1.8, f"background:{LINE};transform:rotate(-45deg)", layer=3)
+
+    # external entities
+    d.gs_entity(30, 130, 610, 100, "User<br>" + small("of the Mac app (Chat, Code)"))
+    d.gs_entity(830, 130, 240, 100, "Hugging Face Hub<br>" + small("model weights ·<br>benchmark datasets"))
+    d.gs_entity(90, 300, 170, 100, "Wikipedia<br>" + small("public API"))
+    d.gs_entity(800, 1040, 230, 100, "Ollama<br>" + small("a separate program<br>on the Mac"))
+    d.gs_entity(30, 1225, 175, 115, "Researcher<br>" + small("student, supervisor,<br>examiner"))
+    d.gs_entity(900, 1225, 170, 125, "Anthropic API<br>" + small("Claude Haiku,<br>Sonnet, Opus 5.5"))
+    EY = 1540
+    d.gs_entity(30, EY, 190, 95, "Cloud model<br>(baseline)<br>" + small("Kimi K3, Moonshot"))
+    d.gs_entity(360, EY, 200, 95, "Automation<br>platform<br>" + small("n8n (baseline)"))
+    d.gs_entity(590, EY, 170, 95, "Public benchmark<br>files " + small("(baseline)"))
+    d.gs_entity(780, EY, 180, 95, "Hugging Face Hub<br>" + small("benchmark<br>datasets"))
+    copy_mark(786, EY + 6, 174, 89)
+
+    # processes
+    d.gs_process(370, 290, 250, 140, "3", "Research online,<br>read a file", size=15)
+    d.gs_process(30, 520, 220, 340, "1", "Remember<br>a moment<br>" + small("revise · place in a<br>room · write notes<br>"
+                                                                       "and a vault note"), size=15)
+    d.gs_process(720, 520, 310, 420, "2", "Answer a question<br>" + small("route · choose · recall ·<br>"
+                                                                      "lay the desk · generate"), size=15)
+    d.gs_process(30, 920, 220, 225, "4", "Fade and sleep<br>" + small("5% a day; rooms past<br>the disk budget "
+                                                                   "sleep"), size=15)
+    d.gs_process(320, 1210, 470, 250, "5", "Run a benchmark<br>" + small("Long Haul · Hugging Face suites ·<br>"
+                                                                    "speed and RAM · Claude alone"), size=15)
+
+    # data stores, and the copies that process 4 uses
+    for sid, y, name in (("D1", 580, "Room files (.notes)"), ("D2", 660, "Index and vectors"),
+                         ("D3", 740, "Vault (Markdown)"), ("D4", 820, "Event, metrics logs")):
+        gs_store(d, 380, y, 230, 50, sid, name)
+    for sid, y, name in (("D3", 925, "Vault (Markdown)"), ("D1", 1015, "Room files (.notes)"),
+                         ("D2", 1095, "Index and vectors")):
+        gs_store(d, 380, y, 230, 45, sid, name, duplicate=True)
+    gs_store(d, 30, 1413, 175, 45, "D5", "Run records")
+
+    # the user, research and the web
+    f([(60, 230), (60, 520)], "moments to remember", (68, 252), 200, "left")
+    f([(430, 230), (430, 290)], "research requests,<br>files to remember", (270, 236), 152, "right")
+    f([(560, 290), (560, 230)], "answers from<br>the web", (568, 236), 130, "left")
+    f([(370, 335), (260, 335)], "a search for<br>the question", (262, 299), 106)
+    f([(260, 375), (370, 375)], "the best page's<br>plain text", (262, 381), 106)
+    f([(400, 430), (400, 470), (180, 470), (180, 520)], "page and file text,<br>marked by source", (190, 476), 200,
+      "left")
+    f([(620, 400), (690, 400), (690, 545), (720, 545)], "the page,<br>as marked<br>data", (698, 418), 76, "left")
+    f([(640, 160), (800, 160), (800, 520)], "questions, code tasks,<br>approvals, memory<br>on or off", (808, 250), 185,
+      "left")
+    f([(780, 520), (780, 200), (640, 200)], "answers (from memory<br>or the model), code<br>changes, what each<br>"
+                                            "answer read", (628, 282), 145, "right")
+    f([(1000, 230), (1000, 520)], "model weights<br>(first download only)", (830, 400), 162, "right")
+
+    # 1 and the stores
+    f([(250, 600), (380, 600)], "notes: keys<br>and values", (254, 562), 122)
+    f([(250, 675), (380, 675)], "moment, room,<br>vector", (254, 637), 122)
+    f([(380, 695), (250, 695)], "closest<br>moments", (254, 699), 122)
+    f([(250, 765), (380, 765)], "a vault note", (254, 745), 122)
+    f([(250, 845), (380, 845)], "remember event", (254, 825), 122)
+    # 2 and the stores
+    f([(610, 605), (720, 605)], "a room's notes<br>(burst read)", (612, 567), 106)
+    f([(610, 685), (720, 685)], "closest<br>moment, room", (612, 647), 106)
+    f([(610, 755), (720, 755)], "core notes", (612, 735), 106)
+    f([(720, 775), (610, 775)], "used: +1.0", (612, 779), 106)
+    f([(720, 832), (610, 832)], "events, metrics", (612, 812), 106)
+    f([(610, 858), (720, 858)], "what each<br>answer read", (612, 862), 106)
+    # 2 and Ollama
+    f([(880, 940), (880, 1046)], "a chat with<br>recalled notes<br>as words", (774, 950), 98, "right")
+    f([(1000, 1046), (1000, 940)], "the streamed<br>answer, its<br>timings", (894, 950), 98, "right")
+    # 4 and its copies of the stores
+    f([(380, 935), (250, 935)], "strength, last use", (254, 915), 122)
+    f([(250, 958), (380, 958)], "× 0.95 a day", (254, 962), 122)
+    f([(250, 1037), (380, 1037)], "sleep: deleted;<br>wake: rewritten", (254, 999), 122)
+    f([(380, 1117), (250, 1117)], "a room's moments<br>as words", (254, 1079), 122)
+
+    # 5: the benchmark and its parts
+    f([(735, 940), (735, 1210)], "answers and<br>their metrics", (628, 960), 100, "right")
+    f([(765, 1210), (765, 940)], "checkpoint<br>questions", (773, 1150), 100, "left")
+    f([(340, 1210), (340, 1180), (15, 1180), (15, 700), (30, 700)], "the scripted history: tell(text, day)",
+      (40, 1158), 290, "left")
+    f([(205, 1262), (320, 1262)], "contender, model,<br>cut, seed,<br>commands", (207, 1203), 112)
+    f([(320, 1312), (205, 1312)], "dated records,<br>tables, charts,<br>cost ledger", (207, 1316), 112)
+    f([(320, 1425), (205, 1425)], "dated records,<br>ledger lines", (207, 1387), 112)
+    f([(205, 1448), (320, 1448)], "past records", (207, 1452), 112)
+    f([(790, 1262), (906, 1262)], "the scripted<br>history and its<br>questions", (792, 1203), 112)
+    f([(906, 1320), (790, 1320)], "answers, tokens,<br>cost (kept in<br>the ledger)", (792, 1324), 112)
+    f([(340, 1460), (340, 1485), (100, 1485), (100, EY + 6)], "prompts: ceiling, escalations", (110, 1489), 220,
+      "left", dashed=True)
+    f([(160, EY + 6), (160, 1517), (380, 1517), (380, 1460)], "answers, token counts", (170, 1521), 200, "left",
+      dashed=True)
+    f([(440, 1460), (440, EY + 6)], "answers", (384, 1466), 50, "right", dashed=True)
+    f([(520, EY + 6), (520, 1460)], "teach, forget,<br>ask", (528, 1466), 90, "left", dashed=True)
+    f([(680, EY + 6), (680, 1460)], "questions,<br>documents", (594, 1505), 80, "right", dashed=True)
+    f([(870, EY + 6), (870, 1485), (770, 1485), (770, 1460)], "benchmark<br>datasets", (878, 1490), 90, "left")
+    d.card(622, 1010, 104, 122, "Dashed: CAMR v1<br>baseline only.<br>Second line in a<br>store, or stroke<br>"
+           "across a corner:<br>drawn twice.", kind="box", size=12, align="left", pad=5)  # the key
+    return d
+
 
 DIAGRAMS = {"context": context, "use_cases": use_cases, "evaluation_pipeline": activity,
             "architecture": architecture, "sequence_question": sequence, "state_room": states, "files": files,
-            "deployment": deployment, "assistant": assistant}
+            "deployment": deployment, "assistant": assistant, "class_engine": class_engine, "dfd0": dfd0}
 
 try:  # the two baseline diagrams, drawn by the earlier generator (read only) at the same scale
     import diagrams as _v1  # noqa: E402

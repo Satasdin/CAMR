@@ -14,7 +14,7 @@
 > - Project memory was the best way to share memory (26 of 40); mixing in a second project cost 2 answers.
 > **How to read the numbers.** Most results are counts of right answers out of a set of questions, graded by rule. *Right* means the expected answer; for a question about something never told, a decline is right. *Declined* means the model said it did not know something it had been told. *First word* is the wait from the question to the first word of the answer. *Peak RAM* and *footprint* are the memory the whole process used. Every number comes from a dated record in the repository (`v2/records/bench/2026-11-04/`) or from the decision log (E-nn).
 
-This chapter reports what was built, how it was tested, and what the measurements showed, including where the system failed. Section {sec:env} describes the environment and Section {sec:datasets} the data. Section {sec:impl} describes the implementation and the application. Section {sec:testing} reports testing, Sections {sec:vc} and {sec:ai-use} the evidence and the use of AI tools, and Section {sec:eval} the evaluation results, discussion and limitations.
+This chapter reports how the design of Chapter 4 was implemented, made available on the Mac, tested and evaluated, including where the system failed. CAMR is a hybrid project: an AI artefact evaluated by experiment and an application used through its interface. The chapter therefore follows the AI and machine-learning route of the department's guidelines, with the datasets described before the implementation and the evaluation, and adds the application's modules and user workflows from the software route. Section {sec:env} describes the environment and Section {sec:datasets} the data and its preparation. Section {sec:impl} describes the implementation of the engine, the assistant and the application, with the application's screens. Section {sec:testing} reports the test strategy, the test cases, and the defects and retests. Sections {sec:vc} and {sec:ai-use} give the implementation evidence and the use of AI tools. Section {sec:eval} presents the evaluation results, and Section {sec:discussion} discusses them objective by objective, with the failures and the limitations. Conclusions and recommendations are left to Chapter 6.
 
 ## Implementation Environment {#env}
 
@@ -24,15 +24,16 @@ This chapter reports what was built, how it was tested, and what the measurement
 
 CAMR is a local prototype: a repository, an installer and an application that run on the user's own Mac. Nothing was deployed for public access. Development began on a MacBook Air M4 with 16 GB, the laptop class of the proposal's scope (Section {sec:scope}). From 3 November 2026 every contender was run on a MacBook Pro M5 Pro, and every result of the final engine comes from that machine (Table {tab:hardware}).
 
-Table: {#hardware} Hardware used (from each record's `environment` field)
+Table: {#hardware} Implementation environment and minimum requirements (from each record's `environment` field)
 
-| Item | Specification | Purpose | Evidence |
+| Item or layer | Minimum tested specification or version | Purpose and justification | Evidence or source |
 |---|---|---|---|
-| Evaluation and app machine | MacBook Pro Mac17,9, Apple M5 Pro, 24 GB unified memory, internal SSD, macOS 27.2 | Every Long Haul, suite, reach and speed run; the app | `environment` of the records; E-17 |
-| First development machine | MacBook Air M4 (Mac16,12), 16 GB, fanless | Step 0 baselines and the room design (E-14 to E-16) | `records/2026-11-02/`; E-17 |
-| Minimum to run | An Apple-silicon Mac; MLX needs one. M1 to M3 Macs and 8 GB Macs were not tested | The installer refuses other machines | `scripts/install.sh` |
+| Evaluation and app machine | MacBook Pro Mac17,9, Apple M5 Pro, 24 GB unified memory, internal SSD, macOS 27.2 | Every Long Haul, suite, reach, speed, multimodal and Code run, and the app; 24 GB holds the 8B reader, the embedder and the vision model together | `environment` of the records; E-17 |
+| First development machine | MacBook Air M4 (Mac16,12), 16 GB, fanless | The rooms build's baselines and room design (E-14 to E-16); the laptop class of the proposal | `records/2026-11-02/`; E-17 |
+| Minimum to run | An Apple-silicon Mac with 16 GB for the 1.7B reader (tested on the Air); 24 GB for the 4B and 8B readers and the vision model (tested on the Pro). M1 to M3 Macs and 8 GB Macs were not tested | MLX runs only on Apple silicon; the installer refuses other machines | `scripts/install.sh`; the records |
+| Storage | The internal SSD; free space for the models (about 1 to 5 GB each) and a disk budget per shelf (8 GB by default in the app, 40 GB in the benchmarks) | Room files are read from the SSD with the cache bypassed; the budget bounds what memory may take | `swap.py`; E-54 |
 | Specialised hardware | None dedicated. MLX uses the chip's integrated graphics processor | The reader's keys and values are read and written inside the process | Table {tab:changes} |
-| Network | Model weights and suites downloaded once; the Anthropic API for the yardstick only | Private, offline use (NFR-10) | `bench/claude.py`; `HF_HUB_OFFLINE` |
+| Network | Model weights and suites downloaded once; Wikipedia when the user asks for research; the Anthropic API for the yardstick only | Private, offline use (NFR-10) | `bench/claude.py`; `assistant.py`; `HF_HUB_OFFLINE` |
 
 The records note the power source and the one-minute load when each run started; the 4B's 3M and 4M rerun, for example, ran on AC power at a load of 4.33. One measuring job used the graphics processor at a time, run from a queue that logs each job's start and end (E-35).
 
@@ -48,17 +49,19 @@ Table: {#software} Software and models (versions as tested)
 | MLX / mlx-lm | 0.32.4 / 0.32.2 | Run the models on the graphics processor and expose the key–value cache (Hannun et al., 2023) |
 | Readers (frozen, 4-bit) | `Qwen3-1.7B-4bit`, `Qwen3-4B-Instruct-2507-4bit`, `Qwen3-8B-4bit` (A. Yang et al., 2025) | The engine's contenders |
 | Larger local model | `Qwen3.8-27B-4bit` | Reads CAMR's memory as words (its linear-attention layers keep no keys and values) |
+| Vision model (frozen, 4-bit) | `Qwen3-VL-4B-Thinking-4bit`, through mlx-vlm | The app's eyes: describes images and video frames once, reasoning before it describes (E-57) |
 | Embedder (frozen) | `Qwen3-Embedding-0.6B-4bit-DWQ` (Zhang et al., 2025) | Every contender |
 | Ollama | 0.13.5, `qwen3:1.7b` (Q4_K_M) | The pairing: memory as words |
 | Anthropic API | `claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-opus-5-5`; effort "medium", adaptive thinking | The yardstick, alone |
 | SwiftUI app | macOS 14 or later, built with the Swift command-line tools | The native front end (Chat, Code) |
 | CAMR v1 as a library | camr 0.4.0 with sqlite-vec 0.1.9 | The baseline contender on the scripted lives |
+| Wikipedia | The public MediaWiki API over HTTPS | Research: one search and one page per question, read as data (E-55) |
 
-The engine's settings are constants in the code, recorded in each record's `contender` field: rooms of at most 512 tokens, a join threshold of 0.80, four closest moments re-read, 2 GB of RAM for hot rooms and 40 GB of disk for room files in the benchmarks, the graphics buffer cache capped at 1 GB, and Qwen3's thinking off for every local model. Answers get room by family: 1,200 tokens for a page, 600 for code, 400 for maths and 120 for the rest.
+The engine's settings are constants in the code, recorded in each record's `contender` field: rooms of at most 512 tokens, a join threshold of 0.80, four closest moments re-read, 2 GB of RAM for hot rooms and 40 GB of disk for room files in the benchmarks, the graphics buffer cache capped at 1 GB, and Qwen3's thinking off for every local model in the benchmarks. In the app, rooms are stored at 8 bits by default and each shelf has an 8 GB disk budget (E-54), and a thinking build may think before it answers. Answers get room by family: 1,200 tokens for a page, 600 for code, 400 for maths and 120 for the rest.
 
 ### Deployment and Reproducibility
 
-The engine installs with one script on an Apple-silicon Mac, which checks the machine, creates a Python 3.12 environment, installs the engine and its models, and runs a health check that teaches a throwaway memory two dated facts and asks for one back. A `camr` command then starts the app, the Ollama pairing or the OpenAI-compatible endpoint (E-48). The Mac app is built from its Swift package and starts the engine itself. Every benchmark can be rerun with the commands in Appendix A, and every run writes a dated record to `records/bench/<date>/` after every checkpoint, naming the machine, its load and a hash of the code that made it (`camr_source_sha`). Three limits apply: records written before the rename on the evening of 4 November keep the old field names; no run was repeated for variance; and the Claude yardstick's answers depend on the provider's service on that day.
+The engine installs with one script on an Apple-silicon Mac, which checks the machine, creates a Python 3.12 environment, installs the engine and its models, and runs a health check that teaches a throwaway memory two dated facts and asks for one back. A `camr` command then starts the app, the Ollama pairing or the OpenAI-compatible endpoint (E-48). The Mac app is built from its Swift package into `CAMR.app`, which is copied into the Mac's Applications folder, appears there and in Launchpad like any other application, and starts the engine itself. Every benchmark can be rerun with the commands in Appendix A, and every run writes a dated record to `records/bench/<date>/` after every checkpoint, naming the machine, its load and a hash of the code that made it (`camr_source_sha`). Three limits apply: records written before the rename on the evening of 4 November keep the old field names; no run was repeated for variance; and the Claude yardstick's answers depend on the provider's service on that day.
 
 ## Dataset Description {#datasets}
 
@@ -131,31 +134,47 @@ Table: {#suites} The public suites as run
 
 The rooms build was developed and judged on three scripted twelve-week lives of invented people (a university student, a dairy-cooperative manager and a software developer), each with about 330 notes and the same 100 questions every week: 45 single facts, 15 updated facts, 10 facts told across two notes, 15 dates and 15 things never told (E-05). Development lives (seed 0) were used for every design choice, and held-out proof lives (seed 1) were run only after the pass marks were written (E-19). The baseline used PopQA, HotpotQA, 2WikiMultiHopQA and GSM8K with fixed samples (seed 13), a store built from supporting and distractor paragraphs only, and a 200-question held-out set for its final claims.
 
+### Data Preparation and Partitioning {#data-prep-5}
+
+The raw data became model input in four steps, the same for every contender.
+
+1. **Dating.** Each Long Haul event was turned into one moment that carries its date and day number, as `[YYYY-MM-DD, day N] text` (DR-04), because the questions ask about days by number. For example, the event "Wanjiru says the delivery van is booked for Thursday" told on day 37 becomes `[2025-11-11, day 37] Wanjiru says the delivery van is booked for Thursday`.
+2. **Counting and cutting.** Tokens were counted with Qwen3-1.7B's tokenizer, and the script was cut at fixed token counts (Table {tab:cuts}), so a cut is the same text for every contender.
+3. **Chunking for the suites.** BABILong stories were told in chunks of about 512 tokens, then the question was asked; HARP's problem A and its worked solution were told as one moment, followed by 30,000 tokens of Long Haul noise.
+4. **Files to words.** In the multimodal test and the app, a PDF became one moment per page of its text, an image its description and the text written in it, and a video one described frame every 2 seconds with its time (E-44); each such moment is marked as from a file.
+
+There was no training, so partitioning concerns the settings and the questions. Settings were chosen on development data only and then frozen: the room size and the desk on the development lives (seed 0), the baseline's budget and gate on validation questions. The held-out data, the proof lives (seed 1), the Long Haul and the suites, were run only after the settings and the instructions were fixed (E-19, E-32). Asking was read-only, so no question could teach the memory the answer to a later one (E-31). Duplicate and paraphrased probes within the Long Haul are of one script and one seed, so they are always in the same partition.
+
 ## System Implementation {#impl}
 
 > **In plain words.** The engine is a Python package of a few thousand lines. A moment is read once by the model and its notes are appended to a room file; a question picks one room, reads it from RAM or the SSD, and the model reads only a few lines more before it answers.
 
 ### The Engine's Modules
 
-The implementation follows Figures {fig:arch} and {fig:sequence}. Table {tab:modules} lists the engine's main modules with their sizes on 4 November.
+The implementation follows Figures {fig:arch} and {fig:sequence}. Table {tab:modules} lists the engine's main modules with their sizes on 5 November.
 
 Table: {#modules} The engine's main modules (`v2/camr_engine/`)
 
 | Module (lines) | What it does | Requirements |
 |---|---|---|
-| `rooms.py` (137) | Places a moment by Equation {eq:room}; appends its notes to the room file; fetches a whole room in 1 MB pieces, eight at once, with the cache bypassed; cuts a room file back to its indexed length on opening (E-27) | FR-08, FR-09, IR-03 |
-| `notes.py` (101) | Turns tokens into notes and notes into a desk; refuses scaled rotary positions; turns keys to a new position | FR-07, IR-02 |
-| `memory.py` (406) | Remember, choose, recall, answer and fade; composes the parts below | FR-07, FR-12 |
-| `swap.py` (301) | The tiers: hot rooms in RAM under a budget (least recently used first out), awake rooms on the SSD, sleep past the disk budget, waking | FR-11, FR-13, NFR-04 |
+| `rooms.py` (182) | Places a moment by Equation {eq:room}; appends its notes to the room file; fetches a whole room in 1 MB pieces, eight at once, with the cache bypassed; cuts a room file back to its indexed length on opening (E-27) | FR-08, FR-09, IR-03 |
+| `notes.py` (157) | Turns tokens into notes and notes into a desk; refuses scaled rotary positions; turns keys to a new position | FR-07, IR-02 |
+| `memory.py` (411) | Remember, choose, recall, answer and fade; composes the parts below | FR-07, FR-12 |
+| `swap.py` (307) | The tiers: hot rooms in RAM under a budget (least recently used first out), awake rooms on the SSD, sleep past the disk budget, waking | FR-11, FR-13, NFR-04 |
 | `vault.py` (613) | One Markdown note per moment; doors between notes; strength fading 5% a day; reads a person's edits back | FR-10 |
 | `core.py` (92) | The core: at most 256 tokens of notes tagged `core`, kept in RAM | FR-14 |
 | `reach.py` (318) | Sessions over several reaches; one lock per reach folder; the memory switch | FR-15, FR-16, NFR-12 |
 | `metrics.py` (169) | One record per answer (Table {tab:metrics}); medians and 90th percentiles | FR-17 |
-| `events.py` (104); `live.py` (185) | The event log with attention per written word; the live events the app watches | FR-19, FR-21 |
-| `models.py` (245) | Loads the models through MLX, layer by layer; greedy decoding, thinking off; caps the graphics buffer cache | NFR-05, NFR-09 |
-| `pair/` (1,039) | The Ollama pairing proxy and the OpenAI-compatible endpoint, with their security checks and metrics | FR-20, IR-06, IR-07 |
+| `events.py` (108); `live.py` (186) | The event log with attention per written word; the live events the app watches | FR-19, FR-21 |
+| `models.py` (258) | Loads the models through MLX, layer by layer; greedy decoding, thinking off; caps the graphics buffer cache | NFR-05, NFR-09 |
+| `pair/` (1,053) | The Ollama pairing proxy and the OpenAI-compatible endpoint, with their security checks and metrics | FR-20, IR-06, IR-07 |
+| `shelves.py` (154) | The four shelves, the Auto sorter and the warm-up | FR-31 |
+| `assistant.py` (132); `revise.py` (93) | The router, Wikipedia research, thinking; SAME, UPDATE or NEW before a moment is kept | FR-27, FR-28, FR-30 |
+| `media.py` (333); `shrink.py` (213) | Files into words (PDF pages, images and video frames through the vision model); rooms stored at 8 or 4 bits | FR-29, NFR-04 |
 | `app/` and `agentic/` | The engine's server and its JSON routes, the Code agent's tools, workspace and approval gate | FR-18, IR-04, IR-05, NFR-11 |
 | `bench/` | The Long Haul generator and grader, the local, Ollama and Claude runners, the suites, the reach and RAM runners, the cost ledger | FR-22 to FR-26 |
+
+
 
 ### Write Path, Read Path and Tiers
 
@@ -171,21 +190,59 @@ For \(n\) tokens, \(L\) layers, \(H_{kv}\) key–value heads of size \(d_h\) and
 
 Two implementation choices from the rooms build matter for every result. Each room is written as one continuous page, so a new moment is read with its room's earlier moments in view (E-15). A single room is laid on the desk without turning its keys, which cut laying the desk from 55 ms to 15 ms at 2,000 words (E-18). The final engine added three things to that path. Every moment carries its date and day number, as `[YYYY-MM-DD, day N] text`, since the Long Haul asks about days by number. Rooms move between tiers: in the benchmarks, 2 GB of RAM held the hot rooms and 40 GB of disk the awake room files, and at the end of the 2M-token history 920 rooms were awake and 4,471 asleep (E-38). The disk budget is kept by the rule of Equation {eq:budget}: while the awake room files outgrow the budget, the weakest room goes to sleep, ties going to the room used least recently.
 
-$$\text{while}\ \sum_{r \in A} S_r > B_{\text{disk}}:\quad r^{*} = \underset{r \in A}{\mathrm{arg\,min}}\ \left(\sigma_r,\ \tau_r\right)\ \text{sleeps}$$ {#budget} [The disk budget rule]
+A question whose room is asleep reads that room's moments as words, which costs reading them as plain text would; waking was off in the benchmarks. Finally, the benchmark's questions were read-only: the hot rooms, the least-recently-used clock and the vault strengths were restored after every answer, so that asking never teaches (E-31).
 
-In Equation {eq:budget}, \(A\) is the set of awake rooms, \(S_r\) the size of room \(r\)'s notes file, \(B_{\text{disk}}\) the disk budget (40 GB in the benchmarks), \(\sigma_r\) the room's strength (that of its strongest vault note, Equation {eq:fade}) and \(\tau_r\) the time it was last used; sleeping deletes the room's notes file and keeps its words. A question whose room is asleep reads that room's moments as words, which costs reading them as plain text would; waking was off in the benchmarks. Finally, the benchmark's questions were read-only: the hot rooms, the least-recently-used clock and the vault strengths were restored after every answer, so that asking never teaches (E-31).
+### Model Selection and Configuration {#models-section}
+
+No model was trained or fine-tuned; the study's claim is about a memory beside a frozen model (Section {sec:scope}). The readers were selected for what the engine needs and what the Mac holds. A reader must keep keys and values at every layer with plain rotary positions, so that its notes can be saved and laid back (IR-02); the Qwen3 family meets this, and its 1.7B, 4B and 8B builds span the sizes a 24 GB Mac can run with the embedder beside them. Qwen3.8-27B was kept as a larger reader of the memory as words, because most of its layers keep a running state instead of keys and values (E-26). One embedder, Qwen3-Embedding-0.6B, serves every contender, so that every memory chooses rooms by the same closeness (E-02). The vision model was chosen for the app by the same rule as the readers, a frozen 4-bit model that runs in MLX, and as a reasoning model, Qwen3-VL-4B-Thinking, whose thinking is removed before its description is kept (E-57). The multimodal benchmark had already been run with Qwen2.5-VL-3B and Gemma 3 (Section {sec:media-results}).
+
+The engine's settings were fixed before the held-out runs: rooms of at most 512 tokens with a join threshold of 0.80 and four closest moments re-read, chosen on the development lives (E-18), and the yardstick's instructions for every contender, with the 1.7B also run under the engine's own wording once the cause of its declines was found (E-37). In the benchmarks every local model decoded greedily with thinking off (NFR-09). In the app, a hybrid thinking build (Qwen3 1.7B and 8B) may think before a general answer, within 2,400 tokens of thinking and 700 of answer, while the 4B Instruct build answers directly. Rooms are stored at 8 bits by default in the app, since 8-bit rooms answered as 16-bit rooms did at about half the disk (Section {sec:bits-results}).
 
 ### The Vault, the Core, Reach and the Switch
 
 Every moment is also written to the vault as a Markdown note whose front matter holds its id, day, date, room, reach, strength and links. The vault opens in Obsidian as it is, and a note edited by hand is read again because its file changed. In the benchmarks the core was on but empty, since every moment was told untagged. A `Session` reads several reaches and writes to one; each reach is a folder of its own under `~/.camr/`, locked while a process has it open, and a question picks the best room over every reach it reads. With the switch off, the model answers alone with the same prompt and no notes, and the answer still gets a metrics record, so on and off compare directly.
 
+### The Assistant: Routing, Research, Files and Revision {#assistant-impl}
+
+The assistant of Section {sec:assistant-design} was implemented in `assistant.py`, `revise.py`, `shelves.py` and the chat route of the engine's server. The router asks the reader for at most three tokens with no live events, so its word is never shown or measured as an answer; before asking, the five closest notes are checked for a name the question carries, with possessives removed, and a match goes to memory outright (E-55). A memory question also reads the closest moment of every other shelf whose closeness is within 0.12 of the best, so a moment filed on another shelf is not lost to a crowded one. A general question is answered with the last six turns of the conversation; a thinking model's reasoning is split from its answer and shown folded. Research uses Wikipedia's search and page-text API with a fixed timeout and a named user agent; the page is cut to 6,000 characters, its angle brackets are neutralised so that it cannot close its markers, and it is placed in the user's turn between `<source>` markers; links in answers are kept only when they are `http` or `https`. Attachments are read by `media.py`: PDF and text pages directly, images and video frames through the vision model, which is downloaded the first time a picture needs it. Revision compares a new moment only with moments of the same source, decided by the vault note's tags (`user`, `file` or `web`) and never by the words; a pair closer than 0.78 is judged in one word, and a moment is left out as SAME only when the pair is also at least 0.95 close and the word is exactly SAME (E-56). Conversations are saved one file per chat under the memory's folder, under identifiers checked against a fixed pattern before any file is opened.
+
+### The Application: Modules, Integration and User Workflows {#app-impl}
+
+The application is a Swift package of eight source files (2,122 lines) that builds into `CAMR.app`, signed for the Mac it was built on and installed in the Applications folder. Its modules are the engine process (`Engine.swift`), Chat (`Chat.swift`), Code (`Code.swift`), the weights view (`Weights.swift`), the settings window, the theme, the app shell, and a rehearsal script runner used to capture the screens. When it starts, it starts the engine as a local process with the chosen model (Qwen3 1.7B, 4B or 8B), a free port and a token only it knows, waits for the engine's line saying it holds that port before it sends the token, and then talks to it over the loopback address (IR-04). Each model has its own memory folder, since notes belong to the model that wrote them. The application has two parts, Chat and Code (E-50); an earlier Swarm screen, which ran several agents with their own memories, was removed so that the app does two things well. Colour carries meaning only: memory is cyan, the model amber and the cloud yardstick grey (E-34, E-49). The screens below were captured from the running app with a real memory of 737 rooms; they illustrate the workflows, and the evidence that each requirement was met is in the test cases (Section {sec:testing}).
+
+**Starting.** When the app starts, it draws the model's layers filling as their weights load (Figure {fig:app-load}); the memory panel above them shows how many rooms the memory holds. If the engine cannot start, the window says why and where it looked, instead of waiting without end.
+
+![{#app-load} Starting the app: the model's 36 layers fill as their weights arrive ("loading 14/36"), before the first question](figures/app/loading-weights.png)
+
+**Telling and asking.** In Chat, the user tells the model something with Remember and asks with Ask (Figure {fig:app-chat}). A remembered moment is judged by revision, filed on its shelf and read once by the model; a question is routed, its room is read, and the answer is written. Under each answer the app shows where it came from (memory, the model's own knowledge or the web), the time to the first word, and, from memory, the note read and whether it came from RAM or the SSD; under each remembered fact, the shelf it was kept on. A switch turns memory off, so the same question can be asked of the model alone, which then answers "I don't know" about the user's own facts.
+
+![{#app-chat} Chat with memory on and off: a fact told earlier is answered from the room it was kept in ("room 609 · read from the SSD"); with memory off, the same question gets "I don't know"](figures/app/chat-memory-on-off.png)
+
+**Shelves.** Moments told on "Auto" are filed by meaning (Figure {fig:app-shelves}), and each answer names the note and the shelf it read.
+
+![{#app-shelves} Shelves in Chat (Qwen3 4B): moments told on "Auto" are filed on the Research and Personal shelves by meaning, and each answer names the note and shelf it read ("note 0 on Coding · read from the SSD")](figures/app/chat-shelves.png)
+
+**General questions and reasoning.** A question that needs no memory is answered from the model's own knowledge; a thinking model's reasoning streams into a block that folds once the answer is written (Figures {fig:app-maths} and {fig:app-reasoning}), and what was learnt is kept on the Research shelf. Conversations are saved and listed, a new one can be started, and an answer can be stopped mid-way.
+
+![{#app-maths} A general question answered by the 8B from its own knowledge, its reasoning folded ("Thought for 18.5 seconds"), labelled "from the model" and kept on the Research shelf](figures/app/chat-maths.png)
+
+![{#app-reasoning} The 8B's reasoning, folded once the answer is written ("Thought for 27.8 seconds")](figures/app/chat-reasoning-folded.png)
+
+**The weights view.** The tensors are drawn only while a model loads or when the user asks for them (Command-T), and can be shown large beside the chat (Figure {fig:app-weights}). While the model answers, the room it reads is marked and travels into the model, and each layer's row lights with how strongly that layer fired for each word: 32 measured numbers per layer per word, sent by the engine only while the app listens, so the benchmarks pay nothing for them (FR-19). With memory off, the memory stays dark and only the model's layers light (Figure {fig:app-onoff}).
+
+![{#app-weights} The weights view, large beside the chat: the room an answer reads travels from the memory (rooms, top) into the model's 36 layers (bottom)](figures/app/weights-large.png)
+
+![{#app-onoff} The weights view with memory on (left), where the room read lights and flows into the model, and off (right), where the model answers alone and the memory stays dark](figures/app/weights-on-off.png)
+
+**Code.** Code is a coding agent on the same local model (Figure {fig:app-code}). The user picks a folder; the agent can list, search, read and edit files and run commands there, and every shell command waits for an explicit Allow. Its turns, tool calls and the files it opened or wrote are shown as it works, and with memory on what it learns about the project is kept on the Coding shelf for the next task (Figure {fig:app-cafe}). Building from memory needed small fixes to the agent, each with its test: the notes' answer rules no longer end a task; an empty workspace and the files still to write are named at every step; a look repeated with nothing changed is not run again; a reply cut off inside a tool call gets more room; a code step re-reads its eight closest moments (E-59); an answer that leaves the task's files unwritten is sent back once; and the attention record is worked out as each look is made, so a long desk no longer runs the graphics memory out (E-60).
+
+![{#app-code} Code: the agent lists the files of a project folder, reads `money.py` and answers from what it read; the answer is kept in memory](figures/app/code-reads-then-answers.png)
+
+![{#app-cafe} Code with the 8B: a one-page café website written as `index.html` and `style.css` in two tool calls, and kept in memory](figures/app/code-cafe-site.png)
+
 ### Memory for Other Runtimes: the Ollama Pairing
 
 Ollama runs its own model and lets no outside code put keys and values into it, so the engine gives it memory as words. A proxy on 127.0.0.1:11435 speaks Ollama's own API; before a chat is forwarded to the real Ollama, the proxy recalls the closest notes on the last user message and puts them, at most 8 notes and 512 tokens, at the front of that message (E-33). After the answer has streamed back, the exchange is remembered on a background worker. The same code serves an OpenAI-compatible endpoint on 127.0.0.1:11436 in front of Ollama, LM Studio or mlx_lm.server (E-47). Through these doors memory goes in as words; the engine's notes need the engine.
-
-### The Application {#app-impl}
-
-The application described in Section {sec:ui-design} is a Swift package of seven source files (about 1,500 lines) that builds into `CAMR.app`, signed for the Mac it was built on. It starts the engine as a local process with the chosen model (Qwen3 1.7B, 4B or 8B), a free port and a token only it knows, waits for the engine's line saying it holds that port before it sends the token, and then talks to it over the loopback address. Each model has its own memory folder, since notes belong to the model that wrote them. The screenshots in Figures {fig:app-load} to {fig:app-onoff} were captured from the running app with Qwen3 4B and a real memory of 737 rooms.
 
 ### The Benchmark Harness and the Contenders {#contenders-section}
 
@@ -207,15 +264,15 @@ The yardstick runner sends a checkpoint's questions in one streamed request that
 
 > **In plain words.** Automated tests checked each part; benchmark runs checked the whole system against requirements written beforehand; and defects found by the measurements were fixed and the runs repeated. Two requirements were not met and are kept as written.
 
-### Test Strategy
+### Test Strategy and Acceptance Criteria
 
-Testing used five levels:
+The purpose of testing was to show whether the implemented system satisfies the requirements of Chapter 4. The scope was the engine, the assistant, the application, the pairing and the benchmark harness; the environment was the MacBook Pro of Table {tab:hardware}; the test data were the scripted lives, the Long Haul, the public suites and the multimodal files, none of them personal. A test passed only when its observed result met an expected result written beforehand: for the non-functional requirements, the thresholds of Table {tab:nfr}, written before the runs that tested them (E-19, E-40); for the functional requirements, the behaviour the requirement states. Testing was complete when every automated test passed, every requirement with a threshold had been measured, and every defect found had been fixed and retested or bounded and reported. Testing used five levels:
 
-1. **Unit and integration tests.** White-box pytest tests in 45 files cover the rooms, notes, tiers, vault, core, reach, metrics, events, pairing, the app's routes and security, the Code agent, and every part of the benchmark harness (the Long Haul's generator and grader, the runners, the suites and the cost ledger). On 4 November, 730 tests passed.
+1. **Unit and integration tests.** White-box pytest tests in 49 files cover the rooms, notes, tiers, vault, core, reach, metrics, events, pairing, the app's routes and security, the Code agent, the assistant's router, research, revision and shelves, and every part of the benchmark harness (the Long Haul's generator and grader, the runners, the suites and the cost ledger). On 5 November, 788 tests passed and 5 were skipped.
 2. **System tests.** The benchmark runs were judged against the non-functional requirements of Table {tab:nfr}, whose thresholds were written before the runs that tested them (E-19, E-40).
 3. **Security tests.** Requests with a foreign host, a foreign origin, no token or a non-JSON body were sent to the engine's server and the proxies.
-4. **Deployment test.** The installer and the health check were run, and the Mac app was built and run with the 4B model.
-5. **Demonstration.** Chat and Code were used with a real memory, and the screens were captured from the running app (Section {sec:app-impl}).
+4. **Deployment test.** The installer and the health check were run, and the Mac app was built, installed in the Applications folder and run with the 1.7B, 4B and 8B models.
+5. **Demonstration.** Chat and Code were used with a real memory, and the screens were captured from the running app (Section {sec:app-impl}). Black-box positive, negative and boundary cases were included: memory off, never-told questions, foreign requests, a second process, a cost cap, and a never-said name.
 
 User acceptance testing and an accessibility audit were not done.
 
@@ -227,7 +284,7 @@ Table: {#testcases} Test cases and results
 
 | Test ID | Traceability | Scenario | Expected result | Actual result and evidence | Verdict |
 |---|---|---|---|---|---|
-| T-01 | All FR | The automated suite | Every test passes | 730 passed (4 November, before Swarm was removed) | Pass |
+| T-01 | All FR | The automated suite | Every test passes | 788 passed, 5 skipped (5 November) | Pass |
 | T-02 | NFR-01 | Speed bench, 2,000 words in the room, cache bypassed, five tries | Median first word under 0.5 s | 0.233 s (E-20) | Pass |
 | T-03 | NFR-02 | The same bench, notes against words | At least 10 times sooner | 4.6 times (E-20) | Fail (kept) |
 | T-04 | NFR-03 | The 1.7B told the whole Long Haul, measured at 1K, 10K and 17.7K moments | First word and RAM do not climb | First word 0.11, 0.15, 0.08 s; RAM 4.26, 4.28, 4.23 GB (E-38) | Pass |
@@ -241,14 +298,19 @@ Table: {#testcases} Test cases and results
 | T-12 | NFR-12 | A second process opens a reach folder | Refused | Refused with `ReachBusy` (reach tests) | Pass |
 | T-13 | NFR-14 | The night's yardstick runs | Spend under $60 | $28.71, every call in the ledger | Pass |
 | T-14 | NFR-15 | Inspection of the records of 4 November | Machine, load, versions, commit and code hash in each | Present in every record | Pass |
-| T-15 | FR-18, FR-19 | The Mac app with Qwen3 4B | Chat and Code work with memory on and off; the weights view moves only with measured events | Figures {fig:app-chat} to {fig:app-onoff} | Pass (demonstration) |
+| T-15 | FR-18, FR-19 | The Mac app with Qwen3 4B and 8B | Chat and Code work with memory on and off; the weights view moves only with measured events | Figures {fig:app-load} to {fig:app-cafe} | Pass (demonstration) |
 | T-16 | FR-20 | A fact told through the OpenAI-compatible endpoint, asked back through the real Ollama | The fact comes back | "Pilipili", with 187 characters of notes (E-47) | Pass |
 | T-17 | FR-22 | The Long Haul built twice from seed 1, and extended | Identical scripts; the first 110 days unchanged by the extension | Generator tests pass; checked event for event (E-39) | Pass |
-| T-18 | Users | User acceptance; accessibility audit | | Not run | Not tested |
+| T-18 | FR-27 | 14 routing questions on the 8B's Long Haul memory, including one never-said name | Questions about the user's records go to memory; others to the model | 13 of 14 routed right; the miss, the never-said name, was then answered honestly (E-55) | Pass |
+| T-19 | FR-30 | Five test moments judged on the 4B: two updates, a repeat and two new facts | UPDATE, UPDATE, SAME, NEW, NEW | 5 of 5 as expected; the old notes kept and marked superseded (E-56) | Pass |
+| T-20 | FR-31 | Twelve test sentences told on "Auto" | Each filed on its shelf | 12 of 12, including the 8 not close to any shelf's examples (E-51) | Pass |
+| T-21 | FR-29 | A photographed receipt attached, then asked about later | Its total and an item answered from memory | KES 730.00 and the item, "from memory · note 549" (Figure {fig:app-receipt}) | Pass (demonstration) |
+| T-22 | FR-28 | A web page whose text tries to close its markers or give orders | The page is read as data only | Angle brackets neutralised and links limited to http(s), by the research tests | Pass |
+| T-23 | Users | User acceptance; accessibility audit | Agreed criteria with representative users | Not run | Not tested |
 
 ### Defects Found and Retests
 
-The measurements found six defects in the system or in its measurement (Table {tab:defects}). Each was fixed or bounded, and the affected runs were repeated or reported both ways.
+The measurements and the demonstrations found nine defects in the system or in its measurement (Table {tab:defects}). Each was fixed or bounded, and the affected runs were repeated or reported both ways.
 
 Table: {#defects} Defects found and retests
 
@@ -260,39 +322,23 @@ Table: {#defects} Defects found and retests
 | D-04 | Ollama, HARP: at the shared 400-token limit, 82 of the bare 1.7B's 120 answers and 95 of the paired one's were cut off mid-working (E-43) | The same room to work in words as Claude has to think (8,192 tokens); the 400-token records kept | Rerun (Section {sec:ollama-suites}) |
 | D-05 | Ollama's `qwen3:4b` had become the Thinking build (E-33) | The 4B runs as `qwen3:4b-instruct-2507-q4_K_M` | Pass |
 | D-06 | A crash between appending a moment's notes and saving the index would misplace later moments (E-27) | Opening a memory cuts each room file to its indexed length; a test covers it | Pass |
+| D-07 | Routing blind, the 8B sent "the number plate of Kitengela Ventures' delivery truck" to its own knowledge (E-55) | The router sees the closest note; a question naming a person or business in the closest notes goes to memory | 13 of 14 (T-18) |
+| D-08 | A photographed receipt was not recalled: 737 Long Haul notes outscored it on its own shelf (0.81 against 0.70) | The closest moment of every other shelf within 0.12 of the best is read too | Recalled (T-21) |
+| D-09 | Switching models in the app marked the new engine failed ("exit 15"): the old process's exit handler ran late | The handler acts only for the process it was attached to | Pass: 1.7B, 4B and 8B switched in turn |
 
 ## Version Control and Implementation Evidence {#vc}
 
-The project lives in one Git repository on GitHub (https://github.com/Satasdin/CAMR), which holds the baseline at its root and the engine in `v2/`, with their full histories. The repository is private, so the supervisor and examiners must be given access. The final engine, its records and this report are on the branch `camr-build`. The repository holds the README, the user guide and the decision log; the installer, the scripts and the tests; every benchmark record and the Claude ledger; the Mac app's Swift package; and the generator scripts of this report's figures. `.gitignore` excludes the virtual environment, model weights, datasets and `work/`, where contenders' memories are rebuilt on every run. Each benchmark job of the night committed its records as it finished, so the history shows when each number was made.
+**Project repository:** https://github.com/Satasdin/CAMR (public). The repository holds the baseline at its root and the engine in `v2/`, with their full histories; the final engine, the Mac app, its records and this report are on the branch `camr-build`. It contains the README, the user guide and the decision log; the installer, the scripts and the tests; every benchmark record and the Claude cost ledger; the Mac app's Swift package; and the generator scripts of this report's diagrams and charts. `.gitignore` excludes the virtual environment, model weights, datasets and `work/`, where contenders' memories are rebuilt on every run; no key, token or personal memory is committed, and the yardstick's key is read at run time from a private file outside the repository. The branch-based workflow kept the engine's development apart from the baseline: each increment of Section {sec:dev-approach} was committed as it was measured, and each benchmark job committed its records as it finished, so the history shows when each number was made and by which code. GitHub Actions runs the tests that need no MLX on every push (NFR-16).
 
 ## Author Oversight and Use of AI-Assisted Tools {#ai-use}
 
-Claude (Anthropic), used through Claude Code, assisted with this project. Under the student's direction it wrote and revised the engine, the app, the harness and their tests; ran the experiments; and drafted the documentation, including the decision log, the user guide and drafts of this report. The student set the problem, the objectives, the scope and the direction of the work, and made the calls recorded as his own, such as making the engine the project (E-29), pushing the Long Haul past 2 million tokens (E-39), asking for the RAM to be optimised (E-40) and removing Swarm from the app (E-50). The output was checked by running the automated tests, by the records, which name the machine and the code behind every number, and by reading the outputs themselves. Requirements were written before the runs that tested them, and the requirements that were not met are reported as measured. Claude also served, separately, as the yardstick in the benchmarks; that role is unrelated to its role as a tool. The student made the final decisions and takes full responsibility for the work. [[Student to confirm this statement and add the model versions used.]]
+Claude (Anthropic), used through Claude Code, assisted with this project. Under the student's direction it wrote and revised the engine, the app, the harness and their tests; ran the experiments; and drafted the documentation, including the decision log, the user guide and drafts of this report. The student set the problem, the objectives, the scope and the direction of the work, and made the calls recorded as the student's own, such as making the engine the project (E-29), pushing the Long Haul past 2 million tokens (E-39), asking for the RAM to be optimised (E-40) and removing Swarm from the app (E-50). The output was checked by running the automated tests, by the records, which name the machine and the code behind every number, and by reading the outputs themselves. Requirements were written before the runs that tested them, and the requirements that were not met are reported as measured. Claude also served, separately, as the yardstick in the benchmarks; that role is unrelated to its role as a tool. The student made the final decisions and takes full responsibility for the work. The tool was Claude Code with Claude Opus models (Opus 5.5 in the final weeks). [[Student to confirm this statement and the model versions.]]
 
-## Evaluation Results, Discussion and Limitations {#eval}
+## Evaluation Results {#eval}
 
 > **In plain words.** A 4B model with CAMR answers a long project's questions about as well as Claude Sonnet alone at 2 million tokens, and better past Claude's window, at a fraction of the wait and in a process of 5 to 8 GB. It stays as fast as memory grows. It is weakest at joining facts and at following a design over weeks.
 
-### Results at a Glance {#glance}
-
-Table {tab:scorecard} gives each claim of the study a verdict, with the section that supports it.
-
-Table: {#scorecard} Scorecard: each claim, its evidence and whether it was met
-
-| Claim | Evidence | Result | Verdict |
-|---|---|---|---|
-| A small model with CAMR answers like a cloud model on a long history | Long Haul at 2M (Section {sec:haul-results}) | 4B + CAMR 29 of 73; Sonnet alone 32, Opus 31, Haiku 10 | Nearly met at 2M |
-| Past the cloud model's window, memory wins | Long Haul at 3M and 4M (Section {sec:past-window}) | 4B + CAMR 29 and 29; Sonnet 13 and 10; Haiku 10 and 10 | Met |
-| Memory beats the same model without it | Long Haul, every cut | 4B: 25/26/25/29 against 18/14/20/11; 8B: 26/26/24/27 against 15/11/15/11 | Met |
-| Lighter than the model reading its own window | Footprint (Section {sec:ram-results}) | 5.4–7.5 GB against 15.2 GB (4B); 8.1–8.8 GB against 13.6 GB (8B) | Met, after the cap (D-02) |
-| No slower as memory grows | Speed as memory grows (Section {sec:speed-results}) | First word 0.11 → 0.08 s and RAM 4.26 → 4.23 GB from 112K to 2.01M tokens | Met |
-| Faster than the cloud | First word (Section {sec:yardstick}) | 0.2–0.3 s against 13–105 s for Sonnet and Opus | Met |
-| Honest about what was never said | Never-said family | 4B declined 9 of 10 at 2M and 10 of 10 past it; Claude 10 of 10 | Met for the 4B; not for the 1.7B with its own wording |
-| Memory recovers knowledge, not reasoning | Families at 2M (Section {sec:families}) | Facts 6 of 10 (Sonnet and Opus 4, Haiku 0); two hops 0; the growing page 0 for everyone | Met as predicted |
-| Notes and words know the same within a room | Rooms build (Section {sec:rooms-results}) | 164 against 163 facts | Met |
-| Notes are at least 10 times sooner than words | Speed bench (Section {sec:rooms-results}) | 4.6 times at 2,000 words | Not met |
-| The best reach | Reach (Section {sec:reach-results}) | Project 26 of 40; global 24; session 11 | Project reach |
-| Files remembered: PDFs, images, charts, video | Multimodal memory (Section {sec:media-results}) | 29 of 29 planted facts with CAMR, for the vision model and the 4B; 0 for the vision model alone | Met, on a small test |
+This section presents the measured results experiment by experiment, each with its conditions, its baseline and its interpretation. Section {sec:discussion} then discusses them by objective.
 
 ### The Long Haul: Right Answers as the History Grows {#haul-results}
 
@@ -390,6 +436,22 @@ With the engine's own wording, written for the scripted lives before any Long Ha
 
 The same 1.7B, with the same wording, can be given its memory two ways: as notes through the engine, or as words through Ollama and the pairing. As notes it answered 14, 20, 17 and 15; as words, 16, 17, 16 and 16. The first word came three times sooner as notes (0.10 to 0.14 s against 0.38 to 0.40 s), but the notes took 40 GB of disk against 0.1 GB for the pairing's words. On this test the tensors buy speed, not accuracy, though the comparison is clean only at 64K and 256K: at 1M and 2M most of the engine's rooms were asleep, and 41 and 69 of its answers read their room as words (Table {tab:tiers}). The rooms build had found the same within one room, where notes and words knew 164 and 163 facts (Section {sec:rooms-results}).
 
+### The Claude Yardstick: Time and Cost {#yardstick}
+
+Claude was only a yardstick: it answered the same questions alone, with no memory. Table {tab:claude} gives what it cost on the Long Haul.
+
+Table: {#claude} The Claude yardstick on the Long Haul (from the records)
+
+| Model | Right, 64K–2M (of 216) | Right, 3M and 4M (of 146) | First token, per request | Cost on the Long Haul |
+|---|---|---|---|---|
+| Claude Haiku 5.5 | 70 | 20 | 2.2–43.2 s | $1.13 + $0.97 |
+| Claude Sonnet 5.5 | 138 | 23 | 12.7–70.0 s | $4.92 + $3.87 |
+| Claude Opus 5.5 | 130 | not run | 19.3–105.2 s | $9.86 |
+
+![{#firstword} The wait for the first word as the history grows: CAMR's median (cyan) against the model alone (amber) and Claude's first token per request (grey, dashed); note the logarithmic scale](figures/ch5/first_word.png){width=15.9}
+
+Figure {fig:firstword} sets the waits side by side. For comparison, the 4B with CAMR answered 105 of the same 216 questions from 64K to 2M and 58 of 146 at 3M and 4M. Sonnet answered more within its window, and less beyond it. Opus scored no better than Sonnet on the Long Haul (130 against 138) at twice the price, so it sat out the suites (E-36) and the longer cuts (E-39). Claude was honest: it never invented a never-said fact. Sonnet's and Opus's first token came after 13 s at 64K and up to 105 s at 2M, because each request reads up to a million tokens; the engine's first word came in under a third of a second. Spending for the night, suites included, was $28.71 of the $60 cap, every call logged.
+
 ### Speed as Memory Grows {#speed-results}
 
 > **In plain words.** The wait for the first word did not grow as the memory grew eighteenfold. RAM stayed flat. Only the disk filled, and sleep held it at its budget.
@@ -436,6 +498,18 @@ Table: {#cap} The 4B at 3M, before and after the 1 GB cap (E-41)
 
 The 7.5 GB is about what the parts add up to: the 4B's weights, the embedder, the 2 GB pool of hot rooms, the 1 GB cache and Python. At 4M the footprint was 5.4 GB. The 8B, the 27B and the Ollama suite runs were the first measured with the cap. Every run before them (the 1.7B and the 4B up to 2M) ran without it; their scores are unaffected, but their RAM figures are understated.
 
+### Storage at 8 and 4 Bits {#bits-results}
+
+The 1.7B with CAMR was rerun on the Long Haul's first two cuts with its rooms stored at 16, 8 and 4 bits (records of 5 November, `v2/records/bench/2026-11-05/`; Table {tab:bits}). At 8 bits it answered as at 16 bits, 14 and 20, with the room files held to 8.6 GB at 256K by an 8 GB disk budget against 34.3 GB at 16 bits; at 4 bits it lost 2 answers at 256K (18 against 20) and took 9.7 GB.
+
+Table: {#bits} Room storage at 16, 8 and 4 bits (`engine:qwen3-1.7b`, the first two cuts)
+
+| Rooms stored at | Right, 64K (34) | Right, 256K (40) | Disk at 256K | First word p50, 256K | Process RAM, 256K |
+|---|---|---|---|---|---|
+| 16 bits | 14 | 20 | 34.3 GB | 0.10 s | 5.2 GB |
+| 8 bits (8 GB disk budget) | 14 | 20 | 8.6 GB | 0.13 s | 3.8 GB |
+| 4 bits | 14 | 18 | 9.7 GB | 0.15 s | 4.1 GB |
+
 ### Which Reach Works Best {#reach-results}
 
 > **In plain words.** Keeping one memory per project is best. A memory per conversation forgets everything said in other weeks, and mixing two projects in one memory sometimes takes the wrong project's rule.
@@ -455,27 +529,31 @@ Table: {#reach} Which reach works best (`engine:qwen3-4b`, 256K tokens, 40 quest
 
 A session's memory holds only its own week, so 10 of its 11 right answers were never-said questions declined. In global memory, two mathematics answers went stale because they took the other project's look-alike rule. When both were read, the other project's room won 7 of the 40 questions and cost exactly 2 answers, a fact and a changed fact, which the 4B declined rather than answer with the other project's facts. Every set-up declined all 10 never-said questions. The app's default therefore stays project reach.
 
-### Shelves and the Warm-Up in the App {#shelves-results}
+### Multimodal Memory {#media-results}
 
-On twelve test sentences, "Auto" filed all 12 on the right shelf, including all 8 that were not close to any shelf's examples (E-51). In the app, three moments told on "Auto" went to the Coding, Research and Personal shelves, and each later answer read the right shelf, with its first word in 111 to 119 ms (Figure {fig:app-shelves}). The warm-up's kernels alone took 24 ms off the 4B's first answer, from 111 to 87 ms; a room not read ahead still came off the SSD in milliseconds, the first Long Haul question reading 68 MB in 8 ms (E-52).
+The engine can also remember files (E-44). A PDF becomes one moment per page, an image its caption and the text written in it, and a video a frame every 2 s, each described with its time, by a vision model that turns the file into words once; the moments are then kept like any others, with the file copied into the vault. The multimodal benchmark tells 21 files of Mama Njeri's Kitchen (PDF invoices and menus, photographed receipts and notices, charts and short whiteboard videos) among about 100,000 tokens of the Long Haul's own events, all in the first 60,000 tokens, and then asks 37 questions graded by the Long Haul's rules: 29 about facts planted in the files, by kind of file, and 8 never-said questions where declining is right. The contenders are Qwen2.5-VL-3B with CAMR, alone with its newest 32K tokens, and with the file itself in the prompt as an upper bound; Qwen3 4B with CAMR and alone, reading the vision model's words; and Ollama's `qwen2.5vl:3b`, paired and bare.
 
-### The Assistant in the App {#assistant-results}
+Table {tab:media} gives the results (VL-3B is Qwen2.5-VL-3B; 4B is Qwen3 4B; Gemma 3 is Ollama's `gemma3:4b`) for seed 1 by kind of file, with each contender's total on a second draw of files and questions (seed 2), from the records `*-media-*.json` of 4 November.
 
-The assistant's parts were checked in the app on the night of 4 November (E-55 to E-57). The router adds about 0.1 s to a question. Reading the closest moment of every other shelf when it is within 0.12 of the best found a photographed receipt that the 737 Long Haul notes had outscored (closeness 0.70 against 0.81). Revision judged five test moments on the 4B correctly, 5 of 5: a raised minimum order and new opening hours as updates, a repeat as the same, and a birthday and another branch's hours as new. The eyes read a photographed receipt line by line (a total of KES 730.00, paid by M-Pesa) in about 25 s including loading the vision model, and the 8B then answered both questions about it from memory. When the router sees memory, a question naming a person or business found in its five closest notes goes to memory outright, and otherwise the model judges with the closest note in view; routing blind, the 8B had sent "the number plate of Kitengela Ventures' delivery truck" to its own knowledge, and seeing memory it routed 13 of 14 test questions right on its Long Haul memory, the miss being a never-said name that it then answered honestly (E-55). Figure {fig:app-receipt} shows the receipt answered later from memory. These are demonstrations on a handful of cases, not benchmarks.
+Table: {#media} Multimodal memory: right answers by kind of file (seed 1: 29 planted facts and 8 never-said questions; seed 2: the same counts)
 
-![{#app-receipt} A photographed receipt read into memory by Qwen3-VL-4B-Thinking, its total and an item answered later by the 8B from memory ("from memory · note 549 · read from the SSD")](figures/app/chat-receipt-photo-recalled.png){width=15.9}
+| Contender | PDF (8) | Image (9) | Chart (6) | Video (6) | Never (8) | Seed 1 (37) | Seed 2 (37) | First word | RAM |
+|---|---|---|---|---|---|---|---|---|---|
+| **4B + CAMR (VL-3B's words)** | **8** | **9** | **6** | **6** | **8** | **37** | **35** | 0.34 s | 7.3 GB |
+| 4B alone (newest 64K) | 1 | 5 | 3 | 1 | 7 | 17 | 18 | 0.32 s | 12.4 GB |
+| VL-3B + CAMR | 8 | 9 | 6 | 6 | 4 | 33 | 31 | 0.21 s | 5.1 GB |
+| VL-3B + CAMR, looking again | 8 | 9 | 6 | 6 | 3 | 32 | | 0.80 s | 8.7 GB |
+| VL-3B, file in the prompt | 8 | 9 | 6 | 6 | 5 | 34 | 33 | 1.23 s | 4.4 GB |
+| VL-3B alone (newest 32K) | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 0.14 s | 6.3 GB |
+| Ollama VL-3B + pairing | 8 | 9 | 6 | 6 | 5 | 34 | 33 | 0.22 s | 1.9 GB† |
+| Ollama VL-3B alone | 0 | 0 | 0 | 0 | 5 | 5 | 2 | | 1.9 GB† |
+| Ollama Gemma 3 + pairing | 8 | 7 | 6 | 5 | 2 | 28 | | 0.36 s | 1.9 GB† |
+| Ollama Gemma 3 alone | 0 | 0 | 0 | 1 | 4 | 5 | | | 1.9 GB† |
+| 4B + CAMR (Gemma's words) | | | | | | 36 | | | |
 
-#### Storage at 8 and 4 bits
+With CAMR, every planted fact from every kind of file was recalled on seed 1, at least 40,000 tokens after the file was told, by the vision model and by the text-only 4B: 29 of 29 each, and 27 to 28 of 29 on seed 2. The 4B with CAMR answered all 37 on seed 1 and 35 on seed 2, declining every never-said question, and beat the vision model holding the file in its prompt (34 and 33) at under a third of its wait. The models alone recalled almost nothing: by the questions, the files had left their windows. Ollama's vision model, given memory as words through the pairing, did as well as the engine's vision model (34 and 33), in the smallest process. A second vision model, Ollama's Gemma 3 4B, described the files itself and, through the pairing, recalled 26 of the 29 facts against 1 alone, but invented answers to 6 of the 8 never-said questions. Given Gemma's descriptions instead of Qwen2.5-VL's, the 4B with CAMR answered 36 of 37: the memory, not the describer, carried the answers. Figure {fig:media} sets the totals side by side. Looking at the image again added nothing on this set and cost nearly four times the wait. The vision models' weakness was honesty, not recall: with memory they invented answers to 3 to 5 of the 8 never-said questions, where the 4B invented none. († Ollama's own peak resident memory, not a process footprint.)
 
-The 1.7B with CAMR was rerun on the Long Haul's first two cuts with its rooms stored at 16, 8 and 4 bits (records of 5 November, `v2/records/bench/2026-11-05/`; Table {tab:bits}). At 8 bits it answered as at 16 bits, 14 and 20, with the room files held to 8.6 GB at 256K by an 8 GB disk budget against 34.3 GB at 16 bits; at 4 bits it lost 2 answers at 256K (18 against 20) and took 9.7 GB.
-
-Table: {#bits} Room storage at 16, 8 and 4 bits (`engine:qwen3-1.7b`, the first two cuts)
-
-| Rooms stored at | Right, 64K (34) | Right, 256K (40) | Disk at 256K | First word p50, 256K | Process RAM, 256K |
-|---|---|---|---|---|---|
-| 16 bits | 14 | 20 | 34.3 GB | 0.10 s | 5.2 GB |
-| 8 bits (8 GB disk budget) | 14 | 20 | 8.6 GB | 0.13 s | 3.8 GB |
-| 4 bits | 14 | 18 | 9.7 GB | 0.15 s | 4.1 GB |
+![{#media} Multimodal memory: right answers of 37 on two draws of files, with CAMR (cyan), with the file in the prompt (grey) and alone (amber)](figures/ch5/media.png){width=15.9}
 
 ### Code: Café Websites from Memory {#code-results}
 
@@ -490,21 +568,13 @@ Table: {#cafe} Code: café websites, average rules met per site (of 10) over fiv
 
 With memory, the sites were as good as with the notes in the prompt. The 4B met every rule on every café from memory (10.0 against 9.8), in fewer steps (3.6 against 9.0) and about half the time (18.0 s against 36.0 s per site); the 8B met 9.6 against 10.0. With memory off the page worked but knew nothing: the 4B invented a menu every time (cappuccino, espresso, latte) and failed "nothing invented", while the 8B wrote a two-line welcome page with no menu. Told ten days back among other events, memory still found most of it, 9.2 on both models. The records show three kinds of miss: the price rule (three runs), whose note was on the desk though the model still wrote "KES 220"; one café's colours and address, which were in neither the room memory chose nor its closest words; and, for the 8B with memory on, one site with no stylesheet, after the model twice said it would write `style.css` and stopped.
 
-### The Claude Yardstick: Time and Cost {#yardstick}
+### The Assistant and the Shelves in the App {#assistant-results}
 
-Claude was only a yardstick: it answered the same questions alone, with no memory. Table {tab:claude} gives what it cost on the Long Haul.
+On twelve test sentences, "Auto" filed all 12 on the right shelf, including all 8 that were not close to any shelf's examples (E-51). In the app, three moments told on "Auto" went to the Coding, Research and Personal shelves, and each later answer read the right shelf, with its first word in 111 to 119 ms. The warm-up's kernels alone took 24 ms off the 4B's first answer, from 111 to 87 ms; a room not read ahead still came off the SSD in milliseconds, the first Long Haul question reading 68 MB in 8 ms (E-52).
 
-Table: {#claude} The Claude yardstick on the Long Haul (from the records)
+The assistant's parts were checked in the app on the night of 4 November (E-55 to E-57). The router adds about 0.1 s to a question. Reading the closest moment of every other shelf when it is within 0.12 of the best found a photographed receipt that the 737 Long Haul notes had outscored (closeness 0.70 against 0.81). Revision judged five test moments on the 4B correctly, 5 of 5: a raised minimum order and new opening hours as updates, a repeat as the same, and a birthday and another branch's hours as new. The eyes read a photographed receipt line by line (a total of KES 730.00, paid by M-Pesa) in about 25 s including loading the vision model, and the 8B then answered both questions about it from memory. When the router sees memory, a question naming a person or business found in its five closest notes goes to memory outright, and otherwise the model judges with the closest note in view; routing blind, the 8B had sent "the number plate of Kitengela Ventures' delivery truck" to its own knowledge, and seeing memory it routed 13 of 14 test questions right on its Long Haul memory, the miss being a never-said name that it then answered honestly (E-55). Figure {fig:app-receipt} shows the receipt answered later from memory. These are demonstrations on a handful of cases, not benchmarks.
 
-| Model | Right, 64K–2M (of 216) | Right, 3M and 4M (of 146) | First token, per request | Cost on the Long Haul |
-|---|---|---|---|---|
-| Claude Haiku 5.5 | 70 | 20 | 2.2–43.2 s | $1.13 + $0.97 |
-| Claude Sonnet 5.5 | 138 | 23 | 12.7–70.0 s | $4.92 + $3.87 |
-| Claude Opus 5.5 | 130 | not run | 19.3–105.2 s | $9.86 |
-
-![{#firstword} The wait for the first word as the history grows: CAMR's median (cyan) against the model alone (amber) and Claude's first token per request (grey, dashed); note the logarithmic scale](figures/ch5/first_word.png){width=15.9}
-
-Figure {fig:firstword} sets the waits side by side. For comparison, the 4B with CAMR answered 105 of the same 216 questions from 64K to 2M and 58 of 146 at 3M and 4M. Sonnet answered more within its window, and less beyond it. Opus scored no better than Sonnet on the Long Haul (130 against 138) at twice the price, so it sat out the suites (E-36) and the longer cuts (E-39). Claude was honest: it never invented a never-said fact. Sonnet's and Opus's first token came after 13 s at 64K and up to 105 s at 2M, because each request reads up to a million tokens; the engine's first word came in under a third of a second. Spending for the night, suites included, was $28.71 of the $60 cap, every call logged.
+![{#app-receipt} A photographed receipt read into memory by Qwen3-VL-4B-Thinking, its total and an item answered later by the 8B from memory ("from memory · note 549 · read from the SSD")](figures/app/chat-receipt-photo-recalled.png){width=15.9}
 
 ### The Public Suites {#suites-results}
 
@@ -539,32 +609,6 @@ Table: {#babilong} BABILong by story length (25 items each; qa1 to qa5)
 | All (100) | 39 | 20 | 78 |
 
 Memory as words through the pairing therefore helps where one worked example carries to the next problem, and hurts where the answer is the newest of many similar mentions. The engine's own contenders, which read whole rooms with dates, were not run on these suites (E-36).
-
-### Multimodal Memory {#media-results}
-
-The engine can also remember files (E-44). A PDF becomes one moment per page, an image its caption and the text written in it, and a video a frame every 2 s, each described with its time, by a vision model that turns the file into words once; the moments are then kept like any others, with the file copied into the vault. The multimodal benchmark tells 21 files of Mama Njeri's Kitchen (PDF invoices and menus, photographed receipts and notices, charts and short whiteboard videos) among about 100,000 tokens of the Long Haul's own events, all in the first 60,000 tokens, and then asks 37 questions graded by the Long Haul's rules: 29 about facts planted in the files, by kind of file, and 8 never-said questions where declining is right. The contenders are Qwen2.5-VL-3B with CAMR, alone with its newest 32K tokens, and with the file itself in the prompt as an upper bound; Qwen3 4B with CAMR and alone, reading the vision model's words; and Ollama's `qwen2.5vl:3b`, paired and bare.
-
-Table {tab:media} gives the results (VL-3B is Qwen2.5-VL-3B; 4B is Qwen3 4B; Gemma 3 is Ollama's `gemma3:4b`) for seed 1 by kind of file, with each contender's total on a second draw of files and questions (seed 2), from the records `*-media-*.json` of 4 November.
-
-Table: {#media} Multimodal memory: right answers by kind of file (seed 1: 29 planted facts and 8 never-said questions; seed 2: the same counts)
-
-| Contender | PDF (8) | Image (9) | Chart (6) | Video (6) | Never (8) | Seed 1 (37) | Seed 2 (37) | First word | RAM |
-|---|---|---|---|---|---|---|---|---|---|
-| **4B + CAMR (VL-3B's words)** | **8** | **9** | **6** | **6** | **8** | **37** | **35** | 0.34 s | 7.3 GB |
-| 4B alone (newest 64K) | 1 | 5 | 3 | 1 | 7 | 17 | 18 | 0.32 s | 12.4 GB |
-| VL-3B + CAMR | 8 | 9 | 6 | 6 | 4 | 33 | 31 | 0.21 s | 5.1 GB |
-| VL-3B + CAMR, looking again | 8 | 9 | 6 | 6 | 3 | 32 | | 0.80 s | 8.7 GB |
-| VL-3B, file in the prompt | 8 | 9 | 6 | 6 | 5 | 34 | 33 | 1.23 s | 4.4 GB |
-| VL-3B alone (newest 32K) | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 0.14 s | 6.3 GB |
-| Ollama VL-3B + pairing | 8 | 9 | 6 | 6 | 5 | 34 | 33 | 0.22 s | 1.9 GB† |
-| Ollama VL-3B alone | 0 | 0 | 0 | 0 | 5 | 5 | 2 | | 1.9 GB† |
-| Ollama Gemma 3 + pairing | 8 | 7 | 6 | 5 | 2 | 28 | | 0.36 s | 1.9 GB† |
-| Ollama Gemma 3 alone | 0 | 0 | 0 | 1 | 4 | 5 | | | 1.9 GB† |
-| 4B + CAMR (Gemma's words) | | | | | | 36 | | | |
-
-With CAMR, every planted fact from every kind of file was recalled on seed 1, at least 40,000 tokens after the file was told, by the vision model and by the text-only 4B: 29 of 29 each, and 27 to 28 of 29 on seed 2. The 4B with CAMR answered all 37 on seed 1 and 35 on seed 2, declining every never-said question, and beat the vision model holding the file in its prompt (34 and 33) at under a third of its wait. The models alone recalled almost nothing: by the questions, the files had left their windows. Ollama's vision model, given memory as words through the pairing, did as well as the engine's vision model (34 and 33), in the smallest process. A second vision model, Ollama's Gemma 3 4B, described the files itself and, through the pairing, recalled 26 of the 29 facts against 1 alone, but invented answers to 6 of the 8 never-said questions. Given Gemma's descriptions instead of Qwen2.5-VL's, the 4B with CAMR answered 36 of 37: the memory, not the describer, carried the answers. Figure {fig:media} sets the totals side by side. Looking at the image again added nothing on this set and cost nearly four times the wait. The vision models' weakness was honesty, not recall: with memory they invented answers to 3 to 5 of the 8 never-said questions, where the 4B invented none. († Ollama's own peak resident memory, not a process footprint.)
-
-![{#media} Multimodal memory: right answers of 37 on two draws of files, with CAMR (cyan), with the file in the prompt (grey) and alone (amber)](figures/ch5/media.png){width=15.9}
 
 ### Development Evidence: the Rooms Build on Scripted Lives {#rooms-results}
 
@@ -638,6 +682,95 @@ Table: {#baseline} The baseline's main results on public benchmarks (CAMR v1)
 
 Three findings carried into the engine's design. Memory helps when the gap is knowledge and not when it is reasoning, which the Long Haul's families confirmed. More text distracts a small reader, so the budget should be small, which the room size confirmed. And recency and importance weighting lowered full-support recall on independent questions (by 1.2 points on 2WikiMultiHopQA and 5.4 on HotpotQA), so the engine chooses rooms by similarity alone.
 
+## Discussion and Limitations {#discussion}
+
+This section discusses the results by objective. For each objective it states the implemented output, the evidence, the acceptance criterion, the observed result and what the result permits the study to conclude, compares it with the baseline and with Chapter 2 where that helps, and analyses the failures. The limitations close the chapter.
+
+### Results by Objective {#glance}
+
+Table {tab:scorecard} gives each claim of the study a verdict, grouped by the objective it serves, with the section that supports it.
+
+Table: {#scorecard} Scorecard: each claim, its evidence and whether it was met
+
+| Objective | Claim | Evidence | Result | Verdict |
+|---|---|---|---|---|
+| i | Selective techniques help a small model; separately written notes do not combine | Baseline; rooms build (Sections {sec:baseline-results}, {sec:rooms-results}) | Bridging 35.8% → 78.4% full-support recall; separate notes 2 of 46 facts against 32 as words | Met |
+| ii | Notes and words know the same within a room | Rooms build (Section {sec:rooms-results}) | 164 against 163 facts | Met |
+| ii | Files remembered: PDFs, images, charts, video | Multimodal memory (Section {sec:media-results}) | 29 of 29 planted facts with CAMR, for the vision model and the 4B; 0 for the vision model alone | Met, on a small test |
+| iii | Lighter than the model reading its own window | Footprint (Section {sec:ram-results}) | 5.4–7.5 GB against 15.2 GB (4B); 8.1–8.8 GB against 13.6 GB (8B) | Met, after the cap (D-02) |
+| iii | No slower as memory grows | Speed as memory grows (Section {sec:speed-results}) | First word 0.11 → 0.08 s and RAM 4.26 → 4.23 GB from 112K to 2.01M tokens | Met |
+| iii | Notes are at least 10 times sooner than words | Speed bench (Section {sec:rooms-results}) | 4.6 times at 2,000 words | Not met |
+| iv | A small model with CAMR answers like a cloud model on a long history | Long Haul at 2M (Section {sec:haul-results}) | 4B + CAMR 29 of 73; Sonnet alone 32, Opus 31, Haiku 10 | Nearly met at 2M |
+| iv | Past the cloud model's window, memory wins | Long Haul at 3M and 4M (Section {sec:past-window}) | 4B + CAMR 29 and 29; Sonnet 13 and 10; Haiku 10 and 10 | Met |
+| iv | Memory beats the same model without it | Long Haul, every cut | 4B: 25/26/25/29 against 18/14/20/11; 8B: 26/26/24/27 against 15/11/15/11 | Met |
+| iv | As accurate as conventional RAG, and faster | Section {sec:disc-rag} | 164 against 166 facts (RAG baseline); first word 0.07 against 0.15 s; Long Haul 0.10–0.14 against 0.38–0.40 s through RAG | Met on speed; level on accuracy |
+| iv | Faster than the cloud | First word (Section {sec:yardstick}) | 0.2–0.3 s against 13–105 s for Sonnet and Opus | Met |
+| iv | Honest about what was never said | Never-said family | 4B declined 9 of 10 at 2M and 10 of 10 past it; Claude 10 of 10 | Met for the 4B; not for the 1.7B with its own wording |
+| iv | Memory recovers knowledge, not reasoning | Families at 2M (Section {sec:families}) | Facts 6 of 10 (Sonnet and Opus 4, Haiku 0); two hops 0; the growing page 0 for everyone | Met as predicted |
+| iv | Code built from memory | Café websites (Section {sec:code-results}) | 4B: 10.0 of 10 rules with memory, 9.8 with the notes in the prompt, 3.0 with memory off | Met, on five cafés |
+| v | The best reach | Reach (Section {sec:reach-results}) | Project 26 of 40; global 24; session 11 | Project reach |
+| v | Smaller rooms, same answers | Storage at 8 and 4 bits (Section {sec:bits-results}) | 8 bits: 14 and 20, as 16 bits; 4 bits: 14 and 18 | Met at 8 bits |
+
+### Objective i: Memory Techniques and Their Limits on the Device {#disc-obj1}
+
+**Implemented output and criterion.** The techniques reviewed in Chapter 2 were built as switchable choices so that their value on a small on-device model could be measured, not assumed: similarity ranking against the composite of recency and importance, a gate and entity bridging in the baseline; and, in the engine, saved keys and values written one moment at a time against rooms written as one page. The criterion was a controlled comparison for each choice on held-out questions.
+
+**Observed result.** Selective techniques that keep what the model reads small helped a small model; techniques that gave it more, or less related, text did not. Bridging found the second hop without a graph, raising full-support recall on 2WikiMultiHopQA from 35.8% to 78.4% at the same budget, while weighting by recency and importance lowered it (Section {sec:baseline-results}). Reusing a model's own keys and values worked within one room, where notes and words knew 164 and 163 facts, but notes written separately and laid side by side did not combine for a small reader (2 of 46 facts against 32 from the words; Section {sec:rooms-results}). This is the limit that cache blending works around by re-computing part of each stored cache where caches meet (Yao et al., 2025), and the reason the engine reads one room per question. A long window was not a substitute for memory: Claude's one-million-token window held only the newest days of a 3 or 4 million-token history and recalled nothing planted earlier (Section {sec:past-window}), which agrees with the evidence that long contexts are used unevenly even when they fit (Liu et al., 2024).
+
+**What this permits.** On the tested device and models, the applicable techniques are those that keep the desk small and related; saved caches are usable only as whole rooms; and a long context window cannot stand in for a memory that outgrows it.
+
+### Objective ii: The Design of the Engine {#disc-obj2}
+
+**Implemented output and criterion.** The design of Chapter 4 was implemented: a write path that keeps each moment as the model's notes in a room, a read path that lays one room and four closest moments on the desk, tiers and sleep under fixed budgets, a vault, reach, and the assistant around them. Its acceptance criterion was NFR-07: within one room, notes must know at least 95% as many facts as the same desk read as words, with at most 3 extra false memories of 45; the assistant's parts were judged against the behaviour their requirements state.
+
+**Observed result.** NFR-07 was met: 164 against 163 facts and 25 against 24 false memories, with the same answer on 3,483 of 3,600 questions (T-08; Section {sec:rooms-results}). On errands, where a tool needs the exact fact, the rooms build did three times as many right as the baseline (122 against 40), because it opens the closest room however a task is worded. The assistant behaved as specified on its test cases: 13 of 14 questions routed right, five revisions judged as expected, and 12 of 12 moments filed on the right shelf (T-18 to T-20), and every fact planted in PDFs, photographs, charts and videos was recalled from memory (Section {sec:media-results}). The design's structural limit showed in the families: a question sees one room, so facts told in two places were almost never joined (0 of 10 two-hop questions at 2M for the 4B; Section {sec:families}). Systems that page text in and out of a model's context (Packer et al., 2023) face the same choice of what to bring in; CAMR brings in one room already read.
+
+**What this permits.** The design keeps and finds memory faithfully within a room and serves chat, files, code and evaluation through one read path. It does not join facts across rooms, and the assistant's results are demonstrations on a handful of cases, not benchmarks.
+
+### Objective iii: The Engine on a Consumer Laptop {#disc-obj3}
+
+**Implemented output and criterion.** The engine and the Mac app ran on a MacBook Pro M5 Pro with 24 GB and no dedicated graphics card, with the models and the memory on the Mac. The criteria were NFR-01 to NFR-06: a first word under 0.5 s at 2,000 words; notes at least 10 times sooner than words; no climb in the first word or RAM as memory grows; disk and RAM within budget; a capped buffer cache; and retrieval within 10% of the answer's time.
+
+**Observed result.** Five of the six were met and one was not (Table {tab:testcases}). The first word at 2,000 words came in 0.233 s (NFR-01). From 112 thousand to 2.01 million tokens of history, the 1.7B's first word stayed at 0.08 to 0.15 s, retrieval at 17 to 24 ms and RAM at about 4.3 GB, while sleep held the room files at their 40 GB budget (NFR-03, NFR-04; Section {sec:speed-results}). Retrieval took 4% of the 4B's answer time (NFR-06), where the baseline's 0.5B reader had spent 56% under contention. After the buffer cache was capped, the 4B's whole process needed 5.4 to 7.5 GB at 3 and 4 million tokens, against 15.2 GB for the same model reading only its newest 64,000 tokens (NFR-05; Section {sec:ram-results}). Notes were 4.6 times sooner than words, not 10 times (NFR-02): the mark had been estimated on the slower MacBook Air, and notes still pay for the SSD read and the copy into graphics memory. The cost of memory moved to storage: the room files reached their budget by about 1 million tokens, and past it most rooms were asleep and read as words (Table {tab:tiers}). Storing rooms at 8 bits, about half the size of 16 bits, gave the same answers, and with an 8 GB disk budget held the room files to 8.6 GB at 256K tokens against 34.3 GB (Section {sec:bits-results}).
+
+**What this permits.** A memory that grows to millions of tokens can run beside a small model on one Mac without slowing it or making it heavier, within a disk budget. The claim holds for the Mac and models tested; 8 GB Macs and older chips were not measured.
+
+### Objective iv: The Capability Gap by Task Type {#disc-obj4}
+
+**Implemented output and criterion.** The engine was evaluated against the same models without memory and against Claude Haiku, Sonnet and Opus 5.5 reading as much of the history as their windows hold, on the same questions graded by the same rules, with the first word, the RAM and the cost of every answer. The criterion was a comparison by family, with knowledge-bound and reasoning-bound families reported apart.
+
+**Observed result.** Within its window the cloud model was better; beyond it, memory was. Up to 1M tokens Sonnet answered 28 to 43 questions per checkpoint against 25 to 26 for the 4B with CAMR; at 2M the 4B with CAMR answered 29 of 73 against Sonnet's 32 and Opus's 31; at 3M and 4M it answered 29 both times while Sonnet fell to 13 and 10 (Sections {sec:haul-results} and {sec:past-window}). Against the same model without memory the gain was large past the window: 29 against 11 for the 4B and 27 against 11 for the 8B at 2M. The first word came in 0.2 to 0.3 s, against 13 to 105 s for Sonnet and Opus (Section {sec:yardstick}). By family, memory closed the knowledge gap but not the reasoning gap: CAMR led on facts told far back (6 against 4 of 10) and on code that had to use the project's own helpers (4 against 2), and trailed where several moments must be weighed (changed facts, look-alikes, corrected mathematics); no model built the page that needed a design from week 1 and a change from day 61 (Section {sec:families}). The baseline had found the same on public benchmarks: with memory, 20 of 22 small models matched the cloud model on long-tail facts, while memory left an 83-point gap on arithmetic (Section {sec:baseline-results}), in line with the finding that retrieval helps most on less popular facts (Mallen et al., 2023). The same held beyond plain text. Building café websites from memory, the 4B met 10.0 of 10 rules against 9.8 with the notes pasted in and 3.0 with memory off (Section {sec:code-results}); told 21 files among 100,000 tokens, the 4B with CAMR answered 37 of 37 against 17 alone (Section {sec:media-results}). The 4B was also honest: it declined 9 of 10 never-said questions at 2M and all 10 beyond it. Memory as words through the Ollama pairing was mixed: it helped where a worked example carried to a new problem (HARP, 34 against 28) and hurt where the answer is the newest of many similar mentions (BABILong, 20 against 39; Section {sec:ollama-suites}).
+
+**What this permits.** On one scripted project, a 4B model with CAMR nearly closes the gap to a cloud model at 2 million tokens and exceeds it past the cloud model's window, at a fraction of the wait and in a process of 5 to 8 GB; it closes knowledge-bound gaps, not reasoning-bound ones. The differences of one to three answers are within the noise of 10 questions per family.
+
+### Objective v: How Much to Read, and What Each Part Contributes {#disc-obj5}
+
+**Implemented output and criterion.** Controlled comparisons varied one choice at a time: the desk, the room size, notes against words, the reader's size, the wording, the reach, the precision of stored rooms and the buffer-cache cap. The criterion was the change in right answers, time and resources against the same set-up with that one choice reverted.
+
+**Observed result.** For a small reader the best desk was small and fixed: one room of at most 512 tokens plus four moments re-read knew 158 facts on the development lives, more than three rooms read as words (144) or either part alone, and larger rooms knew fewer facts at every setting tried (Section {sec:rooms-results}). Saving notes rather than words bought speed, not accuracy: the same 1.7B answered 14 to 20 with notes and 16 to 17 with the same memory as words, three times sooner, at 40 GB of disk against 0.1 GB (Section {sec:notes-words}), a comparison that is clean only at 64K and 256K, since most rooms were asleep later. A larger reader did not raise the ceiling: the 8B and the 27B answered 27 at 2M against the 4B's 29 (Section {sec:bigger}), so the memory, not the reader, set it. The smallest model's wording mattered more than its memory: its own wording raised its score from 15 to 21 at 2M but cut its honest declines from 7 to 3 (Section {sec:wording}). Project memory was the best reach (26 of 40 against 11 for session and 24 for global; Section {sec:reach-results}). Rooms at 8 bits kept every answer and 4 bits lost two (Section {sec:bits-results}), and the buffer-cache cap halved the process's RAM with identical answers (Section {sec:ram-results}).
+
+**What this permits.** The engine should read a small, fixed desk per question, keep one memory per project, store rooms at 8 bits and cap the buffer cache; the saved notes are justified by speed, and a 4B reader is the best trade of answers against time and RAM on this Mac.
+
+### CAMR Against Conventional RAG and Long-Context Pipelines {#disc-rag}
+
+The study's central comparison is between CAMR's memory, in which the model reads one room of its own saved notes already read plus four moments as words, and the conventional pipelines it is meant to replace: retrieval-augmented generation (RAG), which retrieves the closest text chunks and pastes them into the prompt to be read again at every question (Lewis et al., 2020), and long context, which pastes as much of the history as the window holds. Several experiments already measured these pipelines on the same questions, and Table {tab:ragcompare} brings them together. The baseline, CAMR v1, is itself a conventional RAG pipeline with similarity ranking, a gate, entity bridging and a token budget; the Ollama pairing is RAG over CAMR's own memory, with the closest notes, at most 8 and 512 tokens, put before the last message; and the "words" contenders read CAMR's rooms as plain text.
+
+Table: {#ragcompare} CAMR's memory against conventional pipelines, from the experiments of Section {sec:eval}
+
+| Comparison | CAMR's memory | Conventional pipeline | Section |
+|---|---|---|---|
+| Rooms build against the RAG baseline, proof lives, 1.7B, week 12 | 164 facts of 255; 25 false memories; first word 0.07 s; 1.82 GB | CAMR v1 (RAG): 166 facts; 29 false memories; 0.15 s; 2.24 GB | {sec:rooms-results} |
+| Errands, where a tool needs the exact fact | 122 of 255 right | CAMR v1 (RAG): 40 | {sec:rooms-results} |
+| Long context: every note pasted in | 164 facts; first word flat at 0.07 s | 90 facts; first word 1.90 s and climbing | {sec:rooms-results} |
+| The same room as notes or as words, 2,000 words on the desk | First word 0.233 s | 1.080 s (4.6 times slower) | {sec:rooms-results} |
+| Long Haul, 1.7B, same wording: notes against RAG through the pairing | 14, 20, 17, 15 right; first word 0.10–0.14 s; 40 GB of disk | 16, 17, 16, 16 right; 0.38–0.40 s; 0.1 GB | {sec:notes-words} |
+| Long Haul at 2M: the 4B with notes against a 27B reading the same rooms as words | 29 of 73; first word 0.21–0.31 s; 7.5 GB | 27 of 73; 2.2–2.4 s; 16–17 GB | {sec:bigger} |
+| Long context in the cloud at 3M and 4M | 4B + CAMR: 29 and 29; under 0.4 s | Claude Sonnet alone: 13 and 10; 13–70 s | {sec:past-window} |
+| Files: 37 questions, seed 1 | 4B + CAMR: 37; VL-3B + CAMR: 33 | Ollama VL-3B with RAG: 34; the file in the prompt: 34 | {sec:media-results} |
+| Café websites, rules met of 10 (4B) | 10.0, in 3.6 steps | The notes pasted in the prompt: 9.8, in 9.0 steps | {sec:code-results} |
+
+Three findings follow. First, on accuracy CAMR's memory matched conventional RAG rather than beating it: on the same questions the two were within one or two answers (164 against 166 facts; 14 to 20 against 16 to 17 on the Long Haul), which is within the noise of the samples. Its advantage on errands came from opening the closest room however a request was worded, where the RAG baseline's gate, tuned for questions, let requests fall past it. Second, on time and RAM CAMR was consistently better: the model does not re-read retrieved text, so the first word came two to four times sooner than RAG at the same size of reader, and about ten times sooner than a 27B reader given the same memory as words, in a process less than half the size. Long context was worst on both counts once the history grew: pasting every note in knew fewer facts and slowed with every week, and the cloud model's window forgot the start of the history. Third, the price of CAMR's memory is storage: saved notes take thousands of times the disk of their text, so past about 1M tokens most rooms slept and were read as words, which is RAG over well-organised rooms. CAMR is therefore best described as a RAG pipeline whose unit is a dated room of related moments that the model has already read, which keeps the speed of reading nothing twice where the disk allows and falls back to retrieval as words where it does not. Where the answer is the newest of many similar mentions, both RAG and CAMR need more than the closest few notes (BABILong: RAG 20 of 100 against 39 for the model's own window; Section {sec:ollama-suites}).
+
 ### What Failed, and Why {#failures}
 
 Table {tab:failures} lists every weakness the measurements found, including those that were fixed, because they show how the system failed before the fix.
@@ -653,6 +786,8 @@ Table: {#failures} Weaknesses found
 | RAM was understated | 19.2 GB footprint against 5.7 GB reported (E-40) | MLX's unbounded buffer cache | Fixed: 1 GB cap, footprint logged |
 | Notes are 10 times sooner than words | 4.6 times (E-20) | The mark was set on a slower machine | Not met, kept |
 | Notes are large | The room files reached the 40 GB budget by 1M tokens and were held there by sleep; 147,456 bytes per token for the 4B | Keys and values are about 29,000 times their text for the 1.7B, and more for the 4B | Bounded by sleep; distilling not built |
+| Vision models invent answers about what was never told | With memory, 3 to 5 of 8 never-said questions answered (Table {tab:media}) | The describing model guesses where the 4B declines | Bounded: the 4B answers from the vision model's words |
+| A rule in the notes is not always followed | The café price rule missed in three Code runs with its note on the desk (Section {sec:code-results}) | A small reader writes the common format | Open |
 | Swarm was not measured | No benchmark | Built late, then removed from the app (E-50) | Removed |
 
 ### Limitations, Delimitations and Threats to Validity {#limitations}
@@ -665,6 +800,6 @@ Limitations are weaknesses of the evidence; each is stated with its likely effec
 4. **RAM before the cap is understated.** The 1.7B's and the 4B's RAM figures up to 2M were measured as MLX's peak, before the buffer-cache cap; the process held more (E-40). Their scores are unaffected.
 5. **One machine.** Every Long Haul, suite and speed number was measured on one MacBook Pro M5 Pro with 24 GB (the desk design on the MacBook Air, and the baseline on CPU-only machines); answers also differ slightly between chips (158 facts on the Air and 164 on the Pro for the same design; E-17).
 6. **Grading by rule.** A rule can miss a right answer worded in an unexpected way. Every raw answer is kept in the records, so any verdict can be checked by hand, but no hand audit was done for this report.
-7. **What was not measured.** The engine's own contenders were not run on the public suites (E-36); LongMemEval and two further suites have loaders but no runs; the Code agent has no benchmark; no user study and no accessibility audit were done; the app's screenshots come from one session.
+7. **What was not measured.** The engine's own contenders were not run on the public suites (E-36); LongMemEval and two further suites have loaders but no runs; the Code agent was measured only on five café websites per model; no user study and no accessibility audit were done; the app's screenshots come from one session.
 
 Delimitations are boundaries chosen for the study: Apple-silicon Macs only; English text; frozen, quantised open models; no fine-tuning; memory on the device, with the cloud only as a yardstick. Threats to validity: internally, every contender read the same instructions and the same questions, and the one wording change (the 1.7B's) is reported both ways; externally, the results hold for one scripted project, one Mac and the models named.

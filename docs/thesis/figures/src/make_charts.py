@@ -86,7 +86,7 @@ def series(pts, key="right"):
 
 
 def longhaul_share():
-    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    fig, ax = plt.subplots(figsize=(7.2, 5.0))
     lines = [
         ("CAMR, Qwen3 4B", E4, dict(color=CYAN, lw=2.6, marker="o", ms=5)),
         ("CAMR, Qwen3 8B", E8, dict(color=CYAN_D, lw=1.6, marker="o", ms=4)),
@@ -121,7 +121,7 @@ def longhaul_share():
 
 
 def first_word():
-    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    fig, ax = plt.subplots(figsize=(7.2, 4.8))
     for label, pts, style in [
         ("CAMR, Qwen3 4B", E4, dict(color=CYAN, lw=2.4, marker="o", ms=5)),
         ("CAMR, Qwen3 8B", E8, dict(color=CYAN_D, lw=1.4, marker="o", ms=4)),
@@ -174,7 +174,7 @@ def families_2m():
         ("Claude Opus 5.5 alone", claude_fam(OPU), GREY, "////"),
         ("Claude Haiku 5.5 alone", claude_fam(HAI), GREY_L, "////"),
     ]
-    fig, ax = plt.subplots(figsize=(7.2, 5.0))
+    fig, ax = plt.subplots(figsize=(7.2, 5.4))
     h = 0.15
     for j, (label, vals, color, hatch) in enumerate(cols):
         ys = [i + (j - 2) * h for i in range(len(FAMILIES))]
@@ -205,7 +205,7 @@ def ram():
         ("CAMR 8B, 1 GB cap\n(2M)", E8["2M"]["footprint_gb"], CYAN_D),
     ]
     _ = before
-    fig, ax = plt.subplots(figsize=(7.2, 3.4))
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
     xs = range(len(bars))
     ax.bar(xs, [b[1] for b in bars], color=[b[2] for b in bars], width=0.62)
     for x, b in zip(xs, bars):
@@ -227,7 +227,7 @@ def speed():
     hist = [0, 1, 2]
     labels = [f"{p['moments']:,} moments\n{p['history_tokens'] / 1e6:.2f}M tokens" if p['history_tokens'] >= 1e6
               else f"{p['moments']:,} moments\n{p['history_tokens'] / 1e3:.0f}K tokens" for p in pts]
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.2, 3.2))
+    fig, (a1, a2) = plt.subplots(2, 1, figsize=(7.2, 6.4))  # stacked, for a portrait page
     a1.plot(hist, [p["summary"]["ttft_s"]["p50"] * 1000 for p in pts], color=CYAN, marker="o", lw=2,
             label="first word (median)")
     rms = []
@@ -269,7 +269,7 @@ def reach():
             ("Project + global\n(both read)", "201043-reach-engine-qwen3-4b-project-global.json")]
     vals = [load(f)["checkpoints"][0]["summary"]["all"]["right"] for _, f in sets]
     facts = [load(f)["checkpoints"][0]["summary"]["fact"]["right"] for _, f in sets]
-    fig, ax = plt.subplots(figsize=(7.2, 3.0))
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
     xs = range(len(sets))
     ax.bar(xs, vals, color=[CYAN_L, CYAN, CYAN_D, CYAN_D], width=0.6)
     for x, v, f in zip(xs, vals, facts):
@@ -301,7 +301,7 @@ def media():
              ("bare:qwen3-4b", "Qwen3 4B alone", AMBER), ("bare:qwen2.5-vl-3b", "VL-3B alone", AMBER_D),
              ("ollama-bare:qwen2.5vl:3b", "Ollama VL-3B alone", AMBER)]
     order = [o for o in order if o[0] in rows]
-    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    fig, ax = plt.subplots(figsize=(7.2, 4.8))
     w = 0.38
     for i, (key, label, color) in enumerate(order):
         for j, seed in enumerate(("s1", "s2")):

@@ -2,46 +2,44 @@
 
 ## Introduction {#design-intro}
 
-Chapter 3 adopted a pragmatist philosophy that combines design science research with controlled experimentation (Hevner et al., 2004; Peffers et al., 2007), and an incremental approach in which the measurement apparatus is built before the artefact it measures. This chapter applies that paradigm to CAMR (Capability-Adaptive Memory Retrieval). CAMR is an AI artefact judged by experiment, not a transactional information system, so the chapter uses a justified hybrid of views: a structured-analysis context diagram for the boundary; UML use case, activity, component, sequence, state and deployment diagrams for actors, the evaluation, the parts, one question, the life cycle of memory and the hardware; and storage views for the files and the baseline's database. The diagrams are drawn in standard notation (UML 2.5 and Gane–Sarson) from generator scripts kept with this report, so they can be redrawn and checked against the code.
+This chapter presents the analysis and design of CAMR (Capability-Adaptive Memory Retrieval): what the system must do, the quality conditions it must satisfy, the data and interfaces it depends on, and the diagrams that communicate its structure and behaviour. Chapter 3 adopted design science research with controlled experimentation (Hevner et al., 2004; Peffers et al., 2007) and an incremental development approach in which the measurement apparatus is built before the artefact it measures. CAMR is an AI artefact judged by experiment rather than a transactional information system, so the chapter uses a justified hybrid of views. Structured analysis (Gane–Sarson) gives the system boundary and its data flows: the context diagram and the Level 0 data-flow diagram. Object-oriented analysis and design (UML 2.5) gives the actors and services (use case diagram and use case descriptions), the evaluation workflow (activity diagram), the parts and their classes (component and class diagrams), the handling of one question (sequence diagram), the life cycle of memory (state machine diagram) and the hardware (deployment diagram). Storage views replace a relational schema for the engine, which has no transactional database; the baseline's relational store keeps its logical schema. All diagrams are drawn from generator scripts kept with this report, so they can be redrawn and checked against the code.
 
-CAMR was built in three stages (Table {tab:stages}). The baseline, CAMR v1, stores short text notes in one SQLite file beside a frozen model and was evaluated on public benchmarks. The engine's first build (the rooms build, 2–3 November 2026) replaced text with the model's own keys and values, saved in rooms on the SSD, and was evaluated on scripted twelve-week lives. The final engine (4 November 2026) added a core that stays in RAM, tiers that move rooms between RAM and the SSD and put them to sleep, a vault of linked plain-text notes, reach, per-answer metrics and a pairing with Ollama, and was evaluated on the Long Haul against the Claude yardstick. This chapter describes the final engine and keeps the baseline's design where the evaluation still uses it. Decisions from the project's decision log are cited as E-nn (Appendix B).
+CAMR was built in three stages (Table {tab:stages}). The baseline, CAMR v1, stores short text notes in one SQLite file beside a frozen model. The engine's first build (the rooms build) replaced text with the model's own keys and values, saved in rooms on the SSD. The final engine added a core that stays in RAM, tiers that move rooms between RAM and the SSD and put them to sleep, a vault of linked plain-text notes, reach, per-answer metrics, an assistant around the memory and a pairing with Ollama. This chapter designs the final engine and keeps the baseline's design where the evaluation still uses it. Decisions from the project's decision log are cited as E-nn (Appendix B); the implementation, the application's screens and every measured result are reported in Chapter 5.
 
-Section {sec:requirements} states and traces the requirements. Section {sec:analysis-diagrams} presents the analysis diagrams: the context diagram (Figure {fig:context}), the use case diagram (Figure {fig:usecases}) and the evaluation pipeline (Figure {fig:pipeline}). Section {sec:design-diagrams} presents the design: the baseline's architecture (Figure {fig:arch-v1}), the engine's architecture (Figure {fig:arch}), one question (Figure {fig:sequence}), the life of a room (Figure {fig:states}), the baseline's schema (Figure {fig:schema}), the engine's files (Figure {fig:files}), the deployment on the Mac (Figure {fig:deployment}) and the application. Section {sec:changes} justifies the changes from the proposal and Section {sec:design-summary} summarises.
+Section {sec:requirements} states and traces the requirements. Section {sec:analysis-diagrams} presents the analysis diagrams and Section {sec:design-diagrams} the design diagrams. Section {sec:changes} justifies the changes from the proposal, and Section {sec:design-summary} summarises the chapter.
 
 Table: {#stages} The three stages of CAMR
 
-| Aspect | CAMR v1: the baseline | The rooms build (2–3 Nov) | CAMR: the final engine (4 Nov) |
+| Aspect | CAMR v1: the baseline | The rooms build | CAMR: the final engine |
 |---|---|---|---|
 | A memory is | A text note with embedding, importance, timestamps and source | A dated moment: its words, its embedding and the reader's keys and values at every layer | The same moment, also kept as a linked Markdown note in a vault |
-| Store | One SQLite file with sqlite-vec | One append-only file per room on the SSD, a JSON index, a NumPy vector file | The same, plus tiers (RAM, SSD, asleep), a vault and one folder per reach |
+| Store | One SQLite file with sqlite-vec | One append-only file per room on the SSD, a JSON index, a NumPy vector file | The same, plus tiers (RAM, SSD, asleep), a vault and one folder per reach or shelf |
 | Read path | k nearest notes, gate, entity bridging, token budget | One room as notes, plus the four closest moments as words | The same desk after a core of standing facts; the room comes from RAM, the SSD or, when asleep, as words |
-| Frozen reader | 0.5B–3B models through Ollama; 22 models in the size sweep | Qwen3-1.7B through MLX | Qwen3 1.7B, 4B or 8B through MLX; Qwen 27B and Ollama read the memory as words |
+| Frozen reader | 0.5B–3B models through Ollama | Qwen3-1.7B through MLX | Qwen3 1.7B, 4B or 8B through MLX; larger models and Ollama read the memory as words |
 | Embedder | bge-small-en-v1.5 | Qwen3-Embedding-0.6B | Qwen3-Embedding-0.6B |
 | Cloud model | Kimi K3: ceiling and escalation | None | Claude Haiku, Sonnet and Opus 5.5, as a yardstick only |
-| Evaluation | PopQA, HotpotQA, 2WikiMultiHopQA, GSM8K; gap closed | Three scripted 12-week lives; weekly quiz; errands | The Long Haul (2–4M tokens); Hugging Face suites; reach; speed and RAM as memory grows |
-| Interfaces | CLI, CAMR Personal web app, inspector, n8n gateway | One local web page | A native Mac app (Chat and Code), a local web app, the Ollama pairing, an OpenAI-compatible endpoint, a Python library |
-| Machines | CPU-only, 4-vCPU 16 GB containers | MacBook Air M4 16 GB, then MacBook Pro M5 Pro 24 GB | MacBook Pro M5 Pro 24 GB |
+| Interfaces | CLI, web app, inspector | One local web page | A native Mac app (Chat and Code), the Ollama pairing, an OpenAI-compatible endpoint, a Python library |
 
 ## System Requirements {#requirements}
 
-The system requirements identified for this project are presented in the following subsections. They were derived by working backwards from the objectives (Section {sec:specific-objectives}) and the measurements the evaluation needs (Section {sec:measurement}), then revised against what building the three stages showed. Following ISO/IEC/IEEE 29148:2018, each has an identifier, states one thing, and names its source and verification method.
+The system requirements identified for this project are presented in the following subsections. They were derived by working backwards from the objectives (Section {sec:specific-objectives}) and the measurements the evaluation needs (Section {sec:measurement}), then revised as the three stages were built. Following ISO/IEC/IEEE 29148:2018, each requirement has a unique identifier, states one thing, and names its priority, source and verification method.
 
 - **Priority:** MoSCoW (Must, Should, Could).
-- **Source:** objective (i–v); the stage it applies to (v1 for the baseline, E for the engine); and where the requirement or threshold is recorded: the proposal (P §), the decision log (E-nn), the baseline's findings log (Fnn) or the code.
+- **Source:** the objective (i–v) it serves; the stage it applies to (v1 for the baseline, E for the engine); and where the requirement or its threshold is recorded: the proposal (P §), the decision log (E-nn), the baseline's findings log (Fnn) or the code.
 - **Verification:** inspection (I), demonstration (D), automated test (T) or measurement (M).
 
 No threshold was invented. Every number comes from the proposal, a design constant in the code, or a pass mark written in the decision log before the run that tested it (E-19); otherwise the requirement is a comparison or a behaviour that can be shown. The stakeholders are the user, who needs private, offline and honest answers; the researcher, who needs reproducible measurements; and the supervisor and examiners, who need traceable evidence.
 
 ### Functional Requirements
 
-The functional requirements fall into six groups, listed in full in Table {tab:fr}:
+Functional requirements describe what the system must do. They fall into six groups, listed in full in Table {tab:fr}:
 
 - **The baseline's paths (FR-01 to FR-06).** Documents become screened, embedded notes; a question's nearest notes are ranked, gated, bridged and packed into the model's prompt.
 - **Keeping memory (FR-07 to FR-11).** A moment is read once by the frozen model, placed in a room and appended to the room's file; it is also written to the vault; rooms move between tiers under budgets.
 - **Answering (FR-12 to FR-17).** A question's room and closest moments are laid on the desk after the core, within the reaches the session reads; memory can be switched off; every answer is measured and logged.
-- **Interfaces (FR-18 to FR-21).** Chat, Code, the live view of the model at work, and the pairing that gives other runtimes memory as words.
-- **The assistant (FR-27 to FR-30).** Questions are routed to memory or the model's own knowledge; research, files and revision feed the shelves.
+- **Interfaces (FR-18 to FR-21).** Chat, Code, the live view of the model at work, the pairing that gives other runtimes memory as words, and the event log.
 - **The proof (FR-22 to FR-26).** The Long Haul is built from a seed, cut and sampled; every contender is told and asked the same; answers are graded by rule; the cloud yardstick is metered; every run writes a dated record.
+- **The assistant (FR-27 to FR-31).** Questions are routed to memory or to the model's own knowledge; research, files and revision feed topic shelves.
 
 Table: {#fr} Functional requirements catalogue
 
@@ -57,7 +55,7 @@ Table: {#fr} Functional requirements catalogue
 | FR-08 | The engine shall place each new moment in a room by Equation {eq:room}. | Must | ii; E; E-18 | T |
 | FR-09 | The engine shall append a moment's notes to its room's file and keep its words, day, room and embedding in an index. | Must | ii, iii; E; `rooms.py` | T |
 | FR-10 | The engine shall write each moment as a Markdown note in a vault, with links (doors) to notes it shares a room or an answer with, and a strength that fades each day it is unused (Equation {eq:fade}). | Should | ii; E; E-29; `vault.py` | T |
-| FR-11 | The engine shall keep recently used rooms in RAM under a RAM budget, and put the weakest rooms to sleep, keeping their words, when the room files outgrow a disk budget. | Must | iii; E; E-29; `swap.py` | T, M |
+| FR-11 | The engine shall keep recently used rooms in RAM under a RAM budget, and put the weakest rooms to sleep, keeping their words, when the room files outgrow a disk budget (Equation {eq:budget}). | Must | iii; E; E-29; `swap.py` | T, M |
 | FR-12 | For each question, the engine shall lay on the desk the room holding the moment closest to the question, after the header and the core, and then let the reader read the four closest moments as words, in date order. | Must | ii, v; E; E-16 | M |
 | FR-13 | The engine shall read a room from RAM when it is hot, from the SSD in one burst when it is awake, and as words (or woken) when it is asleep. | Must | iii; E; `swap.py` | T |
 | FR-14 | The engine shall build a core of at most 256 tokens from vault notes tagged `core` and keep it in RAM as notes. | Could | ii; E; `core.py` | T |
@@ -65,7 +63,7 @@ Table: {#fr} Functional requirements catalogue
 | FR-16 | A session shall let memory be switched off, so that the plain model answers with the same prompt and no notes. | Must | iv; E; `reach.py` | T |
 | FR-17 | The engine shall record for every answer its time to the first word, total time, retrieval time per step, tier, bytes read, tokens in context, history held, peak RAM and disk (Table {tab:metrics}). | Must | iv; E; `metrics.py` | T |
 | FR-18 | The application shall offer Chat, in which a user tells and asks with memory on or off, and Code, a coding agent on the local model whose every shell command waits for the user's approval. | Must | iii; E; E-50 | D |
-| FR-19 | The application shall show, as the engine measures them, the model's layers loading, the room an answer reads and where it came from, and each layer's activity for each word. | Should | ii; E; `live.py` | D, T |
+| FR-19 | The application shall show, only as the engine measures them and only when the user asks, the model's layers loading, the room an answer reads and where it came from, and each layer's activity for each word. | Should | ii; E; `live.py` | D, T |
 | FR-20 | A pairing proxy shall give Ollama, and any OpenAI-compatible local server, memory as words: the closest notes in front of the last user message. | Should | iii; E; E-33, E-47 | T |
 | FR-21 | The engine shall log each remember, answer, sleep and wake as one line, with each written word's attention over the moments on the desk. | Should | ii; E; E-21 | T |
 | FR-22 | The Long Haul shall be generated deterministically from its seed and cut at fixed sizes, each cut asking a stratified sample of 10 questions per family (all 3 for the page). | Must | iv; E; E-30 | T |
@@ -73,14 +71,15 @@ Table: {#fr} Functional requirements catalogue
 | FR-24 | Every answer shall be graded by rule into one of five verdicts (Table {tab:verdicts}). | Must | iv; E; `haul/grade.py` | T |
 | FR-25 | Every call to the cloud yardstick shall be logged with its tokens and cost, and refused if its worst case would pass the night's cap. | Must | iv; E; `bench/claude.py`, `bench/cost.py` | T |
 | FR-26 | Every run shall write a dated record after every checkpoint, naming the machine, its load, the code fingerprint and every answer. | Must | iv; E; E-12, E-40 | T, I |
-| FR-27 | The assistant shall route each question, by the model's one-word answer, to memory or to the model's own knowledge. | Must | ii; E; `assistant.py` | T |
-| FR-28 | Research shall read a Wikipedia page as marked data and keep what it learns on the Research shelf, marked as from the web. | Should | iii; E; `assistant.py` | T |
-| FR-29 | Attached PDFs, images and videos shall be turned into words once (images and frames by a vision model) and kept on a shelf. | Should | ii; E; E-44; `media.py` | T, M |
-| FR-30 | Before a moment is kept, a close earlier moment of the same source shall be judged SAME, UPDATE or NEW; an updated note is kept and marked superseded, never deleted. | Should | ii; E; `revise.py` | T |
+| FR-27 | The assistant shall route each question, by the model's one-word answer, to memory or to the model's own knowledge, and send a question naming a person or business found in its closest notes to memory. | Must | ii; E; E-55; `assistant.py` | T |
+| FR-28 | Research shall read a Wikipedia page as marked data in the user's turn, never as instructions, and keep what it learns on the Research shelf, marked as from the web. | Should | iii; E; E-55; `assistant.py` | T |
+| FR-29 | Attached PDFs, images and videos shall be turned into words once (images and frames by a vision model) and kept on a shelf, marked as from a file. | Should | ii; E; E-44, E-57; `media.py` | T, M |
+| FR-30 | Before a moment is kept, a close earlier moment of the same source shall be judged SAME, UPDATE or NEW; an updated note is kept and the old one marked superseded, never deleted. | Should | ii; E; E-56; `revise.py` | T |
+| FR-31 | The application shall keep memory on topic shelves (Projects, Coding, Research, Personal), file a moment on "Auto" by meaning, and read every shelf for a question. | Should | v; E; E-51; `shelves.py` | T, D |
 
 ### Non-Functional Requirements
 
-The non-functional requirements use the ISO/IEC 25010:2023 characteristics relevant here (performance efficiency, reliability, security, maintainability, flexibility, interaction capability) and add model quality and honesty for the AI components. Requirements measured as not met are kept as written so that Chapters 5 and 6 report them honestly.
+Non-functional requirements describe how well the system must operate and the constraints under which it must work. They use the ISO/IEC 25010:2023 characteristics relevant here (performance efficiency, reliability, security, maintainability, flexibility) and add model quality and honesty for the AI components (Table {tab:nfr}). A requirement later measured as not met is kept as written, so that Chapters 5 and 6 report it honestly.
 
 Table: {#nfr} Non-functional requirements catalogue
 
@@ -89,13 +88,13 @@ Table: {#nfr} Non-functional requirements catalogue
 | NFR-01 | Performance: time | With 2,000 words in the room on the desk, read from the SSD with the cache bypassed, the median time to the first word shall be under 0.5 s. | Must | iii, v; E; E-19 mark 1 | M |
 | NFR-02 | Performance: time | At 2,000 words, answering from notes shall be at least 10 times sooner than reading the same desk as words. | Should | iii; E; E-19 mark 3 | M |
 | NFR-03 | Performance: capacity | As the memory grows, the median time to the first word and the peak RAM shall not climb. | Must | iii, iv; E; E-20, E-38 | M |
-| NFR-04 | Performance: resources | The room files shall stay within a disk budget (40 GB in the benchmarks) and the hot rooms within a RAM budget (2 GB in the benchmarks; 512 MiB by default). | Must | iii; E; `swap.py`, `bench/local.py` | M |
+| NFR-04 | Performance: resources | The room files shall stay within a disk budget (40 GB in the benchmarks; 8 GB per shelf in the app) and the hot rooms within a RAM budget (2 GB in the benchmarks; 512 MiB by default). | Must | iii; E; E-54; `swap.py` | M |
 | NFR-05 | Performance: resources | MLX's cache of freed graphics buffers shall be capped (1 GB by default), and every record shall log the process's real footprint. | Must | iii; E; E-40, E-41 | M |
 | NFR-06 | Performance: time | Retrieval shall take at most 10% of answer time on the target device. | Should | iii, v; v1; F8 | M |
 | NFR-07 | Model quality | Within one room, notes shall know at least 95% as many facts as the same desk read as words, with at most 3 extra false memories of 45. | Must | ii, iv; E; E-19 mark 2 | M |
 | NFR-08 | Honesty | Answers about things never told shall be graded separately; a decline is right and a guess is a false memory. | Must | iv; E; E-08, E-30 | T |
-| NFR-09 | Reliability | Local contenders shall decode greedily with thinking off, so that re-runs give the same verdicts. | Must | iv; E; E-10, E-41 | I, M |
-| NFR-10 | Security: privacy | All local inference and memory shall stay on the Mac once the models are downloaded; only the yardstick's benchmark runs send scripted text to a cloud service. | Must | iii; E; P §1.6 | I |
+| NFR-09 | Reliability | Local contenders in the benchmarks shall decode greedily with thinking off, so that re-runs give the same verdicts. | Must | iv; E; E-10, E-41 | I, M |
+| NFR-10 | Security: privacy | All local inference and memory shall stay on the Mac once the models are downloaded; only research and the yardstick's benchmark runs reach a network service, and the yardstick sends scripted text only. | Must | iii; E; P §1.6 | I |
 | NFR-11 | Security: integrity | The engine's server and proxies shall listen on 127.0.0.1 only, answer only requests that name the local host, and refuse requests from web pages; the app's server shall require the token made at launch. | Must | iii; E; `app/server.py`, `pair/ollama.py`, `Engine.swift` | T |
 | NFR-12 | Security: integrity | A reach folder shall be opened by one process at a time, and rooms written for one model shall not open with another. | Must | ii; E; `reach.py`, `rooms.py` | T |
 | NFR-13 | Reliability: measurement | Only one measuring job shall use the graphics processor at a time, and the app shall pause while a benchmark measures. | Must | iv; E; E-35 | I |
@@ -105,9 +104,9 @@ Table: {#nfr} Non-functional requirements catalogue
 
 ### Data Requirements
 
-Neither stage trains the language model, so the separation of development and test data applies to the engine's settings and to the questions. In the baseline, settings were tuned on validation questions and confirmed once on held-out ones (F13, F15). In the rooms build, the development lives (seed 0) were used to choose the room design and the proof lives (seed 1) were run only after the pass marks were written (E-19). In the final engine, no setting was tuned on the Long Haul: the room design came from the lives, and the instructions were fixed before any Long Haul result (E-32, E-37).
+Data requirements describe the data the system needs, produces, protects and retains (Table {tab:dr}). Neither stage trains the language model, so the separation of development and test data applies to the engine's settings and to the questions. In the baseline, settings were tuned on validation questions and confirmed once on held-out ones (F13, F15). In the rooms build, the development lives (seed 0) were used to choose the room design, and the proof lives (seed 1) were run only after the pass marks were written (E-19). In the final engine, no setting was tuned on the Long Haul: the room design came from the lives, and the instructions were fixed before any Long Haul result (E-32, E-37).
 
-The Long Haul is synthetic by design. A memory that grows over months cannot be tested on a public question set, while a script knows its right answer on every day, including after a fact changes. It uses Kenyan names and places, which suits the intended users but limits the results to one invented project. The public suites are the real-data complement. No personal data enters any evaluation. Table {tab:dr} lists the data requirements.
+The Long Haul is synthetic by design. A memory that grows over months cannot be tested on a public question set, while a script knows its right answer on every day, including after a fact changes. It uses Kenyan names and places, which suits the intended users but limits the results to one invented project; the public suites are the real-data complement. No personal data enters any evaluation, and a user's own memory never leaves the Mac.
 
 Table: {#dr} Data requirements catalogue
 
@@ -117,14 +116,14 @@ Table: {#dr} Data requirements catalogue
 | DR-02 | The Long Haul for seed 1 shall hold 17,786 events and 2,010,094 tokens over 110 working days, extended to 4.01M tokens with noise only, every probe unchanged. | Must | iv; E; E-30, E-39 | T |
 | DR-03 | Each checkpoint shall sample 10 askable probes per family with seed 0; a cut where nothing new is askable shall reuse the sample before it. | Must | iv; E; E-30, E-39 | T |
 | DR-04 | Each moment shall carry its date and the Long Haul's day number, as `[YYYY-MM-DD, day N] text`. | Must | iv; E; `bench/local.py` | I |
-| DR-05 | Each moment shall be stored as words in the index, an embedding row, notes in its room's file and a vault note. | Must | ii; E; `rooms.py`, `vault.py` | T |
-| DR-06 | Room files shall only grow while awake; sleep shall delete a room's notes but never its words. | Must | ii; E; `swap.py` | T |
+| DR-05 | Each moment shall be stored as words in the index, an embedding row, notes in its room's file and a vault note whose tags record its source (user, file or web). | Must | ii; E; `rooms.py`, `vault.py` | T |
+| DR-06 | Room files shall only grow while awake; sleep shall delete a room's notes but never its words, and a superseded note shall be kept. | Must | ii; E; `swap.py`, `revise.py` | T |
 | DR-07 | Every record shall name the machine, chip, memory, power, load, library versions, commit and a hash of the code. | Must | iv; E; E-12, E-17 | I, T |
-| DR-08 | Personal memory shall stay in folders under `~/.camr/` on the user's Mac. | Must | iii; E; `reach.py` | I |
+| DR-08 | Personal memory and saved conversations shall stay in folders under `~/.camr/` on the user's Mac. | Must | iii; E; `reach.py` | I |
 
 ### Interface and Integration Requirements
 
-The interfaces are kept narrow so that each can be tested: the app reaches the engine only through a small JSON API on the loopback address, the models are loaded in-process through MLX, and the cloud yardstick is reached only by the benchmark runners (Table {tab:ir}).
+Interface and integration requirements describe how the user, the models and outside services meet the system. They are kept narrow so that each can be tested: the app reaches the engine only through a small JSON API on the loopback address, the models are loaded in-process through MLX, and outside services are reached only by research and the benchmark runners (Table {tab:ir}).
 
 Table: {#ir} Interface and integration requirements catalogue
 
@@ -133,28 +132,31 @@ Table: {#ir} Interface and integration requirements catalogue
 | IR-01 | The baseline shall reach local models only through Ollama on the loopback address, and the cloud model under one pinned, logged identifier. | Must | iii, iv; v1; P §3.6 | T |
 | IR-02 | The engine shall load its models through MLX and refuse a reader whose layers do not all keep keys and values with plain rotary positions. | Must | iii; E; E-26, E-44; `notes.py` | I |
 | IR-03 | The engine shall read and write room files with the file cache bypassed (`F_NOCACHE`), in 1 MB pieces eight at a time. | Must | iii; E; E-14 | T, I |
-| IR-04 | The Mac app shall start the engine as a local process on a free port with a token only it knows, and use only `POST /api/chat/message`, `GET /api/live` and the engine's other JSON routes. | Must | iii; E; `Engine.swift` | D |
+| IR-04 | The Mac app shall start the engine as a local process on a free port, send the token only after the engine reports holding that port, and use only the engine's JSON routes. | Must | iii; E; `Engine.swift` | D, T |
 | IR-05 | The engine's server shall return failures as JSON (403, 404, or 500 with the error) instead of dropping the connection. | Should | iii; E; `server.py` | I |
 | IR-06 | The Ollama pairing shall speak Ollama's own HTTP API on 127.0.0.1:11435 and forward everything else byte for byte to 11434. | Should | iii; E; E-33 | T |
 | IR-07 | The OpenAI-compatible endpoint shall serve `/v1/` routes on 127.0.0.1:11436 in front of Ollama, LM Studio or mlx_lm.server. | Could | iii; E; E-47 | T |
 | IR-08 | The yardstick runner shall stream every request, turn the SDK's retries off and never ask for a fallback model. | Must | iv; E; `bench/claude.py` | I |
-| IR-09 | The suites shall be loaded from the Hugging Face Hub once and read from a local folder afterwards. | Must | iv; E; `bench/suites` | I |
+| IR-09 | Models and suites shall be loaded from the Hugging Face Hub once and read from a local folder afterwards. | Must | iv; E; `bench/suites` | I |
+| IR-10 | Research shall fetch only Wikipedia's public API over HTTPS, with a fixed timeout, and shall fail with a message rather than an answer when the page cannot be read. | Should | iii; E; `assistant.py` | T |
 
 ### Requirements Traceability
 
-Table {tab:trace} traces each objective to its requirements, design elements and evidence. Objective i is met mainly by Chapter 2, but it also shaped the system: the reviewed techniques were built as switchable choices so that their value could be measured.
+Every requirement links back to an objective and forward to a design element and to the evidence that verifies it (Table {tab:trace}). Objective i is met mainly by Chapter 2, but it also shaped the system: the reviewed techniques were built as switchable choices so that their value could be measured.
 
 Table: {#trace} Traceability matrix
 
-| Objective | Requirements | Design elements | Verification evidence |
+| Objective | Requirements | Design elements | Verification evidence (Chapter 5) |
 |---|---|---|---|
-| i. Techniques and limits | FR-03, FR-04, FR-07, FR-12 | Baseline read path (Figure {fig:arch-v1}); room design (Figure {fig:arch}) | F1, F1b; E-15, E-16 |
-| ii. Design | FR-07 to FR-14, FR-21, DR-05, DR-06, NFR-07 | Memory, Rooms, Notebook, Tiers, Vault, Core, Event log (Figures {fig:arch} to {fig:files}) | Tests of rooms, notes, tiers, vault and events; E-16, E-18, E-20, E-21 |
-| iii. On the device | FR-11, FR-13, FR-18 to FR-20, NFR-01 to NFR-05, NFR-10 to NFR-13, IR-02 to IR-04 | Tiers; deployment (Figure {fig:deployment}); the app | Speed and RAM records; E-38, E-40, E-41 |
-| iv. Evaluation | FR-06, FR-16, FR-22 to FR-26, DR-01 to DR-04, DR-07, NFR-08, NFR-09, NFR-14, NFR-15 | Evaluation pipeline (Figure {fig:pipeline}) | Long Haul and suite records of 4 November 2026; E-30 to E-43 |
-| v. Budget and components | FR-05, FR-08, FR-12, FR-15 | Rooms of 512 tokens, join 0.80, four closest moments; reach | E-18 (room size); E-37 (wording); E-42 (reach); F8 (baseline budget) |
+| i. Techniques and limits | FR-03, FR-04, FR-07, FR-12 | Baseline read path (Figure {fig:arch-v1}); room design (Figure {fig:arch}) | Baseline results; development evidence of the rooms build |
+| ii. Design | FR-07 to FR-14, FR-21, FR-27 to FR-30, DR-05, DR-06, NFR-07 | Memory, Rooms, Notebook, Tiers, Vault, Core, Event log, assistant (Figures {fig:arch} to {fig:files}) | Unit tests; test cases T-08, T-19 to T-21; rooms-build results |
+| iii. On the device | FR-11, FR-13, FR-18 to FR-20, FR-31, NFR-01 to NFR-05, NFR-10 to NFR-13, IR-02 to IR-04 | Tiers; deployment (Figure {fig:deployment}); the app | Test cases T-02 to T-07, T-11, T-12, T-15; speed and RAM results |
+| iv. Evaluation | FR-06, FR-16, FR-22 to FR-26, DR-01 to DR-04, DR-07, NFR-08, NFR-09, NFR-14, NFR-15 | Evaluation pipeline (Figure {fig:pipeline}) | Long Haul, suites, multimodal and Code results; T-09, T-10, T-13, T-14, T-17 |
+| v. Budget and components | FR-05, FR-08, FR-12, FR-15, FR-31 | Rooms of 512 tokens, join 0.80, four closest moments; reach; shelves | Desk and room-size comparisons; reach; notes against words; storage at 8 and 4 bits |
 
 ## System Analysis Diagrams {#analysis-diagrams}
+
+This section presents the diagrams used to analyse the system's boundary, its data flows, its actors and services, and the workflow of its evaluation. Each is introduced by what it shows and why it is needed, and interpreted after the figure.
 
 ### Context Diagram
 
@@ -162,19 +164,42 @@ The context diagram treats CAMR as one process and shows only what crosses its b
 
 ![{#context} Context diagram of CAMR](diagrams/context.png)
 
-The user's moments and questions flow into CAMR and their answers flow back, and nothing continues to an outside party. Two flows leave the Mac, and neither carries personal data. The Hugging Face Hub supplies model weights and the public suites once; afterwards they are read from the local cache. The Anthropic API receives the scripted Long Haul and the suites' questions, and only when the researcher runs the yardstick. Ollama is outside the boundary because it is a separate program that the pairing reaches over the loopback address; the engine's own models run inside its process. The baseline's flows to Kimi K3 and n8n are dashed. The diagram therefore shows CAMR in use as a closed system on the Mac, the privacy property the problem statement asks for.
+The user's moments, files and questions flow into CAMR and their answers flow back, and nothing the user tells continues to an outside party. The flows that leave the Mac carry no personal memory. The Hugging Face Hub supplies model weights and the public suites once; afterwards they are read from the local cache. The Anthropic API receives the scripted Long Haul and the suites' questions, and only when the researcher runs the yardstick. Ollama is outside the boundary because it is a separate program that the pairing reaches over the loopback address; the engine's own models run inside its process. The diagram therefore presents CAMR in use as a closed system on the Mac, the privacy property that the problem statement requires.
+
+### Data-Flow Diagram, Level 0
+
+The context diagram shows CAMR as a single process; the Level 0 data-flow diagram decomposes that process into its major internal processes, data stores and flows (Figure {fig:dfd0}). It is needed to show where the user's data is kept and which process reads or changes each store, which the data requirements (DR-05, DR-06, DR-08) constrain. The external entities and the flows that cross the boundary are those of Figure {fig:context}, so the two diagrams balance.
+
+![{#dfd0} Data-flow diagram, Level 0, of CAMR](diagrams/dfd0.png)
+
+Remembering and answering are separate processes that meet only at the stores: remembering appends to the room files and writes the index, the vectors and the vault, while answering reads them and writes only to the logs. This separation is what makes asking read-only in the benchmarks (FR-23). Research and file reading feed the same remembering process, so a web page or a PDF becomes a moment like any other, marked by its source. Fading and sleep are the only process that removes notes from the room files, and it never removes words from the index or the vault (DR-06). Every process writes to the event and metrics logs, which is how each answer's cost is traced (FR-17).
 
 ### Use Case Diagram
 
-The use case diagram shows who uses CAMR and for what (Figure {fig:usecases}). Its actors are people and external systems only: the User, the Researcher, the Ollama command line and the Claude API. Rooms, the embedder and the event log are internal parts, not actors. «include» and «extend» relations are dashed arrows, and generalisation is a hollow triangle.
+The use case diagram shows who uses CAMR and for what (Figure {fig:usecases}). Its actors are people and external systems only: the User, the Researcher, the Ollama command line and the Claude API. Rooms, the embedder and the event log are internal parts and are not actors. «include» and «extend» relations are dashed arrows, and generalisation is a hollow triangle.
 
 ![{#usecases} Use case diagram of CAMR](diagrams/use_cases.png)
 
-"Recall from memory" is included by every use case that answers anything: chatting, coding with the agent, the Ollama pairing and the abstract "Run a benchmark", which the Long Haul and the suites specialise. One read path therefore serves chat, agentic work and evaluation, so what is measured is what the user gets. Switching memory off and choosing a reach extend chatting. Asking Claude alone extends a benchmark: the yardstick answers the same questions with no memory. Watching what an answer reads, and browsing the vault, are a user's use cases, not only research tools: they show a user when an answer rested on the wrong moment.
+"Recall from memory" is included by every use case that answers: chatting, coding with the agent, the Ollama pairing and the abstract "Run a benchmark", which the Long Haul and the suites specialise. One read path therefore serves chat, agentic work and evaluation, so what is measured is what the user gets. Switching memory off and choosing a reach or shelf extend chatting. Asking Claude alone extends a benchmark: the yardstick answers the same questions with no memory. Watching what an answer reads, and browsing the vault, are a user's use cases rather than research tools only: they let a user see when an answer rested on the wrong moment.
 
-### Evaluation and Data Pipeline {#pipeline-section}
+### Use Case Descriptions {#uc-desc-section}
 
-The study's contribution is a measurement, so the pipeline that produces each number is analysed as carefully as the engine. Figure {fig:pipeline} shows the Long Haul's pipeline as a UML activity diagram.
+Table {tab:ucdesc} describes the main use cases of Figure {fig:usecases}: the actor, the trigger, the main flow, the alternative and exception flows, and the requirements each realises.
+
+Table: {#ucdesc} Use case descriptions
+
+| Use case | Actor and trigger | Main flow | Alternatives and exceptions | Requirements |
+|---|---|---|---|---|
+| Tell or attach something to remember | User: types a moment or attaches a file | The moment is dated, judged against its closest earlier moment, filed on its shelf, read once by the model and kept | Same as a kept moment: not kept again. Updates a moment: kept, old one marked superseded. File: turned into words first; a picture needs the vision model, which is downloaded once | FR-07 to FR-10, FR-29 to FR-31 |
+| Chat: ask, or research online | User: sends a question | The question is routed; a memory question reads its room and closest moments and is answered; a general one is answered from the model's knowledge; the exchange is kept | Memory off: the model answers alone. Room asleep: read as words. Research: a page is fetched and read as data; no page found: the user is told. Stop: the answer ends at the next word | FR-12, FR-13, FR-16, FR-27, FR-28 |
+| Code with a local agent | User: names a task and a folder | The agent reads its closest notes, then lists, reads and writes files in the folder in turns until the task is done; what it learns is kept on the Coding shelf | A shell command waits for Allow; denied: the agent continues without it. A file outside the folder is refused | FR-18 |
+| Watch what an answer reads | User: opens the weights view | The view draws the layers loading, the room read and each layer's activity for each word, from the engine's live events | No events: nothing moves | FR-19 |
+| Pair Ollama with memory | Ollama command line: sends a chat | The proxy recalls the closest notes, puts them before the last user message and forwards the chat; the exchange is remembered afterwards | Any other route is forwarded unchanged | FR-20, IR-06, IR-07 |
+| Run the Long Haul | Researcher: starts a run | Each contender is told the history, asked each checkpoint's questions read-only, graded by rule, and a dated record is written | Claude: a call whose worst case passes the cap is refused. A second measuring job waits | FR-22 to FR-26 |
+
+### Activity Diagram: The Evaluation Pipeline {#pipeline-section}
+
+The study's contribution is a measurement, so the workflow that produces each number is analysed as carefully as the engine. Figure {fig:pipeline} shows the Long Haul's pipeline as a UML activity diagram.
 
 ![{#pipeline} The evaluation pipeline of the Long Haul](diagrams/evaluation_pipeline.png)
 
@@ -182,9 +207,11 @@ The script is built once from its seed and cut at fixed sizes; at each cut, a ch
 
 ## System Design Diagrams {#design-diagrams}
 
+This section describes how the solution is organised to satisfy the analysed requirements: the architecture of the baseline and of the engine, the engine's classes, the assistant around it, the handling of one question, the life cycle of memory, the stored data and the deployment.
+
 ### Architecture of the Baseline, CAMR v1
 
-CAMR v1 has a write path and a read path that meet at one SQLite file (Figure {fig:arch-v1}). Ranking follows Park et al. (2023), with similarity and importance normalised over the candidates, and recency counted in question steps. The gate then decides how much of the ranked list the model sees.
+CAMR v1 has a write path and a read path that meet at one SQLite file (Figure {fig:arch-v1}). Ranking follows Park et al. (2023), with similarity and importance normalised over the candidates and recency counted in question steps (Equation {eq:composite}); the gate then decides how much of the ranked list the model sees (Equation {eq:gate}).
 
 $$\text{score}(n) = w_s\,\hat{s}(n) + w_r\,\gamma^{\Delta t(n)} + w_i\,\hat{\imath}(n)$$ {#composite} [Composite score of a note (baseline)]
 Equation {eq:composite} is the composite score of note n (defaults \(w_s = 0.60\), \(w_r = 0.15\), \(w_i = 0.25\), \(\gamma = 0.99\); similarity only sets \(w_s = 1\), \(w_r = w_i = 0\)).
@@ -192,76 +219,96 @@ Equation {eq:composite} is the composite score of note n (defaults \(w_s = 0.60\
 $$n \text{ is admitted} \iff s_{\max} \ge \tau \ \text{ and } \ s(n) \ge s_{\max} - \delta$$ {#gate} [The gate (baseline)]
 Equation {eq:gate} is the gate, where \(s_{\max}\) is the best candidate's similarity (defaults \(\tau = 0.50\), \(\delta = 0.15\)).
 
-![{#arch-v1} Architecture of the baseline, CAMR v1](diagrams/architecture_v1.png){width=13.5}
+![{#arch-v1} Architecture of the baseline, CAMR v1](diagrams/architecture_v1.png)
 
-The gate and entity bridging made the read path capability-adaptive: on 2WikiMultiHopQA, bridging raised the share of questions with both gold paragraphs in context from 35.8% to 78.4% with 7% fewer tokens (F1b). The composite score lowered that share (F1), so similarity became the default ranking (Section {sec:changes}). The model was reached only through a loopback runner and the cloud only in ceiling conditions or on escalation.
+The gate and entity bridging make the read path capability-adaptive: the gate admits fewer notes when the best match is weak, and bridging adds the notes about entities that admitted notes name, which finds the second hop of a question without a graph. The model is reached only through a loopback runner, and the cloud only in ceiling conditions or on escalation. Similarity became the default ranking after the composite score was measured (Section {sec:baseline-results}; Table {tab:changes}).
 
 ### Architecture of CAMR {#arch-section}
 
-CAMR changes what a memory is. Instead of text the model must re-read for every question, each moment is kept as the notes the model wrote while reading it: the keys and values of every layer, which a transformer normally discards after a prompt. Laid in front of the model, they let it continue as if it had just read the moment. Notes are large (Equation {eq:bytes}), so they live on the SSD in rooms of related moments that are written as one continuous page and fetched in one read. A moment joins a room by Equation {eq:room}. The application calls a room a "note" and groups notes by topic on "shelves" (Section {sec:shelves}); this thesis keeps "room" for the engine's unit.
+CAMR changes what a memory is. Instead of text that the model must re-read for every question, each moment is kept as the notes the model wrote while reading it: the keys and values of every layer, which a transformer normally discards after a prompt. Laid in front of the model, they let it continue as if it had just read the moment. Notes are large (Equation {eq:bytes}), so they live on the SSD in rooms of related moments that are written as one continuous page and fetched in one read. A moment joins a room by Equation {eq:room}. The application calls a room a "note" and groups memory by topic on "shelves" (Section {sec:assistant-design}); this thesis keeps "room" for the engine's unit.
 
 $$\text{room}(m) = \text{room}\Big(\underset{k\,:\ s_{mk} \ge J,\ T_{\text{room}(k)} + t_m \le T_{\max}}{\mathrm{arg\,max}}\ s_{mk}\Big), \ \text{ else a new room}$$ {#room} [Room placement of a new moment]
 In Equation {eq:room}, \(m\) is the new moment with \(t_m\) tokens, \(s_{mk}\) is its similarity to an earlier moment \(k\), and \(T\) is a room's tokens (\(J = 0.80\), \(T_{\max} = 512\); E-18).
 
 $$b_{\text{token}} = L \times 2 \times H_{kv} \times d_h \times 2 \text{ bytes}$$ {#bytes} [Notes per token]
-Equation {eq:bytes} gives the notes per token, for \(L\) layers, \(H_{kv}\) key–value heads, head size \(d_h\) and 16-bit values: 28 × 2 × 8 × 128 × 2 = 114,688 bytes for Qwen3-1.7B and 36 × 2 × 8 × 128 × 2 = 147,456 bytes for Qwen3 4B and 8B (from the records' `kv_shape`). A full room of 512 tokens is therefore 56 MiB for the 1.7B, about 29,000 times its text. To keep the SSD smaller, a room can also be stored at 8 or 4 bits, quantized in groups of 64 values, which takes 17/32 or 9/32 of its 16-bit size; rooms kept at 16 bits are still read as before, and each room's precision is recorded in the index.
+Equation {eq:bytes} gives the notes per token, for \(L\) layers, \(H_{kv}\) key–value heads, head size \(d_h\) and 16-bit values: 28 × 2 × 8 × 128 × 2 = 114,688 bytes for Qwen3-1.7B and 36 × 2 × 8 × 128 × 2 = 147,456 bytes for Qwen3 4B and 8B. A full room of 512 tokens is therefore 56 MiB for the 1.7B, about 29,000 times its text. To keep the SSD smaller, a room can also be stored at 8 or 4 bits, quantised in groups of 64 values, which takes 17/32 or 9/32 of its 16-bit size; each room's precision is recorded in the index, so rooms of different precisions can be read side by side.
 
 ![{#arch} Component diagram of CAMR, the final engine](diagrams/architecture.png)
 
-Each part has one job (Figure {fig:arch}). Rooms owns the room files and the index and knows nothing about models. The Notebook turns tokens into notes and notes into a desk, and is the only part that touches the reader's cache. The Tiers decide where each room's notes are: hot in RAM, awake on the SSD, or asleep as words. The Vault keeps every moment as a Markdown note that a person can open in Obsidian, with links between notes that are used together and a strength that fades (Equation {eq:fade}). The Core holds a few standing facts as notes in RAM. The Event log watches attention without changing it, Metrics times every step, and Live reports what a person can watch. Memory composes them into remember, choose, recall, answer and fade, and a Session composes one Memory per reach. The app, the Code agent, the pairing and every benchmark runner call the same Session or Memory, so the measured read path is the one the user meets.
+Each component has one responsibility (Figure {fig:arch}). Rooms owns the room files and the index and knows nothing about models. The Notebook turns tokens into notes and notes into a desk, and is the only part that touches the reader's cache. The Tiers decide where each room's notes are: hot in RAM, awake on the SSD, or asleep as words. The Vault keeps every moment as a Markdown note that a person can open in Obsidian, with links between notes that are used together and a strength that fades (Equation {eq:fade}). The Core holds a few standing facts as notes in RAM. The Event log watches attention without changing it, Metrics times every step, and Live reports what a person can watch. Memory composes them into remember, choose, recall, answer and fade, and a Session composes one Memory per reach. The app, the Code agent, the pairing and every benchmark runner call the same Session or Memory, so the read path that is measured is the one the user meets.
 
 $$s_{n}(d) = s_{n}(d_0)\times 0.95^{\,d-d_0} + u_n$$ {#fade} [Strength of a vault note]
-In Equation {eq:fade}, a vault note's strength \(s_n\) on day \(d\) is its strength on the day \(d_0\) it was last brought up to date, reduced by 5% for each day unused, plus 1.0 for each of its \(u_n\) uses since then; a note at strength 1 that goes unused for about 45 days falls below 0.1 and counts as faded. Pinned notes never fade, and nothing is ever deleted by the engine. A room is as strong as its strongest note, and when the room files outgrow the disk budget the weakest room sleeps first.
+In Equation {eq:fade}, a vault note's strength \(s_n\) on day \(d\) is its strength on the day \(d_0\) it was last brought up to date, reduced by 5% for each day unused, plus 1.0 for each of its \(u_n\) uses since then; a note at strength 1 that goes unused for about 45 days falls below 0.1 and counts as faded. Pinned notes never fade, and nothing is ever deleted by the engine. A room is as strong as its strongest note, and when the room files outgrow the disk budget the weakest room sleeps first (Equation {eq:budget}).
 
-Two measurements on the MacBook Air shaped this design. Moments written alone and laid side by side lost the thread: with 30 unrelated moments beside the right one, the reader found 2 of 46 facts from such notes against 32 from the words (E-15). So a room is written as one page, each moment read with the room's earlier moments in view. And one room plus the four closest moments as words knew 158 facts, against 120 for the room alone and 135 for the moments alone (E-16). A single room sits where it was written, so its keys need no turning; with the core before it, a room sits further along the desk and its keys are turned by the core's length (Su et al., 2024).
+$$\text{while}\ \sum_{r \in A} S_r > B_{\text{disk}}:\quad r^{*} = \underset{r \in A}{\mathrm{arg\,min}}\ \left(\sigma_r,\ \tau_r\right)\ \text{sleeps}$$ {#budget} [The disk budget rule]
+In Equation {eq:budget}, \(A\) is the set of awake rooms, \(S_r\) the size of room \(r\)'s notes file, \(B_{\text{disk}}\) the disk budget, \(\sigma_r\) the room's strength (that of its strongest vault note) and \(\tau_r\) the time it was last used; sleeping deletes the room's notes file and keeps its words.
+
+Two findings from the development lives fixed the shape of a room and of the desk (E-15, E-16; Section {sec:rooms-results}). Moments written alone and laid side by side lost the thread for a small reader, so a room is written as one page, each moment read with the room's earlier moments in view. And one room plus the four closest moments as words knew more facts than either alone or than three rooms, so that is the desk. A single room sits where it was written, so its keys need no turning; with the core before it, a room sits further along the desk and its keys are turned by the core's length (Su et al., 2024).
+
+### Class Diagram of the Engine {#class-section}
+
+The component diagram shows responsibilities; the class diagram shows the classes that carry them, with their main attributes and operations and the relationships between them (Figure {fig:class}). It is drawn from the engine's code, so its names are those of the implementation.
+
+![{#class} Class diagram of the CAMR engine](diagrams/class_engine.png)
+
+A Session holds the reaches it reads and aggregates one Memory per reach, so a question can be answered over several memories while each keeps its own folder. Memory is the centre: it is composed of its Rooms, and of a Vault and Tiers when they are enabled, which live and die with it, while it only aggregates a Notebook and a Core, because the Session builds one Notebook and shares it across every Memory, and a Core can be handed in from outside. Memory is associated with exactly one Reader and one Embedder, the frozen models, which it uses but never changes. Rooms knows nothing about models: it places a moment, appends its notes and fetches whole rooms, and Tiers is bound to it to decide where those notes are. The Notebook is the only class that touches the Reader's cache, writing notes and laying the desk. The Sorter files a moment onto one of the Shelves by the Embedder's closeness, and a Shelf names the Reach it is kept in. The assistant and revise are modules of functions rather than classes: they use the Reader, Rooms and the Embedder through a Memory and add no state of their own, which is why the engine is unchanged when the assistant is not used. Reader reports what it does to a Live only when a Live listens, and the vision model, Seer, stands apart: only the application's chat route uses it, to turn a picture into words before they are remembered.
+
+### The Assistant: Routing, Research, Files, Revision and Shelves {#assistant-design}
+
+In its final form the chat is an assistant built around the engine (Figure {fig:assistant}). It keeps the conversation and answers from the model's own knowledge, and it reaches into memory only when a question needs it. The closeness of the nearest memory cannot tell such questions apart, since a greeting can sit as close to a remembered moment as a question about the user's records. The design therefore lets the model route each question itself, with a one-word answer, MEMORY or GENERAL, that reads the question, the last two turns and the closest note in memory; a question that names a person or business found in its closest notes goes to memory without asking the model (FR-27; E-55). Only a MEMORY question fetches a room, and the router's word is never shown.
+
+![{#assistant} Component diagram of the CAMR assistant: the router, research, files and the eyes around the memory engine and its shelves](diagrams/assistant.png)
+
+Four parts surround the router. Research looks a question up on Wikipedia (a search, then the best page's plain text); the page goes into the user's turn between markers as data, never into the instructions, and what is kept from it goes on the Research shelf marked as from the web (FR-28). Files are turned into words once: a PDF a page at a time as its text, and images and video frames by a vision model that also reasons, before the words are kept like any other moment, marked as from a file and not as the user's words (FR-29; E-57). Revision compares a new moment with the closest moment of the same source; only a close pair is judged by the model, in one word, SAME, UPDATE or NEW, and an update keeps the new moment and marks the old one superseded, never destroying it (FR-30; E-56). Shelves give the memory topics (FR-31; E-51): Projects is the global reach, which every session reads, and Coding, Research and Personal are project reaches, each with its own rooms and vault. A question reads every shelf and the closest moment wins; when another shelf's closest moment is nearly as close, it is read as well. A new moment goes on the shelf the user picks or, on "Auto", on the shelf whose description and examples it is closest to by the same embedder, so it is filed by meaning. When a session opens, a warm-up builds the model's kernels and reads the newest rooms of every shelf, up to 1.5 GB, so that the first questions find them in RAM (E-52). The design keeps the engine unchanged: every part reaches memory through a Session, so routing, research and files cost nothing when they are not used.
 
 ### Sequence Diagram: One Question {#sequence-section}
 
-Figure {fig:sequence} follows one question asked in Chat. Lifelines run left to right and time downwards; solid arrows with filled heads are calls, dashed arrows with open heads are returns, a looping arrow is work done inside one part, and a bar shows while a part is busy. It realises FR-12, FR-13, FR-17 and FR-19 and shows where the wait of NFR-01 and NFR-03 is spent.
+Figure {fig:sequence} follows one question asked in Chat. Lifelines run left to right and time downwards; solid arrows with filled heads are calls, dashed arrows with open heads are returns, a looping arrow is work done inside one part, and a bar shows while a part is busy. The diagram realises FR-12, FR-13, FR-17 and FR-19, and shows where the wait of NFR-01 and NFR-03 is spent.
 
 ![{#sequence} Sequence diagram of one question answered in Chat](diagrams/sequence_question.png)
 
-The order of steps keeps the wait short. The question is embedded once, and the closest moment is chosen over every reach the session reads (steps 6 to 8). The room is then fetched before the reader writes anything: from RAM when hot, in one SSD burst when awake, or as words when asleep (steps 10 to 12). The header and the core are already notes in RAM, and the room arrives already read, so at question time the reader reads only the four closest moments, the date and the question as words (step 15). While the answer is written, the app polls the live events and draws each word and each layer's activity (steps 17 and 18). Every answer ends with one metrics record and one line in the event log (step 20). On the Long Haul at 2M tokens this path took 18 ms to choose and fetch (retrieval p50) and gave the 1.7B's first word in 0.08 s (E-38).
+The order of steps keeps the wait short. The question is embedded once, and the closest moment is chosen over every reach the session reads. The room is then fetched before the reader writes anything: from RAM when hot, in one SSD burst when awake, or as words when asleep. The header and the core are already notes in RAM, and the room arrives already read, so at question time the reader reads only the four closest moments, the date and the question as words. While the answer is written, the app polls the live events and draws each word and each layer's activity. Every answer ends with one metrics record and one line in the event log. Because the desk is always one room and four moments, the work done before the first word does not depend on how much the memory holds; Chapter 5 measures this (Section {sec:speed-results}).
 
-### State Diagram of a Room and Its Moments {#states-section}
+### State Machine Diagram of a Room and Its Moments {#states-section}
 
 A moment and its room have coupled life cycles: placing a moment changes its room, a question moves a room onto the desk, and the disk budget can put a room to sleep. Figure {fig:states} shows the three state machines; its guards are Equations {eq:room}, {eq:share} and {eq:fade}.
 
 $$\text{share}_j = \frac{\sum_w a_{wj}}{\sum_w \sum_k a_{wk}}, \qquad j \text{ is used} \iff \text{share}_j \ge 0.10$$ {#share} [Share of the desk's attention drawn by a moment]
 Equation {eq:share} is the share of the desk's attention drawn by moment \(j\) over an answer, where \(a_{wj}\) is the attention from written word \(w\) to \(j\)'s tokens, averaged over every head of layers 12, 16, 20 and 24 (E-21).
 
-![{#states} State machines of a moment, a room and a vault note's strength](diagrams/state_room.png){width=13.5}
+![{#states} State machines of a moment, a room and a vault note's strength](diagrams/state_room.png)
 
-A moment has no final state: once stored it only cycles between Stored and On the desk, where it is either used or only picked up. A room is awake on the SSD, hot in RAM after a read, and back to awake when it is the least recently used room and the RAM budget is full; letting a hot room go writes nothing, since its file is still on the SSD. When the awake room files outgrow the disk budget, the weakest room goes to sleep: its notes file is deleted and its moments stay as words in the index and the vault. A question about an asleep room reads its moments as words, or wakes it when waking is on, which costs one reading of the room by the model. Sleep therefore keeps the SSD within budget without destroying anything: at the end of the 2M-token Long Haul, 4,471 of 5,391 rooms were asleep (E-38).
+A moment has no final state: once stored it only cycles between Stored and On the desk, where it is either used or only picked up. A room is awake on the SSD, hot in RAM after a read, and back to awake when it is the least recently used room and the RAM budget is full; letting a hot room go writes nothing, since its file is still on the SSD. When the awake room files outgrow the disk budget, the weakest room goes to sleep: its notes file is deleted and its moments stay as words in the index and the vault. A question about an asleep room reads its moments as words, or wakes it when waking is on, which costs one reading of the room by the model. Sleep therefore keeps the SSD within its budget without destroying anything the user told.
 
 ### Logical Schema of the Baseline Store
 
 The baseline uses an embedded relational database, so a logical schema is the right view. Figure {fig:schema} shows its tables with their keys and cardinalities.
 
-![{#schema} Logical schema of the baseline's store](diagrams/schema_v1.png){width=13.5}
+![{#schema} Logical schema of the baseline's store](diagrams/schema_v1.png)
 
 The integrity rules carry the baseline's guarantees. Checksums are unique, and a source is unique per dataset, document and note type, so each write policy is its own note population in one file. A note and its embedding are committed together with a cascading delete, so no note lacks its vector. `meta` records the schema version, embedder and dimension, and a store refuses an embedder it was not built with.
 
 ### File and Data Design of CAMR {#files-section}
 
-CAMR has no transactional database. Each memory is one folder in which every file has one writer and one format, and each reach is a folder of its own under `~/.camr/` (Figure {fig:files}, Table {tab:files}).
+CAMR has no transactional database, so a relational schema would misrepresent it. Each memory is one folder in which every file has one writer and one format, and each reach or shelf is a folder of its own under `~/.camr/` (Figure {fig:files}, Table {tab:files}).
 
-![{#files} Files of a CAMR memory, its reaches and its records](diagrams/files.png){width=13.5}
+![{#files} Files of a CAMR memory, its reaches and its records](diagrams/files.png)
 
 Table: {#files} Files of a CAMR memory
 
 | File | Format | Written | Read |
 |---|---|---|---|
-| `room-NNNNNN.notes` | Raw 16-bit values, token by token (tokens × layers × keys and values × heads × head size) | Appended at each remember; deleted when the room sleeps | Whole, at recall, cache bypassed |
-| `index.json` | Every moment's words, day, room and byte range; every room's members and tokens | After each moment in a shared reach; at save | When the memory opens; for the words a desk re-reads |
+| `room-NNNNNN.notes` | Raw 16-, 8- or 4-bit values, token by token (tokens × layers × keys and values × heads × head size) | Appended at each remember; deleted when the room sleeps | Whole, at recall, cache bypassed |
+| `index.json` | Every moment's words, day, room and byte range; every room's members, tokens and precision | After each moment in a shared reach; at save | When the memory opens; for the words a desk re-reads |
 | `vectors.npy` | float32 matrix, one unit row per moment | With the index | On opening; one product per question |
-| `vault/*.md` | One Markdown note per moment: front matter (id, day, room, reach, strength, asleep, links, doors), then its words | At each remember and each fade | By a person (Obsidian); by the core and by sleep |
+| `vault/*.md` | One Markdown note per moment: front matter (id, day, room, reach, strength, tags, links, doors), then its words | At each remember, fade and revision | By a person (Obsidian); by the core, sleep and revision |
 | `events.jsonl` | One JSON line per moment kept, answer given, room put to sleep or woken | At every event | The app's views |
 | `metrics.jsonl` | One JSON line per answer (Table {tab:metrics}) | At every answer | Summaries; the app |
 | `tiers.json` | When each room was last used | With the index | When the memory opens |
 | `.lock` | A lock held while a process has the folder open | On opening a reach | By a second process, which is refused |
+| `chats/<id>.json` | One saved conversation: its turns and the shelf each answer read | After each answer | When a conversation is reopened |
 
-Files suit a workload with two operations: append a moment's notes to one file, and read one whole file. Each room is a contiguous array read in one burst, with no lookup and no database page cache in between, and bypassing the file cache makes every recall a real SSD read: 6 to 12 GB/s on the MacBook Pro when a room is not hot (Section {sec:speed-results}). The readable part of memory sits in a small index and the vault, which can be inspected without touching the notes. Files refer to each other by integer position: a moment's id is its row in `vectors.npy`, and its byte range in the room comes from the index. The notes' size per token, recorded in the index, stops another model from opening the memory.
+Files suit a workload with two operations: append a moment's notes to one file, and read one whole file. Each room is a contiguous array read in one burst, with no lookup and no database page cache in between, and bypassing the file cache makes every recall a real SSD read. The readable part of memory sits in a small index and the vault, which can be inspected without touching the notes. Files refer to each other by integer position: a moment's id is its row in `vectors.npy`, and its byte range in the room comes from the index. The notes' size per token, recorded in the index, stops another model from opening the memory (NFR-12).
 
 Table: {#metrics} What every answer records
 
@@ -277,75 +324,33 @@ Table: {#metrics} What every answer records
 | Peak RAM and footprint | `peak_ram_bytes`, `peak_mlx_bytes`, `footprint_gb` | The process's peak resident memory and MLX's own peak; in the benchmarks, the process's physical footprint per checkpoint |
 | Disk | `disk_bytes` | The memory folders on disk: room files, indexes, logs and vaults |
 
-### Deployment on the Mac {#deployment-section}
+### Deployment Diagram {#deployment-section}
 
-Figure {fig:deployment} shows where each part of CAMR runs: one Mac, its execution environments, the files on its SSD, and three outside parties used once, for benchmarks only, or for testing.
+Figure {fig:deployment} shows where each part of CAMR runs: one Mac, its execution environments, the files on its SSD, and the outside parties that are used once, for research, or for benchmarks only.
 
 ![{#deployment} Deployment diagram of CAMR on the Mac](diagrams/deployment.png)
 
-The Mac app is a SwiftUI process that starts the engine as a second, Python process with the chosen model and a token made at launch, and talks to it only over the loopback address (IR-04). The engine holds the reader and the embedder in unified memory through MLX on the graphics processor; each model has its own memory folder, because notes belong to the model that wrote them. Ollama, when paired, is a third process that the proxy reaches on its own port. The Hugging Face Hub is contacted only when a model or suite is missing. The Anthropic API is contacted only by the yardstick's runner, with its key read from a private file and never logged. GitHub Actions runs the tests that need no MLX on every push (NFR-16).
-
-### Shelves and the Warm-Up {#shelves}
-
-The application keeps memory on four shelves by kind of work: Projects, Coding, Research and Personal (E-51). Each shelf is a reach of its own (Section {sec:arch-section}): Projects is the global reach, which every session reads, and the other three are project reaches, each with its own folder of rooms and its own vault. A question reads every shelf, and the closest moment wins, as a session always chooses; when another shelf's closest moment is nearly as close, it is read as well. Memory is therefore kept apart but read as one. A new moment goes on the shelf the user picks, or, on "Auto", on the shelf whose description and three example moments it is closest to, measured by the same embedder that recall uses, so it is filed by meaning. The Code agent keeps what it learns on the Coding shelf and still reads its own workspace's reach. Figure {fig:app-shelves} shows the shelves in Chat.
-
-![{#app-shelves} Shelves in Chat (Qwen3 4B): moments told on "Auto" are filed on the Research and Personal shelves by meaning, and each answer names the note and shelf it read ("note 0 on Coding · read from the SSD")](figures/app/chat-shelves.png){width=15.9}
-
-When a session opens, the engine warms up before the first question (E-52). One one-word answer builds the model's kernels, and the newest rooms of every shelf, up to 1.5 GB in all, are read off the SSD so that the operating system holds them in RAM and the first questions fetch them at memory speed. The weights view shows the warming, with rooms lighting on their shelves.
-
-### The Assistant: Routing, Research, Files and Revision {#assistant-design}
-
-In its final form the chat is an assistant (Figure {fig:assistant}). It keeps the conversation and answers from the model's own knowledge, and it reaches into memory only when a question needs it. The closeness of the nearest memory cannot tell such questions apart: in the Long Haul, "hello" sits as close to a remembered moment (0.81) as "What is Otieno's surname?" (0.72). So the model routes each question itself, with a one-word answer, MEMORY or GENERAL, that reads the question and the last two turns, so that a follow-up stays with the conversation (E-55). Only a MEMORY question fetches a room, and the router's word is never shown. A GENERAL question is answered from the model's own knowledge with the last six turns; a thinking build (Qwen3 1.7B and 8B) can show its reasoning, which the 4B Instruct build cannot. What was asked and answered is kept on a shelf with its source, general knowledge on Research. Research looks a question up on Wikipedia (a search, then the best page's plain text); the page goes into the user's turn as marked data, never into the instructions, and what is kept from it goes on the Research shelf marked as from the web. Files can be attached: a PDF is kept a page at a time as its text, and images and video frames are described by a vision model that also reasons, Qwen3-VL-4B-Thinking (4-bit, 3.1 GB, loaded the first time a picture needs it), before their words are kept like any other moment; a file's moments say they are not the user's words (E-57). Finally, memory revises itself (E-56). Before a moment is kept, it is compared with the closest moment of the same source; only a close pair (closeness of at least 0.78) is judged by the model, in one word: SAME (not kept again, and only when the two are also nearly the same words), UPDATE (kept, with the old note tagged superseded and linked to it, never destroyed) or NEW.
-
-![{#assistant} Component diagram of the CAMR assistant: the router, research, files and the eyes around the memory engine and its shelves](diagrams/assistant.png)
-
-### User Interface Design {#ui-design}
-
-The application is a native Mac app written in SwiftUI, with two parts, Chat and Code (E-50). An earlier Swarm screen, which ran several agents with their own memories, was removed so that the app does two things well. The visual direction ("Instrument") draws memory as an instrument would: rooms as tiles, the model's layers as rows, and colour used only to mean something, with memory in cyan, the model in amber and the cloud yardstick always grey (E-34, E-49). A panel beside the conversation, the weights view, draws only what the engine measures (FR-19). Figures {fig:app-load} to {fig:app-onoff} show the app with Qwen3 4B.
-
-![{#app-load} Starting the app: the model's 36 layers fill as their weights arrive ("loading 14/36"), before the first question](figures/app/loading-weights.png){width=15.9}
-
-When the app starts, it starts the engine with the chosen model and draws the model's layers filling as their weights load (Figure {fig:app-load}). The memory panel above them shows how many rooms the memory holds.
-
-![{#app-chat} Chat with memory on and off: a fact told earlier is answered from the room it was kept in ("room 609 · read from the SSD"); with memory off, the same question gets "I don't know"](figures/app/chat-memory-on-off.png){width=15.9}
-
-In Chat (Figure {fig:app-chat}), the user tells the model something with Remember and asks with Ask. Under each answer the app shows the time to the first word, the room read and whether it came from RAM or the SSD; under each remembered fact, the reach it was kept in. A switch in the window turns memory off, so the same question can be asked of the model alone.
-
-![{#app-weights} The weights view, large beside the chat for a projector: the room an answer reads travels from the memory (rooms, top) into the model's 36 layers (bottom)](figures/app/weights-large.png){width=15.9}
-
-The weights view can be shown large beside the chat (Figure {fig:app-weights}). While the model answers, the room it reads is marked and travels into the model, and each layer's row lights with how strongly that layer fired for each word: 32 measured numbers per layer per word, sent by the engine only while the app listens, so the benchmarks pay nothing for it. With no events, nothing moves.
-
-![{#app-code} Code: the agent lists the files of a project folder, reads `money.py` and answers from what it read; the answer is kept in memory](figures/app/code-reads-then-answers.png){width=15.9}
-
-Code is a coding agent on the same local model (Figure {fig:app-code}). Building from memory needed small fixes to the agent, each with its test: the notes' answer rules no longer end a task, an empty workspace and the files still to write are named at every step, a look repeated with nothing changed is not run again, a reply cut off inside a tool call gets more room, and a code step re-reads its eight closest moments (E-59); the attention record is also worked out as each look is made, so a long desk no longer runs the graphics memory out (E-60). The user picks a folder; the agent can list, search, read and edit files and run commands there, and every shell command waits for an explicit Allow. Its turns, tool calls and the files it opened are shown as it works, and with memory on what it learns about the project is kept for the next question.
-
-![{#app-onoff} The weights view with memory on (left), where the room read lights and flows into the model, and off (right), where the model answers alone and the memory stays dark](figures/app/weights-on-off.png){width=12}
-
-As an assistant, Chat also keeps saved conversations, can be stopped mid-answer, and has a Settings window; the tensors are drawn only while a model loads or when the user asks for them (Command-T). A thinking model's reasoning streams into a block that folds once the answer is written (Figure {fig:app-reasoning}), and each answer says whether it came from memory, from the model's own knowledge or from the web.
-
-![{#app-reasoning} The 8B's reasoning, folded once the answer is written ("Thought for 27.8 seconds")](figures/app/chat-reasoning-folded.png){width=15.9}
-
-Figure {fig:app-onoff} sets the two states side by side. The difference is the design's main idea made visible: with memory on, an answer reads one room from the SSD or RAM; with it off, nothing outside the model is read.
+The Mac app is a SwiftUI process that starts the engine as a second, Python process with the chosen model and a token made at launch, and talks to it only over the loopback address (IR-04). The engine holds the reader, the embedder and, when a picture needs it, the vision model in unified memory through MLX on the graphics processor; each model has its own memory folder, because notes belong to the model that wrote them. Ollama, when paired, is a third process that the proxy reaches on its own port. The Hugging Face Hub is contacted only when a model or suite is missing, Wikipedia only when the user asks for research, and the Anthropic API only by the yardstick's runner, with its key read from a private file and never logged. GitHub Actions runs the tests that need no MLX on every push (NFR-16).
 
 ## Design Changes Since the Proposal {#changes}
 
-Building and measuring the three stages changed several choices that the proposal had fixed in advance. Table {tab:changes} states each change and its evidence, so that the diagrams, the code and the report describe the same system.
+Building and measuring the three stages changed several choices that the proposal had fixed in advance. Table {tab:changes} states each change and the evidence for it, so that the diagrams, the code and the report describe the same system.
 
 Table: {#changes} Changes from the proposed design
 
 | Proposed | Built | Reason and evidence |
 |---|---|---|
 | An embedded database: SQLite with a vector extension in one file (P §3.6.5; objective iii) | The baseline as proposed; the engine stores one append-only file per room on the SSD, an index, a vector file and a vault | The engine stores the model's notes, 114,688 to 147,456 bytes per token (Equation {eq:bytes}), and only appends and reads whole files; bypassing the cache gives honest SSD timings (E-14) |
-| Short structured notes of the text (P §3.5.1) | The model's own keys and values, read back as if just read | Reading notes back skips re-reading the text; within one room, notes answered as the words did (164 against 163 facts, E-20) |
+| Short structured notes of the text (P §3.5.1) | The model's own keys and values, read back as if just read | Reading notes back skips re-reading the text, and within one room notes answered as the words did (E-20; Section {sec:rooms-results}) |
 | A 16 GB laptop with no dedicated graphics card, CPU inference (P §1.6) | The baseline on CPU-only 16 GB machines; the engine on a MacBook Air M4 (16 GB), then a MacBook Pro M5 Pro (24 GB) | MLX needs Apple silicon and uses its integrated graphics processor, not a dedicated card; the Pro was adopted for speed, with the Air's results kept (E-17) |
 | Qwen2.5, Llama 3.2, Phi-3 through Ollama; a BGE embedder (P §3.6) | The baseline as proposed; the engine on Qwen3 1.7B, 4B and 8B and Qwen3-Embedding through MLX | The engine must read and write the reader's cache in its own process; one embedder serves every contender (E-02) |
-| Ranking by similarity, recency and importance (P §3.5.1) | The baseline defaults to similarity, gate and bridging; the engine chooses the closest moment's room | The composite lowered full-support recall by 1.2 points on 2WikiMultiHopQA and 5.4 on HotpotQA (F1) |
+| Ranking by similarity, recency and importance (P §3.5.1) | The baseline defaults to similarity, gate and bridging; the engine chooses the closest moment's room | The composite lowered full-support recall on both multi-hop sets (F1; Section {sec:baseline-results}) |
 | A fixed token budget (P §3.5.1) | Rooms capped at 512 tokens plus four moments re-read | Larger rooms knew fewer facts at every setting tried (E-18) |
 | A pinned hosted reference model as the ceiling (P §3.6.3) | Kimi K3 for the baseline; Claude Haiku, Sonnet and Opus 5.5 as a yardstick for the engine | A cloud model with a one-million-token window sees the whole history early and only its end later, so it is reported beside the engine, not as a fixed ceiling |
 | Public benchmarks only; "not an end-user application" (P §1.6) | The Long Haul, the Hugging Face suites, and a Mac app with Chat and Code | The claim is about a memory that grows over months, which no public set tests; the final project also needs a usable release |
 
-Parts of the design were planned but not built, because the remaining time went to the proof. They are future work, and no requirement above depends on them: naps that run on their own while the Mac is charging; distilling what was learnt, checked by a quiz before it is kept; settling unsure facts at recall; reading several rooms together; and the native engine (notes rather than words) behind the pairing and the OpenAI-compatible endpoint.
+Parts of the design were planned but not built, because the remaining time went to the evaluation. No requirement above depends on them, and they are taken up as future work in Chapter 6: naps that run on their own while the Mac is charging; distilling what was learnt, checked by a quiz before it is kept; settling unsure facts at recall; reading several rooms together; and the native engine (notes rather than words) behind the pairing and the OpenAI-compatible endpoint.
 
 ## Chapter Summary {#design-summary}
 
-This chapter specified CAMR in three stages, using structured, UML and storage views suited to an experimental AI artefact. It stated 30 functional, 16 non-functional, 8 data and 9 interface requirements, each with a source and a verification method, without invented thresholds, and traced them to the objectives. The analysis showed CAMR in use as a closed system on the Mac. The design described the baseline's paths over one SQLite file and the engine's memory of saved notes in rooms on the SSD, read one room at a time after a small core, with the four closest moments re-read as words, rooms moving between RAM, the SSD and sleep under fixed budgets, and a vault a person can read. The main changes from the proposal, the model's own notes instead of text, files on the SSD instead of a database, and an Apple-silicon Mac instead of a CPU-only laptop, were justified from measurements. Chapter 5 reports the implementation and the evaluation against these requirements.
+This chapter specified CAMR in three stages, using structured, UML and storage views suited to an experimental AI artefact. It stated 31 functional, 16 non-functional, 8 data and 10 interface requirements, each with a source and a verification method and without invented thresholds, and traced them to the objectives. The analysis presented CAMR as a closed system on the Mac, decomposed it into remembering, answering, research and files, and fading and sleep around shared stores, and described its main use cases. The design described the baseline's paths over one SQLite file; the engine's memory of saved notes in rooms on the SSD, read one room at a time after a small core with the four closest moments re-read as words; its classes; the assistant that routes, researches, reads files, revises and files by topic; the life cycle of rooms between RAM, the SSD and sleep under fixed budgets; the files of a memory; and the deployment on one Mac. The main changes from the proposal were justified from evidence. Chapter 5 reports how this design was implemented, tested and evaluated.

@@ -10,7 +10,7 @@ The text lives in docs/thesis/src/*.md, in a small Markdown dialect:
     #! Title                     unnumbered heading 1 (front matter, references, appendices)
     ## Title {#key}              section (N.n); ### subsection (N.n.n); #### bold lead-in paragraph
     Table: {#key} Caption        the caption of the pipe table that follows
-    ![{#key} Caption](path)      a figure (wide ones get a landscape page of their own)
+    ![{#key} Caption](path)      a figure, on the portrait page ({width=cm} caps its width)
     $$ latex $$ {#key}           a numbered equation
     {tab:key} {fig:key} {eq:key} {sec:key}   cross-references, resolved to "Table 4.2", "Figure 5.1", "4.3", "5.2.1"
     [[text]]                     a highlighted placeholder
@@ -49,8 +49,7 @@ TEMPLATE = ROOT / "docs" / "report" / "Chapter5_CAMR.docx"
 SRC = HERE / "src"
 OUT = HERE / "CAMR_Thesis.docx"
 TEXT_WIDTH_CM = 15.9
-LANDSCAPE_WIDTH_CM = 24.6
-LANDSCAPE_HEIGHT_CM = 14.8
+FIGURE_MAX_HEIGHT_CM = 21.0  # a tall figure never runs past this height on the portrait page
 
 OMML = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 _ACCENTS = {"^": "̂", "~": "̃", "¯": "̅", "‾": "̅", "―": "̅", "→": "⃗", "˙": "̇"}
@@ -495,16 +494,14 @@ class Thesis:
             del pg.attrib[qn("w:start")]
 
     def figure(self, caption: str, path: Path, opts: str):
+        """Every figure sits on the portrait page: at most the text width, and at most FIGURE_MAX_HEIGHT_CM tall."""
         self.fig += 1
         pic = Picture.from_file(str(path))
         aspect = pic.px_width / pic.px_height
-        landscape = "landscape" in opts or ("portrait" not in opts and aspect > 1.45 and "diagrams" in str(path))
         m = re.search(r"width=([\d.]+)", opts)
-        if landscape:
-            self.orient(True)
-            width = min(LANDSCAPE_WIDTH_CM, LANDSCAPE_HEIGHT_CM * aspect)
-        else:
-            width = float(m.group(1)) if m else min(TEXT_WIDTH_CM, 19.0 * aspect)
+        width = min(TEXT_WIDTH_CM, FIGURE_MAX_HEIGHT_CM * aspect)
+        if m:
+            width = min(width, float(m.group(1)))
         p = self.doc.add_paragraph(style="Normal")
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.keep_with_next = True
@@ -514,9 +511,6 @@ class Thesis:
         cap = self.doc.add_paragraph(style="FigCaption")
         self.runs(cap, f"Figure {self.chlabel}.{self.fig}: {caption}")
         self.outline.append(("lof", 1, self.plain(f"Figure {self.chlabel}.{self.fig}: {caption}")))
-        if landscape:
-            self.orient(False)
-            self.fresh = True
 
     def page_break(self):
         if self.fresh:  # a section break has just started a new page
