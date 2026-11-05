@@ -75,7 +75,10 @@ MODELS = {"qwen3-1.7b": "mlx-community/Qwen3-1.7B-4bit",
 EMBEDDER = "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 NO_KV = {"qwen-27b"}  # hybrid attention: its linear layers keep a running state, not keys and values
 WINDOWS = {"qwen3-1.7b": 32_768, "qwen3-4b": 65_536, "qwen3-8b": 32_768, "qwen-27b": 16_384}
-KINDS = ("engine", "words", "bare")
+KINDS = ("engine", "words", "bare", "rag")
+RAG_K = 8  # conventional RAG: the closest moments pasted in as text (the app's chat route, RAG_K)…
+RAG_TOKENS = 1024  # …up to this many tokens: the memory CAMR's desk holds, one room (at most 512) + 4 closest moments
+RAG_ORDERS = ("date", "score")
 
 RAM_BYTES = 2 * 10**9  # hot rooms and the core
 DISK_BYTES = 40 * 10**9  # awake room files
@@ -111,6 +114,21 @@ DAY_LINE = re.compile(r"^Day \d+ · [A-Z][a-z]+ \d{1,2} [A-Z][a-z]+ \d{4}$")
 
 def hint(family: str | None) -> str:
     return HINTS.get(family or "", "")
+
+
+def view(*, prefill: int, notes: int, words: int) -> dict:
+    """What one answer had in front of it, the same keys for every contender: ``prefill_tokens`` read as text this
+    answer (memory, instructions and question), ``memory_notes`` tokens of memory already read (notes), and
+    ``memory_words`` tokens of memory read as text; ``memory_in_view`` is the two together."""
+    return {"prefill_tokens": int(prefill), "memory_notes": int(notes), "memory_words": int(words),
+            "memory_in_view": int(notes) + int(words)}
+
+
+def _peak_footprint_gb() -> float | None:
+    from camr_engine.models import peak_footprint_bytes
+
+    got = peak_footprint_bytes()
+    return round(got / 1e9, 3) if got is not None else None
 
 
 def parse(spec: str) -> tuple[str, str]:
@@ -281,9 +299,10 @@ class Engine(Contender):
                  ram_bytes: int = RAM_BYTES, disk_bytes: int = DISK_BYTES, project: str = PROJECT,
                  dates: Callable[[int], dt.date] | None = None, day_numbers: bool = True,
                  nap_days: int | None = NAP_DAYS, intro: str = INTRO, learn: bool = False, watch: bool = False,
-                 log: bool = True, wake: bool = False, **settings):
+                 log: bool = True, wake: bool = False, snapshots: Path | None = None, **settings):
         if reader is None:
             parse(f"engine:{model}")
+        self.snapshots = snapshots
         self.model, self.repo, self.name = model, MODELS.get(model), f"engine:{model}" + ("+wake" if wake else "")
         self.loader, self._reader, self._embedder = loader or Loader(), reader, embedder
         self.ram_bytes, self.disk_bytes, self.project = ram_bytes, disk_bytes, project
@@ -305,10 +324,25 @@ class Engine(Contender):
     def open(self, folder: Path) -> None:
         self.close()  # a contender opened again (a suite's next group) lets go of the memory before
         folder = _fresh(folder)
+        self._reset()
+        self._make(folder / "project" / self.project)  # where reach.Session keeps a project reach
+
+    def attach(self, snap: Path, day: int) -> None:
+        """Open a memory told earlier (``<snap>/project/<project>``, as ``snapshots`` keeps them) as of ``day``, to be
+        asked only: nothing is told and nothing is cleared."""
+        self.close()
+        self._reset()
+        folder = Path(snap) / "project" / self.project
+        if not (folder / "index.json").exists():
+            raise FileNotFoundError(f"no memory at {folder}")
+        self._make(folder)
+        self.days.day, self.days.today = day, self.days.dates(day)
+        self.moments = len(self.memory.rooms.moments)
+
+    def _make(self, folder: Path) -> None:
         reader = self._reader or self.loader.reader(self.repo)
         embedder = self._embedder or self.loader.embedder()
-        self._reset()
-        self.folder = folder / "project" / self.project  # where reach.Session keeps a project reach
+        self.folder = folder
         self.folder.mkdir(parents=True, exist_ok=True)
         self._lock = _hold(self.folder)
         try:
@@ -323,6 +357,25 @@ class Engine(Contender):
         except BaseException:
             self.close()
             raise
+
+    def cut_told(self, checkpoint: dict) -> None:
+        """A checkpoint's events are all told: with ``snapshots``, save the memory and keep an APFS clone of it
+        (``<snapshots>/<cut>.nosync``, with ``snapshot.json``), so other ways of reading it can be asked later
+        (camr_engine.bench.desk). The clone is not counted as ingest."""
+        if not self.snapshots or self.memory is None:
+            return
+        import subprocess
+
+        self.memory.save()
+        root = self.folder.parent.parent  # the folder the run gave: <root>/project/<project>
+        snap = Path(self.snapshots) / f"{checkpoint['name']}.nosync"
+        if snap.exists():
+            raise FileExistsError(f"{snap} is already kept")
+        snap.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["cp", "-c", "-R", str(root), str(snap)], check=True)
+        (snap / "snapshot.json").write_text(json.dumps(
+            {"cut": checkpoint["name"], "events": checkpoint["events"], "tokens": checkpoint.get("tokens"),
+             "day": self.days.day, "today": str(self.days.now()), "moments": self.moments, "contender": self.name}))
 
     def tell(self, text: str, day: int) -> None:
         if self.nap_days and self._napped is not None and day - self._napped >= self.nap_days:
@@ -408,7 +461,9 @@ class Engine(Contender):
         extra = {"retrieval_steps_ms": r.retrieval_ms, "room": r.room, "new_tokens": r.new_tokens,
                  "answer_tokens": r.answer_tokens, "mlx_decode_tps": r.decode_tps,
                  "rss_peak_gb": round(r.peak_ram_bytes / 1e9, 3), "asleep": rec.asleep, "core_tokens": rec.core,
-                 "score": round(rec.score, 4) if rec.score is not None else None}
+                 "score": round(rec.score, 4) if rec.score is not None else None,
+                 "rooms_laid": len(rec.laid), **view(prefill=r.new_tokens, notes=rec.core + rec.notes,
+                                                    words=rec.words)}
         if self.watch:  # the watch's own keys are in this peak: see the module's docstring
             extra["peak_ram_gb_watched"] = peak
         return Answer(reply.text, m, extra)
@@ -432,10 +487,11 @@ class Engine(Contender):
                 "token_bytes": self.memory.rooms.token_bytes,
                 "bits": self.memory.rooms.bits,
                 "join_hits": tiers.get("hits", {}),  # rooms read to append a moment; questions' tiers are per answer
-                "remember_s": round(self.remember_s, 3), "saves_s": round(self.saves_s, 3), "naps": dict(self.naps)}
+                "remember_s": round(self.remember_s, 3), "saves_s": round(self.saves_s, 3), "naps": dict(self.naps),
+                "peak_footprint_gb": _peak_footprint_gb()}
 
     def describe(self) -> dict:
-        from camr_engine.memory import CLOSEST, JOIN, ROOM_TOKENS
+        from camr_engine.memory import CLOSEST, DESK_ROOMS, JOIN, ROOM_TOKENS
 
         shape = self.memory.notebook.shape if self.memory is not None else (
             kv_shape(config_of(self.repo)) if self.repo and config_of(self.repo) else None)
@@ -448,6 +504,8 @@ class Engine(Contender):
                 "ram_bytes": self.ram_bytes, "disk_bytes": self.disk_bytes, "wake": self.wake,
                 "room_tokens": self.settings.get("room_tokens", ROOM_TOKENS), "join": self.settings.get("join", JOIN),
                 "closest": self.settings.get("closest", CLOSEST),
+                "desk_rooms": self.settings.get("desk_rooms", DESK_ROOMS),
+                "desk_tokens": self.settings.get("desk_tokens"), "desk_order": self.settings.get("desk_order", "date"),
                 "kv_shape": None if shape is None else {"layers": shape.layers, "kv_heads": shape.kv_heads,
                                                         "head_dim": shape.head_dim, "rope_base": shape.rope_base,
                                                         "token_bytes": shape.token_bytes},
@@ -560,7 +618,8 @@ class Words(Contender):
                     context_tokens=len(ids), history_tokens=sum(r.tokens for r in self.rooms.rooms),
                     peak_ram_gb=peak_gb(), disk_gb=round(folder_bytes(self.folder) / 1e9, 6), tier="vault")
         return Answer(reply.text, m, {"moments_read": len(picked), "answer_tokens": reply.gen_tokens,
-                                      "mlx_decode_tps": round(reply.gen_tps, 1)})
+                                      "mlx_decode_tps": round(reply.gen_tps, 1),
+                                      **view(prefill=len(ids), notes=0, words=len(self.reader.tok.encode(notes)))})
 
     def reading_s(self) -> float:
         return self.saves_s
@@ -590,6 +649,174 @@ class Words(Contender):
                 self.rooms.close()
             finally:
                 self.rooms = None
+
+
+class Rag(Contender):
+    """rag:<model>: conventional retrieval-augmented generation over the same moments, for the comparison with the
+    engine. Ingest embeds each moment and keeps its words (no notes, no rooms). A question is embedded, the ``k``
+    closest moments are taken, closest first, while they fit ``budget`` tokens, and pasted in as text where the
+    engine's notes go, in ``order`` ("date": oldest first, as the engine re-reads its closest moments; "score":
+    closest first). The same reader, embedder, dated moments, instructions, date line, family's line and question as
+    the engine; only the fixed header is already read (as any runtime keeps a prompt's unchanging start), and
+    everything else is read as text, every question."""
+
+    def __init__(self, model: str, *, loader: Loader | None = None, reader=None, embedder=None,
+                 dates: Callable[[int], dt.date] | None = None, day_numbers: bool = True, intro: str = INTRO,
+                 k: int = RAG_K, budget: int = RAG_TOKENS, order: str = "date"):
+        if reader is None:
+            parse(f"rag:{model}")
+        if order not in RAG_ORDERS:
+            raise ValueError(f"order is one of {RAG_ORDERS}, not {order!r}")
+        self.model, self.repo, self.name = model, MODELS.get(model), f"rag:{model}"
+        self.loader, self._reader, self._embedder = loader or Loader(), reader, embedder
+        self.days, self.intro, self.k, self.budget, self.order = _Days(dates, day_numbers), intro, k, budget, order
+        self.reader = self.embedder = self.notebook = None
+        self.folder: Path | None = None
+        self.texts: list[str] = []
+        self.counts: list[int] = []
+        self.vectors = None
+        self._pending: list = []
+        self.moments, self.embed_s, self.saves_s, self._dirty = 0, 0.0, 0.0, False
+
+    def open(self, folder: Path) -> None:
+        import numpy as np
+
+        from camr_engine.notes import Notebook
+
+        self.close()
+        self.folder = _fresh(folder)
+        self.reader = self._reader or self.loader.reader(self.repo)
+        self.embedder = self._embedder or self.loader.embedder()
+        self.texts, self.counts, self._pending = [], [], []
+        self.vectors = np.zeros((0, 0), dtype=np.float32)
+        self.moments, self.embed_s, self.saves_s, self._dirty = 0, 0.0, 0.0, False
+        self.days.reset()
+        head, _ = self.prompt(dt.date(2026, 1, 1), "?")
+        self.notebook = Notebook(self.reader, head)  # the fixed header, read once and kept
+
+    def prompt(self, today: dt.date, question: str, then: str = "") -> tuple[list[int], list[int]]:
+        """The engine's prompt (camr_engine.memory.Memory.prompt, with ``intro``): the header up to the notes, and
+        the part after them, as token ids."""
+        system = f"{self.intro}\n\nNotes:\n{_SLOT}End of notes.\nToday is {today_text(today)}." + (
+            f"\n\n{then}" if then else "")
+        text = self.reader.tok.apply_chat_template([{"role": "system", "content": system},
+                                                    {"role": "user", "content": question}],
+                                                   add_generation_prompt=True, enable_thinking=THINKING,
+                                                   tokenize=False)
+        head, rest = text.split(_SLOT)
+        return self.reader.tok.encode(head), self.reader.tok.encode(rest)
+
+    def ids(self, text: str) -> list[int]:
+        return self.reader.tok.encode(text + "\n")  # a moment as the engine reads it as words
+
+    def tell(self, text: str, day: int) -> None:
+        moment = self.days.moment(text, day)
+        if moment is None:
+            return
+        t = time.perf_counter()
+        self._pending.append(self.embedder.encode_one(moment))
+        self.embed_s += time.perf_counter() - t
+        self.texts.append(moment)
+        self.counts.append(len(self.ids(moment)))
+        self.moments += 1
+        self._dirty = True
+
+    def _flush(self) -> None:
+        """Vectors embedded since the last question join the matrix searched."""
+        import numpy as np
+
+        if self._pending:
+            new = np.stack(self._pending).astype(np.float32)
+            self.vectors = new if not self.vectors.size else np.concatenate([self.vectors, new])
+            self._pending = []
+
+    def _save(self) -> None:
+        """The index (each moment's words) and the vectors, beside each other in the folder."""
+        import numpy as np
+
+        self._flush()
+        tmp = self.folder / "index.json.tmp"
+        tmp.write_text(json.dumps({"moments": self.texts, "tokens": self.counts}))
+        os.replace(tmp, self.folder / "index.json")
+        np.save(self.folder / "vectors.npy", self.vectors)
+
+    def pick(self, question: str) -> tuple[list[int], list[float]]:
+        """The moments to paste in, in the order they go, and the closeness of each."""
+        import numpy as np
+
+        if not self.texts:
+            return [], []
+        self._flush()
+        sims = self.vectors @ np.asarray(self.embedder.encode_one(question, is_query=True), dtype=np.float32)
+        picked, total = [], 0
+        for i in np.argsort(-sims)[:self.k]:
+            n = self.counts[int(i)]
+            if total + n > self.budget:
+                continue  # past the budget: a shorter one further down may still fit
+            picked.append(int(i))
+            total += n
+        if self.order == "date":
+            picked.sort()
+        return picked, [float(sims[i]) for i in picked]
+
+    def ask(self, question: str, *, max_tokens: int, family: str | None = None) -> Answer:
+        if self._dirty:  # the index is saved before a question, as the engine's is
+            t = time.perf_counter()
+            self._save()
+            self.saves_s += time.perf_counter() - t
+            self._dirty = False
+        peak_reset()
+        t = time.perf_counter()  # the wait counts the search, as the engine's counts its choosing
+        picked, scores = self.pick(question)
+        words = [i for m in picked for i in self.ids(self.texts[m])]
+        retrieval = time.perf_counter() - t
+        head, rest = self.prompt(self.days.now(), question, hint(family))
+        ids = words + rest
+        desk = self.notebook.desk([])  # the header alone, already read
+        before = time.perf_counter() - t
+        reply = self.reader.generate(ids, cache=desk, max_tokens=max_tokens)
+        total = time.perf_counter() - t
+        peak = peak_gb()
+        ttft = round(before + reply.ttft_s, 4)
+        m = metrics(ttft_s=ttft, total_s=round(total, 4),
+                    prefill_tps=round(len(ids) / reply.ttft_s, 1) if reply.ttft_s > 0 else None,
+                    decode_tps=decode_tps(reply.gen_tokens, total, before + reply.ttft_s),
+                    retrieval_ms=round(retrieval * 1000, 3), bytes_read=0, gbps=None, read_share=0.0,
+                    context_tokens=len(head) + len(ids), history_tokens=sum(self.counts), peak_ram_gb=peak,
+                    disk_gb=round(folder_bytes(self.folder) / 1e9, 6) if self.folder is not None else None,
+                    tier="vault")
+        return Answer(reply.text, m, {"moments_read": len(picked), "scores": [round(x, 4) for x in scores],
+                                      "answer_tokens": reply.gen_tokens, "mlx_decode_tps": round(reply.gen_tps, 1),
+                                      **view(prefill=len(ids), notes=0, words=len(words))})
+
+    def reading_s(self) -> float:
+        return self.saves_s
+
+    def status(self) -> dict:
+        if self.folder is None:
+            return {}
+        return {"moments": len(self.texts), "history_tokens": sum(self.counts), "embed_s": round(self.embed_s, 3),
+                "saves_s": round(self.saves_s, 3), "disk_gb": round(folder_bytes(self.folder) / 1e9, 6),
+                "peak_footprint_gb": _peak_footprint_gb()}
+
+    def describe(self) -> dict:
+        return {"name": self.name, "kind": "rag", "model": self.model, "repo": self.repo, "embedder": EMBEDDER,
+                "k": self.k, "budget_tokens": self.budget, "order": self.order,
+                "retrieval": "the question embedded (as a query), cosine over every moment's vector, the k closest "
+                             "taken closest first while they fit the budget",
+                "moment": "[YYYY-MM-DD, day N] text" if self.days.day_numbers else "[YYYY-MM-DD] text",
+                "ingest": "embed only: each moment's vector and words; no notes, no rooms, no model reading",
+                "tier": "vault (memory read as words)", "enable_thinking": THINKING, "system": self.intro,
+                "prompt": NOTES_PROMPT.replace("the core, the room and the closest moments", "the picked moments"),
+                "today_line": True, "hint_in": "system, after the notes and the date", "hints": HINTS,
+                "header": "the fixed header (instructions up to \"Notes:\") read once and kept, as the engine's is",
+                "disk": "the whole folder: index.json (each moment's words) and vectors.npy"}
+
+    def close(self) -> None:
+        if self.folder is not None and self._dirty:
+            self._save()
+            self._dirty = False
+        self.notebook = None
 
 
 def _mark(cache) -> list[tuple[str, Any]]:
@@ -702,14 +929,15 @@ class Bare(Contender):
                     history_tokens=sum(self.counts), peak_ram_gb=peak_gb(), disk_gb=0.0, tier=None)
         return Answer(reply.text, m, {"window_tokens": len(self.head), "window_read_s": self.prefill.get("seconds"),
                                       "question_tokens": len(rest), "answer_tokens": reply.gen_tokens,
-                                      "mlx_decode_tps": round(reply.gen_tps, 1)})
+                                      "mlx_decode_tps": round(reply.gen_tps, 1),
+                                      **view(prefill=len(rest), notes=len(self.head), words=0)})
 
     def reading_s(self) -> float:
         return self.read_s
 
     def status(self) -> dict:
         return {"window": self.window, "lines_told": len(self.lines), "history_tokens": sum(self.counts),
-                "prefill": dict(self.prefill), "prefills": self.prefills}
+                "prefill": dict(self.prefill), "prefills": self.prefills, "peak_footprint_gb": _peak_footprint_gb()}
 
     def describe(self) -> dict:
         return {"name": self.name, "kind": "bare", "model": self.model, "repo": self.repo, "window": self.window,
@@ -727,20 +955,49 @@ class Bare(Contender):
 
 
 def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
-    """The contender ``engine:<model>``, ``words:<model>`` or ``bare:<model>``."""
+    """The contender ``engine:<model>``, ``words:<model>``, ``bare:<model>`` or ``rag:<model>``."""
     kind, model = parse(spec)
-    cls = {"engine": Engine, "words": Words, "bare": Bare}[kind]
+    cls = {"engine": Engine, "words": Words, "bare": Bare, "rag": Rag}[kind]
     return cls(model, loader=loader or Loader(), **kw)
+
+
+# Settings a run can give the engine's desk (``--desk``) or RAG (``--rag``), by their short names.
+DESK_KEYS = {"rooms": ("desk_rooms", int), "tokens": ("desk_tokens", int), "order": ("desk_order", str),
+             "closest": ("closest", int)}
+RAG_KEYS = {"k": ("k", int), "budget": ("budget", int), "order": ("order", str)}
+
+
+def parse_settings(kind: str, text: str | None) -> dict:
+    """``rooms=3,order=date`` for the engine's desk (kind "engine"), ``k=8,budget=1024`` for RAG (kind "rag")."""
+    keys = DESK_KEYS if kind == "engine" else RAG_KEYS
+    out: dict[str, Any] = {}
+    for part in filter(None, (text or "").split(",")):
+        k, _, v = part.partition("=")
+        if k not in keys:
+            raise ValueError(f"{kind} takes {', '.join(keys)}, not {k!r}")
+        name, cast = keys[k]
+        out[name] = cast(v)
+    return out
+
+
+def settings_tag(kind: str, settings: dict) -> str:
+    """The settings as a name's suffix: ``[order=date,rooms=3]`` (empty when there are none)."""
+    inv = {v[0]: k for k, v in (DESK_KEYS if kind == "engine" else RAG_KEYS).items()}
+    tail = ",".join(f"{inv[k]}={v}" for k, v in sorted(settings.items(), key=lambda kv: inv[kv[0]]))
+    return f"[{tail}]" if tail else ""
 
 
 def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = False, watch: bool = False,
                    wake: bool = False, wording: str = "yardstick", bits: int | None = None,
-                   disk_gb: float | None = None) -> Contender:
+                   disk_gb: float | None = None, desk: dict | None = None, rag: dict | None = None,
+                   snapshots: Path | None = None) -> Contender:
     """A contender with the Long Haul's wording. ``wording`` "yardstick": the engine and words read LONGHAUL_INTRO,
     bare reads the yardstick's own. "own": every one reads the engine's own instructions (memory.INTRO), bare with
     its window as the notes, and the name says so ("+own"). ``learn``, ``watch`` and ``wake`` are the engine's, and
     so are ``bits``: how its rooms keep their notes on the SSD (memory.BITS when not given; the name says so,
-    "+8bit"), and ``disk_gb``: its disk budget in GB instead of DISK_BYTES (the name says so, "+8GB")."""
+    "+8bit"), and ``disk_gb``: its disk budget in GB instead of DISK_BYTES (the name says so, "+8GB"). ``desk`` sets
+    the engine's desk (Memory's desk_rooms, desk_tokens, desk_order, closest) and ``rag`` RAG's k, budget and order;
+    the name carries either (``[rooms=3]``). ``snapshots`` keeps a clone of the engine's memory at each cut."""
     kind, _ = parse(spec)
     if wording not in WORDINGS:
         raise ValueError(f"wording is one of {', '.join(WORDINGS)}, not {wording!r}")
@@ -752,7 +1009,14 @@ def haul_contender(spec: str, loader: Loader | None = None, *, learn: bool = Fal
             kw["bits"] = bits
         if disk_gb is not None:
             kw["disk_bytes"] = int(disk_gb * 2**30)
+        kw.update(desk or {})
+        if snapshots is not None:
+            kw["snapshots"] = Path(snapshots)
+    if kind == "rag":
+        kw.update(rag or {})
     c = make(spec, loader, **kw)
+    if kind in ("engine", "rag"):
+        c.name += settings_tag(kind, (desk if kind == "engine" else rag) or {})
     if kind == "engine" and bits is not None:
         c.name += f"+{bits}bit"
     if kind == "engine" and disk_gb is not None:
@@ -805,7 +1069,8 @@ def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] |
              memories: Path = MEMORIES, records: Path = RECORDS, loader: Loader | None = None,
              progress: Callable[[str], None] = print, learn: bool = False, watch: bool = False,
              wake: bool = False, wording: str = "yardstick", bits: int | None = None,
-             disk_gb: float | None = None) -> list[dict]:
+             disk_gb: float | None = None, desk: dict | None = None, rag: dict | None = None,
+             snapshots: Path | None = None) -> list[dict]:
     """Each contender through the Long Haul's checkpoints, one after another; returns their records. A contender
     that fails is recorded with ``failed`` (its checkpoints so far kept) and the next one runs."""
     from camr_engine.bench.longhaul import CUTS, checkpoints, grader
@@ -816,7 +1081,7 @@ def longhaul(specs: Sequence[str], folder: Path = HAUL, *, cuts: Sequence[str] |
     out = []
     for spec in specs:
         c = haul_contender(spec, loader, learn=learn, watch=watch, wake=wake, wording=wording, bits=bits,
-                           disk_gb=disk_gb)
+                           disk_gb=disk_gb, desk=desk, rag=rag, snapshots=snapshots)
         rec = run(c, events, cps, task="longhaul", grader=grader, limit=limit, records=records,
                   folder=memory_folder("longhaul", c.name, memories), progress=progress,
                   meta={"haul": haul_meta(folder), "cuts": names}, raise_failure=False)
@@ -963,6 +1228,7 @@ def parser() -> argparse.ArgumentParser:
     h.add_argument("--limit", type=int, help="at most N questions per checkpoint, every family in turn")
     h.add_argument("--memories", type=Path, default=MEMORIES)
     h.add_argument("--records", type=Path, default=RECORDS)
+    h.add_argument("--snapshots", type=Path, help="keep an APFS clone of the engine's memory at each cut here")
     s = sub.add_parser("speed", help="retrieval and first-word time as the memory grows, during one ingest")
     s.add_argument("--contender", action="append", required=True)
     s.add_argument("--dir", type=Path, default=HAUL)
@@ -983,6 +1249,8 @@ def parser() -> argparse.ArgumentParser:
                        help="how the engine's new rooms keep their notes on the SSD (default: memory.BITS)")
         p.add_argument("--disk-gb", type=float,
                        help="the engine's disk budget for awake room files, in GB (default: 40 GB)")
+        p.add_argument("--desk", help="the engine's desk: rooms=N,tokens=N,order=date|best_last,closest=N")
+        p.add_argument("--rag", help="RAG's retrieval: k=N,budget=N,order=date|score")
         p.add_argument("--wake", action="store_true",
                        help="wake an asleep room the engine asks (its notes written again from its words) instead of "
                             "reading it as words")
@@ -996,13 +1264,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     if a.cmd == "longhaul":
         for r in longhaul(a.contender, a.dir, cuts=a.cuts, limit=a.limit, memories=a.memories, records=a.records,
                           learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits,
-                          disk_gb=a.disk_gb):
+                          disk_gb=a.disk_gb, desk=parse_settings("engine", a.desk), rag=parse_settings("rag", a.rag),
+                          snapshots=a.snapshots):
             print(r.get("path"))
         return 0
     loader = Loader()
     for spec in a.contender:
         c = haul_contender(spec, loader, learn=a.learn, watch=a.watch, wake=a.wake, wording=a.wording, bits=a.bits,
-                           disk_gb=a.disk_gb)
+                           disk_gb=a.disk_gb, desk=parse_settings("engine", a.desk), rag=parse_settings("rag", a.rag))
         r = speed(c, a.dir, memory=memory_folder("speed", c.name, a.memories), marks=a.marks, questions=a.questions,
                   until=cut_tokens(a.until) if a.until else None, records=a.records, raise_failure=False)
         if "failed" in r:
@@ -1011,7 +1280,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
-__all__ = ["BARE_SYSTEM", "DISK_BYTES", "HINTS", "LONGHAUL_INTRO", "MARKS", "METRICS", "MODELS", "RAM_BYTES", "WINDOWS",
+__all__ = ["RAG_K", "RAG_TOKENS", "Rag", "parse_settings", "settings_tag", "view", "BARE_SYSTEM", "DISK_BYTES", "HINTS", "LONGHAUL_INTRO", "MARKS", "METRICS", "MODELS", "RAM_BYTES", "WINDOWS",
            "Bare", "Engine", "Loader", "Words", "haul_contender", "kv_shape", "longhaul", "make", "max_tokens", "parse",
            "rewind", "speed", "speed_questions"]
 

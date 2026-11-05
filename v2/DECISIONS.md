@@ -715,3 +715,48 @@ look held its layer's keys until the answer ended: by our count about 100 MB a w
 café's note-context run the GPU ran out (Metal "Insufficient Memory") at the first step, every time. Each look is now
 evaluated as it is made, and prompt chunks are not looked at at all (nothing reads them). That run now passes 9 of
 10.
+
+## CAMR against conventional RAG on the Long Haul (5 November 2026)
+
+**E-61 Pre-registered before any held-out (seed-1) run: the contenders, the cuts, the metrics, and what counts as
+CAMR beating RAG.** Written after the development memory (seed 2) was told and before any of its questions were
+answered; nothing on seed 1 has been run for this comparison.
+- **Reader and memory, the same for every contender:** Qwen3 4B Instruct 2507 (4-bit, MLX), the Qwen3-Embedding-0.6B
+  embedder, the Long Haul's dated moments (`[YYYY-MM-DD, day N] text`), the yardstick's instructions as the engine
+  reads them (`LONGHAUL_INTRO`), "Today is ...", the family's line, the same questions and the same rule grader. The
+  1 GB MLX buffer cap (E-40) is on for all of them.
+- **Contenders, on the seed-1 Long Haul:**
+  - `rag:qwen3-4b`, conventional RAG (`camr_engine.bench.local.Rag`): ingest embeds each moment and keeps its words;
+    a question is embedded and the 8 closest moments are pasted in as text where the engine's notes go, closest first
+    while they fit **1,024 tokens**, then laid in date order (as the engine re-reads its closest moments). Only the
+    fixed header is already read. 1,024 tokens is the memory CAMR's desk holds: one room of at most 512 tokens plus
+    4 closest moments of about 115 tokens each. Every answer records the memory actually in view, so the match can
+    be checked rather than assumed.
+  - `engine:qwen3-4b` **improved**: the desk chosen on the development memory by the rule below, with a disk budget
+    of 200 GiB (`--disk-gb 200`) so the 4B's 8-bit rooms (about 78 KB a token) stay awake through 2M tokens instead
+    of sleeping past about 0.5M at 40 GB. Its memory is cloned at every cut (`--snapshots`).
+  - `engine:qwen3-4b` **old desk** (one room + 4 closest moments as words), read from those same clones
+    (`camr_engine.bench.desk`), so it differs from the improved one only in the desk. The 4 November record
+    (`071525-longhaul-engine-qwen3-4b.json`: 16-bit notes, 40 GB) stays the "as shipped" history.
+  - `bare:qwen3-4b`, the most recent 64K tokens, the yardstick's own wording, as before.
+- **Cuts:** 64K, 256K and 1M (34, 40 and 69 questions, sample seed 0), and 2M (73) if the time allows. One measuring
+  job on the GPU at a time.
+- **Choosing the improved desk (development only):** the candidates are the desks listed in E-62, read from the
+  seed-2 memory at 256K and 1M (10 questions per family, sample seed 0). The one with the most right answers summed
+  over both cuts is adopted, ties going to the lower first-word p50 at 1M, but only if it beats the old desk by at
+  least 2 answers; otherwise the old desk stays and the improved contender is the old desk with the larger disk
+  budget. Nothing is tuned on seed 1.
+- **Metrics, per cut:** right answers (and by family; stale answers on changed facts; false memories on things never
+  said); first word p50 and p90; total time p50; tokens read as text before the first word (prefill) p50; memory in
+  view p50 (notes already read plus memory read as text); retrieval ms p50; the process's peak footprint
+  (`ri_lifetime_max_phys_footprint`); disk; ingest tokens per second.
+- **What counts as CAMR beating RAG**, metric by metric: more right answers (summed over the cuts run, with an exact
+  two-sided McNemar test on the paired answers; "significantly" only below p = 0.05, otherwise "level"); fewer stale
+  answers; fewer false memories; lower first-word p50 and p90; lower total-time p50; fewer prefill tokens; more
+  memory in view; lower retrieval ms; lower peak footprint; less disk; faster ingest. Each is reported whichever way
+  it goes. Expected before running: RAG wins disk, ingest and retrieval ms; CAMR wins first word and prefill; the
+  answers are open.
+- **The equal-memory curve**, at the seed-1 1M cut: RAG with 512, 1,024, 2,048 and 4,096 tokens of moments (k 64, so
+  the budget binds) and CAMR with as many rooms as fit 512, 1,024, 2,048 and 4,096 tokens of notes, plus the improved
+  desk's closest moments as words. Right answers and first word against the memory in view each measured. Expected:
+  RAG's first word grows with the text it re-reads; CAMR's stays nearly flat.

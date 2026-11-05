@@ -98,6 +98,9 @@ class Contender:
     def close(self) -> None:
         """Let go of the models' memory and save what is kept."""
 
+    def cut_told(self, checkpoint: dict) -> None:
+        """Every event of ``checkpoint`` is told, and its questions come next (a contender may keep a copy)."""
+
     def describe(self) -> dict:
         """The contender's settings, for the record."""
         return {"name": self.name}
@@ -276,6 +279,7 @@ def run(contender: Contender, events: Sequence[dict], checkpoints: Sequence[dict
             told = max(told, cp["events"])
             told_tokens += tokens
             tell_s = time.perf_counter() - t
+            contender.cut_told(cp)
             history = cp.get("tokens") if cp.get("tokens") is not None else told_tokens
             stage = "ask"
             answers, chosen = [], pick(cp["questions"], limit)

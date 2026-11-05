@@ -256,3 +256,17 @@ def footprint_bytes(pid: int | None = None) -> int | None:
         return int(info[9])
     except (OSError, AttributeError):
         return None
+
+
+def peak_footprint_bytes(pid: int | None = None) -> int | None:
+    """The most the process's physical footprint has been since it started (rusage_info_v4's
+    ri_lifetime_max_phys_footprint), or None where macOS's libproc is not."""
+    try:
+        lib = ctypes.CDLL("/usr/lib/libproc.dylib")
+        lib.proc_pid_rusage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
+        info = (ctypes.c_uint64 * 40)()  # rusage_info_v4: 37 numbers, the uuid counted as two
+        if lib.proc_pid_rusage(os.getpid() if pid is None else pid, 4, info) != 0:
+            return None
+        return int(info[30])
+    except (OSError, AttributeError):
+        return None

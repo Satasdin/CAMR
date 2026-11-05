@@ -49,6 +49,9 @@ _SLOT = "⁣NOTES⁣"  # where the room goes; never typed by a person
 ROOM_TOKENS = 512  # at most 57 MB of notes on the 1.7B, inside the 256 MB allowance
 JOIN = 0.80  # how close a moment must be to a room's closest moment to join it
 CLOSEST = 4  # moments re-read as words after the room
+DESK_ROOMS = 1  # rooms laid on the desk as notes: the closest moment's room, and the next closest awake ones
+DESK_ORDERS = ("date", "best_last")  # several rooms on the desk: oldest room first, or the best room nearest the question
+SCAN = 64  # moments looked down for the further rooms of a desk
 ALLOWANCE_BYTES = 256 * 2**20
 BITS = 8  # new rooms' notes on the SSD: 8 bits held the Long Haul's answers (DECISIONS.md, E-54)
 _OWN = object()  # "this memory's own core", as against a core (or None) a session passes in
@@ -73,6 +76,15 @@ class Recall:
     core: int = 0  # core tokens on the desk, between the header and the room
     reach: str | None = None  # whose memory the room is in
     words: int = 0  # memory read as words this answer: an asleep room's moments and the closest ones, in tokens
+    more: list[int] = field(default_factory=list)  # further rooms laid as notes beside the room (desk_rooms > 1)
+    laid: list[int] = field(default_factory=list)  # every room on the desk as notes, in desk order
+    notes: int = 0  # tokens on the desk as notes, after the header and the core
+
+    @property
+    def in_view(self) -> int:
+        """Memory in front of the model for this answer, in tokens: the core and rooms as notes, and every word of
+        memory read as text."""
+        return self.core + self.notes + self.words
 
     @property
     def gbps(self) -> float | None:
@@ -90,8 +102,12 @@ class Memory:
                  closest: int = CLOSEST, allowance: int = ALLOWANCE_BYTES, log: bool = True,
                  notebook: Notebook | None = None, vault: Vault | bool = False, reach: str | None = None,
                  core: Core | bool = False, core_tokens: int = CORE_TOKENS, tiers: Tiers | None = None,
-                 metrics: Meter | bool = False, bits: int = BITS):
+                 metrics: Meter | bool = False, bits: int = BITS, desk_rooms: int = DESK_ROOMS,
+                 desk_tokens: int | None = None, desk_order: str = "date"):
         self.reader, self.embedder, self.closest, self.allowance = reader, embedder, closest, allowance
+        if desk_rooms < 1 or desk_order not in DESK_ORDERS:
+            raise ValueError(f"a desk holds at least one room, laid in one of {DESK_ORDERS}")
+        self.desk_rooms, self.desk_tokens, self.desk_order = desk_rooms, desk_tokens, desk_order
         self.path, self.reach = Path(path), reach
         self.log = EventLog(Path(path) / "events.jsonl") if log else None
         if notebook is None:
@@ -176,35 +192,83 @@ class Memory:
         order = np.argsort(-sims)
         room = self.rooms.rooms[self.rooms.moments[int(order[0])].room]
         closest = sorted(int(m) for m in order[:self.closest])
+        more = self._more_rooms(order, room.rid) if self.desk_rooms > 1 else []
         return Recall(room.rid, closest, room.tokens, self.rooms.room_bytes(room.rid),
-                      seconds={"choose": time.perf_counter() - t}, score=float(sims[int(order[0])]), reach=self.reach)
+                      seconds={"choose": time.perf_counter() - t}, score=float(sims[int(order[0])]), reach=self.reach,
+                      more=more)
+
+    def _more_rooms(self, order, first: int) -> list[int]:
+        """The further rooms for the desk: those holding the next closest moments, in that order, each awake (an
+        asleep room would have to be read as words, which is what notes save), up to ``desk_rooms`` rooms in all
+        and, with ``desk_tokens``, as many tokens of notes."""
+        budget = self.desk_tokens if self.desk_tokens is not None else 10**9
+        total, seen, more = self.rooms.rooms[first].tokens, {first}, []
+        for m in order[:SCAN]:
+            if len(more) + 1 >= self.desk_rooms:
+                break
+            rid = self.rooms.moments[int(m)].room
+            if rid in seen:
+                continue
+            seen.add(rid)
+            if self.tiers is not None and self.tiers.is_asleep(rid):
+                continue
+            n = self.rooms.rooms[rid].tokens
+            if total + n > budget:
+                continue
+            more.append(rid)
+            total += n
+        return more
 
     def recall(self, question: str, *, chosen: Recall | None = None, core: Core | None | object = _OWN) -> Recall:
         """Choose (unless ``chosen`` already did), read the room from the SSD in one burst, and lay it on the desk:
         the header, then the core when there is one, then the room. ``core`` is the core to lay (a session's, or
-        None for none) instead of this memory's own."""
+        None for none) instead of this memory's own. Further rooms (``desk_rooms`` > 1) are read the same way and
+        laid beside it, in ``desk_order``, each slid to its place."""
         rec = self.choose(question) if chosen is None else chosen
         core = self._core(rec, self.core if core is _OWN else core)
         t = time.perf_counter()
+        got: dict[int, object] = {}  # room -> its notes for the desk
         if self.tiers is None:
-            data = self.rooms.fetch([rec.room]) if rec.room is not None else {}
+            rids = [r for r in ([rec.room] if rec.room is not None else []) + list(rec.more)]
+            data = self.rooms.fetch(rids) if rids else {}
             rec.seconds["fetch"] = time.perf_counter() - t
             if data:
-                rec.tier, rec.read_bytes = SSD, len(data[rec.room])
+                rec.tier, rec.read_bytes = SSD, sum(len(b) for b in data.values())
             t = time.perf_counter()
-            rec.desk = self.notebook.desk(core + ([self._array(data[rec.room], rec.room)] if data else []))
-            rec.seconds["desk"] = time.perf_counter() - t
-            return rec
-        got = self.tiers.load(rec.room) if rec.room is not None else None
-        rec.seconds["fetch"] = got.seconds if got is not None else 0.0
-        if got is not None:
-            rec.tier, rec.read_bytes, rec.asleep = got.tier, got.bytes, got.data is None
-            if got.woke:
-                rec.seconds["wake"] = got.wake_s
-        t = time.perf_counter()
-        rec.desk = self.notebook.desk(core + ([got.data] if got is not None and got.data is not None else []))
-        rec.seconds["desk"] = time.perf_counter() - t + (got.convert_s if got is not None else 0.0)
+            got = {r: self._array(b, r) for r, b in data.items()}
+            convert = 0.0
+        else:
+            convert, fetch, wake = 0.0, 0.0, 0.0
+            for i, rid in enumerate(([rec.room] if rec.room is not None else []) + list(rec.more)):
+                r = self.tiers.load(rid)
+                fetch += r.seconds
+                convert += r.convert_s
+                rec.read_bytes += r.bytes
+                if r.woke:
+                    wake += r.wake_s
+                if i == 0:
+                    rec.tier, rec.asleep = r.tier, r.data is None
+                if r.data is not None:
+                    got[rid] = r.data
+            rec.seconds["fetch"] = fetch
+            if wake:
+                rec.seconds["wake"] = wake
+            t = time.perf_counter()
+        rec.laid = self._order([r for r in ([rec.room] if rec.room is not None else []) + list(rec.more) if r in got],
+                               rec.room)
+        rec.notes = sum(self.rooms.rooms[r].tokens for r in rec.laid)
+        rec.desk = self.notebook.desk(core + [got[r] for r in rec.laid])
+        rec.seconds["desk"] = time.perf_counter() - t + convert
         return rec
+
+    def _order(self, rids: list[int], best: int | None) -> list[int]:
+        """Rooms in the order they go on the desk: oldest first ("date"), or the best room last, nearest the
+        question ("best_last")."""
+        if len(rids) < 2:
+            return list(rids)
+        if self.desk_order == "best_last":
+            return [r for r in reversed(rids) if r != best] + [best]
+        return sorted(rids, key=lambda r: self.rooms.rooms[r].members[0] if self.rooms.rooms[r].members else r)
 
     def answer(self, question: str, today: dt.date, *, then: str = "", tools: list | None = None,
                max_tokens: int | None = None, kind: str = "answer", chosen: Recall | None = None,
@@ -231,14 +295,20 @@ class Memory:
         ids = said + rest
         rec.words = len(said) + int(extra.pop("memory_words", 0) or 0)  # and any the caller put in ``then``
         c = rec.core
-        spans = [] if rec.room is None else [(m, c + self.rooms.moments[m].start, self.rooms.moments[m].tokens)
-                                             for m in self.rooms.rooms[rec.room].members]
-        at = c + rec.tokens
+        spans, at = [], c
+        for rid in rec.laid:  # each room's moments where the desk holds them
+            spans += [(m, at + self.rooms.moments[m].start, self.rooms.moments[m].tokens)
+                      for m in self.rooms.rooms[rid].members]
+            at += self.rooms.rooms[rid].tokens
+        if lead:  # an asleep room, read as words just after the desk
+            spans += [(m, at + self.rooms.moments[m].start, self.rooms.moments[m].tokens)
+                      for m in self.rooms.rooms[rec.room].members]
+            at += len(lead)
         for m in rec.closest:  # re-read as words, after the room
             n = len(self.ids(self.rooms.moments[m].text))
             spans.append((m, at, n))
             at += n
-        desk = c + (0 if rec.asleep else rec.tokens)  # tokens on the desk already read, after the header
+        desk = c + rec.notes  # tokens on the desk already read, after the header
         if live is not None:  # what the model still has to read as text, and what it finds already read
             live.add("prefill", tokens=len(ids), memory=rec.words, notes=desk)
         before = time.perf_counter() - t
