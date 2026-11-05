@@ -72,6 +72,7 @@ class Recall:
     asleep: bool = False  # the room's notes were asleep, so its moments are read as words
     core: int = 0  # core tokens on the desk, between the header and the room
     reach: str | None = None  # whose memory the room is in
+    words: int = 0  # memory read as words this answer: an asleep room's moments and the closest ones, in tokens
 
     @property
     def gbps(self) -> float | None:
@@ -226,7 +227,9 @@ class Memory:
                      tier=rec.tier, tokens=rec.tokens, bytes=rec.bytes, read_bytes=rec.read_bytes,
                      asleep=rec.asleep, closest=len(rec.closest), core=rec.core, ms=rec.ms)
         lead = self.room_words(rec.room) if rec.asleep else []  # an asleep room is read as words
-        ids = lead + self.words(rec.closest) + rest
+        said = lead + self.words(rec.closest)
+        ids = said + rest
+        rec.words = len(said) + int(extra.pop("memory_words", 0) or 0)  # and any the caller put in ``then``
         c = rec.core
         spans = [] if rec.room is None else [(m, c + self.rooms.moments[m].start, self.rooms.moments[m].tokens)
                                              for m in self.rooms.rooms[rec.room].members]
@@ -236,6 +239,8 @@ class Memory:
             spans.append((m, at, n))
             at += n
         desk = c + (0 if rec.asleep else rec.tokens)  # tokens on the desk already read, after the header
+        if live is not None:  # what the model still has to read as text, and what it finds already read
+            live.add("prefill", tokens=len(ids), memory=rec.words, notes=desk)
         before = time.perf_counter() - t
         if self.log:
             with Looks(self.reader, self.notebook.p, spans, self.notebook.p + desk + len(ids), rec.desk) as looks:

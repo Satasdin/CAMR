@@ -535,3 +535,111 @@ def test_a_question_naming_someone_in_the_closest_notes_goes_to_memory():
     notes = ["[2025-10-02] Kitengela Ventures' truck KDS 711Z brought the flour."]
     assert named_in("What is the number plate of Kitengela Ventures' delivery truck?", notes)
     assert not named_in("Who wrote Things Fall Apart?", notes)
+
+
+def _until_done(call, jid):
+    import time
+
+    for _ in range(300):
+        got = call(f"/api/live?id={jid}")[1]
+        if got["done"]:
+            return got["events"]
+        time.sleep(0.02)
+    raise AssertionError("the job never finished")
+
+
+def test_memory_modes_answer_from_a_room_from_pasted_text_or_from_nothing(chat):
+    from camr_engine.app.routes.chat import RAG_K, RAG_TOKENS
+
+    app, call = chat
+    call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})
+    call("/api/chat", {"text": "The invoice template lives in the shared drive.", "intent": "tell"})
+    header = app.session.memory().notebook.p
+
+    camr = call("/api/chat", {"text": "Where did Amina move?", "intent": "chat", "memory": "camr"})[1]
+    p = camr["pipeline"]
+    assert camr["route"] == "memory" and camr["mode"] == "camr" and p["mode"] == "camr"
+    assert p["source"]["room"] == 0 and p["source"]["tier"] in ("ram", "ssd") and p["notes_tokens"] > 0
+    assert p["notes_bytes"] > 0 and p["first_word_s"] > 0 and p["memory_text_tokens"] > 0
+    first = app.reader.calls[-1]
+    assert p["prefill_tokens"] == len(first.ids) and first.offset == header + p["notes_tokens"]  # the room, read
+
+    rag = call("/api/chat", {"text": "Where did Amina move?", "intent": "chat", "memory": "rag"})[1]
+    p = rag["pipeline"]
+    assert rag["route"] == "memory" and rag["mode"] == "rag" and rag["reply"] == "ok"
+    chunks = p["source"]["chunks"]
+    assert p["source"]["k"] == RAG_K and p["source"]["budget"] == RAG_TOKENS and 1 <= len(chunks) <= RAG_K
+    assert p["notes_tokens"] == 0 and p["notes_bytes"] == 0 and p["read_bytes"] == 0
+    assert p["memory_text_tokens"] == sum(c["tokens"] for c in chunks) <= RAG_TOKENS
+    last = app.reader.calls[-1]
+    assert last.offset == header and p["prefill_tokens"] == len(last.ids)  # only the fixed header was already read
+    moment = app.session.memory().ids("[2026-01-20] Amina moved to Nakuru.")
+    assert any(last.ids[i:i + len(moment)] == moment for i in range(len(last.ids)))  # the moment, pasted as text
+    assert rag["metric"]["retrieval_ms"]["choose"] == p["retrieval_ms"] and "learned" not in rag
+
+    off = call("/api/chat", {"text": "Where did Amina move?", "intent": "chat", "memory": "off"})[1]
+    p = off["pipeline"]
+    assert off["route"] == "general" and off["mode"] == "off" and p["source"] is None
+    assert p["memory_text_tokens"] == 0 and p["notes_tokens"] == 0 and app.reader.calls[-1].cache is None
+    assert "learned" not in off and app.session.on  # the switch is as it was
+    assert len(app.session.memory().rooms.moments) == 2  # nothing kept by any of them
+
+
+def test_rag_keeps_to_its_budget_and_compare_answers_are_measurements_not_the_talk(chat, monkeypatch):
+    from camr_engine.app.routes import chat as routes
+
+    app, call = chat
+    for i in range(12):
+        call("/api/chat", {"text": f"Amina note {i}: the Nakuru shop opens at {i} o'clock.", "intent": "tell"})
+    monkeypatch.setattr(routes, "RAG_TOKENS", 120)
+    rag = call("/api/chat", {"text": "When does the shop of Amina open?", "intent": "chat", "memory": "rag"})[1]
+    chunks = rag["pipeline"]["source"]["chunks"]
+    assert sum(c["tokens"] for c in chunks) <= 120 and 1 <= len(chunks) < routes.RAG_K
+
+    before = len(app.talk.turns)
+    jobs = [call("/api/chat/message", {"text": "Where is the shop of Amina?", "intent": "chat", "memory": m,
+                                       "compare": True})[1]["id"] for m in ("camr", "rag", "off")]
+    done = []
+    for jid in jobs:
+        events = _until_done(call, jid)
+        kinds = [e["kind"] for e in events]
+        assert "prefill" in kinds and kinds[-1] == "done"
+        done.append(events)
+    camr, rag, off = (e[-1] for e in done)
+    assert [d["pipeline"]["mode"] for d in (camr, rag, off)] == ["camr", "rag", "off"]
+    assert all(d["compare"] and not d.get("learned") for d in (camr, rag, off))
+    assert "room" in [e["kind"] for e in done[0]] and "chunks" in [e["kind"] for e in done[1]]
+    assert not {"room", "chunks"} & {e["kind"] for e in done[2]}
+    chunk_event = next(e for e in done[1] if e["kind"] == "chunks")
+    assert chunk_event["tokens"] == rag["pipeline"]["memory_text_tokens"]
+    assert len(app.talk.turns) == before + 2  # only the CAMR answer joins the conversation
+
+
+def test_a_memory_mode_is_refused_when_it_is_not_one_or_not_for_a_chat(chat):
+    _, call = chat
+    assert call("/api/chat/message", {"text": "Hi", "intent": "chat", "memory": "vectors"})[0] == 400
+    assert call("/api/chat/message", {"text": "Hi", "intent": "tell", "memory": "rag"})[0] == 400
+    assert call("/api/chat", {"text": "Hi", "intent": "ask", "memory": "rag"})[0] == 400
+
+
+def test_a_request_for_code_is_answered_in_full_by_the_model_not_from_memory(chat):
+    from camr_engine.assistant import CODE_TOKENS, wants_code
+
+    app, call = chat
+    assert wants_code("write a python function that reverses a list")
+    assert wants_code("build a one-page café website (html+css)")
+    assert not wants_code("Where did Amina move?") and not wants_code("What is the square root of 56?")
+    seen = []
+    real = app.reader.generate
+
+    def generate(ids, cache=None, max_tokens=None):
+        seen.append(max_tokens)
+        return real(ids, cache, max_tokens)
+
+    app.reader.generate = generate
+    call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})
+    got = call("/api/chat", {"text": "write a python function that sorts Amina's notes", "intent": "chat",
+                             "max_tokens": 300})[1]
+    assert got["route"] == "memory"  # a name from memory still goes there
+    got = call("/api/chat", {"text": "build a one-page café website in html and css", "intent": "chat"})[1]
+    assert got["route"] == "general" and seen[-1] >= CODE_TOKENS

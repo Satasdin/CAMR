@@ -29,8 +29,10 @@ ROUTER = ("Decide whether answering the user's last message needs the assistant'
           "explanations, writing, code help and follow-ups to the conversation are GENERAL. Reply with one word: "
           "MEMORY or GENERAL.")
 SYSTEM = ("You are CAMR, a helpful assistant running on the user's own Mac. Answer clearly and as fully as the "
-          "question needs; show working for maths. If the user asks about their own life, work or project and you "
-          "were not given notes that say, say you don't know rather than guess.")
+          "question needs; show working for maths. When asked for code, write it complete and runnable in fenced "
+          "code blocks that name their language (```python, ```html, ```css), one block per file, with a short "
+          "note on how to run it. If the user asks about their own life, work or project and you were not given "
+          "notes that say, say you don't know rather than guess.")
 MEMORY_RULES = ("This is a conversation, not only a question about the notes: the one-sentence rule above does not "
                 "apply. Use the notes when they are about the question and say the answer plainly. If the question "
                 "is about the user's own life or work and the notes do not say, answer: I don't know.")
@@ -39,6 +41,7 @@ WEB_RULES = ("The user's message carries a web page between <source> markers. An
              "the question, say so.")
 TURNS = 6  # turns of the conversation the model reads
 ANSWER_TOKENS = 700
+CODE_TOKENS = 3000  # a request for code gets room for whole files (a one-page site is about 1,500 tokens)
 THINK_TOKENS = 2400  # a thinking model writes its reasoning first
 SOURCE_CHARS = 6000
 AGENT = "CAMR/0.1 (a local assistant; one page fetched per question)"
@@ -60,6 +63,18 @@ def history_lines(turns: list[dict], n: int = TURNS) -> list[dict]:
     return out
 
 
+_CODE = re.compile(r"\b(code|function|script|class|method|program|regex|sql|snippet|html|css|javascript|"
+                   r"typescript|python|swift|rust|bash|json|api|website|web ?page|landing page|app|bug|refactor|"
+                   r"implement|compile)\b", re.I)
+_ASKS = re.compile(r"\b(write|build|make|create|code|implement|generate|fix|refactor|show me|give me|draft)\b", re.I)
+
+
+def wants_code(question: str) -> bool:
+    """Whether a message asks for code to be written ("write a python function…", "build a one-page site in
+    html+css"): such a request is the model's own work, answered in full in the chat."""
+    return bool(_CODE.search(question) and _ASKS.search(question))
+
+
 def route(reader, question: str, turns: list[dict], closest: str | None = None) -> str:
     """MEMORY or GENERAL, as the model judges it, seeing the closest note in memory. Nothing is reported to a Live:
     the router's word is not an answer."""
@@ -74,7 +89,10 @@ def route(reader, question: str, turns: list[dict], closest: str | None = None) 
 
 COMMON = {"What", "Who", "Where", "When", "Why", "How", "Which", "Is", "Are", "Do", "Does", "Did", "Can", "Could",
           "Should", "Would", "Will", "The", "A", "An", "I", "My", "Our", "Please", "Tell", "Show", "Explain", "Write",
-          "Give", "Now", "And", "But", "In", "On", "Of", "For", "To", "Hello", "Hi", "Thanks", "KES", "OK"}
+          "Give", "Now", "And", "But", "In", "On", "Of", "For", "To", "Hello", "Hi", "Thanks", "KES", "OK",
+          # languages and tools a request for code names: not the user's people or businesses
+          "Python", "HTML", "CSS", "JavaScript", "TypeScript", "SQL", "Swift", "SwiftUI", "Rust", "Go", "Java", "Kotlin",
+          "Bash", "JSON", "React", "Node", "API", "Build", "Create", "Make", "Implement", "Generate", "Fix", "Use"}
 
 
 def names(question: str) -> list[str]:
