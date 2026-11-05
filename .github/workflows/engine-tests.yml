@@ -22,8 +22,14 @@ jobs:
         with: {python-version: "3.12"}
       - name: Install the engine
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,bench,media]"
+      # Hosted runners do not allow the macOS sandbox (sandbox-exec) that the grader and the agent use to run
+      # untrusted code, so those tests run on the developer's Mac only; everything else runs here.
       - name: Run the tests (no model weights are downloaded; tests that need them skip)
         env:
           CAMR_MEASURING: ${{ runner.temp }}/measuring
           HF_HUB_OFFLINE: "1"
-        run: python -m pytest -q
+        run: >-
+          python -m pytest -q
+          --deselect tests/bench/test_haul_grade.py
+          --deselect tests/test_agentic.py::test_a_regular_expression_that_backtracks_stops_and_the_app_keeps_running
+          tests
