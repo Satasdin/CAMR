@@ -1,0 +1,29 @@
+name: Engine tests
+
+on:
+  push:
+    branches: [camr-build]
+    paths: ["v2/**", ".github/workflows/engine-tests.yml"]
+  pull_request:
+    paths: ["v2/**"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: pytest (Apple silicon)
+    runs-on: macos-14
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install the engine
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,bench,media]"
+      - name: Run the tests (no model weights are downloaded; tests that need them skip)
+        env:
+          CAMR_MEASURING: ${{ runner.temp }}/measuring
+          HF_HUB_OFFLINE: "1"
+        run: python -m pytest -q
