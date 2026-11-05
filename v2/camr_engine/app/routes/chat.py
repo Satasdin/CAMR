@@ -513,14 +513,24 @@ class Talk:
             return _pipe("camr", reply, retrieval_ms=0.0, memory_text=0, notes_tokens=0, notes_bytes=0,
                          read_bytes=0, source=None)
         on = shelf_of(rec.reach) if rec.reach else None
-        notes = rec.core + (0 if rec.asleep else rec.tokens)
+        notes = rec.core + rec.notes  # every room laid as notes (the room, and any further rooms of the desk)
+        laid_bytes = sum(home.rooms.room_bytes(r) for r in rec.laid) if (home := self._home_of(session, rec)) else 0
         return _pipe("camr", reply, retrieval_ms=(metric.retrieval_ms.get("total", 0.0) if metric else 0.0),
-                     memory_text=rec.words, notes_tokens=notes, notes_bytes=0 if rec.asleep else rec.bytes,
+                     memory_text=rec.words, notes_tokens=notes, notes_bytes=laid_bytes,
                      read_bytes=rec.read_bytes,
                      source={"room": rec.room, "reach": rec.reach, "shelf": on.name if on else None,
                              "tier": rec.tier, "asleep": rec.asleep, "room_tokens": rec.tokens,
+                             "rooms_laid": len(rec.laid),
                              "core_tokens": rec.core, "closest": len(rec.closest),
                              "score": None if rec.score is None else round(rec.score, 4)})
+
+    @staticmethod
+    def _home_of(session, rec):
+        """The memory a recall's rooms are in (by its reach), or None."""
+        for m in session.memories.values():
+            if m.reach == rec.reach:
+                return m
+        return None
 
     def _top(self, session, text: str, k: int = 5) -> list[str]:
         """The ``k`` moments closest to ``text`` over every memory the session reads, closest first."""

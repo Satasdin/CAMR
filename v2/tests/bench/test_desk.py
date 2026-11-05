@@ -207,3 +207,14 @@ def test_variants_are_named_and_checked():
         dk.parse_variant("bm25:k=3")
     with pytest.raises(ValueError):
         dk.parse_variant("camr:k=3")
+
+
+def test_moments_already_on_the_desk_need_not_be_read_again_as_words(tmp_path):
+    m = rooms_apart(tmp_path / "m", desk_rooms=2, reread="off_desk")
+    m.answer("Who serviced the oven brand?", dt.date(2026, 1, 20))
+    call = m.reader.calls[-1]
+    words = "".join(chr(i - 1) for i in call.ids)
+    assert "Ramtons" not in words and "Otieno" not in words  # both are in the two rooms laid as notes
+    assert "KDA 123X" in words  # a closest moment from a room not on the desk is still read as words
+    with pytest.raises(ValueError):
+        make(tmp_path / "x", reread="some")

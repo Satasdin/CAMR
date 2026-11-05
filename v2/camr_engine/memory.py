@@ -52,6 +52,7 @@ CLOSEST = 4  # moments re-read as words after the room
 DESK_ROOMS = 1  # rooms laid on the desk as notes: the closest moment's room, and the next closest awake ones
 DESK_ORDERS = ("date", "best_last")  # several rooms on the desk: oldest room first, or the best room nearest the question
 SCAN = 64  # moments looked down for the further rooms of a desk
+REREADS = ("all", "off_desk")  # the closest moments re-read as words: all of them, or only those not on the desk
 ALLOWANCE_BYTES = 256 * 2**20
 BITS = 8  # new rooms' notes on the SSD: 8 bits held the Long Haul's answers (DECISIONS.md, E-54)
 _OWN = object()  # "this memory's own core", as against a core (or None) a session passes in
@@ -103,11 +104,13 @@ class Memory:
                  notebook: Notebook | None = None, vault: Vault | bool = False, reach: str | None = None,
                  core: Core | bool = False, core_tokens: int = CORE_TOKENS, tiers: Tiers | None = None,
                  metrics: Meter | bool = False, bits: int = BITS, desk_rooms: int = DESK_ROOMS,
-                 desk_tokens: int | None = None, desk_order: str = "date"):
+                 desk_tokens: int | None = None, desk_order: str = "date", reread: str = "all"):
         self.reader, self.embedder, self.closest, self.allowance = reader, embedder, closest, allowance
         if desk_rooms < 1 or desk_order not in DESK_ORDERS:
             raise ValueError(f"a desk holds at least one room, laid in one of {DESK_ORDERS}")
-        self.desk_rooms, self.desk_tokens, self.desk_order = desk_rooms, desk_tokens, desk_order
+        if reread not in REREADS:
+            raise ValueError(f"reread is one of {REREADS}, not {reread!r}")
+        self.desk_rooms, self.desk_tokens, self.desk_order, self.reread = desk_rooms, desk_tokens, desk_order, reread
         self.path, self.reach = Path(path), reach
         self.log = EventLog(Path(path) / "events.jsonl") if log else None
         if notebook is None:
@@ -291,6 +294,9 @@ class Memory:
                      tier=rec.tier, tokens=rec.tokens, bytes=rec.bytes, read_bytes=rec.read_bytes,
                      asleep=rec.asleep, closest=len(rec.closest), core=rec.core, ms=rec.ms)
         lead = self.room_words(rec.room) if rec.asleep else []  # an asleep room is read as words
+        if self.reread == "off_desk":  # a moment already on the desk as notes is not read again as words
+            on = set(rec.laid)
+            rec.closest = [m for m in rec.closest if self.rooms.moments[m].room not in on]
         said = lead + self.words(rec.closest)
         ids = said + rest
         rec.words = len(said) + int(extra.pop("memory_words", 0) or 0)  # and any the caller put in ``then``

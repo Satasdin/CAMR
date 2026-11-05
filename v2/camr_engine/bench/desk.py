@@ -56,8 +56,9 @@ def snapshot_day(snap: Path) -> dict:
 
 def attach(model: str, snap: Path, *, loader: Loader | None = None, intro: str = LONGHAUL_INTRO,
            **settings) -> Engine:
-    """An engine contender over a saved memory (``<snap>/project/longhaul``), told up to the snapshot's day."""
-    e = Engine(model, loader=loader or Loader(), intro=intro, **settings)
+    """An engine contender over a saved memory (``<snap>/project/longhaul``), told up to the snapshot's day. No disk
+    budget is held while it is asked: its rooms stay awake or asleep exactly as the telling left them."""
+    e = Engine(model, loader=loader or Loader(), intro=intro, disk_bytes=None, **settings)
     e.attach(Path(snap), int(snapshot_day(snap)["day"]))
     return e
 
@@ -90,8 +91,9 @@ def configure(engine: Engine, settings: dict) -> None:
     m.desk_tokens = settings.get("desk_tokens")
     m.desk_order = settings.get("desk_order", "date")
     m.closest = settings.get("closest", CLOSEST)
+    m.reread = settings.get("reread", "all")
     engine.settings = {**{k: v for k, v in engine.settings.items()
-                          if k not in ("desk_rooms", "desk_tokens", "desk_order", "closest")}, **settings}
+                          if k not in ("desk_rooms", "desk_tokens", "desk_order", "closest", "reread")}, **settings}
 
 
 def compare(model: str, snap: Path, haul: Path, cut: str, variants: Sequence[str], *, per_family: int = 10,
