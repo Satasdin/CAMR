@@ -34,11 +34,11 @@ SAME_CLOSE = 0.95  # only this close may a moment be left out as already kept
 
 def source_of(memory, mid: int) -> str:
     """Where a kept moment came from, by its vault note's tags: ``web``, ``file`` (camr_engine.media tags every
-    file's moments), or ``user``. Never guessed from the words."""
+    file's moments), ``model`` (the model's own answer, kept), or ``user``. Never guessed from the words."""
     vault = getattr(memory, "vault", None)
     note = vault.get(vault.moment_id(mid)) if vault is not None else None
     tags = set(note.tags) if note is not None else set()
-    return "web" if "web" in tags else "file" if "file" in tags else "user"
+    return "web" if "web" in tags else "file" if "file" in tags else "model" if "model" in tags else "user"
 
 
 def closest(memory, text: str, embedder, source: str = "user") -> tuple[int, float] | None:

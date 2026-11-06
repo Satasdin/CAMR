@@ -91,9 +91,10 @@ struct PreviewDock: View {
     }
 }
 
-/// A page a model wrote is untrusted, and it may run scripts. So it runs shut in: nothing on the network or the disk
-/// can be reached (a content rule list, in place before anything loads, and a content security policy in the page),
-/// and it cannot navigate away. If the rules cannot be compiled, nothing is loaded.
+/// A page a model wrote is untrusted, and it may run scripts. So it runs shut in: a content rule list (in place before
+/// anything loads; if it cannot be compiled, nothing loads), a content security policy in the page, WebRTC removed
+/// before the page's script runs, and no navigating away. These are layers inside a process that does have network
+/// access, not a boundary around it: what they stop is what was tried against them.
 struct PageView: NSViewRepresentable {
     let code: String
     let loads: Int
@@ -182,6 +183,15 @@ struct PageView: NSViewRepresentable {
         }, true);
         """
         cfg.userContentController.addUserScript(WKUserScript(source: watch, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        // WebRTC opens connections that neither the rule list nor the page's policy can see: it is gone before any of
+        // the page's own script runs, and cannot be put back
+        let noPeers = """
+        for (const name of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel', 'RTCSessionDescription',
+                            'RTCIceCandidate', 'WebTransport']) {
+          try { Object.defineProperty(window, name, {value: undefined, writable: false, configurable: false}); } catch (e) {}
+        }
+        """
+        cfg.userContentController.addUserScript(WKUserScript(source: noPeers, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         cfg.userContentController.add(context.coordinator, name: "page")
         let web = WKWebView(frame: .zero, configuration: cfg)
         let guardian = context.coordinator

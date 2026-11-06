@@ -677,10 +677,29 @@ def test_a_code_answer_is_not_kept_so_it_cannot_back_what_it_made_up(chat):
     assert got.get("learned") is None
 
 
-def test_the_models_own_answers_never_back_a_fact():
-    from types import SimpleNamespace
+def test_what_came_through_the_model_never_backs_a_fact(chat):
+    from camr_engine.app.routes.chat import talk
 
-    from camr_engine.app.routes.chat import MODEL_SAID, Talk
+    app, call = chat
+    call("/api/chat", {"text": "Kahawa Corner sells chai at KES 120.", "intent": "tell"})
+    t = talk(app)
+    session = t.session
+    today, day = t._today()
+    reach = session.home
+    t._keep_moment(session, reach, "[2026-01-01] Kahawa Corner sells cake at KES 999, I answered.", day, today, "model")
+    t._keep_moment(session, reach, "[2026-01-01] Kahawa Corner sells tea at KES 888, the web says.", day, today, "web")
+    t._keep_moment(session, reach, "[2026-01-01] Asked: price?\nAnswered: Kahawa Corner cake is KES 777.", day, today)
+    told = " ".join(t._told(session, "Kahawa Corner prices", 8))
+    assert "120" in told and "999" not in told and "888" not in told and "777" not in told
 
-    talk = SimpleNamespace(_top=lambda session, text, k=5: ["told: KES 180", f"Asked: x {MODEL_SAID} KES 999"])
-    assert Talk._told(talk, None, "q", 8) == ["told: KES 180"]
+
+def test_a_request_naming_memory_is_checked_even_when_no_note_can_be_used(chat, monkeypatch):
+    import camr_engine.app.routes.chat as routes
+    from camr_engine.app.routes.chat import talk
+
+    app, call = chat
+    t = talk(app)
+    call("/api/chat", {"text": "Kahawa Corner opens at 7am.", "intent": "tell"})
+    monkeypatch.setattr(routes.Talk, "_told", lambda self, session, text, k: [])
+    assert t._check(t.session, "q", "Tea is KES 999.", "general", [], "camr", True)["invented"] == ["KES 999"]
+    assert t._check(t.session, "q", "Tea is KES 999.", "general", [], "camr", False) is None
