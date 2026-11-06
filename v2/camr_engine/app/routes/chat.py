@@ -63,18 +63,7 @@ MODES = ("camr", "rag", "off")  # how a chat message reads memory
 RAG_K = 8  # conventional RAG: the closest moments pasted in as text…
 RAG_TOKENS = 1024  # …up to this many tokens: what CAMR lays in front of the model, one room (at most ROOM_TOKENS,
 # 512, as notes) and its 4 closest moments as words (about 128 tokens each in the Long Haul), all as text
-EYES = "mlx-community/Qwen3-VL-4B-Thinking-4bit"  # sees and reasons: reads images and video frames into memory
-
-
-def eyes_ready() -> bool:
-    """Whether the vision model is on this Mac (never a download from here)."""
-    try:
-        from huggingface_hub import snapshot_download
-
-        snapshot_download(EYES, local_files_only=True)
-        return True
-    except Exception:  # noqa: BLE001
-        return False
+SEEN = (".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif", ".mp4", ".mov", ".m4v")  # read by the app's own OCR
 
 
 def _measuring() -> dict | None:
@@ -584,19 +573,21 @@ class Talk:
             return {"reach": reach.label, "shelf": on.name if on else None, "moment": rv["old"], "revised": "same"}
         return {"reach": reach.label, "shelf": on.name if on else None, "moment": m.mid, "revised": rv["verdict"]}
 
-    def attach(self, path: str, shelf: str | None = None) -> dict:
+    def attach(self, path: str, shelf: str | None = None, given: list[dict] | None = None) -> dict:
         """Read a file into memory: a PDF page by page (camr_engine.media), a text or Markdown file in pieces. An
-        image or a video needs a model that can see, which this chat's text model cannot: it is refused, saying so."""
+        image or a video is read by the Mac app itself, with the Mac's own text recognition (no vision model is
+        loaded here): ``given`` carries what it read (camr_engine.media.read_given), and the file is kept beside
+        the moments as a PDF is. A PDF's scanned pages may come read the same way."""
         from camr_engine import media
 
         f = Path(path).expanduser()
         if not f.is_file():
             raise Refused(404, "no such file")
         kind = f.suffix.lower()
-        seen = kind in (".png", ".jpg", ".jpeg", ".webp", ".heic", ".mp4", ".mov", ".m4v")
-        if seen and not eyes_ready():
-            raise Refused(409, f"{f.name} needs a model that can see: download {EYES} (about 3 GB) to read images "
-                               "and videos. PDFs, text and Markdown files can be read now.")
+        seen = kind in SEEN
+        if seen and given is None:
+            raise Refused(409, f"{f.name}: images and videos are read with the Mac's on-device text recognition; "
+                               "attach them in the CAMR app. PDFs, text and Markdown files can be read here.")
         if not seen and kind not in (".pdf", ".txt", ".md", ".markdown"):
             raise Refused(415, "a PDF, image, video, text or Markdown file")
         _not_measuring()
@@ -611,12 +602,15 @@ class Talk:
                 if target == "auto":
                     if self.sorter is None:
                         self.sorter = Sorter(session.embedder)
-                    head = f.read_text(errors="ignore")[:1500] if kind != ".pdf" else f.name
+                    if seen:
+                        head = " ".join(str(g.get("text") or "") for g in given)[:1500]
+                    else:
+                        head = f.read_text(errors="ignore")[:1500] if kind != ".pdf" else f.name
                     target = self.sorter.sort(f"{f.stem} {head}").name
                 reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
                 m = session.memory(reach)
-                if kind == ".pdf" or seen:  # the vision model reads images and video frames; a PDF its text, at once
-                    kept = media.ingest(f, m, day=day, date=today, describe=self._eyes() if seen else None,
+                if kind == ".pdf" or seen:  # the app read images, frames and scanned pages; a PDF's text here
+                    kept = media.ingest(f, m, day=day, date=today, given=given, tags=["ocr"] if given else (),
                                         stamp=lambda t: f"[{today.isoformat()}] From the file {f.name}, not something "
                                                         f"the user said: {t}")
                 else:
@@ -635,14 +629,6 @@ class Talk:
         self._keep({"who": "you", "text": f"(attached {f.name})", "intent": "attach", "at": _now()})
         self._keep({"who": "camr", "reply": f"Read {f.name}: {out['moments']} pieces kept.", **out, "at": _now()})
         return out
-
-    def _eyes(self):
-        """The vision model that reads images for memory, loaded the first time a file needs it."""
-        if getattr(self, "seer", None) is None:
-            from camr_engine.models import Seer
-
-            self.seer = Seer(EYES)
-        return self.seer.describe
 
     def _tell(self, session, text: str, today: dt.date, day: int, shelf: str | None = None) -> dict:
         if not session.on:
@@ -1032,7 +1018,10 @@ def register(routes: Routes) -> None:
         shelf = req.str("shelf", limit=20) or None
         if shelf is not None and shelf != "auto" and shelf not in BY_NAME:
             raise Refused(400, f"a shelf is auto or one of {', '.join(BY_NAME)}")
-        return t.attach(req.str("path", limit=1024), shelf)
+        given = req.body.get("read")
+        if given is not None and (not isinstance(given, list) or not all(isinstance(g, dict) for g in given)):
+            raise Refused(400, "read is a list of what was read: {text, labels, at_s or page}")
+        return t.attach(req.str("path", limit=1024), shelf, given)
 
     @routes.post("/api/live/stop")
     def live_stop(req: Request) -> dict:

@@ -71,6 +71,7 @@ final class World: ObservableObject {
         if let m = MODELS.first(where: { $0.id == wanted || $0.name == wanted }) { engine.model = m }
         engine.start()
         Script.startShots()
+        Script.startHangWatch()
     }
 
     func pick(_ m: ModelChoice) {
@@ -156,9 +157,9 @@ struct RootView: View {
                 HStack(spacing: 6) {
                     Text(engine.model.note).font(Theme.mono(10)).foregroundStyle(Theme.faint)
                     Spacer()
-                    Label("eyes: Qwen3-VL 4B Thinking", systemImage: "eye").font(Theme.mono(9))
+                    Label("images: on-device OCR", systemImage: "text.viewfinder").font(Theme.mono(9))
                         .foregroundStyle(Theme.faint)
-                        .help("Images and videos dropped on the chat are read by a vision model that reasons")
+                        .help("Images, video frames and scanned pages dropped on the chat are read on this Mac by Apple's own text recognition; no vision model is loaded")
                 }
             }
 

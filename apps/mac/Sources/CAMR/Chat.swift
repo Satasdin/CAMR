@@ -330,10 +330,20 @@ final class ChatModel: ObservableObject {
             turns.append(Turn(who: .camr, text: "Reading \(url.lastPathComponent)…", pending: true))
             let k = turns.count - 1
             do {
-                let got = try await engine.post("/api/chat/attach", ["path": url.path, "shelf": shelf])
+                // an image, a video's frames or a scanned page: read here with the Mac's own text recognition, off
+                // the main thread; the engine is sent the words (it loads no vision model)
+                let t0 = Date()
+                let read = await Task.detached(priority: .userInitiated) { await OCR.read(url) }.value
+                let ocr = Date().timeIntervalSince(t0)
+                var body: [String: Any] = ["path": url.path, "shelf": shelf]
+                if let read { body["read"] = read }
+                let got = try await engine.post("/api/chat/attach", body)
                 let n = Int(got.num("moments") ?? 0)
                 let on = shelves.first(where: { $0.name == got.str("shelf") })?.label
                 turns[k].text = "Read \(url.lastPathComponent): \(n) piece\(n == 1 ? "" : "s") kept" + (on.map { " on the \($0) shelf." } ?? ".")
+                if read != nil {
+                    turns[k].meta = String(format: "read on this Mac with on-device OCR in %.2f s", ocr)
+                }
             } catch {
                 turns[k].text = error.localizedDescription
                 turns[k].failed = true
@@ -508,7 +518,7 @@ struct ChatView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 Button { chat.attach() } label: { Image(systemName: "paperclip").font(.system(size: 15, weight: .semibold)) }
                     .buttonStyle(.plain).foregroundStyle(Theme.dim).padding(.bottom, 12)
-                    .help("Read a PDF, text or Markdown file into memory")
+                    .help("Read a PDF, image, video, text or Markdown file into memory (images on this Mac, with on-device OCR)")
                 TextField(engine.phase == .ready ? "Ask anything, ask for code, remember something, or compare…"
                           : "Loading the model…", text: $chat.draft, axis: .vertical)
                     .textFieldStyle(.plain)

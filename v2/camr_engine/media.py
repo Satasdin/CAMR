@@ -12,6 +12,11 @@ and which page or frame it came from.
 ``CAPTION``) and returns words. ``camr_engine.models.Seer.describe`` is the MLX one; the media benchmark also uses
 Ollama's. Without ``describe``, only a PDF's text can be read.
 
+The Mac app loads no vision model: it reads an image, a video's frames and a scanned PDF page itself, with Apple's
+on-device text recognition (the Vision framework), and hands the words over as ``given`` (``read_given``): for each
+image, frame or page its text, a few labels for what it shows, and its time or page. The moments say the same as a
+vision model's would ("File x.jpg, an image. ... Written in it: ...").
+
 The original file is copied into the memory's vault, under ``files/`` (Obsidian shows it beside the notes), with
 the frames a video was read from. ``files/sources.jsonl`` says, for every moment, which file, page or frame it came
 from and where the copy is; the moment's own words start with the same, so the reader and a person both see it.
@@ -23,7 +28,7 @@ for words alone. So a look reads the room's moments as words (DECISIONS.md, E-44
 
 The app calls one function:
 
-    ingest(path, memory, *, describe=None, day, date=None, stamp=None, tags=()) -> list[str]
+    ingest(path, memory, *, describe=None, given=None, day, date=None, stamp=None, tags=()) -> list[str]
 """
 
 from __future__ import annotations
@@ -216,6 +221,44 @@ def read(path: Path | str, *, describe: Describe | None = None, folder: Path | N
     return [Piece(image_words(path.name, path, describe), IMAGE, image=path)]
 
 
+MAX_GIVEN = 60  # images, frames or pages read by the app, at most, for one file
+GIVEN_CHARS = 6000  # characters of one image's, frame's or page's text, at most
+
+
+def _given_words(head: str, item: dict) -> str:
+    text = _clean(str(item.get("text") or ""))[:GIVEN_CHARS]
+    labels = [" ".join(str(x).split()) for x in (item.get("labels") or []) if str(x).strip()][:6]
+    if not text and not labels:
+        return ""
+    out = head + (f" It shows: {', '.join(labels)}." if labels else "")
+    return out + (f"\nWritten in it:\n{text}" if text else "")
+
+
+def read_given(path: Path | str, given: list[dict]) -> list[Piece]:
+    """The moments of an image, a video or a PDF's scanned pages from what the app read on the Mac (its OCR): each
+    item is ``{"text", "labels", "at_s"}`` for an image or a frame, ``{"text", "labels", "page", "pages"}`` for a
+    page. An item with no text and no labels gives nothing."""
+    path = Path(path)
+    kind = kind_of(path)
+    out = []
+    for item in list(given or [])[:MAX_GIVEN]:
+        if not isinstance(item, dict):
+            continue
+        if kind == VIDEO:
+            at = float(item.get("at_s") or 0.0)
+            words = _given_words(f"File {path.name}, a video, the frame at {clock(at)}.", item)
+            piece = Piece(words, VIDEO, at_s=round(at, 2))
+        elif kind == PDF:
+            page, pages = int(item.get("page") or 0), int(item.get("pages") or 0)
+            words = _given_words(f"File {path.name}, a PDF, page {page} of {pages}, a scan.", item)
+            piece = Piece(words, PDF, page, pages)
+        else:
+            piece = Piece(_given_words(f"File {path.name}, an image.", item), IMAGE, image=path)
+        if piece.text:
+            out.append(piece)
+    return out
+
+
 def files_folder(memory) -> Path:
     """Where a memory keeps its files: ``files/`` in its vault, or in its own folder when it has no vault."""
     vault = getattr(memory, "vault", None)
@@ -234,12 +277,14 @@ def _safe(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") or "file"
 
 
-def ingest(path: Path | str, memory, *, describe: Describe | None = None, day: int, date: dt.date | None = None,
-           stamp: Callable[[str], str] | None = None, tags: Iterable[str] = ()) -> list[str]:
+def ingest(path: Path | str, memory, *, describe: Describe | None = None, given: list[dict] | None = None, day: int,
+           date: dt.date | None = None, stamp: Callable[[str], str] | None = None, tags: Iterable[str] = ()
+           ) -> list[str]:
     """Remember a PDF, an image or a video as moments, and keep the file. Returns each moment's words, as kept.
 
-    ``describe`` reads images (see the module's docstring); ``day`` and ``date`` are the moments' own, as
-    ``Memory.remember`` takes them; ``stamp`` turns a moment's words into what is kept (the Long Haul dates every
+    ``describe`` reads images (see the module's docstring); ``given`` is what the app already read in an image, a
+    video's frames or a PDF's scanned pages (``read_given``), used instead of ``describe``; ``day`` and ``date``
+    are the moments' own, as ``Memory.remember`` takes them; ``stamp`` turns a moment's words into what is kept (the Long Haul dates every
     moment, ``[YYYY-MM-DD, day N] ...``); ``tags`` go on every moment's vault note, with "file" and its kind.
 
     The file is copied into the memory's ``files/`` folder (named by its hash, so the same file is kept once), and
@@ -253,7 +298,14 @@ def ingest(path: Path | str, memory, *, describe: Describe | None = None, day: i
     if not copy.exists():
         shutil.copy2(path, copy)
     t = time.perf_counter()
-    pieces = read(path, describe=describe, folder=folder / f"{digest}-frames")
+    if given is not None and kind != PDF:
+        pieces = read_given(path, given)
+    else:
+        pieces = read(path, describe=describe, folder=folder / f"{digest}-frames")
+        if given:  # a PDF's pages with no text in them (scans), as the app read them
+            have = {p.page for p in pieces}
+            pieces = sorted(pieces + [p for p in read_given(path, given) if p.page not in have],
+                            key=lambda p: p.page or 0)
     read_s = time.perf_counter() - t
     out = []
     with open(folder / SOURCES, "a", encoding="utf-8") as log:

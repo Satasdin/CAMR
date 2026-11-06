@@ -42,8 +42,9 @@ struct SettingsView: View {
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                 }
             }
-            Section("Eyes") {
-                LabeledContent("Images and videos are read by", value: "Qwen3-VL 4B Thinking (sees and reasons)")
+            Section("Images") {
+                LabeledContent("Images, video frames and scanned pages are read by",
+                               value: "the Mac's on-device text recognition (Vision)")
             }
         }
         .formStyle(.grouped)

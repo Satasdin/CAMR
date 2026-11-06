@@ -150,3 +150,25 @@ def test_the_sources_log_survives_a_bad_line(tmp_path):
     assert list(media.sources(m)) == [0]
     assert json.loads((media.files_folder(m) / media.SOURCES).read_text().splitlines()[0])["moment"] == 0
     m.close()
+
+
+def test_what_the_app_read_with_the_macs_own_ocr_is_kept_as_a_vision_model_would_say_it(tmp_path):
+    m = memory(tmp_path / "mem")
+    photo = png(tmp_path / "receipt.png")
+    kept = media.ingest(photo, m, day=DAY, date=DATE, tags=["ocr"],
+                        given=[{"text": "TOTAL  KES 1,250", "labels": ["receipt", "paper"]}])
+    assert kept == ["File receipt.png, an image. It shows: receipt, paper.\nWritten in it:\nTOTAL KES 1,250"]
+    assert (media.files_folder(m) / media.SOURCES).exists()
+    clip = tmp_path / "board.mp4"
+    clip.write_bytes(b"not decoded here: the app read its frames")
+    frames = media.read_given(clip, [{"text": "Step 1", "at_s": 0}, {"text": "", "labels": [], "at_s": 2},
+                                     {"text": "Step 2", "labels": ["whiteboard"], "at_s": 64.0}])
+    assert [p.text for p in frames] == ["File board.mp4, a video, the frame at 0:00.\nWritten in it:\nStep 1",
+                                        "File board.mp4, a video, the frame at 1:04. It shows: whiteboard.\n"
+                                        "Written in it:\nStep 2"]
+    scan = pdf(tmp_path / "scan.pdf", ["Typed page.", ""])  # page 2 has no text layer: the app read it
+    kept = media.ingest(scan, m, day=DAY, date=DATE,
+                        given=[{"text": "Handwritten: pay rent", "page": 2, "pages": 2},
+                               {"text": "ignored: page 1 has text", "page": 1, "pages": 2}])
+    assert kept == ["File scan.pdf, a PDF, page 1 of 2:\nTyped page.",
+                    "File scan.pdf, a PDF, page 2 of 2, a scan.\nWritten in it:\nHandwritten: pay rent"]

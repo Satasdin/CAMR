@@ -486,10 +486,7 @@ def test_the_assistant_routes_thinks_researches_and_learns(tmp_path, looks, monk
         app.talk.close()
 
 
-def test_a_text_file_is_read_onto_a_shelf_and_an_image_is_refused_by_a_text_model(chat, tmp_path, monkeypatch):
-    from camr_engine.app.routes import chat as routes
-
-    monkeypatch.setattr(routes, "eyes_ready", lambda: False)  # no vision model on this Mac
+def test_a_text_file_is_read_onto_a_shelf_and_an_image_comes_read_by_the_app(chat, tmp_path):
     app, call = chat
     call("/api/chat/state")
     call("/api/chat/settings", {"shelf": "research"})
@@ -499,8 +496,15 @@ def test_a_text_file_is_read_onto_a_shelf_and_an_image_is_refused_by_a_text_mode
     assert got["file"] == "reading.md" and got["moments"] >= 2 and got["shelf"] == "research"
     photo = tmp_path / "receipt.png"
     photo.write_bytes(b"\x89PNG")
-    status, why = call("/api/chat/attach", {"path": str(photo)})
-    assert status == 409 and "can see" in why["error"]
+    status, why = call("/api/chat/attach", {"path": str(photo)})  # no vision model here: the app reads images
+    assert status == 409 and "on-device text recognition" in why["error"]
+    read = [{"text": "MAMA OLIECH CAFE\nPilau 450\nTOTAL KES 1,250", "labels": ["receipt", "paper"]}]
+    got = call("/api/chat/attach", {"path": str(photo), "read": read})[1]
+    assert got["file"] == "receipt.png" and got["moments"] == 1 and got["shelf"] == "research"
+    kept = [m.text for m in app.session.memory(app.session._reach("project:research")).rooms.moments]
+    assert any("receipt.png, an image. It shows: receipt, paper." in t and "TOTAL KES 1,250" in t for t in kept)
+    assert call("/api/chat/attach", {"path": str(photo), "read": "nope"})[0] == 400
+    assert not hasattr(app.talk, "seer")  # no vision model was loaded
     assert call("/api/chat/attach", {"path": str(tmp_path / "nope.pdf")})[0] == 404
 
 

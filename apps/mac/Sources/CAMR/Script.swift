@@ -92,6 +92,39 @@ enum Script {
         }
     }
 
+    /// CAMR_HANG_LOG=path: a watchdog for measuring. Every 20 ms a thread asks the main thread to run an empty block
+    /// and times how long that took; once a second it appends one line to the file: seconds since launch, the
+    /// longest wait that second (ms), and the main thread's stall time that second (the waits of 50 ms or more).
+    nonisolated static func startHangWatch() {
+        guard let path = ProcessInfo.processInfo.environment["CAMR_HANG_LOG"] else { return }
+        FileManager.default.createFile(atPath: path, contents: nil)
+        guard let out = FileHandle(forWritingAtPath: path) else { return }
+        let thread = Thread {
+            let start = DispatchTime.now().uptimeNanoseconds
+            var second = 0, worst = 0.0, stalled = 0.0
+            while true {
+                let t0 = DispatchTime.now().uptimeNanoseconds
+                let sem = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async { sem.signal() }
+                sem.wait()
+                let now = DispatchTime.now().uptimeNanoseconds
+                let ms = Double(now - t0) / 1e6
+                worst = max(worst, ms)
+                if ms >= 50 { stalled += ms }
+                let s = Int((now - start) / 1_000_000_000)
+                if s != second {
+                    out.write(String(format: "%d %.1f %.1f\n", second, worst, stalled).data(using: .utf8)!)
+                    second = s
+                    worst = 0
+                    stalled = 0
+                }
+                usleep(20_000)
+            }
+        }
+        thread.qualityOfService = .userInteractive
+        thread.start()
+    }
+
     /// The window as drawn now, saved as a PNG.
     static func snapshot(_ url: URL) {
         guard let view = NSApp.windows.first(where: { $0.isVisible })?.contentView else { return }
