@@ -644,6 +644,6 @@ def test_a_request_for_code_is_answered_in_full_by_the_model_not_from_memory(cha
     call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})
     got = call("/api/chat", {"text": "write a python function that sorts Amina's notes", "intent": "chat",
                              "max_tokens": 300})[1]
-    assert got["route"] == "memory"  # a name from memory still goes there
+    assert got["route"] == "general" and got["check"] is not None  # written in full, from the notes it names, and checked
     got = call("/api/chat", {"text": "build a one-page café website in html and css", "intent": "chat"})[1]
     assert got["route"] == "general" and seen[-1] >= CODE_TOKENS

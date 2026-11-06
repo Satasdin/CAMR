@@ -35,7 +35,7 @@ class Live:
         self.first = 0  # the index of events[0], once early ones are dropped
         self.done = False
         self.stopped = False  # asked to stop: a model writing for this job ends at its next word
-        self.layers = True  # measure each layer for each word (only a view on screen needs it; it costs time)
+        self.layer_every = 1  # measure the layers on every Nth word: 1 for the tensor view, more for the band
         self.t0 = time.perf_counter()
         self.lock = threading.Lock()
 
@@ -143,6 +143,13 @@ def measuring_layers(on: bool = True):
         yield
     finally:
         _here.layers = before
+
+
+def next_word_measured(on: bool) -> None:
+    """Whether the layers are measured for the next word (measuring costs time, so a band need not see each word)."""
+    if getattr(_here, "layers", None) is None and not on:
+        return
+    _here.layers = {} if on else None
 
 
 def taken() -> list[list[float]] | None:

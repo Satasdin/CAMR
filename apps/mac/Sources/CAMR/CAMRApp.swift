@@ -98,9 +98,11 @@ struct RootView: View {
             }
             ZStack {
                 ChatView(chat: chat, engine: engine)
+                WindowEdge(w: weights)
                 if case .failed(let why) = engine.phase { failure(why) }
             }
             .frame(minWidth: 480)
+            PreviewDock(center: PreviewCenter.shared)
             if world.expanded {
                 Rectangle().fill(Theme.line).frame(width: 1)
                 VStack(alignment: .leading, spacing: 12) {

@@ -77,18 +77,21 @@ class Reader:
     def generate(self, ids: list[int], cache=None, max_tokens: int | None = None) -> Reply:
         from mlx_lm import stream_generate
 
-        from camr_engine.live import current, measuring_layers, taken
+        from camr_engine.live import current, measuring_layers, next_word_measured, taken
 
         t0 = time.perf_counter()
         first, pieces, r = None, [], None
         live = current()
-        with measuring_layers(live is None or live.layers):
+        every = live.layer_every if live is not None else 1
+        with measuring_layers():
             for r in stream_generate(self.model, self.tok, ids, max_tokens=max_tokens or self.max_tokens,
                                      prompt_cache=cache):
                 first = first or time.perf_counter() - t0
                 pieces.append(r.text)
                 if live is not None:
                     live.add("token", n=len(pieces), text=r.text, layers=taken())
+                    if every > 1:
+                        next_word_measured(len(pieces) % every == 0)
                     if live.stopped:  # the person pressed Stop
                         break
         return Reply("".join(pieces).strip(), first or 0.0, r.generation_tps if r else 0.0, len(ids),
@@ -103,7 +106,7 @@ class Reader:
 
         cache = make_prompt_cache(self.model)
         live = current()
-        with measuring_layers(live is None or live.layers):
+        with measuring_layers(live is None or live.layer_every == 1):
             for i in range(0, len(ids), PREFILL_STEP):
                 self.model(mx.array(ids[i:i + PREFILL_STEP])[None], cache=cache)
                 mx.eval([c.state for c in cache])

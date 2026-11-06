@@ -126,6 +126,17 @@ final class WeightsModel: ObservableObject {
 
     /// Called once a second while the view is on screen: what the timeline is paused by can change with nothing
     /// published (the last layers of a load drain inside ``tick``), and it only reads ``idle`` when redrawn.
+    /// Each layer's activity now, 0 to 1, for the band under the chat box and the window's edge.
+    var levels: [Float] { act.map { row in row.isEmpty ? 0 : min(1, row.reduce(0, +) / Float(row.count) * 3) } }
+    var level: Float {
+        let l = levels
+        return l.isEmpty ? 0 : l.reduce(0, +) / Float(l.count)
+    }
+    var memoryFlash: Double {
+        guard let at = roomAt else { return 0 }
+        return max(0, 1 - Date().timeIntervalSince(at) / 1.4)
+    }
+
     func recheckIdle() {
         guard idle != idleShown else { return }
         idleShown = idle
@@ -761,5 +772,64 @@ struct WeightsView: View {
     private func point(_ a: CGPoint, _ c: CGPoint, _ b: CGPoint, _ t: Double) -> CGPoint {
         let u = 1 - t
         return CGPoint(x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y)
+    }
+}
+
+/// The model at work, always in view and small: one bar per layer under the chat box, lit by what the engine measured.
+/// A room read from memory crosses it in cyan, the model's own work is amber, and at rest it is a thin line.
+struct ModelBand: View {
+    @ObservedObject var w: WeightsModel
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 20, paused: w.idle)) { tl in
+            let _ = w.watched ? () : w.tick(tl.date)
+            let flash = w.memoryFlash
+            Canvas { ctx, size in
+                let levels = w.levels
+                let n = max(levels.count, 1)
+                let gap: CGFloat = 2
+                let bw = max(1, (size.width - gap * CGFloat(n - 1)) / CGFloat(n))
+                for i in 0..<n {
+                    let v = CGFloat(i < levels.count ? levels[i] : 0)
+                    let h = max(1.5, v * size.height)
+                    let r = CGRect(x: CGFloat(i) * (bw + gap), y: size.height - h, width: bw, height: h)
+                    ctx.fill(Path(roundedRect: r, cornerRadius: 1), with: .color(Theme.model.opacity(0.25 + 0.75 * Double(v))))
+                }
+                if flash > 0 {  // the room arriving, from the first layer to the last
+                    let x = size.width * CGFloat(1 - flash)
+                    let r = CGRect(x: max(0, x - 40), y: 0, width: 40, height: size.height)
+                    ctx.fill(Path(r), with: .linearGradient(Gradient(colors: [Theme.memory.opacity(0), Theme.memory.opacity(0.9 * flash)]),
+                                                            startPoint: CGPoint(x: r.minX, y: 0), endPoint: CGPoint(x: r.maxX, y: 0)))
+                }
+            }
+            .frame(height: 22)
+            .overlay(alignment: .topTrailing) {
+                Text(caption).font(Theme.mono(9)).foregroundStyle(Theme.faint).padding(.top, -12)
+            }
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in w.recheckIdle() }
+        .help("The model's layers, measured by the engine as it writes. Cyan is memory being read; amber is the model working.")
+    }
+
+    private var caption: String {
+        if w.loading { return "loading the model" }
+        guard w.answering else { return "\(w.layers) layers at rest" }
+        if w.words == 0 { return w.room.map { "reading note \($0)" } ?? "reading" }
+        return "writing · \(w.words) words"
+    }
+}
+
+/// The whole window answers the model: its edge glows amber as the model works and cyan as a room is read.
+struct WindowEdge: View {
+    @ObservedObject var w: WeightsModel
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 20, paused: w.idle)) { _ in
+            let flash = w.memoryFlash
+            let working = w.answering ? 0.25 + 0.75 * Double(w.level) : 0
+            Rectangle()
+                .strokeBorder(flash > 0.05 ? Theme.memory.opacity(flash) : Theme.model.opacity(working), lineWidth: 2)
+        }
+        .allowsHitTesting(false)
     }
 }

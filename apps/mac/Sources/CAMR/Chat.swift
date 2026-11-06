@@ -19,6 +19,8 @@ struct Turn: Identifiable {
     var thinkEnd: Date?
     var pipe: Measured?  // how this answer read memory, as the engine measured it
     var runs: [Run] = []  // a comparison: the same question answered by CAMR, RAG and the model alone
+    var checked = 0  // the fact check: how many facts it looked up in memory…
+    var unbacked: [String] = []  // …and those memory does not hold
 }
 
 /// One answer's pipeline, as the engine measured it (camr_engine.app.routes.chat, ``pipeline``).
@@ -461,6 +463,10 @@ final class ChatModel: ObservableObject {
             turns[k].text = reply.trimmingCharacters(in: .whitespacesAndNewlines)
             if let th = e.str("thinking"), !th.isEmpty { turns[k].thinking = th }
             if let r = e.str("route") { turns[k].route = r }
+            if let c = e.dict("check") {
+                turns[k].checked = Int(c.num("checked") ?? 0)
+                turns[k].unbacked = (c["invented"] as? [String]) ?? []
+            }
             if let s = e.dict("source"), let t = s.str("title"), let u = s.str("url") { turns[k].source = (t, u) }
             let m = e.dict("metric")
             weights.finish(m)
@@ -525,6 +531,10 @@ struct ChatView: View {
                 }
             }
             Composer(chat: chat, typing: chat.typing, engine: engine)
+            ModelBand(w: chat.weights)
+                .padding(.horizontal, 32).padding(.bottom, 10)
+                .frame(maxWidth: 1100)
+                .frame(maxWidth: .infinity)
         }
         .background(Theme.ink)
         .dropDestination(for: URL.self) { urls, _ in  // drop a file to read it into memory
@@ -657,7 +667,7 @@ struct TurnView: View, Equatable {
         let x = a.turn, y = b.turn
         return x.id == y.id && x.pending == y.pending && x.failed == y.failed && x.text == y.text
             && x.thinking == y.thinking && x.meta == y.meta && x.route == y.route && x.model == y.model
-            && x.source?.url == y.source?.url && x.thinkEnd == y.thinkEnd && x.runs.count == y.runs.count
+            && x.source?.url == y.source?.url && x.thinkEnd == y.thinkEnd && x.runs.count == y.runs.count && x.unbacked == y.unbacked && x.checked == y.checked
             && zip(x.runs, y.runs).allSatisfy {
                 $0.text == $1.text && $0.pending == $1.pending && $0.started == $1.started && $0.failed == $1.failed
                     && $0.pipe?.firstWord == $1.pipe?.firstWord && $0.pipe?.prefill == $1.pipe?.prefill
@@ -710,6 +720,17 @@ struct TurnView: View, Equatable {
                 Label("Source: \(s.title)", systemImage: "globe").font(Theme.mono(10))
             }
             .foregroundStyle(Theme.memory)
+        }
+        if turn.who == .camr, !turn.pending, turn.checked > 0 {
+            if turn.unbacked.isEmpty {
+                Label("\(turn.checked) fact\(turn.checked == 1 ? "" : "s") found in your memory", systemImage: "checkmark.seal")
+                    .font(Theme.mono(10)).foregroundStyle(Theme.memory)
+            } else {
+                Label("Not in your memory, so the model may have made these up: " + turn.unbacked.joined(separator: " · "),
+                      systemImage: "exclamationmark.triangle")
+                    .font(Theme.mono(10)).foregroundStyle(Theme.error)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         if turn.who == .camr, !turn.pending {
             HStack(spacing: 10) {
@@ -979,6 +1000,10 @@ struct CodeBlock: View {
 
     final class Flag: ObservableObject { @Published var on = false }
 
+    private var isPage: Bool {
+        language.lowercased().hasPrefix("htm") || code.lowercased().contains("<html") || code.lowercased().contains("<!doctype html")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
@@ -987,6 +1012,13 @@ struct CodeBlock: View {
                 Text("\(code.split(separator: "\n", omittingEmptySubsequences: false).count) lines")
                     .font(Theme.mono(10)).foregroundStyle(Theme.faint)
                 Spacer()
+                if isPage {
+                    Button { PreviewCenter.shared.show(code: code) } label: {
+                        Label("Preview", systemImage: "play.rectangle").font(Theme.mono(11))
+                    }
+                    .buttonStyle(.plain).foregroundStyle(Theme.memory)
+                    .help("Open this page in the built-in browser")
+                }
                 Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(code, forType: .string)

@@ -92,6 +92,22 @@ enum Script {
                     await world.chat.emptyShelf(arg)
                 case "shelf-pick":
                     await world.chat.pick(shelf: arg)
+                case "preview-last":
+                    let text = world.chat.turns.last?.text ?? ""
+                    if let page = AnswerText.blocks(text).first(where: { $0.code })?.text { PreviewCenter.shared.show(code: page) }
+                case "preview-html":
+                    PreviewCenter.shared.show(code: arg)
+                case "preview-file":
+                    if let page = try? String(contentsOfFile: arg, encoding: .utf8) { PreviewCenter.shared.show(code: page) }
+                case "preview-shot":
+                    if let dir = env["CAMR_SNAPSHOT_DIR"] {
+                        await PreviewCenter.shared.savePage(to: URL(fileURLWithPath: dir).appendingPathComponent("\(arg).png"))
+                    }
+                case "preview-inspect":
+                    print("PREVIEW-INSPECT \(await PreviewCenter.shared.inspect())")
+                    fflush(stdout)
+                case "preview-phone":
+                    PreviewCenter.shared.phone = arg != "off"
                 case "wait":
                     try? await Task.sleep(nanoseconds: UInt64((Double(arg) ?? 1) * 1e9))
                 default:
