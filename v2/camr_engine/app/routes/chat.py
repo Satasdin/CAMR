@@ -50,6 +50,7 @@ from pathlib import Path
 from camr_engine.app.web import Refused, Request, Routes, part
 from camr_engine.assistant import can_think
 from camr_engine.live import Live, current, probe, reporting
+from camr_engine import shelves as shelf_list
 from camr_engine.shelves import BY_NAME, SHELVES, Sorter, shelf_of, warm
 from camr_engine.shelves import reaches as shelf_reaches
 
@@ -118,6 +119,7 @@ class Talk:
         from camr_engine.reach import Session
         from camr_engine.shelves import disk_budget
 
+        shelf_list.load(self.root)  # this memory's own shelves
         settings = {"vault": True, "core": True, "tiers": {"disk_bytes": disk_budget()}, "metrics": True,
                     **(getattr(self.app, "session_settings", None) or {})}
         reads = list(self.reads)
@@ -241,6 +243,27 @@ class Talk:
                 self.session = None
                 self.app.session = None
                 self._open()
+
+    def change_shelves(self, change) -> dict:
+        """Change the shelves (``change(root)``) with the memory closed, as its folders may move, then open it again
+        over the new list. Answers with what ``change`` gave and the state."""
+        _not_measuring()
+        with self.lock:
+            was_open = self.session is not None
+            if was_open:
+                self.run(self.session.close)
+                self.session = None
+                self.app.session = None
+            shelf_list.load(self.root)
+            try:
+                got = change(self.root)
+            finally:
+                self.sorter = None
+                if self.shelf not in (None, "auto") and self.shelf not in BY_NAME:
+                    self.shelf = "auto"
+                if was_open:
+                    self._open()
+        return {"changed": got, **self.state()}
 
     def close(self) -> None:
         with self.lock:
@@ -1026,6 +1049,37 @@ def register(routes: Routes) -> None:
         if given is not None and (not isinstance(given, list) or not all(isinstance(g, dict) for g in given)):
             raise Refused(400, "read is a list of what was read: {text, labels, at_s or page}")
         return t.attach(req.str("path", limit=1024), shelf, given)
+
+    def _shelves(req: Request, change) -> dict:
+        t = talk(req.app)
+        if t is None:
+            raise Refused(409, "this app has no memory to change (a recorded memory is read-only)")
+        try:
+            return t.change_shelves(change)
+        except KeyError:
+            raise Refused(404, "no such shelf") from None
+        except ValueError as e:
+            raise Refused(400, str(e)) from None
+
+    @routes.post("/api/shelves/add")
+    def shelf_add(req: Request) -> dict:
+        label, about = req.str("label", limit=100), req.str("about", limit=600)
+        return _shelves(req, lambda root: {"shelf": shelf_list.add(root, label, about).name})
+
+    @routes.post("/api/shelves/rename")
+    def shelf_rename(req: Request) -> dict:
+        name, label = req.str("name", limit=20), req.str("label", limit=100)
+        return _shelves(req, lambda root: {"shelf": shelf_list.rename(root, name, label).name})
+
+    @routes.post("/api/shelves/empty")
+    def shelf_empty(req: Request) -> dict:
+        name = req.str("name", limit=20)
+        return _shelves(req, lambda root: {"put_away": shelf_list.empty(root, name)})
+
+    @routes.post("/api/shelves/remove")
+    def shelf_remove(req: Request) -> dict:
+        name = req.str("name", limit=20)
+        return _shelves(req, lambda root: {"put_away": shelf_list.remove(root, name)})
 
     @routes.post("/api/live/stop")
     def live_stop(req: Request) -> dict:

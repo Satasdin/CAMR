@@ -84,6 +84,14 @@ enum Script {
                         try? await Task.sleep(nanoseconds: 30_000_000)
                     }
                     world.chat.draft = ""
+                case "shelf-add":
+                    await world.chat.addShelf(arg)
+                case "shelf-remove":
+                    await world.chat.removeShelf(arg)
+                case "shelf-empty":
+                    await world.chat.emptyShelf(arg)
+                case "shelf-pick":
+                    await world.chat.pick(shelf: arg)
                 case "wait":
                     try? await Task.sleep(nanoseconds: UInt64((Double(arg) ?? 1) * 1e9))
                 default:

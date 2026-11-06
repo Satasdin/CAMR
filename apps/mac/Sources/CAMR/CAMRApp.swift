@@ -123,6 +123,7 @@ struct RootView: View {
             }
         }
         .background(Theme.ink)
+        .sheet(item: $chat.shelfAsk) { ask in ShelfSheet(chat: chat, ask: ask) }
         .onChange(of: engine.phase) { _, p in
             if p == .ready {
                 Task { await chat.useShelves(); await chat.loadChats() }
@@ -168,13 +169,29 @@ struct RootView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("REMEMBER ON").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
-                HStack(spacing: 4) {
-                    shelfButton("auto", "Auto")
-                    ForEach(chat.shelves, id: \.name) { sh in shelfButton(sh.name, sh.label) }
+                HStack {
+                    Text("SHELVES").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
+                    Spacer()
+                    Button {
+                        chat.shelfName = ""
+                        chat.shelfAsk = .add
+                    } label: {
+                        Label("New shelf", systemImage: "plus").font(Theme.mono(10))
+                    }
+                    .buttonStyle(.plain).foregroundStyle(Theme.dim)
+                    .help("Make a shelf of your own")
+                }
+                VStack(spacing: 1) {
+                    shelfRow("auto", "Auto: file by meaning", nil)
+                    ForEach(chat.shelves, id: \.name) { sh in shelfRow(sh.name, sh.label, sh) }
                 }
                 .padding(3)
                 .background(RoundedRectangle(cornerRadius: 9).fill(Theme.panel))
+                if let n = chat.shelfNotice {
+                    Text(n).font(Theme.mono(10)).foregroundStyle(Theme.memory.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .onTapGesture { chat.shelfNotice = nil }
+                }
             }
             .disabled(engine.phase != .ready)
 
@@ -250,16 +267,34 @@ struct RootView: View {
         }
     }
 
-    private func shelfButton(_ id: String, _ title: String) -> some View {
-        Button { Task { await chat.pick(shelf: id) } } label: {
-            Text(title).font(Theme.ui(11, .semibold)).lineLimit(1).minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-                .foregroundStyle(chat.shelf == id ? Color.black : Theme.dim)
-                .background(RoundedRectangle(cornerRadius: 7).fill(chat.shelf == id ? Theme.memory : .clear))
+    private func shelfRow(_ id: String, _ title: String, _ shelf: ShelfInfo?) -> some View {
+        let on = chat.shelf == id
+        return Button { Task { await chat.pick(shelf: id) } } label: {
+            HStack(spacing: 6) {
+                Text(title).font(Theme.ui(12, .semibold)).lineLimit(1)
+                Spacer(minLength: 4)
+                if let s = shelf {
+                    Text("\(s.moments)").font(Theme.mono(10)).foregroundStyle(on ? Color.black.opacity(0.6) : Theme.faint)
+                }
+            }
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .foregroundStyle(on ? Color.black : Theme.dim)
+            .background(RoundedRectangle(cornerRadius: 6).fill(on ? Theme.memory : .clear))
         }
         .buttonStyle(.plain)
-        .help(id == "auto" ? "Put each remembered moment on the shelf it is closest to by meaning" : "Remember on \(title)")
+        .help(shelf == nil ? "Put each remembered moment on the shelf it is closest to by meaning"
+              : "Remember on \(title). Right-click to rename, empty or remove.")
+        .contextMenu {
+            if let s = shelf {
+                Button("Rename…") {
+                    chat.shelfName = s.label
+                    chat.shelfAsk = .rename(s)
+                }
+                Button("Empty…") { chat.shelfAsk = .empty(s) }
+                Button("Remove…", role: .destructive) { chat.shelfAsk = .remove(s) }
+            }
+        }
     }
 
     private var modeText: String {
@@ -292,5 +327,83 @@ struct RootView: View {
         }
         .padding(28)
         .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
+    }
+}
+
+/// Make, rename, empty or remove a shelf. Emptying and removing say plainly what happens to the notes.
+struct ShelfSheet: View {
+    @ObservedObject var chat: ChatModel
+    let ask: ChatModel.ShelfAsk
+
+    private var title: String {
+        switch ask {
+        case .add: return "New shelf"
+        case .rename(let s): return "Rename \(s.label)"
+        case .empty(let s): return "Empty \(s.label)?"
+        case .remove(let s): return "Remove \(s.label)?"
+        }
+    }
+
+    private var message: String {
+        switch ask {
+        case .add: return "A shelf keeps one kind of memory together. Every question still reads every shelf."
+        case .rename: return "The notes stay where they are."
+        case .empty(let s):
+            return "The \(s.moments) notes on this shelf stop being used. They are moved to the removed folder beside your memory, not deleted."
+        case .remove(let s):
+            return "The shelf goes, and its \(s.moments) notes stop being used. They are moved to the removed folder beside your memory, not deleted."
+        }
+    }
+
+    private var asksName: Bool {
+        switch ask {
+        case .add, .rename: return true
+        default: return false
+        }
+    }
+
+    private var action: String {
+        switch ask {
+        case .add: return "Make shelf"
+        case .rename: return "Rename"
+        case .empty: return "Empty shelf"
+        case .remove: return "Remove shelf"
+        }
+    }
+
+    private func go() {
+        let name = chat.shelfName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let current = ask
+        chat.shelfAsk = nil
+        Task {
+            switch current {
+            case .add: await chat.addShelf(name)
+            case .rename(let s): await chat.renameShelf(s.name, name)
+            case .empty(let s): await chat.emptyShelf(s.name)
+            case .remove(let s): await chat.removeShelf(s.name)
+            }
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(title).font(Theme.ui(16, .semibold)).foregroundStyle(Theme.text)
+            Text(message).font(Theme.ui(13)).foregroundStyle(Theme.dim).fixedSize(horizontal: false, vertical: true)
+            if asksName {
+                TextField("Name", text: $chat.shelfName)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { if !chat.shelfName.isEmpty { go() } }
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { chat.shelfAsk = nil }.keyboardShortcut(.cancelAction)
+                Button(action) { go() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(asksName && chat.shelfName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 380)
+        .background(Theme.ink)
     }
 }

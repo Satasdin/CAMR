@@ -128,7 +128,7 @@ final class ChatModel: ObservableObject {
         reach = reaches.first(where: { ($0["written"] as? Bool) == true })?.str("label") ?? ""
         shelves = st.list("shelves").map {
             ShelfInfo(name: $0.str("name") ?? "", label: $0.str("label") ?? "", reach: $0.str("reach") ?? "",
-                      notes: Int($0.num("rooms") ?? 0))
+                      notes: Int($0.num("rooms") ?? 0), moments: Int($0.num("moments") ?? 0))
         }
         weights.shelves = shelves
         if let sh = st.str("shelf") { shelf = sh }
@@ -145,6 +145,56 @@ final class ChatModel: ObservableObject {
             next = Int(got.num("next") ?? Double(next))
             if (got["done"] as? Bool) == true { break }
             try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
+    // -- the shelves are the user's: make, rename, empty and remove them
+
+    enum ShelfAsk: Identifiable {
+        case add, rename(ShelfInfo), empty(ShelfInfo), remove(ShelfInfo)
+        var id: String {
+            switch self {
+            case .add: return "add"
+            case .rename(let s): return "rename-" + s.name
+            case .empty(let s): return "empty-" + s.name
+            case .remove(let s): return "remove-" + s.name
+            }
+        }
+    }
+    @Published var shelfAsk: ShelfAsk?
+    @Published var shelfName = ""
+    @Published var shelfNotice: String?
+
+    private func changeShelves(_ path: String, _ body: [String: Any], _ done: (([String: Any]) -> String?)? = nil) async {
+        guard !busy else { shelfNotice = "Wait for the answer to finish first."; return }
+        busy = true
+        defer { busy = false }
+        do {
+            let got = try await engine.post(path, body)
+            shelfNotice = done?(got.dict("changed") ?? [:])
+            await refresh()
+        } catch {
+            shelfNotice = error.localizedDescription
+        }
+    }
+
+    func addShelf(_ label: String) async {
+        await changeShelves("/api/shelves/add", ["label": label]) { _ in "Shelf \(label) made." }
+    }
+
+    func renameShelf(_ name: String, _ label: String) async {
+        await changeShelves("/api/shelves/rename", ["name": name, "label": label]) { _ in "Renamed to \(label)." }
+    }
+
+    func emptyShelf(_ name: String) async {
+        await changeShelves("/api/shelves/empty", ["name": name]) { got in
+            got.str("put_away") == nil ? "That shelf had nothing on it." : "Shelf emptied. Its notes were moved to the removed folder, not deleted."
+        }
+    }
+
+    func removeShelf(_ name: String) async {
+        await changeShelves("/api/shelves/remove", ["name": name]) { got in
+            got.str("put_away") == nil ? "Shelf removed." : "Shelf removed. Its notes were moved to the removed folder, not deleted."
         }
     }
 

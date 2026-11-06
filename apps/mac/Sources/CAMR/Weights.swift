@@ -286,6 +286,7 @@ struct ShelfInfo {
     let label: String
     let reach: String
     var notes: Int
+    var moments = 0
 }
 
 /// The weights view, for a projector: the memory's shelves on top (each tile a share of a shelf's rooms), what this
