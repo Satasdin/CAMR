@@ -59,8 +59,12 @@ final class World: ObservableObject {
     let weights = WeightsModel()
     let engine: Engine
     let chat: ChatModel
-    @Published var expanded = false  // the weights view large, beside the chat, for a projector
-    @Published var showTensors = false  // the weights view in the sidebar; it also shows itself while a model loads
+    @Published var expanded = false {  // the weights view large, beside the chat, for a projector
+        didSet { weights.watched = expanded || showTensors }
+    }
+    @Published var showTensors = false {  // the weights view in the sidebar; it also shows itself while a model loads
+        didSet { weights.watched = expanded || showTensors }
+    }
     var played = false
 
     init() {

@@ -260,11 +260,13 @@ class Talk:
         return self.worker.submit(within).result()
 
     def start(self, text: str, intent: str | None = None, shelf: str | None = None, thinking: bool = False,
-              limits: dict | None = None, memory: str | None = None, compare: bool = False) -> dict:
+              limits: dict | None = None, memory: str | None = None, compare: bool = False,
+              layers: bool = True) -> dict:
         """``say`` on a thread of its own, reporting to a new Live: ``{id}`` names it for ``GET /api/live``."""
         import secrets
 
         live = Live("message")
+        live.layers = bool(layers)
         jid = secrets.token_hex(6)
         self.jobs[jid] = live
         for old in list(self.jobs)[:-JOBS]:
@@ -1008,7 +1010,9 @@ def register(routes: Routes) -> None:
         compare = req.bool("compare")
         if (memory is not None or compare) and intent != "chat":
             raise Refused(400, "a memory mode and compare are for chat messages")
-        return t.start(text, intent, shelf, req.bool("thinking"), limits, memory, compare)
+        layers = req.body.get("layers")
+        return t.start(text, intent, shelf, req.bool("thinking"), limits, memory, compare,
+                       layers if isinstance(layers, bool) else True)
 
     @routes.post("/api/chat/attach")
     def attach(req: Request) -> dict:

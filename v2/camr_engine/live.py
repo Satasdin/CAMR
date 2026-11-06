@@ -35,6 +35,7 @@ class Live:
         self.first = 0  # the index of events[0], once early ones are dropped
         self.done = False
         self.stopped = False  # asked to stop: a model writing for this job ends at its next word
+        self.layers = True  # measure each layer for each word (only a view on screen needs it; it costs time)
         self.t0 = time.perf_counter()
         self.lock = threading.Lock()
 
@@ -133,10 +134,11 @@ def _bins(h):
 
 
 @contextmanager
-def measuring_layers():
-    """Inside, the probed layers keep their newest output; ``taken()`` hands them over."""
+def measuring_layers(on: bool = True):
+    """Inside, the probed layers keep their newest output; ``taken()`` hands them over. With ``on`` false, nothing
+    is measured and ``taken()`` gives None."""
     before = getattr(_here, "layers", None)
-    _here.layers = {}
+    _here.layers = {} if on else None
     try:
         yield
     finally:

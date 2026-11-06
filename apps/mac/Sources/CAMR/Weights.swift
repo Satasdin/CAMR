@@ -97,12 +97,41 @@ final class WeightsModel: ObservableObject {
         }
     }
 
-    func loadDone() { loadingDone = true }
+    func loadDone() {
+        loadingDone = true
+        settleSoon()
+    }
 
     var loading: Bool { loadedLayers < layers || !loadingDone }
 
     /// Shows the next layer that arrived, no faster than one every 40 ms, so a load from a warm disk (a tenth of a
     /// second) can still be followed by eye. The order and the sizes are the engine's.
+    /// Nothing is changing: the view stops drawing, so an idle window costs nothing. It wakes for an answer, a load,
+    /// or a few seconds after either while the layers cool.
+    @Published var settled = true
+    var watched = false  // the view is on screen: only then does the engine measure each layer for each word
+    var idle: Bool { !answering && !loading && settled && pending.isEmpty }
+
+    private func settleSoon(after seconds: Double = 4) {
+        settled = false
+        let mark = Date().addingTimeInterval(seconds)
+        settleAt = mark
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 0.05) { [weak self] in
+            guard let self, self.settleAt == mark else { return }
+            self.settled = true
+        }
+    }
+    private var settleAt = Date.distantPast
+    private var idleShown = false
+
+    /// Called once a second while the view is on screen: what the timeline is paused by can change with nothing
+    /// published (the last layers of a load drain inside ``tick``), and it only reads ``idle`` when redrawn.
+    func recheckIdle() {
+        guard idle != idleShown else { return }
+        idleShown = idle
+        objectWillChange.send()
+    }
+
     func tick(_ now: Date) {
         let pace = loadingDone ? 0.006 : 0.04  // once the engine is ready, what is left is shown at once
         if loadingDone, !pending.isEmpty, now.timeIntervalSince(lastShown) > 0.5 {
@@ -151,6 +180,7 @@ final class WeightsModel: ObservableObject {
     }
 
     func warmEvent(_ e: [String: Any]) {
+        if settled { settleSoon() }
         switch e.str("kind") {
         case "warm":
             if let s = e.str("shelf"), let r = e.num("room") { warmed[s, default: []].append((Int(r), Date())) }
@@ -243,6 +273,7 @@ final class WeightsModel: ObservableObject {
 
     func finish(_ metric: [String: Any]?) {
         answering = false
+        settleSoon()
         firstWord = metric?.num("first_word_s") ?? firstWord
         tps = metric?.num("decode_tps") ?? metric?.num("gen_tps")
         if let r = metric?.num("read_bytes") { readBytes = r }
@@ -267,10 +298,11 @@ struct WeightsView: View {
     var large = false
 
     var body: some View {
-        TimelineView(.animation) { tl in
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: w.idle)) { tl in
             let _ = w.tick(tl.date)
             panel(tl.date)
         }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in w.recheckIdle() }
     }
 
     private var small: CGFloat { large ? 11 : 9.5 }

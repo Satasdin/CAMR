@@ -91,7 +91,13 @@ final class ChatModel: ObservableObject {
     @Published var memoryOn = true
     @Published var mode = "camr"  // how answers read memory: camr (notes), rag (text) or off
     @Published var busy = false
-    @Published var draft = ""
+    /// What is being typed lives apart from the conversation, so a keystroke redraws the box and not every answer.
+    final class Draft: ObservableObject { @Published var text = "" }
+    let typing = Draft()
+    var draft: String {
+        get { typing.text }
+        set { typing.text = newValue }
+    }
     @Published var reach = ""
     @Published var shelf = "auto"  // where Remember puts a moment: a shelf, or auto (by meaning)
     @Published var shelves: [ShelfInfo] = []
@@ -178,7 +184,7 @@ final class ChatModel: ObservableObject {
         do {
             let prefs = Prefs.shared
             var body: [String: Any] = ["text": text, "intent": intent, "shelf": shelf, "thinking": thinks && reasoning,
-                                       "turns": prefs.turns, "max_tokens": prefs.maxTokens]
+                                       "turns": prefs.turns, "max_tokens": prefs.maxTokens, "layers": weights.watched]
             if intent == "chat" { body["memory"] = self.mode }
             let job = try await engine.post("/api/chat/message", body)
             guard let id = job.str("id") else { throw Engine.Failure(message: "no job id") }
@@ -191,7 +197,7 @@ final class ChatModel: ObservableObject {
                 for e in got.list("events") { handle(e, at: k) }
                 next = Int(got.num("next") ?? Double(next))
                 done = (got["done"] as? Bool) ?? false
-                if !done { try await Task.sleep(nanoseconds: 30_000_000) }
+                if !done { try await Task.sleep(nanoseconds: 80_000_000) }
             }
         } catch {
             turns[k].text = error.localizedDescription
@@ -224,7 +230,7 @@ final class ChatModel: ObservableObject {
             do {
                 let job = try await engine.post("/api/chat/message", [
                     "text": text, "intent": "chat", "shelf": shelf, "thinking": false, "turns": prefs.turns,
-                    "max_tokens": prefs.maxTokens, "memory": m, "compare": true])
+                    "max_tokens": prefs.maxTokens, "memory": m, "compare": true, "layers": weights.watched])
                 guard let id = job.str("id") else { throw Engine.Failure(message: "no job id") }
                 self.job = id
                 var next = 0
@@ -234,7 +240,7 @@ final class ChatModel: ObservableObject {
                     for e in got.list("events") { handleRun(e, at: k, i) }
                     next = Int(got.num("next") ?? Double(next))
                     done = (got["done"] as? Bool) ?? false
-                    if !done { try await Task.sleep(nanoseconds: 30_000_000) }
+                    if !done { try await Task.sleep(nanoseconds: 80_000_000) }
                 }
                 self.job = nil
             } catch {
@@ -449,15 +455,14 @@ final class ChatModel: ObservableObject {
 struct ChatView: View {
     @ObservedObject var chat: ChatModel
     @ObservedObject var engine: Engine
-    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
+                    LazyVStack(alignment: .leading, spacing: 18) {
                         if chat.turns.isEmpty { empty }
-                        ForEach(chat.turns) { t in TurnView(turn: t).id(t.id) }
+                        ForEach(chat.turns) { t in TurnView(turn: t).equatable().id(t.id) }
                     }
                     .padding(.horizontal, 32)
                     .padding(.vertical, 28)
@@ -469,7 +474,7 @@ struct ChatView: View {
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(chat.turns[n - 2].id, anchor: .top) }
                 }
             }
-            composer
+            Composer(chat: chat, typing: chat.typing, engine: engine)
         }
         .background(Theme.ink)
         .dropDestination(for: URL.self) { urls, _ in  // drop a file to read it into memory
@@ -513,14 +518,23 @@ struct ChatView: View {
         .disabled(engine.phase != .ready)
     }
 
-    private var composer: some View {
+}
+
+/// The box you type in, on its own: typing here redraws this and nothing else.
+struct Composer: View {
+    @ObservedObject var chat: ChatModel
+    @ObservedObject var typing: ChatModel.Draft
+    @ObservedObject var engine: Engine
+    @FocusState private var focused: Bool
+
+    var body: some View {
         VStack(spacing: 8) {
             HStack(alignment: .bottom, spacing: 8) {
                 Button { chat.attach() } label: { Image(systemName: "paperclip").font(.system(size: 15, weight: .semibold)) }
                     .buttonStyle(.plain).foregroundStyle(Theme.dim).padding(.bottom, 12)
                     .help("Read a PDF, image, video, text or Markdown file into memory (images on this Mac, with on-device OCR)")
                 TextField(engine.phase == .ready ? "Ask anything, ask for code, remember something, or compare…"
-                          : "Loading the model…", text: $chat.draft, axis: .vertical)
+                          : "Loading the model…", text: $typing.text, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(Theme.ui(15))
                     .foregroundStyle(Theme.text)
@@ -585,8 +599,20 @@ struct ChatView: View {
     }
 }
 
-struct TurnView: View {
+struct TurnView: View, Equatable {
     let turn: Turn
+
+    /// An answer already written is not parsed again when another one changes.
+    static func == (a: TurnView, b: TurnView) -> Bool {
+        let x = a.turn, y = b.turn
+        return x.id == y.id && x.pending == y.pending && x.failed == y.failed && x.text == y.text
+            && x.thinking == y.thinking && x.meta == y.meta && x.route == y.route && x.model == y.model
+            && x.source?.url == y.source?.url && x.thinkEnd == y.thinkEnd && x.runs.count == y.runs.count
+            && zip(x.runs, y.runs).allSatisfy {
+                $0.text == $1.text && $0.pending == $1.pending && $0.started == $1.started && $0.failed == $1.failed
+                    && $0.pipe?.firstWord == $1.pipe?.firstWord && $0.pipe?.prefill == $1.pipe?.prefill
+            }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {

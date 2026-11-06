@@ -82,7 +82,7 @@ class Reader:
         t0 = time.perf_counter()
         first, pieces, r = None, [], None
         live = current()
-        with measuring_layers():
+        with measuring_layers(live is None or live.layers):
             for r in stream_generate(self.model, self.tok, ids, max_tokens=max_tokens or self.max_tokens,
                                      prompt_cache=cache):
                 first = first or time.perf_counter() - t0
@@ -103,7 +103,7 @@ class Reader:
 
         cache = make_prompt_cache(self.model)
         live = current()
-        with measuring_layers():
+        with measuring_layers(live is None or live.layers):
             for i in range(0, len(ids), PREFILL_STEP):
                 self.model(mx.array(ids[i:i + PREFILL_STEP])[None], cache=cache)
                 mx.eval([c.state for c in cache])

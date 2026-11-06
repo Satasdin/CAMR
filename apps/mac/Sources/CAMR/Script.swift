@@ -78,6 +78,12 @@ enum Script {
                     world.showTensors = arg != "off"
                 case "memory":
                     await world.chat.setMemory(arg != "off")
+                case "type":  // as a person types: one character at a time, for measuring how the window keeps up
+                    for ch in arg {
+                        world.chat.draft += String(ch)
+                        try? await Task.sleep(nanoseconds: 30_000_000)
+                    }
+                    world.chat.draft = ""
                 case "wait":
                     try? await Task.sleep(nanoseconds: UInt64((Double(arg) ?? 1) * 1e9))
                 default:
