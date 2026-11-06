@@ -9,11 +9,15 @@ final class PreviewCenter: ObservableObject {
     static let shared = PreviewCenter()
     @Published var code: String?
     @Published var phone = false
+    @Published var scripts = false {  // a page's own scripts: off until the person turns them on, for this page
+        didSet { if scripts != oldValue { loads += 1 } }
+    }
     @Published var loads = 0
     @Published var problems: [String] = []
 
     func show(code: String) {
         self.code = code
+        scripts = false
         problems = []
         loads += 1
     }
@@ -62,6 +66,9 @@ struct PreviewDock: View {
                         Text("Phone").tag(true)
                     }
                     .pickerStyle(.segmented).frame(width: 150).labelsHidden()
+                    Toggle("Scripts", isOn: $center.scripts)
+                        .toggleStyle(.checkbox).font(Theme.mono(10)).foregroundStyle(center.scripts ? Theme.error : Theme.dim)
+                        .help("Run this page's scripts. They are off because the page was written by a model. With them on, the page is limited but not fully sealed off from the network.")
                     Button { center.loads += 1 } label: { Image(systemName: "arrow.clockwise") }
                         .buttonStyle(.plain).foregroundStyle(Theme.dim).help("Load the page again")
                     Button { center.close() } label: { Image(systemName: "xmark") }
@@ -91,10 +98,10 @@ struct PreviewDock: View {
     }
 }
 
-/// A page a model wrote is untrusted, and it may run scripts. So it runs shut in: a content rule list (in place before
-/// anything loads; if it cannot be compiled, nothing loads), a content security policy in the page, WebRTC removed
-/// before the page's script runs, and no navigating away. These are layers inside a process that does have network
-/// access, not a boundary around it: what they stop is what was tried against them.
+/// A page a model wrote is untrusted. Its scripts are off unless the person turns them on for that page. It also runs
+/// behind a content rule list (in place before anything loads; if it cannot be compiled, nothing loads), a content
+/// security policy in the page, and no navigating away. With scripts on, WebRTC is also taken off the page, which
+/// narrows what a script can do but is not a boundary: the process has network access.
 struct PageView: NSViewRepresentable {
     let code: String
     let loads: Int
@@ -144,20 +151,21 @@ struct PageView: NSViewRepresentable {
             return c.string
         }
 
-        func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction,
-                     decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+        func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction, preferences: WKWebpagePreferences,
+                     decisionHandler: @escaping @MainActor (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
+            preferences.allowsContentJavaScript = MainActor.assumeIsolated { center?.scripts ?? false }
             guard a.targetFrame?.isMainFrame == true else {  // frames, and new windows
-                decisionHandler(.cancel)
+                decisionHandler(.cancel, preferences)
                 return
             }
             if ownLoad {
                 ownLoad = false
-                decisionHandler(.allow)
+                decisionHandler(.allow, preferences)
                 return
             }
             // a jump inside this same page; a fragment alone proves nothing, as any address can carry one
             let same = a.request.url?.fragment != nil && sansFragment(a.request.url) == sansFragment(w.url)
-            decisionHandler(same ? .allow : .cancel)
+            decisionHandler(same ? .allow : .cancel, preferences)
         }
 
         func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
@@ -183,8 +191,8 @@ struct PageView: NSViewRepresentable {
         }, true);
         """
         cfg.userContentController.addUserScript(WKUserScript(source: watch, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        // WebRTC opens connections that neither the rule list nor the page's policy can see: it is gone before any of
-        // the page's own script runs, and cannot be put back
+        // WebRTC opens connections that neither the rule list nor the page's policy can see. Taken off the page before
+        // its script runs; that does not reach every way a script could get at it, which is why scripts start off
         let noPeers = """
         for (const name of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel', 'RTCSessionDescription',
                             'RTCIceCandidate', 'WebTransport']) {
