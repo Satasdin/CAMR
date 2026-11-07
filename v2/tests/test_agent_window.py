@@ -414,3 +414,14 @@ def test_a_told_address_missing_from_the_page_is_noticed():
     notes = ["Kahawa Corner is on Argwings Kodhek Road, tea KES 90"]
     assert missing_from("kahawa corner sells tea KES 90", notes) == ["Argwings Kodhek Road"]
     assert missing_from("Kahawa Corner, Argwings Kodhek Road, tea KES 90", notes) == []
+
+
+def test_what_was_told_during_the_build_is_never_called_made_up(box):
+    tools, gate = box
+    tools.fact_check = lambda text: ["8am", "0733 902 118", "KES 999"]
+    tools.known = lambda: ["Clinic: are the opening hours: Monday to Saturday, 8am to 6pm",
+                           "Clinic: is the phone number or e-mail: 0733 902 118"]
+    t = later(gate, "browser", lambda w: gate.answer(w["id"], json.dumps({"text": "8am 0733 902 118 KES 999"})))
+    done = tools.run("open_page", {"path": "index.html"}, owner="r")
+    t.join()
+    assert done.made_up == ("KES 999",)

@@ -20,6 +20,9 @@ MAX_CALLS = 4  # calls taken from one reply
 _THINK = re.compile(r"<think>.*?(?:</think>|$)", re.S)
 _BLOCK = re.compile(r"<tool_call>(.*?)(?:</tool_call>|$)", re.S)
 _FUNCTION = re.compile(r"<function=[\w.-]+>.*?(?:</function>|(?=<function=)|$)", re.S)
+# the form Claude writes when it uses its own habit: <invoke name="tool"><parameter name="key">value</parameter></invoke>
+_INVOKE = re.compile(r"<invoke\s+name=\"([\w.-]+)\"\s*>(.*?)(?:</invoke>|(?=<invoke\s)|$)", re.S)
+_PARAM = re.compile(r"<parameter\s+name=\"([\w.-]+)\"\s*>(.*?)</parameter>", re.S)
 
 
 @dataclass
@@ -57,6 +60,10 @@ def calls(text: str, known: set[str] | None = None, limit: int = MAX_CALLS) -> l
             name, args = parse(f.group(0))
             if name:
                 out.append(Call(str(name), args, f.start(), f.end(), "xml"))
+        if not out:
+            for m in _INVOKE.finditer(seen):
+                args = {k: _value(v) for k, v in _PARAM.findall(m.group(2))}
+                out.append(Call(m.group(1), args, m.start(), m.end(), "xml"))
     if not out and known:
         out = _bare(seen, known)
     return out[:limit]
@@ -85,9 +92,22 @@ def _bare(text: str, known: set[str]) -> list[Call]:
         i = end
 
 
+def _value(v: str):
+    """A parameter's value: JSON when it reads as a number, true/false, an object or a list, else the text as written
+    (a file's content keeps its own first and last line breaks out)."""
+    t = v.strip()
+    if t[:1] in "[{" or t in ("true", "false", "null") or re.fullmatch(r"-?\d+(\.\d+)?", t):
+        try:
+            return json.loads(t)
+        except ValueError:
+            pass
+    return v[1:] if v.startswith("\n") else v
+
+
 def prose(text: str) -> str:
     """The reply's words without its thinking and its tool calls: what the model says to the person."""
     out = _THINK.sub("", text)
     out = _BLOCK.sub("", out)
     out = _FUNCTION.sub("", out)
+    out = _INVOKE.sub("", out)
     return re.sub(r"\n{3,}", "\n\n", out).strip()

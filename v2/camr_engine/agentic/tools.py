@@ -187,6 +187,7 @@ class Toolbox:
         self.workspace, self.gate, self.skills, self.servers, self.allows = workspace, gate, skills, servers, allows
         self.window, self.shelf_notes, self.fact_check = window, shelf_notes, fact_check
         self.task = ""  # what was asked, so that a removal that was asked for is not refused
+        self.known = None  # what the run was told during it, as a function: answers count as told, memory or not
         self.told = told  # what the person told about a request: the notes it may rest on
 
     def specs(self) -> list[dict]:
@@ -372,6 +373,11 @@ class Toolbox:
         if not text.strip():
             problems.append("the page shows no text")
         made_up = self.fact_check(text) if self.fact_check is not None else []
+        if made_up and self.known is not None:  # told during this build (answers, the brief's facts): not made up
+            from camr_engine.grounding import invented
+
+            said = "\n".join(self.known())
+            made_up = [f for f in made_up if invented(f, said)]
         if made_up:
             problems.append("on the page but not in memory, so perhaps made up: " + ", ".join(made_up[:12])
                             + ". Remove them, or call ask_user")

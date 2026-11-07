@@ -331,6 +331,7 @@ class Desk:
                       on_step=self._watch, shelves=self.shelf_index() if window and memory else "")
             run.thread_id = thread
             run.window_tokens = self.window_tokens()
+            tools.known = lambda r=run: list(r.told_notes)  # read when the page is checked, after any questions
             if window:  # the band under the chat box sees a few words a second; measuring each one costs time
                 run.watch.layer_every = 8
                 run.keep_request = bool(memory)

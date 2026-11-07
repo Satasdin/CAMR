@@ -741,3 +741,17 @@ def test_the_edit_tool_takes_an_edit_that_differs_only_in_indentation(tmp_path):
                                  "new_text": "let total = 0;\nlet message = '';"}, owner="r")
     assert done.ok and done.offset == 1
     assert "  let total = 0;\n  let message = '';" in (tmp_path / "app.js").read_text()
+
+
+def test_calls_written_as_invoke_blocks_are_read_too():
+    from camr_engine.agentic.parse import calls, prose
+
+    text = ('I will write it.\n<invoke name="write_file">\n<parameter name="path">app.js</parameter>\n'
+            '<parameter name="content">\nconst a = "<b>";\nlet n = 1;\n</parameter>\n</invoke>\n'
+            '<invoke name="read_file">\n<parameter name="path">index.html</parameter>\n<parameter name="lines">20'
+            '</parameter>\n</invoke>')
+    got = calls(text, known={"write_file", "read_file"})
+    assert [(c.name, c.args) for c in got] == [
+        ("write_file", {"path": "app.js", "content": 'const a = "<b>";\nlet n = 1;\n'}),
+        ("read_file", {"path": "index.html", "lines": 20})]
+    assert prose(text) == "I will write it."
