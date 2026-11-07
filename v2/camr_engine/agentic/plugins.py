@@ -33,11 +33,13 @@ CHECK = r"""() => {
     deadLinks: [...document.querySelectorAll('a[href^="#"]')].filter(a => a.getAttribute('href').length > 1
       && !document.getElementById(a.getAttribute('href').slice(1))).map(a => a.getAttribute('href')).slice(0, 8),
     failed: []};
-  for (const b of [...document.querySelectorAll('button')].slice(0, 12)) {
-    const before = document.body.innerText;
-    try { b.click(); } catch (e) { out.failed.push('pressing "' + (b.innerText || b.id || 'a button').slice(0, 40) + '" threw ' + e.message); continue; }
-    if (document.body.innerText === before) out.failed.push('pressing "' + (b.innerText || b.id || 'a button').slice(0, 40) + '" changed nothing');
-  }
+  const label = b => (b.innerText || b.id || 'a button').slice(0, 40);
+  const press = b => { const before = document.body.innerText;
+    try { b.click(); } catch (e) { out.failed.push('pressing "' + label(b) + '" threw ' + e.message); return true; }
+    return document.body.innerText !== before; };
+  const still = [...document.querySelectorAll('button')].slice(0, 12).filter(b => !press(b));
+  // pressed once more after all the others: Clear or Reset changes nothing until there is something to clear
+  for (const b of still) if (!press(b)) out.failed.push('pressing "' + label(b) + '" changed nothing');
   return JSON.stringify(out);
 }"""
 

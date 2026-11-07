@@ -685,7 +685,7 @@ class Lead:
                                      "question": str((t.get("args") or {}).get("question", ""))[:300],
                                      "answer": said[:300], "asked": bool(t.get("ok")), "why": text[:200]})
                     elif t.get("kind") == "call" and t.get("tool") == "open_page" and not str(
-                            t.get("text") or "").startswith("(the same as "):  # a repeat answered, not a test
+                            t.get("text") or "").startswith(("(the same as ", "there is no tool")):  # not tests
                         report = str(t.get("text") or "").split("\n\nThe page as it is now")[0]
                         tests.append({"at_s": at, "part": ROLES[part.role].name, "ok": bool(t.get("ok")),
                                       "report": report[:1200]})
@@ -763,7 +763,7 @@ class Lead:
     def _summary(self) -> str:
         done = [p for p in self.plan.parts if p.state == "done" and p.target and p.target not in TEAM_FILES]
         failed = [p for p in self.plan.parts if p.state == "failed"]
-        text = ("Made " + ", ".join(p.target for p in done) + "." if done else "Nothing was made.")
+        text = ("Made " + ", ".join(dict.fromkeys(p.target for p in done)) + "." if done else "Nothing was made.")
         if failed:
             text += " Not finished: " + "; ".join(f"{p.title} ({p.note})" for p in failed) + "."
         return text

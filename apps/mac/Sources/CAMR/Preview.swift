@@ -373,10 +373,14 @@ extension PageTester {
     /// With scripts allowed, it presses each button, as a person would, and notes any that changes nothing on the page.
     private func clickEverything(_ web: WKWebView) async -> [String] {
         let js = """
-        JSON.stringify([...document.querySelectorAll('button')].slice(0, 12).map(b => {
-          const before = document.body.innerText; b.click();
-          return {label: (b.innerText || b.id || 'a button').slice(0, 40), changed: document.body.innerText !== before};
-        }))
+        (() => {
+          const press = b => { const before = document.body.innerText; b.click(); return document.body.innerText !== before; };
+          const buttons = [...document.querySelectorAll('button')].slice(0, 12);
+          const still = buttons.filter(b => !press(b));
+          // a button that changed nothing is pressed once more after all the others: Clear or Reset changes
+          // nothing on an empty page, and is judged once there is something to clear
+          return JSON.stringify(still.filter(b => !press(b)).map(b => ({label: (b.innerText || b.id || 'a button').slice(0, 40), changed: false})));
+        })()
         """
         guard let s = try? await web.evaluateJavaScript(js, contentWorld: .defaultClient) as? String, let d = s.data(using: .utf8),
               let rows = try? JSONSerialization.jsonObject(with: d) as? [[String: Any]] else { return [] }
