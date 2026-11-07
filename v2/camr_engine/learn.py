@@ -20,11 +20,13 @@ The model and the embedder come in as plain callables, so this file never touche
 from __future__ import annotations
 
 import datetime as dt
+import http.client
 import ipaddress
 import json
 import re
 import secrets
 import socket
+import ssl
 import threading
 import time
 import urllib.parse
@@ -127,6 +129,55 @@ def public_url(url: str) -> bool:
     return bool(infos)
 
 
+def _connect_public(host: str, port: int, timeout) -> socket.socket:
+    """A socket to ``host`` that only ever reaches a public address: every address the name resolves to is checked,
+    the connection goes to one of those very addresses (no second lookup a DNS answer could change in between), and
+    the peer is checked again once connected."""
+    t = timeout if isinstance(timeout, (int, float)) else TIMEOUT_S
+    infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    if not infos:
+        raise urllib.error.URLError(f"{host} does not resolve")
+    for info in infos:
+        if not ipaddress.ip_address(info[4][0].split("%")[0]).is_global:
+            raise urllib.error.URLError(f"{host} resolves to a private address; refused")
+    last: OSError | None = None
+    for fam, kind, proto, _, addr in infos:
+        sock = socket.socket(fam, kind, proto)
+        sock.settimeout(t)
+        try:
+            sock.connect(addr)
+        except OSError as e:
+            sock.close()
+            last = e
+            continue
+        if not ipaddress.ip_address(sock.getpeername()[0].split("%")[0]).is_global:
+            sock.close()
+            raise urllib.error.URLError(f"{host} connected to a private address; refused")
+        return sock
+    raise last or OSError(f"could not reach {host}")
+
+
+class _PublicHTTP(http.client.HTTPConnection):
+    def connect(self):
+        self.sock = _connect_public(self.host, self.port, self.timeout)
+
+
+class _PublicHTTPS(http.client.HTTPSConnection):
+    def connect(self):
+        self.sock = self._context.wrap_socket(_connect_public(self.host, self.port, self.timeout),
+                                              server_hostname=self.host)
+
+
+class _PublicHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_PublicHTTP, req)
+
+
+class _PublicHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(_PublicHTTPS, req, context=ssl.create_default_context())
+
+
 class _NoRedirectToPrivate(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if not public_url(newurl):
@@ -201,7 +252,9 @@ def fetch(url: str, opener=None) -> tuple[str, str]:
     """(title, text) of one public page, at most PAGE_BYTES read."""
     if not public_url(url):
         raise ValueError(f"not a public http(s) page: {url}")
-    open_ = opener or urllib.request.build_opener(_NoRedirectToPrivate()).open
+    # no proxy (it would connect for us, unchecked); every connection, redirects included, to a checked address
+    open_ = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _PublicHTTPHandler(),
+                                                  _PublicHTTPSHandler(), _NoRedirectToPrivate()).open
     req = urllib.request.Request(url, headers={"User-Agent": AGENT, "Accept": "text/html,text/plain;q=0.9"})
     with open_(req, timeout=TIMEOUT_S) as r:
         kind = (r.headers.get("Content-Type") or "").lower()

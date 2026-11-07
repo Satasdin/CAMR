@@ -177,9 +177,9 @@ def test_vendored_and_report_files_are_never_parts():
 def test_which_briefs_ask_for_motion_and_which_rules_they_get():
     assert motion.asks_motion(ROCKET) and not motion.asks_motion(CAFE)
     assert not motion.asks_motion("A promotion page for our bakery")  # "promotion" is not motion
-    assert motion.wants(ROCKET) == {"canvas", "fps", "console", "layers", "reduced", "strip"}
+    assert motion.wants(ROCKET) == {"canvas", "clear", "fps", "console", "layers", "reduced", "strip"}
     assert motion.wants(CAFE) == set()
-    assert motion.wants(CAFE, '<canvas id="c"></canvas>') == {"canvas", "fps", "console", "reduced", "strip"}
+    assert motion.wants(CAFE, '<canvas id="c"></canvas>') == {"canvas", "clear", "fps", "console", "reduced", "strip"}
     assert motion.wants("A scroll-told story page with pinned chapters") == {"fps", "console", "reduced", "strip"}
 
 
@@ -216,11 +216,13 @@ def test_each_rule_fails_on_its_own_evidence():
     bad["console"] = ["ReferenceError: startTelemetry is not defined"]
     bad["still"].update(overTime=2, overTimeEls=["p.kicker"], hidden=3, hiddenEls=["h2.reveal"])
     bad["strip"] = ["a.png"] * 3
+    bad["measured"]["clashes"] = [{"el": "h2", "text": "The vehicle", "spread": 61, "at": 2}]
     got = marks(bad)
     assert {k for k, r in got.items() if not r["ok"]} == set(motion.RULES)
     assert "40 frames a second" in got["fps"]["text"] and "one flat colour" in got["canvas"]["text"]
     assert got["layers"]["value"] == 1  # three speeds within 12% of each other are one layer
     assert "startTelemetry" in got["console"]["text"] and "3 of 21 texts are hidden" in got["reduced"]["text"]
+    assert "The vehicle" in got["clear"]["text"]
 
 
 def test_no_canvas_a_page_that_does_not_scroll_and_an_unmeasured_page_fail_plainly():

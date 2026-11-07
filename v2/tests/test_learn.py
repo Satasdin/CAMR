@@ -132,3 +132,19 @@ def test_no_quoted_note_is_a_failure_not_an_empty_card():
               reader=lambda url: ("T", "some text"))
     assert job.state == "failed" and "quote" in job.error
     assert isinstance(job.stop, threading.Event)
+
+
+def test_a_connection_only_ever_reaches_a_checked_public_address(monkeypatch):
+    import socket as sk
+    import urllib.error
+
+    import pytest
+
+    # a name that answers public first and private second (as a rebinding attack would) is refused outright
+    monkeypatch.setattr(sk, "getaddrinfo", lambda *a, **k: [(sk.AF_INET, sk.SOCK_STREAM, 6, "", ("93.184.216.34", 80)),
+                                                             (sk.AF_INET, sk.SOCK_STREAM, 6, "", ("127.0.0.1", 80))])
+    with pytest.raises(urllib.error.URLError):
+        learn._connect_public("rebind.example", 80, 5)
+    monkeypatch.setattr(sk, "getaddrinfo", lambda *a, **k: [(sk.AF_INET, sk.SOCK_STREAM, 6, "", ("10.0.0.5", 80))])
+    with pytest.raises(urllib.error.URLError):
+        learn._connect_public("inside.example", 80, 5)

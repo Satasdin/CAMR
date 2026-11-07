@@ -127,11 +127,44 @@ def _q(p: str | Path) -> str:
     return json.dumps(str(p))  # a quoted string in the profile's own syntax (same escapes as JSON for paths)
 
 
+def _pythons() -> list[Path]:
+    """The kernel environment's Python and the interpreter it links to: the only programs a kernel may start."""
+    env = kernel_env()
+    out = []
+    for name in ("python", "python3"):
+        p = env / "bin" / name
+        out.append(p)
+        try:
+            out.append(p.resolve())
+        except OSError:
+            pass
+    return list(dict.fromkeys(out))
+
+
+def _base_prefix() -> Path | None:
+    """Where the kernel environment's interpreter lives (its standard library), read from pyvenv.cfg."""
+    cfg = kernel_env() / "pyvenv.cfg"
+    try:
+        for line in cfg.read_text().splitlines():
+            key, _, value = line.partition("=")
+            if key.strip() == "home":
+                return Path(value.strip()).resolve().parent
+    except OSError:
+        pass
+    for p in _pythons():
+        if p.is_absolute() and p.exists() and kernel_env() not in p.parents:
+            return p.parent.parent
+    return None
+
+
 def sandbox_profile(project: Path, tmp: Path) -> str:
     """No network at all but Unix sockets inside ``tmp``; writes only inside the project, ``tmp`` and the font
-    cache; no reads of the folders of keys and the app's memory."""
+    cache; in the home folder, file contents readable only inside the project, ``tmp``, the font cache and the kernel's
+    own environment (names and sizes of other files stay visible); no programs started but the kernel's Python; no
+    opening other apps or sending them Apple events; and never the folders of keys or the app's memory."""
     home = Path.home().resolve()
     writable = [Path(project).resolve(), Path(tmp).resolve(), cache_dir().resolve()]
+    readable = writable + [kernel_env().resolve()] + ([b] if (b := _base_prefix()) is not None else [])
     unreadable = [home / s for s in _SENSITIVE_READS]
     return "\n".join([
         "(version 1)",
@@ -143,7 +176,15 @@ def sandbox_profile(project: Path, tmp: Path) -> str:
         "(allow file-write* " + " ".join(f"(subpath {_q(p)})" for p in writable)
         + ' (literal "/dev/null") (literal "/dev/zero") (literal "/dev/dtracehelper") (regex #"^/dev/tty")'
           ' (regex #"^/dev/fd/"))',
+        f"(deny file-read-data (subpath {_q(home)}))",
+        "(allow file-read-data " + " ".join(f"(subpath {_q(p)})" for p in readable)
+        + f" (literal {_q(RUNNER)}))",
         "(deny file-read* " + " ".join(f"(subpath {_q(p)})" for p in unreadable) + ")",
+        "(deny process-exec*)",
+        "(allow process-exec " + " ".join(f"(literal {_q(p)})" for p in _pythons()) + ")",
+        '(deny mach-lookup (global-name "com.apple.coreservices.launchservicesd")'
+        ' (global-name "com.apple.coreservices.appleevents") (global-name "com.apple.coreservices.sharedfilelistd"))',
+        "(deny appleevent-send)",
     ])
 
 

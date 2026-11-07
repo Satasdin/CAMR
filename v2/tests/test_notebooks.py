@@ -335,3 +335,23 @@ def test_the_routes_read_edit_run_and_stop_a_notebook_and_run_a_script(tmp_path)
         assert got["source"] == "print('from a script')\n"
     finally:
         httpd.shutdown()
+
+
+@pytest.mark.skipif(not nbm.sandbox_works(), reason="needs macOS sandbox-exec")
+def test_the_sandbox_keeps_the_home_folder_and_other_programs_out(tmp_path):
+    project, tmp = tmp_path / "p", tmp_path / "t"
+    project.mkdir(), tmp.mkdir()
+    secret = Path.home() / ".camr" / "sandbox-probe.txt"
+    secret.parent.mkdir(parents=True, exist_ok=True)
+    secret.write_text("private")
+    try:
+        code = ("import subprocess, sys\n"
+                f"try:\n    open({str(secret)!r}).read(); print('read')\nexcept OSError: print('no-read')\n"
+                "try:\n    subprocess.run(['/usr/bin/true']); print('exec')\nexcept OSError: print('no-exec')\n"
+                "open('made.txt', 'w').write('ok'); print('wrote')\n")
+        python = str(nbm._pythons()[0])
+        got = subprocess.run(["/usr/bin/sandbox-exec", "-p", nbm.sandbox_profile(project, tmp), python, "-c",
+                              code], cwd=project, capture_output=True, text=True, timeout=60)
+        assert got.stdout.split() == ["no-read", "no-exec", "wrote"], got.stderr[-500:]
+    finally:
+        secret.unlink()

@@ -38,7 +38,7 @@ THREE_D = re.compile(r"\b(3-?d|three\.?js|webgl|exploded|rocket|globe|planet)\b"
 LAYERS = re.compile(r"\b(parallax|layers?|layered|depth)\b", re.I)
 
 # the rules, by name, in the order they are reported
-RULES = ("canvas", "fps", "console", "layers", "reduced", "strip")
+RULES = ("canvas", "fps", "console", "layers", "reduced", "clear", "strip")
 MIN_FPS = 50.0
 MIN_COLOURS = 8  # distinct colours (4 bits a channel) in a 48 x 48 sample of the canvas
 MIN_SPREAD = 4.0  # standard deviation of the sample's brightness, 0 to 255
@@ -46,6 +46,7 @@ MIN_LAYERS = 3  # elements whose transforms change at different rates while scro
 MOVED = 0.5  # px, %, or degrees: less than this is not a change
 SAME_RATE = 0.12  # rates within 12% of each other are one layer
 STRIP = 5  # screenshots down the page
+CLASH_SPREAD = 28  # brightness spread of the canvas under a text with no panel behind it: over the model, not the sky
 
 
 def asks_motion(request: str) -> bool:
@@ -59,7 +60,7 @@ def wants(request: str, page: str = "") -> set[str]:
         return set()
     out = {"fps", "console", "reduced", "strip"}
     if THREE_D.search(request or "") or re.search(r"<canvas\b|vendor/three|from\s+['\"]three['\"]", page or ""):
-        out.add("canvas")
+        out |= {"canvas", "clear"}
     if LAYERS.search(request or ""):
         out.add("layers")
     return out
@@ -139,13 +140,39 @@ _HELPERS = r"""
     const mean = sum / n;
     return {colours: seen.size, spread: Math.round(Math.sqrt(Math.max(0, sq / n - mean * mean)) * 10) / 10, hash: h};
   };
+  // text drawn straight over the busy part of the 3D scene (the model, not the plain sky): no panel behind it, and
+  // the canvas under its box varies a lot in brightness
+  const panelled = e => { for (let x = e; x && x !== document.body; x = x.parentElement) {
+      const c = getComputedStyle(x).backgroundColor.match(/[\d.]+/g);
+      if (c && (c.length < 4 || parseFloat(c[3]) >= 0.55)) return true; } return false; };
+  const clashes = () => {
+    if (!big) return [];
+    const r = big.getBoundingClientRect(); if (!r.width || !r.height) return [];
+    const out = [];
+    for (const e of document.body.querySelectorAll('h1, h2, h3, p, li, a, button')) {
+      if (!e.innerText || !e.innerText.trim() || panelled(e)) continue;
+      const b = e.getBoundingClientRect();
+      if (b.width < 8 || b.height < 8 || b.bottom < 0 || b.top > innerHeight) continue;
+      const x0 = Math.max(b.left, r.left), y0 = Math.max(b.top, r.top), x1 = Math.min(b.right, r.right), y1 = Math.min(b.bottom, r.bottom);
+      if (x1 - x0 < 8 || y1 - y0 < 8) continue;
+      const sx = big.width / r.width, sy = big.height / r.height;
+      try { pctx.clearRect(0, 0, 48, 48);
+        pctx.drawImage(big, (x0 - r.left) * sx, (y0 - r.top) * sy, (x1 - x0) * sx, (y1 - y0) * sy, 0, 0, 48, 48); }
+      catch (x) { continue; }
+      const d = pctx.getImageData(0, 0, 48, 48).data; let n = 0, sum = 0, sq = 0;
+      for (let i = 0; i < d.length; i += 4) { const l = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]; sum += l; sq += l * l; n++; }
+      const mean = sum / n, spread = Math.sqrt(Math.max(0, sq / n - mean * mean));
+      if (spread >= CLASH_SPREAD) out.push({el: label(e), text: e.innerText.trim().slice(0, 40), spread: Math.round(spread)});
+    }
+    return out;
+  };
 """
 
-MEASURE = "async () => {" + _HELPERS + r"""
+MEASURE = "async () => {" + _HELPERS.replace("CLASH_SPREAD", str(CLASH_SPREAD)) + r"""
   await sleep(800);  // the page's own start-up: modules, a model loading
   const max = Math.max(0, root.scrollHeight - innerHeight);
   const out = {max, width: innerWidth, height: innerHeight, canvas: big ? {width: big.width, height: big.height,
-    samples: []} : null, frames: 0, seconds: 0, worst_ms: 0, moved: []};
+    samples: []} : null, frames: 0, seconds: 0, worst_ms: 0, moved: [], clashes: []};
   root.scrollTop = 0; await frame(); await frame();
   // frames per second while the page is scrolled from top to bottom over about two seconds
   const t0 = await frame(); let last = t0, n = 0;
@@ -162,6 +189,7 @@ MEASURE = "async () => {" + _HELPERS + r"""
   for (let k = 0; k < 5; k++) {
     root.scrollTop = max * k / 4; await frame(); await frame(); await sleep(180); await frame();
     if (big && out.canvas.samples.length < 8) out.canvas.samples.push(pixels());
+    if (big) { await frame(); for (const c of clashes()) if (!out.clashes.some(o => o.el === c.el)) out.clashes.push({...c, at: k}); }
     at.push(els.map(vec));
   }
   els.forEach((e, i) => { const v = at.map(a => a[i]);
@@ -171,7 +199,7 @@ MEASURE = "async () => {" + _HELPERS + r"""
   return JSON.stringify(out);
 }"""
 
-STILL = "async () => {" + _HELPERS + r"""
+STILL = "async () => {" + _HELPERS.replace("CLASH_SPREAD", str(CLASH_SPREAD)) + r"""
   await sleep(800);
   const max = Math.max(0, root.scrollHeight - innerHeight);
   const snap = () => els.map(sig);
@@ -365,6 +393,12 @@ def score(result: dict, want: set[str]) -> list[dict]:
             mark(rule, not problems, {k: still.get(k) for k in ("overTime", "onScroll", "hidden", "texts", "canvasChanged")},
                  "with reduced motion nothing moves and every text shows" if not problems else
                  "with prefers-reduced-motion: reduce, " + "; ".join(problems))
+        elif rule == "clear":
+            clash = m.get("clashes") or []
+            shown = "; ".join(f"\u201c{c.get('text')}\u201d ({c.get('el')})" for c in clash[:3])
+            mark(rule, not clash, len(clash), "no text sits on the 3D model without a panel behind it" if not clash else
+                 f"{len(clash)} text(s) sit straight on the busy part of the 3D scene: {shown}; move them beside the "
+                 f"model, or give them a solid panel")
         elif rule == "strip":
             n = len(result.get("strip") or [])
             mark(rule, n >= STRIP, n, f"{n} of {STRIP} screenshots down the page were saved")
