@@ -23,6 +23,9 @@ enum Script {
         guard let dir = ProcessInfo.processInfo.environment["CAMR_SNAPSHOT_DIR"].map({ URL(fileURLWithPath: $0) })
         else { return }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        // a frame every quarter second costs the app more than the model does (measured: 2,022 of 2,251 main-thread
+        // samples during a build), so frames are recorded only when asked for; named shots are always saved
+        guard ProcessInfo.processInfo.environment["CAMR_FRAMES"] == "1" else { return }
         var n = 0
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
             MainActor.assumeIsolated {
@@ -93,6 +96,8 @@ enum Script {
                     await world.chat.addCurated(names)
                 case "agent-model":  // agent-model: ollama:qwen3:4b   (or: claude-sonnet-5-5, or: local)
                     await world.chat.setAgentModel(arg == "local" ? nil : arg)
+                case "plugin":  // plugin: playwright   (connects it)
+                    await world.chat.connectPlugin(arg)
                 case "shelf-remove":
                     await world.chat.removeShelf(arg)
                 case "shelf-empty":

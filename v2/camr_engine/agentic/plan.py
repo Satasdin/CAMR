@@ -422,7 +422,12 @@ class Lead:
     def _do(self, part: Part, *, last: bool) -> None:
         role = ROLES[part.role]
         coder = self.desk.personas.get("coder")
-        persona = replace(coder, name=role.name, system=role.system, tools=list(role.tools))
+        tools = list(role.tools)
+        if part.role == "review":  # a connected browser plugin's few tools, which ask like any other call
+            from camr_engine.agentic.plugins import review_tools
+
+            tools += review_tools(self.desk.servers)
+        persona = replace(coder, name=role.name, system=role.system, tools=tools)
         task = self._task(part)
         for attempt in (1, 2):
             if self.cancel.is_set():
@@ -540,6 +545,11 @@ class Lead:
                 names = classes_in(self._read(css, 60_000))
                 if names:
                     out.append(f"The classes {css} defines (use these): {', '.join(names)}")
+        if part.role == "review" and self.desk.servers.link("playwright") is not None:
+            from camr_engine.agentic.serve import serving
+
+            out.append("A real Chrome is connected (the browser_ tools). The page is at "
+                       f"{serving(self.desk.workspace).url('index.html')}: open it there, never as a file.")
         if part.role == "behaviour":
             page = self._read("index.html")
             if page:
@@ -582,7 +592,8 @@ class Lead:
                         asks.append({"at_s": at, "part": ROLES[part.role].name,
                                      "question": str((t.get("args") or {}).get("question", ""))[:300],
                                      "answer": said[:300], "asked": bool(t.get("ok")), "why": text[:200]})
-                    elif t.get("kind") == "call" and t.get("tool") == "open_page":
+                    elif t.get("kind") == "call" and t.get("tool") == "open_page" and not str(
+                            t.get("text") or "").startswith("(the same as "):  # a repeat answered, not a test
                         report = str(t.get("text") or "").split("\n\nThe page as it is now")[0]
                         tests.append({"at_s": at, "part": ROLES[part.role].name, "ok": bool(t.get("ok")),
                                       "report": report[:1200]})

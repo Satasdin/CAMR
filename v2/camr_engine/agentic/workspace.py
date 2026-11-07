@@ -347,7 +347,31 @@ class Workspace:
         path, text = self.text(rel)
         n = text.count(old)
         if n == 0:
-            raise Outside(f"that text is not in {path}; read the file and copy it exactly")
+            loose = _loose_replace(text, old, new)  # the same lines but for their indentation, as small models write
+            if loose is None:
+                raise Outside(f"that text is not in {path}; read the file and copy it exactly")
+            return self.write(path, loose)
         if n > 1:
             raise Outside(f"that text is in {path} {n} times; include more lines so it is found once")
         return self.write(path, text.replace(old, new, 1))
+
+
+def _loose_replace(text: str, old: str, new: str) -> str | None:
+    """``text`` with the one run of lines that matches ``old`` line for line, ignoring the spaces at either end of each
+    line, replaced by ``new``, indented as the lines it replaces were. None when there is no such run, or more than one:
+    only a match that cannot be mistaken is made."""
+    want = [x.strip() for x in old.strip("\n").split("\n")]
+    if not any(want):
+        return None
+    lines = text.split("\n")
+    hits = [i for i in range(len(lines) - len(want) + 1)
+            if all(lines[i + k].strip() == w for k, w in enumerate(want))]
+    if len(hits) != 1:
+        return None
+    i = hits[0]
+    found = lines[i][:len(lines[i]) - len(lines[i].lstrip())]  # the file's indentation at the first line
+    new_lines = new.strip("\n").split("\n")
+    given = new_lines[0][:len(new_lines[0]) - len(new_lines[0].lstrip())]
+    redone = [found + x[len(given):] if x.startswith(given) else found + x.lstrip() if x.strip() else x
+              for x in new_lines]
+    return "\n".join(lines[:i] + redone + lines[i + len(want):])

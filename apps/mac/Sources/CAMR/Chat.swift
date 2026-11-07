@@ -213,6 +213,40 @@ final class ChatModel: ObservableObject {
         }
     }
 
+    /// Plugins: MCP servers the app knows how to start (Playwright first), each asking before every call unless the
+    /// person says otherwise.
+    struct Plugin: Identifiable { let id: String; let name: String; let about: String; let state: String
+                                  let error: String?; let trusted: Bool; let calls: Int }
+    @Published var plugins: [Plugin] = []
+    @Published var pluginBusy: String?
+
+    private func takePlugins(_ got: [String: Any]) {
+        plugins = got.list("plugins").map {
+            Plugin(id: $0.str("id") ?? "", name: $0.str("name") ?? "", about: $0.str("about") ?? "",
+                   state: $0.str("state") ?? "idle", error: $0.str("error"), trusted: ($0["trusted"] as? Bool) ?? false,
+                   calls: Int($0.num("calls") ?? 0))
+        }
+    }
+
+    func loadPlugins() async {
+        if let got = try? await engine.get("/api/code/plugins") { takePlugins(got) }
+    }
+
+    func connectPlugin(_ id: String) async {
+        pluginBusy = id
+        defer { pluginBusy = nil }
+        do { takePlugins(try await engine.post("/api/code/plugins/add", ["id": id])) } catch { shelfNotice = error.localizedDescription }
+    }
+
+    func disconnectPlugin(_ id: String) async {
+        _ = try? await engine.post("/api/code/mcp/disconnect", ["name": id])
+        await loadPlugins()
+    }
+
+    func trustPlugin(_ id: String, _ on: Bool) async {
+        if let got = try? await engine.post("/api/code/plugins/trust", ["id": id, "on": on]) { takePlugins(got) }
+    }
+
     /// The curated shelves shipped with the engine: name, label, what it covers and how many rules it holds.
     @Published var curated: [(name: String, label: String, about: String, notes: Int)] = []
 

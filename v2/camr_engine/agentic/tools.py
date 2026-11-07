@@ -202,7 +202,8 @@ class Toolbox:
             name = tool_name(server, t["name"])
             if self.allows(name):
                 out.append({"type": "function", "function": {
-                    "name": name, "description": f"[{server}] {t['description']} The user must allow each call.",
+                    "name": name, "description": f"[{server}] {t.get('description', '')}" + (
+                        "" if self._trusted(server) else " The user must allow each call."),
                     "parameters": t["schema"]}})
         return out
 
@@ -349,6 +350,13 @@ class Toolbox:
             if got.get(key):
                 problems.append(f"{what}: {json.dumps(got[key], ensure_ascii=False)[:600]}")
         problems += static
+        chrome = self._chrome(path)
+        if chrome:  # the same page in a real Chrome, through the Playwright plugin the person connected
+            for key, what in (("errors", "errors in Chrome"), ("failed", "in Chrome, checks that failed")):
+                if chrome.get(key):
+                    problems.append(f"{what}: {json.dumps(chrome[key], ensure_ascii=False)[:600]}")
+            if chrome.get("runsOff") and not got.get("runsOff"):
+                problems.append("in Chrome, the page runs off the side of a phone screen")
         if got.get("runsOff"):
             problems.append("the page runs off the side of a phone screen")
         if got.get("hasScripts") and not got.get("scriptsRan"):
@@ -378,6 +386,25 @@ class Toolbox:
                 report += f"\n\nThe page as it is now:\n{page}"
         return Done("open_page", args, not fixable, report, ms, output=json.dumps(got, ensure_ascii=False)[:OUTPUT_SHOWN],
                     made_up=tuple(made_up))
+
+    def _trusted(self, server: str) -> bool:
+        s = self.servers.spec(server) if hasattr(self.servers, "spec") else None
+        return bool(s is not None and s.trusted)
+
+    def _chrome(self, path: str) -> dict | None:
+        """The page checked in Chrome when the Playwright plugin is connected: its own check, not the model's call."""
+        from camr_engine.agentic.plugins import browser_check
+        from camr_engine.agentic.serve import serving
+
+        link = self.servers.link("playwright") if self.servers is not None else None
+        if link is None or link.state != "connected":
+            return None
+        try:
+            got = browser_check(link, serving(self.workspace).url(path))
+        except Exception as e:  # noqa: BLE001 (the app's own test still stands)
+            return {"errors": [f"the Chrome check failed: {type(e).__name__}: {e}"[:300]]}
+        got["errors"] = [e for e in got.get("errors", []) if "favicon.ico" not in e]
+        return got
 
     def _shelf(self, args, t) -> Done:
         shelf, question = str(_arg(args, "shelf", "")), str(_arg(args, "question", ""))
@@ -427,6 +454,10 @@ class Toolbox:
                           "they run; write them with plain characters only")
         if on_wait is not None:
             on_wait(what)
+        s = self.servers.spec(server) if hasattr(self.servers, "spec") else None
+        if s is not None and s.trusted:  # the person said this plugin need not ask
+            got = link.call(tool, what["arguments"])
+            return Done(name, args, got["ok"], _clip(got["text"]), (time.perf_counter() - t) * 1000)
         ask = self.gate.ask("mcp", what, owner=owner, label=label, cancel=cancel)
         if not ask.allowed:
             return Done(name, args, False, f"the user did not allow this call ({ask.decision})",

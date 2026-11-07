@@ -714,3 +714,17 @@ def test_an_answer_with_a_named_file_not_written_is_sent_back_once(ws):
     run.execute()
     assert "the task names style.css, not in the workspace yet" in brain.prompts[2].user
     assert run.state == "done" and run.answer == "I will not write style.css." and len(brain.prompts) == 3
+
+
+def test_an_edit_that_differs_only_in_indentation_is_made_once_and_indented_as_the_file(tmp_path):
+    from camr_engine.agentic.workspace import Outside, Workspace
+
+    ws = Workspace(tmp_path, [])
+    (tmp_path / "app.js").write_text("const app = () => {\n  const total = 0;\n  const message = '';\n  go();\n};\n")
+    ws.edit("app.js", "const total = 0;\nconst message = '';", "let total = 0;\nlet message = '';")
+    assert (tmp_path / "app.js").read_text() == "const app = () => {\n  let total = 0;\n  let message = '';\n  go();\n};\n"
+    (tmp_path / "b.js").write_text("  x();\n  x();\n")
+    with pytest.raises(Outside):  # two places it could be: none is guessed
+        ws.edit("b.js", "x();", "y();")
+    with pytest.raises(Outside):
+        ws.edit("b.js", "z();", "y();")

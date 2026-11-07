@@ -34,9 +34,11 @@ class Spec:
     command: str
     args: list[str] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
+    trusted: bool = False  # its calls run without asking: set by the person only, never by the agent
 
     def show(self) -> dict:
-        return {"name": self.name, "command": self.command, "args": self.args, "env": sorted(self.env)}
+        return {"name": self.name, "command": self.command, "args": self.args, "env": sorted(self.env),
+                "trusted": self.trusted}
 
 
 def spec(name: str, command_line: str, env: dict | None = None) -> Spec:
@@ -206,7 +208,7 @@ class Servers:
         for x in raw.get("servers", []) if isinstance(raw, dict) else []:
             try:
                 s = Spec(str(x["name"]), str(x["command"]), [str(a) for a in x.get("args", [])],
-                         {str(k): str(v) for k, v in (x.get("env") or {}).items()})
+                         {str(k): str(v) for k, v in (x.get("env") or {}).items()}, x.get("trusted") is True)
             except (KeyError, TypeError, AttributeError):
                 continue
             if NAME.match(s.name):
@@ -231,6 +233,20 @@ class Servers:
             self._specs[s.name] = s
             self._save()
         return self.show()
+
+    def trust(self, name: str, on: bool) -> dict:
+        """Whether a server's calls run without asking. The person's choice, from the app only."""
+        with self.lock:
+            s = self._specs.get(name)
+            if s is None:
+                raise KeyError(name)
+            s.trusted = bool(on)
+            self._save()
+        return self.show()
+
+    def spec(self, name: str) -> Spec | None:
+        with self.lock:
+            return self._specs.get(name)
 
     def remove(self, name: str) -> dict:
         self.disconnect(name)

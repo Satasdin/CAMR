@@ -237,6 +237,44 @@ struct RootView: View {
             }
             .disabled(engine.phase != .ready)
 
+            VStack(alignment: .leading, spacing: 6) {
+                Text("PLUGINS").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
+                ForEach(chat.plugins) { p in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Circle().fill(p.state == "connected" ? Theme.memory : p.state == "failed" ? Theme.error : Theme.faint)
+                                .frame(width: 6, height: 6)
+                            Text(p.name).font(Theme.ui(12, .semibold)).foregroundStyle(Theme.text)
+                            Spacer()
+                            if chat.pluginBusy == p.id {
+                                ProgressView().controlSize(.mini)
+                            } else if p.state == "connected" {
+                                Button("Disconnect") { Task { await chat.disconnectPlugin(p.id) } }
+                                    .buttonStyle(.plain).font(Theme.mono(10)).foregroundStyle(Theme.dim)
+                            } else {
+                                Button("Connect") { Task { await chat.connectPlugin(p.id) } }
+                                    .buttonStyle(.plain).font(Theme.mono(10)).foregroundStyle(Theme.memory)
+                            }
+                        }
+                        .help(p.about)
+                        if p.state == "connected" {
+                            Toggle("Ask before each call", isOn: Binding(get: { !p.trusted },
+                                                                         set: { v in Task { await chat.trustPlugin(p.id, !v) } }))
+                                .toggleStyle(.checkbox).font(Theme.mono(10))
+                                .foregroundStyle(p.trusted ? Theme.error : Theme.dim)
+                                .help("Off: the agent's calls to this plugin run without asking you. The page test's own Chrome check never asks.")
+                        }
+                        if let e = p.error, p.state == "failed" {
+                            Text(e).font(Theme.mono(9)).foregroundStyle(Theme.error).lineLimit(3)
+                        }
+                    }
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 9).fill(Theme.panel))
+                }
+            }
+            .task { await chat.loadPlugins() }
+            .disabled(engine.phase != .ready)
+
             do {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
