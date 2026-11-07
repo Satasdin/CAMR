@@ -145,3 +145,23 @@ def test_a_reach_already_open_stays_on_its_pool_and_a_fix_is_kept_where_asked(tm
     assert not [k for k in second.hot if k[0] is shared.tiers]
     b.close()
     a.close()
+
+
+def test_an_agent_step_reuses_what_the_step_before_it_read(tmp_path):
+    reader = ToolReader([])
+    s = session(tmp_path, reader)
+    brain = EngineBrain(s)
+    brain.keep("The fee helper is fee(amount) in fees.py: 1% rounded up to the next 5 shillings.")
+    task = "Task: use the fee helper. " + "The method, at length. " * 120
+    first = brain.think(Prompt("Be careful.", task, [], ask="Which fee helper rounds up?"))
+    second = brain.think(Prompt("Be careful.", task + " What you did so far: read fees.py.", [],
+                                ask="Which fee helper rounds up?"))
+    a, b = reader.calls[-2], reader.calls[-1]
+    assert len(b.ids) * 4 < len(a.ids)  # the second step read only what was new
+    assert b.cache is a.cache  # on the same notes
+    assert second.prompt_tokens > first.prompt_tokens  # and still counts the whole prompt it read
+    other = brain.think(Prompt("Something else entirely.", "Task: another job", [], ask="Which fee helper rounds up?"))
+    # a different task shares only what comes before it differs (the memory's words): all the rest is read again
+    assert len(reader.calls[-1].ids) > len(b.ids) and other.prompt_tokens == len(reader.calls[-1].ids) + (
+        other.prompt_tokens - len(reader.calls[-1].ids))
+    brain.close()

@@ -54,6 +54,7 @@ DESK_ORDERS = ("date", "best_last")  # several rooms on the desk: oldest room fi
 SCAN = 64  # moments looked down for the further rooms of a desk
 REREADS = ("all", "off_desk")  # the closest moments re-read as words: all of them, or only those not on the desk
 ALLOWANCE_BYTES = 256 * 2**20
+STEP_REUSE_MIN = 256  # tokens an agent step must share with the step before for its read to be reused
 BITS = 8  # new rooms' notes on the SSD: 8 bits held the Long Haul's answers (DECISIONS.md, E-54)
 _OWN = object()  # "this memory's own core", as against a core (or None) a session passes in
 
@@ -318,11 +319,18 @@ class Memory:
         if live is not None:  # what the model still has to read as text, and what it finds already read
             live.add("prefill", tokens=len(ids), memory=rec.words, notes=desk)
         before = time.perf_counter() - t
+        cache, todo, reused = rec.desk, ids, 0
+        if kind == "agent":  # an agent's next step starts as its last did: what was read already is kept, not re-read
+            cache, todo, reused = self._step_reuse(rec, ids)
         if self.log:
-            with Looks(self.reader, self.notebook.p, spans, self.notebook.p + desk + len(ids), rec.desk) as looks:
-                reply = self.reader.generate(ids, cache=rec.desk, max_tokens=max_tokens)
+            with Looks(self.reader, self.notebook.p, spans, self.notebook.p + desk + len(ids), cache) as looks:
+                reply = self.reader.generate(todo, cache=cache, max_tokens=max_tokens)
         else:
-            reply = self.reader.generate(ids, cache=rec.desk, max_tokens=max_tokens)
+            reply = self.reader.generate(todo, cache=cache, max_tokens=max_tokens)
+        reply.prompt_tokens = len(ids)  # what the step reads, whether it was read now or kept from the last step
+        reply.reused_tokens = reused
+        if kind == "agent":
+            self._step = (self._step_key(rec), ids, cache, self.notebook.p + desk)
         done = time.perf_counter() - t
         first = reply.ttft_s
         reply.ttft_s += before
@@ -345,6 +353,31 @@ class Memory:
                           disk_bytes=sum(m.folder_bytes() for m in group), reach=self.reach)
             reply.metrics = self.meter.add(got) if self.meter is not None else got
         return reply
+
+    @staticmethod
+    def _step_key(rec) -> tuple:
+        return (tuple(rec.laid), rec.room, bool(rec.asleep), int(rec.core), int(rec.notes), tuple(rec.closest))
+
+    def _step_reuse(self, rec, ids: list[int]):
+        """(cache, ids still to read, ids reused): the last agent step's cache, rewound to what it shares with this
+        step, when the same room is on the desk and at least STEP_REUSE_MIN tokens are shared; else the new desk."""
+        prev = getattr(self, "_step", None)
+        self._step = None  # one kept at a time: the cache now belongs to this step
+        if prev is None or prev[0] != self._step_key(rec):
+            return rec.desk, ids, 0
+        _, old, cache, start = prev
+        n = 0
+        for a, b in zip(old, ids):
+            if a != b:
+                break
+            n += 1
+        n = min(n, len(ids) - 1)  # the model must read at least one token itself
+        if n < STEP_REUSE_MIN:
+            return rec.desk, ids, 0
+        from camr_engine.models import Reader
+
+        Reader.rewind(cache, start + n)
+        return cache, ids[n:], n
 
     def words(self, moments: list[int]) -> list[int]:
         return [i for m in moments for i in self.ids(self.rooms.moments[m].text)]

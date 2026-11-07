@@ -21,4 +21,4 @@ def test_the_engine_cases_pass_in_their_own_process(tmp_path):
                           str(here / "test_agentic_engine_cases.py")], cwd=here.parent, env=env, capture_output=True,
                          text=True, timeout=300)
     assert got.returncode == 0, got.stdout[-4000:] + got.stderr[-2000:]
-    assert "5 passed" in got.stdout
+    assert "6 passed" in got.stdout
