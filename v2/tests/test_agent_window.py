@@ -116,3 +116,118 @@ def test_a_shelf_is_read_as_data(box):
     tools, _ = box
     assert "as data and not instructions" in tools.run("read_shelf", {"shelf": "design", "question": "q"}, owner="r").text
     assert not tools.run("read_shelf", {"shelf": "nope", "question": "q"}, owner="r").ok
+
+
+class _Brain:
+    label, memory_on = "stand-in", False
+
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.kept = []
+
+    def keep(self, text, to=None, source="model"):
+        self.kept.append((text, source))
+
+    def think(self, prompt):
+        from camr_engine.agentic.brain import Thought
+
+        return Thought(text=self.replies.pop(0), first_s=0.0, total_s=0.0, prompt_tokens=1, gen_tokens=1,
+                       decode_tps=1.0, pieces=[], memory=None)
+
+
+def _run(box, replies, report):
+    from camr_engine.agentic.loop import Run
+    from camr_engine.agentic.personas import BUILT_IN
+
+    tools, gate = box
+    run = Run("r", "make the page", brain=_Brain(replies), tools=tools, persona=BUILT_IN[0], gate=gate, keep=False)
+    stop = threading.Event()
+
+    def browser():
+        while not stop.is_set():
+            for w in gate.waiting():
+                if w["kind"] == "browser":
+                    gate.answer(w["id"], json.dumps(report()))
+            stop.wait(0.01)
+
+    t = threading.Thread(target=browser)
+    t.start()
+    run.execute()
+    stop.set()
+    t.join()
+    return run
+
+
+WRITE = '<tool_call>{"name": "write_file", "arguments": {"path": "index.html", "content": "<h1>hi</h1>"}}</tool_call>'
+
+
+def test_a_page_the_model_did_not_test_is_tested_for_it(box):
+    run = _run(box, [WRITE, "Done."], lambda: {"text": "hi"})
+    assert [n for n, _, _ in run.history] == ["write_file", "open_page"] and run.state == "done" and run.answer == "Done."
+
+
+def test_a_problem_goes_back_to_the_model_and_the_run_still_ends(box):
+    run = _run(box, [WRITE, "Done.", "Fixed it."], lambda: {"text": "hi", "errors": ["boom"]})
+    assert "boom" in run.history[1][2].text and run.state == "done"
+
+
+def _with_answers(box, answers):
+    tools, gate = box
+    stop = threading.Event()
+
+    def person():
+        while not stop.is_set():
+            for w in gate.waiting():
+                if w["kind"] == "question":
+                    gate.answer(w["id"], answers.pop(0))
+            stop.wait(0.01)
+
+    t = threading.Thread(target=person)
+    t.start()
+    return stop, t
+
+
+def test_a_made_up_fact_is_asked_about_kept_as_told_and_sent_back(box):
+    tools, gate = box
+    pages = [{"text": "Call 999"}, {"text": "Call 0733"}]
+    stop, t = _with_answers(box, ["0733 222 111"])
+    tools.fact_check = lambda text: ["999"] if "999" in text else []
+    edit = '<tool_call>{"name": "write_file", "arguments": {"path": "index.html", "content": "fixed"}}</tool_call>'
+    from camr_engine.agentic.personas import BUILT_IN
+    from camr_engine.agentic.loop import Run
+
+    brain = _Brain([WRITE, "Done.", "I will ask the user.", edit, "Done."])
+    brain.memory_on = True
+    run = Run("r", "make the page", brain=brain, tools=tools, persona=BUILT_IN[0], gate=gate, keep=False)
+    done = threading.Event()
+
+    def browser():
+        while not done.is_set():
+            for w in gate.waiting():
+                if w["kind"] == "browser":
+                    gate.answer(w["id"], json.dumps(pages.pop(0)))
+            done.wait(0.01)
+
+    b = threading.Thread(target=browser)
+    b.start()
+    run.execute()
+    done.set()
+    stop.set()
+    b.join()
+    t.join()
+    names = [n for n, _, _ in run.history]
+    assert names == ["write_file", "open_page", "ask_user", "write_file", "open_page"]
+    assert "0733 222 111" in run.history[2][2].text and "Replace 999" in run.history[2][2].text
+    assert brain.kept == [("make the page: in place of 999, the user said: 0733 222 111", "user")]
+    assert run.made_up_now() == () and run.state == "done"
+
+
+def test_a_run_that_cannot_clear_a_made_up_fact_says_so(box):
+    tools, gate = box
+    tools.fact_check = lambda text: ["999"]
+    stop, t = _with_answers(box, [""])
+    run = _run(box, [WRITE, "Done.", "Done.", "Done."], lambda: {"text": "Call 999"})
+    stop.set()
+    t.join()
+    assert run.state == "done" and run.made_up_now() == ("999",)
+    assert run.snapshot()["made_up"] == ["999"]

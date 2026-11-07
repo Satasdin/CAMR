@@ -64,7 +64,7 @@ class Brain(Protocol):
 
     def think(self, prompt: Prompt) -> Thought: ...
 
-    def keep(self, text: str, to: str | None = None) -> dict | None: ...
+    def keep(self, text: str, to: str | None = None, source: str = "model") -> dict | None: ...
 
     def moment(self, reach: str, mid: int) -> dict | None: ...
 
@@ -122,7 +122,7 @@ class PlainBrain:
         return Thought("".join(reply.pieces) or reply.text, list(reply.pieces), reply.ttft_s,
                        time.perf_counter() - t, reply.prompt_tokens, reply.gen_tokens, reply.gen_tps or None)
 
-    def keep(self, text: str, to: str | None = None) -> dict | None:
+    def keep(self, text: str, to: str | None = None, source: str = "model") -> dict | None:
         return None
 
     def moment(self, reach: str, mid: int) -> dict | None:
@@ -195,12 +195,13 @@ class EngineBrain:
         except (IndexError, AttributeError):
             return ""
 
-    def keep(self, text: str, to: str | None = None) -> dict | None:
+    def keep(self, text: str, to: str | None = None, source: str = "model") -> dict | None:
         """Remember a moment, dated, in the reach this session writes to, or ``to`` another it reads (such as
-        ``project``)."""
+        ``project``). ``source`` says where it came from: a run's summary is the model's own, and never backs a fact;
+        ``user`` is what the person said."""
         s = self.session
         today = self.today()
-        got = s.remember(f"[{today.isoformat()}] {text}", self.day(today), to=to)
+        got = s.remember(f"[{today.isoformat()}] {text}", self.day(today), to=to, tags=[] if source == "user" else [source])
         if got is None:
             return None
         m = s.memory(to)

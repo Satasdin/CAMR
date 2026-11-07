@@ -43,6 +43,7 @@ HISTORY_CHARS = 60_000  # the steps so far, at most: about 15-20K tokens, well i
 TERM_CHARS = 200_000  # terminal characters kept (as camr_engine.agentic.shell.KEEP)
 TERM_LIMIT = 4000  # terminal chunks kept
 ENDED = ("done", "stopped", "failed")
+PAGE_TESTS = 4  # times a run tests its page by itself
 ROOM_MAX = 4096  # a step cut off inside a call gets twice the room for its next reply, at most this
 
 RULES = """You work in the folder "{ws}" on the user's Mac. Paths are relative to it, so leave its name out: "a.txt",
@@ -80,6 +81,8 @@ class Run:
         self.max_steps, self.step_tokens, self.keep_it = max_steps, step_tokens, keep
         self.room = step_tokens  # the next reply's token limit (doubled after a reply cut off inside a call)
         self._reminded = False  # told once already that it answered with files the task names not written
+        self._page_tests = 0
+        self._asked: set[str] = set()  # facts the run has asked the person about
         self.measuring, self.on_step, self.on_think = measuring, on_step, on_think
         self.state = "queued"  # queued, thinking, tool, waiting, measuring, keeping, done, stopped, failed
         self.answer: str | None = None
@@ -165,7 +168,7 @@ class Run:
                     "decode_tps": thought.decode_tps, "memory": thought.memory}
             self._turn(turn)
             self._span("model", t0, t1, f"step {k}", ticks=ticks(thought, t0))
-            if not found and (self._cut(thought) or self._not_yet()):
+            if not found and (self._cut(thought) or self._not_yet() or self._test_page(k) or self._ask_about(k)):
                 continue
             if not found:
                 self.answer = words or "(the model wrote nothing)"
@@ -240,6 +243,72 @@ class Run:
             f"you answered, but the task names {', '.join(todo)}, not in the workspace yet. Write "
             f"{'it' if len(todo) == 1 else 'them'} now with write_file, or answer again saying why not."), 0.0)))
         self._turn({"kind": "error", "text": f"answered with {', '.join(todo)} not written yet; going on"})
+        return True
+
+    def _test_page(self, step: int) -> bool:
+        """An answer with a web page written since it was last tested: a small model skips the test however it is told,
+        so the run tests the page itself and gives the model the report. Only while there are problems to fix, and at
+        most PAGE_TESTS times a run, so it always ends."""
+        if not getattr(self.tools, "window", False) or self._page_tests >= PAGE_TESTS:
+            return False
+        page = None
+        for name, args, done in reversed(self.history):
+            if name == "open_page":
+                break
+            if done.wrote is not None and done.wrote.path.lower().endswith((".html", ".htm")):
+                page = done.wrote.path
+                break
+            if done.wrote is not None and page is None:  # a stylesheet or script: its page needs testing again
+                page = "index.html" if (Path(self.tools.workspace.root) / "index.html").exists() else None
+                break
+        if page is None:
+            return False
+        self._page_tests += 1
+        self._set("tool")
+        t0 = self.now()
+        args = {"path": page}
+        done = self.tools.run("open_page", args, owner=self.id, label=self.label, cancel=self.cancel)
+        self.history.append(("open_page", args, done))
+        self._turn({"kind": "call", "step": step, **done.show()})
+        self._span("open_page", t0, self.now(), short(args, 60), ok=done.ok)
+        self._set("thinking")
+        return not done.ok  # problems go back to the model; a clean page ends the run with the answer it gave
+
+    def made_up_now(self) -> tuple[str, ...]:
+        """What the page's latest test found that memory does not hold, unless the page has changed since."""
+        for name, _, done in reversed(self.history):
+            if done.wrote is not None:
+                return ()
+            if name == "open_page":
+                return done.made_up
+        return ()
+
+    def _ask_about(self, step: int) -> bool:
+        """An answer with made-up facts still on the page. A small model says it will ask, in words, and stops; so the
+        run asks the person itself, keeps what they say in memory (so it counts as told, and is never asked again), and
+        sends the model back to fix the page."""
+        facts = [f for f in self.made_up_now() if f not in self._asked]
+        if not facts:
+            return False
+        fact = facts[0]
+        self._asked.add(fact)
+        question = (f'Your page says "{fact}", but nobody told me that. What should it be? Leave it empty to take it '
+                    "off the page.")
+        args = {"question": question}
+        self._set("waiting")
+        done = self.tools.run("ask_user", args, owner=self.id, label=self.label, cancel=self.cancel)
+        said = done.text.removeprefix("The user answered: ") if done.text.startswith("The user answered: ") else ""
+        self._turn({"kind": "call", "step": step, **done.show()})
+        if said and self.brain.memory_on:
+            try:
+                with self.model_lock:
+                    self.brain.keep(f"{self.label}: in place of {fact}, the user said: {said}", source="user")
+            except Exception as e:  # noqa: BLE001 (the answer still reaches the model)
+                self._turn({"kind": "error", "text": f"not kept in memory: {type(e).__name__}: {e}"[:300]})
+        tell = (f"Replace {fact} on the page with {said}, using edit_file." if said else
+                f"The user did not give a value. Remove {fact} from the page with edit_file.")
+        self.history.append(("ask_user", args, Done("ask_user", args, True, f"{done.text} {tell}", done.ms)))
+        self._set("thinking")
         return True
 
     def _again(self, name: str, args: dict) -> Done | None:
@@ -426,6 +495,7 @@ class Run:
                     "trace": list(self.trace),
                     "term": self.term[start:], "term_next": self.term_dropped + len(self.term),
                     "term_cut": self.term_cut, "wrote": list(self.wrote), "kept": self.kept,
+                    "made_up": list(self.made_up_now()),
                     "waiting": self.gate.waiting(self.id)}
 
 

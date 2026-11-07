@@ -95,6 +95,8 @@ enum Script {
                 case "preview-last":
                     let text = world.chat.turns.last?.text ?? ""
                     if let page = AnswerText.blocks(text).first(where: { $0.code })?.text { PreviewCenter.shared.show(code: page) }
+                case "answers":  // what the person will answer when the agent asks, in order
+                    world.chat.scriptAnswers = arg.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
                 case "preview-html":
                     PreviewCenter.shared.show(code: arg)
                 case "preview-file":

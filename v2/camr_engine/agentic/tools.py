@@ -100,6 +100,7 @@ class Done:
     wrote: Wrote | None = None
     offset: int = 0  # for an edit: the line in the file where the new text starts (0-based)
     content: str = ""  # for a write or an edit: the text the call wrote, as written in the reply
+    made_up: tuple[str, ...] = ()  # for a page's test: facts on the page that memory does not hold
 
     def show(self) -> dict:
         w = self.wrote
@@ -323,7 +324,8 @@ class Toolbox:
                             + ". Remove them, or call ask_user")
         seen = f"The page loads, showing {len(text):,} characters of text."
         return Done("open_page", args, not problems, seen + (" Problems:\n- " + "\n- ".join(problems) if problems else
-                    " No problems found."), ms, output=json.dumps(got, ensure_ascii=False)[:OUTPUT_SHOWN])
+                    " No problems found."), ms, output=json.dumps(got, ensure_ascii=False)[:OUTPUT_SHOWN],
+                    made_up=tuple(made_up))
 
     def _shelf(self, args, t) -> Done:
         shelf, question = str(_arg(args, "shelf", "")), str(_arg(args, "question", ""))

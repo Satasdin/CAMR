@@ -305,6 +305,8 @@ class Desk:
                       marks=self.marks, notes=notes, max_steps=max_steps or 12, measuring=self.measuring,
                       on_step=self._watch, shelves=self.shelf_index() if window and memory else "")
             run.thread_id = thread
+            if window:  # the band under the chat box sees a few words a second; measuring each one costs time
+                run.watch.layer_every = 8
             self.runs[rid] = run
             finished = [k for k, r in self.runs.items() if not r.live]
             for k in finished[:max(0, len(self.runs) - MAX_RUNS)]:
@@ -406,7 +408,7 @@ class Desk:
                 except Exception:  # noqa: BLE001 (the fix is still told to the next run)
                     return
                 try:
-                    b.keep(note, to="project")
+                    b.keep(note, to="project", source="user")
                 except Exception:  # noqa: BLE001
                     pass
                 finally:

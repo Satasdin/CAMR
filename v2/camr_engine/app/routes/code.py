@@ -32,6 +32,42 @@ from camr_engine.agentic.workspace import Outside
 from camr_engine.app.web import Refused, Request, Routes, part
 
 
+class OnSessionThread:
+    """A brain whose model calls run on the chat session's own thread. MLX's streams belong to the thread that made
+    them, so the chat and the agent must share one to use the one model in turn."""
+
+    def __init__(self, brain, run):
+        self.brain, self.run = brain, run
+
+    def __getattr__(self, name):
+        return getattr(self.brain, name)
+
+    def think(self, prompt):
+        return self.run(lambda: self.brain.think(prompt))
+
+    def keep(self, text, to=None, source="model"):
+        return self.run(lambda: self.brain.keep(text, to, source))
+
+    def close(self):
+        return self.run(self.brain.close)
+
+
+def on_session_thread(app, make):
+    """Brains made and used on the chat session's thread, when the app has a chat."""
+    if make is None:
+        return None
+
+    def made(spec):
+        from camr_engine.app.routes.chat import talk
+
+        t = talk(app)
+        if t is None:
+            return make(spec)
+        return OnSessionThread(t.run(lambda: make(spec)), t.run)
+
+    return made
+
+
 def desk(app) -> Desk:
     """The app's one Desk, made on first use. A workspace may neither hold nor sit inside its folder, the app's memory
     or the memory's reaches."""
@@ -43,17 +79,24 @@ def desk(app) -> Desk:
         base = Path(memory.path).parent if memory is not None else Path.home() / ".camr"
         root = getattr(app, "agentic_root", None) or base / "code"
         keep_out = [Path(memory.path), *(base / k for k in KINDS)] if memory is not None else []
-        brains = getattr(app, "brain_factory", None) or engine_brains(app)
+        brains = getattr(app, "brain_factory", None) or on_session_thread(app, engine_brains(app))
         d = Desk(Path(root), brains=brains, model_lock=getattr(app, "lock", None), measuring=active,
                  skills_dir=getattr(app, "skills_dir", None), keep_out=keep_out)
         from camr_engine.app.routes.chat import talk
         from camr_engine.shelves import SHELVES
 
-        t = talk(app)
-        if t is not None:  # the agent in the one window reads the chat's shelves and is checked against its memory
-            d.shelf_notes = t.shelf_notes
-            d.fact_check = t.page_check
-            d.shelf_index = lambda: "\n".join(f"- {s.name}: {s.about[:120]}" for s in SHELVES)
+        # the agent in the one window reads the chat's shelves and is checked against its memory; the chat is looked
+        # up when it is used, as asking for it here, while this part is being made, would wait on itself
+        def shelf_notes(name: str, question: str):
+            t = talk(app)
+            return t.shelf_notes(name, question) if t is not None else None
+
+        def fact_check(text: str) -> list[str]:
+            t = talk(app)
+            return t.page_check(text) if t is not None else []
+
+        d.shelf_notes, d.fact_check = shelf_notes, fact_check
+        d.shelf_index = lambda: "\n".join(f"- {s.name}: {s.about[:120]}" for s in SHELVES)
         return d
 
     return part(app, "_code_desk", make)

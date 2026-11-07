@@ -21,6 +21,8 @@ struct Turn: Identifiable {
     var runs: [Run] = []  // a comparison: the same question answered by CAMR, RAG and the model alone
     var checked = 0  // the fact check: how many facts it looked up in memory…
     var unbacked: [String] = []  // …and those memory does not hold
+    var agent: AgentState?  // the agent's work, when this answer was a request to make something
+    var agentRev = 0  // changes whenever the agent's card does
 }
 
 /// One answer's pipeline, as the engine measured it (camr_engine.app.routes.chat, ``pipeline``).
@@ -110,10 +112,17 @@ final class ChatModel: ObservableObject {
 
     let engine: Engine
     let weights: WeightsModel
+    let tester = PageTester()
+    var projectRoot: String?  // the folder the agent works in, for this conversation
+    var agentThread: String?
+    var agentRun: String?
+    var scriptAnswers: [String] = []  // a rehearsal's answers to the agent's questions, in order
+    static weak var current: ChatModel?
 
     init(engine: Engine, weights: WeightsModel) {
         self.engine = engine
         self.weights = weights
+        ChatModel.current = self
     }
 
     func refresh() async {
@@ -227,6 +236,11 @@ final class ChatModel: ObservableObject {
         draft = ""
         busy = true
         defer { busy = false }
+        if mode == .ask, let got = try? await engine.post("/api/chat/intent", ["text": text, "project_open": projectRoot != nil]),
+           (got["agent"] as? Bool) == true {
+            await runAgent(text)
+            return
+        }
         let label = mode == .remember ? "remember" : mode == .research ? "research online" : ""
         turns.append(Turn(who: .you, text: text, meta: label))
         turns.append(Turn(who: .camr, text: "", memory: memoryOn, pending: true, model: engine.model.name))
@@ -336,6 +350,10 @@ final class ChatModel: ObservableObject {
 
     /// Stop the answer being written: the model ends at its next word.
     func stop() async {
+        if let run = agentRun {
+            _ = try? await engine.post("/api/code/stop", ["run": run])
+            return
+        }
         guard let id = job else { return }
         _ = try? await engine.post("/api/live/stop", ["id": id])
     }
@@ -344,6 +362,9 @@ final class ChatModel: ObservableObject {
     func newChat() async {
         guard !busy else { return }
         turns = []
+        projectRoot = nil
+        agentThread = nil
+        PreviewCenter.shared.close()
         _ = try? await engine.post("/api/chat/new", [:])
         await loadChats()
     }
@@ -589,11 +610,7 @@ struct Composer: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            HStack(alignment: .bottom, spacing: 8) {
-                Button { chat.attach() } label: { Image(systemName: "paperclip").font(.system(size: 15, weight: .semibold)) }
-                    .buttonStyle(.plain).foregroundStyle(Theme.dim).padding(.bottom, 12)
-                    .help("Read a PDF, image, video, text or Markdown file into memory (images on this Mac, with on-device OCR)")
-                TextField(engine.phase == .ready ? "Ask anything, ask for code, remember something, or compare…"
+            TextField(engine.phase == .ready ? "Ask anything, or tell it to build something…"
                           : "Loading the model…", text: $typing.text, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(Theme.ui(15))
@@ -605,6 +622,11 @@ struct Composer: View {
                     .padding(12)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.line))
+            HStack(spacing: 8) {
+                Button { chat.attach() } label: { Image(systemName: "paperclip").font(.system(size: 15, weight: .semibold)) }
+                    .buttonStyle(.plain).foregroundStyle(Theme.dim)
+                    .help("Read a PDF, image, video, text or Markdown file into memory (images on this Mac, with on-device OCR)")
+                Spacer()
                 Button { Task { await chat.send(.research) } } label: { Image(systemName: "globe") }
                     .buttonStyle(Pill(color: Theme.text.opacity(0.85)))
                     .keyboardShortcut(.return, modifiers: [.command, .shift])
@@ -667,7 +689,7 @@ struct TurnView: View, Equatable {
         let x = a.turn, y = b.turn
         return x.id == y.id && x.pending == y.pending && x.failed == y.failed && x.text == y.text
             && x.thinking == y.thinking && x.meta == y.meta && x.route == y.route && x.model == y.model
-            && x.source?.url == y.source?.url && x.thinkEnd == y.thinkEnd && x.runs.count == y.runs.count && x.unbacked == y.unbacked && x.checked == y.checked
+            && x.source?.url == y.source?.url && x.thinkEnd == y.thinkEnd && x.runs.count == y.runs.count && x.unbacked == y.unbacked && x.checked == y.checked && x.agentRev == y.agentRev
             && zip(x.runs, y.runs).allSatisfy {
                 $0.text == $1.text && $0.pending == $1.pending && $0.started == $1.started && $0.failed == $1.failed
                     && $0.pipe?.firstWord == $1.pipe?.firstWord && $0.pipe?.prefill == $1.pipe?.prefill
@@ -687,6 +709,12 @@ struct TurnView: View, Equatable {
             }
             if !turn.runs.isEmpty {
                 CompareView(runs: turn.runs)
+            } else if let agent = turn.agent {
+                AgentCard(agent: agent, pending: turn.pending)
+                if !turn.text.isEmpty { AnswerText(text: turn.text, failed: turn.failed) }
+                if !turn.pending, !agent.files.isEmpty {
+                    Text("Made: " + agent.files.joined(separator: ", ")).font(Theme.mono(10)).foregroundStyle(Theme.faint)
+                }
             } else {
                 answer
             }

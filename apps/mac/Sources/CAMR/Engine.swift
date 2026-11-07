@@ -12,7 +12,8 @@ struct ModelChoice: Identifiable, Hashable {
 
 let MODELS = [
     ModelChoice(id: "mlx-community/Qwen3-1.7B-4bit", name: "Qwen3 1.7B", size: "1.0 GB", note: "reasons · quickest"),
-    ModelChoice(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit", name: "Qwen3 4B", size: "2.3 GB",
+    ModelChoice(id: "mlx-community/Qwen3-4B-4bit", name: "Qwen3 4B", size: "2.3 GB", note: "reasons · best balance"),
+    ModelChoice(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit", name: "Qwen3 4B Instruct", size: "2.3 GB",
                 note: "best memory recall · no reasoning"),
     ModelChoice(id: "mlx-community/Qwen3-8B-4bit", name: "Qwen3 8B", size: "4.6 GB", note: "reasons · strongest"),
 ]
