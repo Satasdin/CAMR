@@ -157,8 +157,25 @@ def test_a_brief_that_asks_for_motion_gets_a_motion_part_and_the_vendored_files(
     assert not any(p.target and p.target.startswith("vendor/") for p in parts)
     text = "\n".join(p.system + "\n" + p.user for p in desk.brain.prompts)
     assert '<script type="importmap">' in text and "vendor/gsap/ScrollTrigger.min.js" in text  # the builder's snippet
-    assert "The method for 3d-scene" in text and "The method for layers" in text  # the motion part's cards
+    # the motion part starts from the whole tested motion.js; the builder and designer from the tested page
+    assert "The method for motion-starter" in text and "Write it whole with write_file" in text
+    assert "The method for page-starter" in text and 'id="cd-secs"' in text
     assert "Vendor files" in text and "camr-rocket.js" in text  # the architect is told what is vendored
+
+
+def test_a_folder_of_cards_from_before_the_starter_gives_the_old_cards(desk, tmp_path, monkeypatch):
+    from camr_engine.agentic import plan
+
+    old = tmp_path / "skills"
+    old.mkdir()
+    for f in plan.SKILLS.glob("*.md"):
+        if f.stem not in ("motion-starter", "page-starter"):
+            (old / f.name).write_text(f.read_text())
+    monkeypatch.setattr(plan, "SKILLS", old)
+    build(desk, ROCKET)
+    text = "\n".join(p.system + "\n" + p.user for p in desk.brain.prompts)
+    assert "The method for 3d-scene" in text and "The method for layers" in text
+    assert "motion-starter" not in text and "page-starter" not in text
 
 
 def test_a_plain_cafe_page_gets_no_motion_part_and_no_vendor_folder(desk):

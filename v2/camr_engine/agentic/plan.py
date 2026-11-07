@@ -19,6 +19,7 @@ The plan is kept as PLAN.md in the project, for the person to read, and as JSON 
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 import time
@@ -32,7 +33,8 @@ from camr_engine.agentic.loop import WEBSITE
 if TYPE_CHECKING:
     from camr_engine.agentic.desk import Desk
 
-SKILLS = Path(__file__).resolve().parent.parent / "curated" / "skills"  # the methods, shipped with the engine
+# the methods, shipped with the engine; CAMR_SKILLS names another folder of them (a before/after test of the cards)
+SKILLS = Path(os.environ.get("CAMR_SKILLS") or Path(__file__).resolve().parent.parent / "curated" / "skills")
 MAX_FILES = 6  # files one plan makes, at most
 SHOWN = 9000  # characters of one file a specialist reads
 TEAM_FILES = ("BRIEF.md", "ARCHITECTURE.md", "PLAN.md", "REPORT.md")
@@ -829,6 +831,11 @@ class Lead:
             out += self._motion_context(part)
         return out
 
+    def _starter_wanted(self, part: Part) -> bool:
+        """The page starter goes to the parts that write index.html or the stylesheet of a 3D page."""
+        t = (part.target or "").lower()
+        return t.endswith((".html", ".htm")) if part.role == "builder" else t.endswith(".css")
+
     def _motion_context(self, part: Part) -> list[str]:
         """For a brief that asks for motion: the vendored files to the architect, the exact loading HTML to the
         builder, and the methods (skill cards) to the motion part."""
@@ -837,17 +844,33 @@ class Lead:
             return ["The project gets these vendored files in vendor/ (no network at page time). Under a heading "
                     "'Vendor files', list the ones the page uses, and plan motion.js (an ES module) for the motion:\n"
                     + moving.catalog(kits)]
+        if part.role in ("builder", "design") and "three" in kits and self._starter_wanted(part):
+            from camr_engine.agentic.skills import Skills
+
+            try:  # the page and stylesheet that passed every check with motion-starter's motion.js
+                starter = [f"The method for page-starter:\n{Skills(SKILLS).load('page-starter')}"]
+            except KeyError:
+                starter = []
+        else:
+            starter = []
         if part.role == "builder" and part.target and part.target.lower().endswith((".html", ".htm")):
             needs = ['a <canvas id="scene"></canvas> for the 3D scene'] if "three" in kits else []
             needs += ['the depth layers as empty divs with class "layer" and a data-speed from 0.1 (far) to 1 (near)',
                       'class "reveal" on what should slide in as it reaches the screen']
-            return ["Paste this into the page exactly, just before </body> (it loads the vendored libraries and "
-                    f"motion.js, which the motion part writes):\n{moving.loader(kits)}\n\nThe motion needs, in the page: "
-                    + "; ".join(needs) + "."]
+            return starter + ["Paste this into the page exactly, just before </body> (it loads the vendored libraries "
+                              f"and motion.js, which the motion part writes):\n{moving.loader(kits)}\n\nThe motion "
+                              "needs, in the page: " + "; ".join(needs) + "."]
+        if part.role == "design" and starter:
+            return starter
         if part.role == "motion":
             from camr_engine.agentic.skills import Skills
 
-            cards = (["3d-scene"] if "three" in kits else []) + (["layers"] if moving.LAYERS.search(self.request) else [])
+            # a 3D page starts from a whole tested file (motion-starter), which even a small model can copy and
+            # adjust; without 3D, the layers card when the brief asks for depth
+            depth = ["layers"] if moving.LAYERS.search(self.request) else []
+            cards = (["motion-starter"] if "three" in kits else depth)
+            if "three" in kits and not (SKILLS / "motion-starter.md").exists():
+                cards = ["3d-scene"] + depth  # a folder of cards from before the starter (CAMR_SKILLS)
             out = ["The vendored files in vendor/ (use these, never a network address):\n" + moving.catalog(kits)]
             for name in cards:
                 try:

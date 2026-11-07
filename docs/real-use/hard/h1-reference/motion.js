@@ -71,11 +71,11 @@ if (calm) {
   render();  // once, the final still: the rocket on its pad
 } else {
   gsap.registerPlugin(ScrollTrigger);
-  const flame = rocket.getObjectByName('flame');
   // the rocket turns as the page scrolls, then lifts off; scrub ties it to the scrollbar
   const flight = gsap.timeline({
     scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: true },
-    onUpdate: () => { flame.visible = rocket.position.y > 0.05; },
+    // look the flame up each time: the detailed rocket replaces the stand-in (and its flame) when it loads
+    onUpdate: () => { rocket.getObjectByName('flame').visible = rocket.position.y > 0.05; },
   });
   flight.to(rocket.rotation, { y: Math.PI * 2, ease: 'none', duration: 1 })
     .to(rocket.position, { y: 14, ease: 'power2.in', duration: 1.2 }, 0.6)
@@ -101,6 +101,7 @@ if (calm) {
   // a slow idle turn of the stars, drawn every frame
   renderer.setAnimationLoop((t) => {
     stars.rotation.y = t * 0.00002;
+    const flame = rocket.getObjectByName('flame');
     if (flame.visible) flame.scale.y = 0.85 + Math.sin(t * 0.03) * 0.15;
     render();
   });

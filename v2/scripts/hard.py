@@ -190,7 +190,7 @@ def brains(model: str):
     raise SystemExit("--model is claude-..., ollama:<name> or mlx[:<name>]")
 
 
-def run(bid: str, model: str, minutes: float) -> dict:
+def run(bid: str, model: str, minutes: float, tag: str = "") -> dict:
     from camr_engine.agentic.desk import Desk
     from camr_engine.agentic.plugins import browser_check
     from camr_engine.agentic.serve import serving
@@ -204,7 +204,8 @@ def run(bid: str, model: str, minutes: float) -> dict:
             raise SystemExit(f"a benchmark is measuring ({active().get('job')}): a local model would take its GPU")
     brief = briefs()[bid]
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    folder = projects() / f"{bid.lower()}-{re.sub(r'[^a-z0-9]+', '-', model.lower())}-{stamp}"
+    name = f"{bid.lower()}-{re.sub(r'[^a-z0-9]+', '-', model.lower())}" + (f"-{tag}" if tag else "")
+    folder = projects() / f"{name}-{stamp}"
     folder.mkdir(parents=True)
     desk_root = projects() / "_desk" / stamp
     desk = Desk(desk_root, brains=brains(model), keep_out=[])
@@ -254,7 +255,8 @@ def run(bid: str, model: str, minutes: float) -> dict:
             rules = brief_rules(link, serving(desk.workspace).url("index.html"), told)
         finally:
             link.close()
-    out = {"brief": bid, "model": model, "folder": str(folder), "state": lead.state, "seconds": lead.facts()["seconds"],
+    out = {"brief": bid, "model": model, "tag": tag, "skills": os.environ.get("CAMR_SKILLS") or "shipped",
+           "folder": str(folder), "state": lead.state, "seconds": lead.facts()["seconds"],
            "parts": [(x.role, x.target, x.state) for x in lead.plan.parts], "motion": motion.read_report(desk.workspace),
            "rules": rules}
     (folder / "report").mkdir(exist_ok=True)
@@ -277,6 +279,7 @@ def main(argv=None) -> None:
     r.add_argument("brief")
     r.add_argument("--model", required=True)
     r.add_argument("--minutes", type=float, default=45)
+    r.add_argument("--tag", default="", help="a label for the run's folder (e.g. cards-before)")
     sub.add_parser("list", help="the briefs in HARD.md")
     k = sub.add_parser("rules", help="the brief's own rules (countdown, told facts) on a page already built")
     k.add_argument("brief")
@@ -298,7 +301,7 @@ def main(argv=None) -> None:
     elif a.cmd == "check":
         check(a.brief, a.folder.resolve(), a.name)
     else:
-        run(a.brief, a.model, a.minutes)
+        run(a.brief, a.model, a.minutes, a.tag)
 
 
 if __name__ == "__main__":

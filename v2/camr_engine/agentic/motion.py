@@ -106,8 +106,9 @@ def catalog(kits: list[str]) -> str:
                       "GLTFLoader from 'three/addons/loaders/GLTFLoader.js'",
              "rocket": "vendor/camr-rocket.js: loadRocket(THREE, GLTFLoader, {onLoad}) (the detailed rocket, "
                        "vendor/models/rocket/rocket.glb: a three-stage launcher, white and black, no markings; it "
-                       "returns the group at once and puts the model in when it loads), makeRocket(THREE) (a simple "
-                       "rocket from shapes), makePad(THREE), makeStars(THREE), disposeAll(THREE, group)",
+                       "returns the group at once and puts the model in when it loads: use this one for a rocket), "
+                       "makePad(THREE), makeStars(THREE), disposeAll(THREE, group); makeRocket(THREE) is a cartoon "
+                       "rocket from shapes, only for a cartoon look",
              "models": "vendor/models/space-kit/*.glb (CC0, Kenney): rocket_baseA, rocket_fuelA, rocket_sidesA, "
                        "rocket_finsA, rocket_topA, platform_large (a launch pad), satelliteDish",
              "gsap": "GSAP 3.15 and ScrollTrigger as globals: vendor/gsap/gsap.min.js, vendor/gsap/ScrollTrigger.min.js"}
