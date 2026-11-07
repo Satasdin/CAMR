@@ -63,3 +63,18 @@ def test_a_script_that_is_a_file_of_secrets_or_a_symlink_out_is_never_read(tmp_p
     (site_ / "index.html").write_text('<script src=".env"></script><script src="link.js"></script>')
     got = page_problems(site_, "index.html")
     assert got == [] and "sk-secret" not in " ".join(got)
+
+
+def test_a_const_that_is_changed_is_found(tmp_path):
+    got = site(tmp_path, PAGE.replace(' onclick="go()"', ""),
+               "const total = 0;\nconst names = [];\nlet n = 1;\nnames.push('a');\nn += 1;\n"
+               "document.getElementById('add').addEventListener('click', () => { total += 5; });")
+    assert any("changes total, declared with const" in p for p in got)
+    assert not any("names" in p or " n," in p for p in got)
+
+
+def test_comparisons_and_object_fields_are_not_changes(tmp_path):
+    got = site(tmp_path, PAGE.replace(' onclick="go()"', ""),
+               "const total = 0;\nconst o = {total: 1};\nif (total === 0 || total == 1 || total >= 2) { o.total = 3; }\n"
+               "document.getElementById('add');")
+    assert got == []

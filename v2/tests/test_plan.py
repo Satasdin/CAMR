@@ -8,7 +8,7 @@ import pytest
 
 from camr_engine.agentic.brain import Thought
 from camr_engine.agentic.desk import Desk
-from camr_engine.agentic.plan import ROLES, change_target, classes_in, files_named, role_of
+from camr_engine.agentic.plan import ROLES, change_target, change_targets, classes_in, files_named, role_of
 
 
 def call(name, **args) -> str:
@@ -319,3 +319,45 @@ def test_the_researcher_asks_for_what_was_not_told_and_the_answers_reach_the_bri
     assert "Monday to Saturday, 8am to 6pm" in first and "0733 902 118" in first
     assert any("0733 902 118" in n for n in lead.told)  # and every later part gets them too
     assert len(lead.facts()["asks"]) == 2 and "You said: \"0733 902 118\"" in lead.report()
+
+
+def test_layout_words_go_to_the_stylesheet_and_new_controls_to_page_and_script():
+    files = ["index.html", "style.css", "app.js"]
+    assert change_target("Make the order total sticky at the bottom on a phone", files)[0] == "style.css"
+    assert change_target("Make the menu two columns on desktop and one on a phone", files)[0] == "style.css"
+    assert change_target("The headings should use a serif font", files)[0] == "style.css"
+    assert [t for t, _ in change_targets("Add a clear-order button", files)] == ["index.html", "app.js"]
+    assert [t for t, _ in change_targets("Add an order note box, up to 100 characters", files)] == ["index.html", "app.js"]
+    assert [t for t, _ in change_targets("Show the total with no decimals", files)] == ["app.js"]
+    assert [t for t, _ in change_targets("Add a line saying we are closed on public holidays", files)] == ["index.html"]
+    assert [t for t, _ in change_targets("Add a clear button", ["index.html"])] == ["index.html"]
+
+
+def test_a_change_to_two_files_is_two_parts_then_a_review(desk):
+    root = desk.workspace.root
+    for f, text in {"index.html": "<h1>Shop</h1>", "style.css": ".a{}", "app.js": "let total = 0"}.items():
+        (root / f).write_text(text)
+    lead = build(desk, "Add a clear-order button")
+    assert [(p.role, p.target) for p in lead.plan.parts] == [("change", "index.html"), ("change", "app.js"),
+                                                            ("review", None)]
+
+
+def test_a_failing_test_outweighs_the_models_check_and_plans_a_fix(desk):
+    desk.brain.files["BRIEF.md"] = BRIEF
+    reports = iter([{"text": "Shop", "errors": ["TypeError: Assignment to constant variable."],
+                     "failed": ['pressing "Add" changed nothing']}] * 3 + [{"text": "Shop"}] * 20)
+    lead = build(desk, "Build a website for a small bookshop", report=lambda: next(reports))
+    fix = next(p for p in lead.plan.parts if p.title.startswith("Fix what the page test found"))
+    assert fix.target == "app.js" and fix.by == "rule" and "Assignment to constant" in fix.detail
+    assert "Assignment to constant" in desk.run(fix.runs[0]).task
+    assert any("the test outweighs the model" in d["text"] for d in lead.plan.decisions)
+    assert lead.plan.parts[-1].role == "review"
+
+
+def test_a_repeated_page_test_is_answered_not_run_and_never_counts_as_a_pass(desk):
+    from camr_engine.agentic.loop import AGAIN, Run
+
+    lead = build(desk, "Build a website for a small bookshop", report=lambda: {"text": "Shop", "errors": ["boom"]})
+    review = desk.run(lead.plan.parts[5].run)
+    assert review.last_test()["ok"] is False
+    assert all(not d.text.startswith(AGAIN) or n == "open_page" for n, _, d in review.history)

@@ -38,8 +38,10 @@ TEAM_FILES = ("BRIEF.md", "ARCHITECTURE.md", "PLAN.md", "REPORT.md")
 _FILE = re.compile(r"(?<![\w/.-])((?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.(?:html|htm|css|js|mjs|json|svg|py|ts|txt))\b")
 _CLASS = re.compile(r"\.([A-Za-z][\w-]*)\s*[{,:\s]")
 STYLE_WORDS = re.compile(r"\b(colou?rs?|fonts?|typefaces?|bigger|smaller|spacing|padding|margins?|dark|light|"
-                         r"background|layout|looks?|styles?|theme|rounded|shadows?|centred|centered|red|green|blue|yellow|orange|"
+                         r"background|layout|looks?|styles?|theme|rounded|shadows?|centred|centered|sticky|columns?|desktop|mobile|"
+                         r"serif|sans-serif|bold|italic|underlined?|width|gap|align\w*|red|green|blue|yellow|orange|"
                          r"purple|pink|black|white|grey|gray|brown|gold|teal|navy|cream|beige)\b|#[0-9a-f]{3,6}\b", re.I)
+NEW_ELEMENT = re.compile(r"\b(add|put|show)\b.*\b(button|box|field|input|form|toggle|checkbox|slider|picker)\b", re.I)
 BEHAVIOUR_WORDS = re.compile(r"\b(clicks?|total|cart|basket|counts?|calculat\w*|submit|saves?|filters?|sort|"
                              r"remembers?|localStorage|quantity|quantities)\b", re.I)
 ENDED = ("done", "stopped", "failed")
@@ -121,6 +123,18 @@ def files_named(text: str) -> list[str]:
     return found[:MAX_FILES]
 
 
+def change_targets(request: str, files: list[str]) -> list[tuple[str, str]]:
+    """The files a change goes to, in order, each with why: a new control the page must show and the script must
+    work goes to both; otherwise one file, as ``change_target`` picks it."""
+    js = next((f for f in files if f.lower().endswith((".js", ".mjs"))), None)
+    page = "index.html" if "index.html" in files else next((f for f in files if f.lower().endswith(".html")), None)
+    m = NEW_ELEMENT.search(request)
+    if m and js and page and not STYLE_WORDS.search(request):
+        return [(page, f"the page must show the new {m.group(2).lower()}"),
+                (js, f"the script must make the new {m.group(2).lower()} work")]
+    return [change_target(request, files)]
+
+
 def change_target(request: str, files: list[str]) -> tuple[str, str]:
     """The file a change goes to, and why: looks to the stylesheet, what happens on a click to the script, everything
     else to the page. A rule, so the reason is said plainly."""
@@ -154,6 +168,7 @@ class Part:
     tries: int = 0
     seconds: float = 0.0
     note: str = ""
+    detail: str = ""  # what the part must fix, when the lead planned it from a test
 
 
 @dataclass
@@ -217,13 +232,14 @@ class Lead:
     def _first_plan(self) -> Plan:
         files = self._files()
         if files:  # a project that has files already: the request is a change to it
-            target, why = change_target(self.request, files)
+            targets = change_targets(self.request, files)
             plan = Plan(self.request, "change", [
-                Part("p1", "change", f"Change {target}", target, "rule", why),
-            ])
-            plan.decide("rule", f"The project has files already, so this is a change. It goes to {target}: {why}.")
+                Part(f"p{i}", "change", f"Change {target}", target, "rule", why)
+                for i, (target, why) in enumerate(targets, 1)])
+            plan.decide("rule", "The project has files already, so this is a change. It goes to "
+                        + "; then ".join(f"{t}: {why}" for t, why in targets) + ".")
             if any(f.lower().endswith((".html", ".htm")) for f in files):
-                plan.parts.append(Part("p2", "review", "Test the page and fix it", None, "rule",
+                plan.parts.append(Part(f"p{len(targets) + 1}", "review", "Test the page and fix it", None, "rule",
                                        "every change to a page is tested"))
             return plan
         kind = "website" if WEBSITE.search(self.request) else "code"
@@ -276,8 +292,12 @@ class Lead:
     def _check(self) -> None:
         """The lead's own decision, by the model: does the page do each thing the brief says people must be able to
         do? Each "no" becomes a change part, then the page is reviewed again. At most CHECKS times."""
+        if self.checks >= CHECKS:
+            return
+        if self._fix_from_test():
+            return
         musts = self.musts()
-        if self.checks >= CHECKS or not musts:
+        if not musts:
             return
         self.checks += 1
         page = self._read("index.html", 7000)
@@ -322,6 +342,29 @@ class Lead:
         n += 1
         self.plan.parts.append(Part(f"p{n}", "review", "Test the page again and fix it", None, "rule",
                                     "every change to a page is tested"))
+
+    def _fix_from_test(self) -> bool:
+        """The review's last page test still failing is evidence, and it outweighs the model's own reading: a rule
+        plans a fix of the file the problems point at, with the problems, then another review."""
+        review = next((p for p in reversed(self.plan.parts) if p.role == "review"), None)
+        run = self.desk.runs.get(review.run) if review is not None and review.run else None
+        last = run.last_test() if run is not None else None
+        if not last or last["ok"]:
+            return False
+        self.checks += 1
+        problems = last["text"].split("\n\nThe page as it is now")[0]
+        files = self._files()
+        js = next((f for f in files if f.lower().endswith((".js", ".mjs"))), None)
+        script = js and re.search(r"pressing|script|TypeError|ReferenceError|\.js\b", problems)
+        target = js if script else ("index.html" if "index.html" in files else (files[0] if files else "index.html"))
+        self.plan.decide("rule", f"The page's last test still shows problems, so {target} gets a fix planned from "
+                         "them (the test outweighs the model's own reading).")
+        n = len(self.plan.parts)
+        self.plan.parts.append(Part(f"p{n + 1}", "change", f"Fix what the page test found in {target}", target, "rule",
+                                    "the last page test failed", detail=problems[:1500]))
+        self.plan.parts.append(Part(f"p{n + 2}", "review", "Test the page again and fix it", None, "rule",
+                                    "every change to a page is tested"))
+        return True
 
     # -- running
 
@@ -454,7 +497,7 @@ class Lead:
             "review": f'Test the page and fix what its test reports. The request: "{r}"',
             "change": f'In {t}: {r}' if self.plan.kind == "change" else
                       f'In {t}: {part.title[0].lower() + part.title[1:]}. The request: "{r}"',
-        }[part.role]
+        }[part.role] + (f"\n\nWhat the page test found:\n{part.detail}" if part.detail else "")
 
     def _first(self, part: Part) -> str:
         t = part.target
@@ -578,8 +621,16 @@ class Lead:
         lines += ["", "## Decisions", ""]
         lines += [f"- ({d['by']}) {d['text']}" for d in self.plan.decisions]
         lines += ["", "## Page tests", ""]
-        for t in f["tests"] or []:
-            lines.append(f"- After {mins(t['at_s'])}, by the {t['part'].lower()}: {'passed' if t['ok'] else 'problems'}.")
+        merged = []
+        for t in f["tests"]:
+            if merged and merged[-1]["report"] == t["report"] and merged[-1]["part"] == t["part"]:
+                merged[-1]["times"] += 1
+                continue
+            merged.append({**t, "times": 1})
+        for t in merged:
+            again = f" (the same result {t['times']} times)" if t["times"] > 1 else ""
+            lines.append(f"- After {mins(t['at_s'])}, by the {t['part'].lower()}: "
+                         f"{'passed' if t['ok'] else 'problems'}{again}.")
             if not t["ok"]:
                 lines += ["  " + x for x in t["report"].splitlines()[:8]]
         if not f["tests"]:

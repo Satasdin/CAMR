@@ -19,6 +19,8 @@ IDS = re.compile(r"\bid\s*=\s*[\"']([^\"']+)[\"']", re.I)
 CLASSES = re.compile(r"\bclass\s*=\s*[\"']([^\"']+)[\"']", re.I)
 LOOKS_ID = re.compile(r"getElementById\(\s*[\"'`]([\w-]+)[\"'`]\s*\)|querySelector(?:All)?\(\s*[\"'`]#([\w-]+)[\"'`]")
 LOOKS_CLASS = re.compile(r"querySelector(?:All)?\(\s*[\"'`]\.([\w-]+)[\"'`]|getElementsByClassName\(\s*[\"'`]([\w-]+)")
+CONST = re.compile(r"\bconst\s+([A-Za-z_$][\w$]*)\s*=")
+ASSIGNED = re.compile(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?:[-+*/%]?=(?!=)|\+\+|--)|(?:\+\+|--)([A-Za-z_$][\w$]*)")
 HANDLERS = re.compile(r"\son(click|submit|change|input|load)\s*=", re.I)
 NOT_BROWSER = ((re.compile(r"\brequire\s*\("), "require(), which a browser does not have"),
                (re.compile(r"^\s*import\s.+\sfrom\s", re.M), "import ... from, which a plain script cannot use"),
@@ -75,6 +77,12 @@ def page_problems(ws, page: str) -> list[str]:
         for pattern, what in NOT_BROWSER:
             if pattern.search(js):
                 out.append(f"{src} uses {what}: the whole script stops there. Remove it")
+        consts = set(CONST.findall(js))
+        rest = CONST.sub(" ", js)  # the declarations themselves are not changes
+        changed = sorted({a or b for a, b in ASSIGNED.findall(rest) if (a or b) in consts})
+        if changed:
+            out.append(f"{src} changes {', '.join(changed)}, declared with const: that stops the script with a "
+                       "TypeError when it runs. Declare it with let")
         wanted = {a or b for a, b in LOOKS_ID.findall(js)} - ids
         if wanted:
             out.append(f"{src} looks for {', '.join('#' + w for w in sorted(wanted))}, which {page} does not have. "

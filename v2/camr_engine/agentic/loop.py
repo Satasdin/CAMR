@@ -69,7 +69,7 @@ _DEFINES = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?(?:def|class|function|con
 
 
 _NAMED = re.compile(r"[\w./-]+\.[A-Za-z0-9]{1,6}\b")  # a file the task names, as money.py or src/app.ts
-LOOKS = ("read_file", "list_files", "search")  # tools that only look: the same call gives the same result until a write
+LOOKS = ("read_file", "list_files", "search", "open_page")  # only look: the same call, the same result until a write
 AGAIN = "(the same as "  # how a look made again is answered
 
 class Run:
@@ -400,7 +400,7 @@ class Run:
         """What the page's latest test found that memory does not hold. A later change does not clear it: only another
         test can, which ``last_test`` says is still owed."""
         for name, _, done in reversed(self.history):
-            if name == "open_page":
+            if name == "open_page" and not done.text.startswith(AGAIN):
                 return done.made_up
         return ()
 
@@ -408,7 +408,7 @@ class Run:
         """How the page's latest test went, and whether the page has changed since (``stale``). None with no page."""
         stale = False
         for name, _, done in reversed(self.history):
-            if name == "open_page":
+            if name == "open_page" and not done.text.startswith(AGAIN):  # a repeat is answered, not tested
                 return {"ok": done.ok, "text": done.text[:800], "stale": stale}
             if done.wrote is not None and done.wrote.path.lower().endswith((".html", ".htm", ".css", ".js")):
                 stale = True

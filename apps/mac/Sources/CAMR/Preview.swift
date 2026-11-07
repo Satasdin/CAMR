@@ -167,6 +167,7 @@ enum ShutIn {
      {"trigger":{"url-filter":"^file:"},"action":{"type":"block"}},
      {"trigger":{"url-filter":"^ftp://"},"action":{"type":"block"}}]
     """
+    static let origin = URL(string: "https://page.camr.invalid/")
     static let policy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
         + "font-src data:; media-src data:; base-uri 'none'; form-action 'none'; frame-src 'none'"
 
@@ -197,7 +198,10 @@ enum ShutIn {
                 return
             }
             ownLoad = true
-            web.loadHTMLString(ShutIn.page(code), baseURL: nil)
+            // a fixed address that never resolves (.invalid), so the page has an origin of its own: with none, WebKit
+            // hides every script error as "Script error." and nothing can be fixed from it. The policy still lets
+            // nothing load, and navigating away is still refused
+            web.loadHTMLString(ShutIn.page(code), baseURL: ShutIn.origin)
         }
 
         private func sansFragment(_ url: URL?) -> String? {

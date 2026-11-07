@@ -337,7 +337,19 @@ struct AgentCard: View {
                       systemImage: "exclamationmark.triangle")
                     .font(Theme.mono(11, .semibold)).foregroundStyle(Theme.error)
             }
-            Text(footer).font(Theme.mono(10)).foregroundStyle(Theme.faint)
+            HStack {
+                Text(footer).font(Theme.mono(10)).foregroundStyle(Theme.faint)
+                Spacer()
+                if !pending, agent.files.contains("REPORT.md") {
+                    Button {
+                        let center = PreviewCenter.shared
+                        center.tab = "files"
+                        center.open(file: "REPORT.md")
+                    } label: { Label("Report", systemImage: "doc.text.magnifyingglass").font(Theme.mono(10)) }
+                    .buttonStyle(.plain).foregroundStyle(Theme.dim)
+                    .help("What happened, in numbers: how long it worked, what it asked, each part and every decision")
+                }
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
