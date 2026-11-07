@@ -45,7 +45,9 @@ TERM_CHARS = 200_000  # terminal characters kept (as camr_engine.agentic.shell.K
 TERM_LIMIT = 4000  # terminal chunks kept
 ENDED = ("done", "stopped", "failed")
 PAGE_TESTS = 4  # times a run tests its page by itself
-WEBSITE = re.compile(r"\b(web ?site|site|web ?page|landing page|home ?page|web ?app)\b", re.I)
+WEBSITE = re.compile(r"\b(web ?site|site|web ?page|landing page|home ?page|web ?app|(?:product|pricing|story|"
+                     r"portfolio|about|contact|sales|sign-?up|marketing|event|profile|gallery|launch|company|"
+                     r"shop) page)\b", re.I)
 PAGE_NEEDS = ((("money",), "are the prices"), (("time",), "are the opening hours"), (("phone", "email"), "is the phone number or e-mail"),
               (("colour",), "are the brand colours"))
 FIXES = 3  # times a run is sent back with problems still on its page

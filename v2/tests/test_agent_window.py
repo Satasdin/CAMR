@@ -192,7 +192,7 @@ def test_a_made_up_fact_is_asked_about_kept_as_told_and_sent_back(box):
     pages = [{"text": "Call 999"}, {"text": "Call 0733"}]
     stop, t = _with_answers(box, ["0733 222 111"])
     tools.fact_check = lambda text: ["999"] if "999" in text else []
-    edit = '<tool_call>{"name": "write_file", "arguments": {"path": "index.html", "content": "fixed"}}</tool_call>'
+    edit = '<tool_call>{"name": "write_file", "arguments": {"path": "index.html", "content": "<p>fixed</p>"}}</tool_call>'
     from camr_engine.agentic.personas import BUILT_IN
     from camr_engine.agentic.loop import Run
 

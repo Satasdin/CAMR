@@ -40,6 +40,59 @@ ANSWER_CHARS = 2000  # of the person's answer to a question
 PAGE_SHOWN = 8000  # a page this size or smaller is shown to the model along with its problems
 REMOVING = re.compile(r"\b(remove|delete|drop|get rid of|take (?:off|out)|replace|rewrite|start over)\b", re.I)
 WINDOW_TOOLS = ("ask_user", "open_page", "read_shelf")  # only with a person and a browser at the other end
+HTML_TAG = re.compile(r"<(!doctype|html|head|body|main|header|section|div|h[1-6]|p|script|link|style)\b", re.I)
+JS_CHECK_S = 5.0  # node's syntax check of one file, at most
+
+
+def shape_problem(path: str, content: str) -> str:
+    """Why a whole file is not the kind of file its name says, or "". Small models sometimes send a sentence about
+    the file ("index.html is complete and ready") as its content, or nothing at all; such a file is not written."""
+    low, text = path.lower(), content.strip()
+    if low.endswith((".html", ".htm")) and not HTML_TAG.search(text):
+        return (f"{path} must be an HTML page, starting with <!doctype html>, and this has no HTML tags"
+                + (": it reads like a sentence about the file" if text else "") + ". Send the whole page as content.")
+    if low.endswith(".css") and "{" not in text:
+        return (f"{path} must hold CSS rules (selector {{ property: value; }}) and this has none"
+                + (": it reads like a sentence about the file" if text else "") + ". Send the whole style sheet.")
+    if low.endswith((".js", ".mjs")) and not text:
+        return f"{path} is empty. Send the whole script as content."
+    return ""
+
+
+def js_syntax(content: str) -> str:
+    """Node's syntax error in a script, as "line N: SyntaxError: ...", or "" when it parses (as a module or as a
+    plain script) or node is not on this Mac. Nothing is run: ``node --check`` only parses."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    node = shutil.which("node")
+    if not node or not content.strip():
+        return ""
+    errors = []
+    with tempfile.TemporaryDirectory() as d:
+        for name in ("check.mjs", "check.cjs"):
+            p = Path(d) / name
+            p.write_text(content)
+            try:
+                r = subprocess.run([node, "--check", str(p)], capture_output=True, text=True, timeout=JS_CHECK_S)
+            except (OSError, subprocess.TimeoutExpired):
+                return ""
+            if r.returncode == 0:
+                return ""
+            line = re.search(rf"{re.escape(name)}:(\d+)", r.stderr)
+            what = next((x.strip() for x in r.stderr.splitlines() if "Error:" in x), "")
+            errors.append(f"line {line.group(1)}: {what}" if line and what else what)
+    return errors[0] if errors and errors[0] else ""
+
+
+def _parses(path, content: str) -> str:
+    """What a write or an edit says after it when a script it left does not parse: the line and the error, so the
+    next step fixes that line rather than finding out from a blank page."""
+    if not str(path).lower().endswith((".js", ".mjs")):
+        return ""
+    err = js_syntax(content)
+    return f". But {path} does not run: {err}. Fix that line with edit_file before going on." if err else ""
 
 
 def _fn(name: str, description: str, props: dict[str, tuple[str, str]], required: list[str]) -> dict:
@@ -312,11 +365,14 @@ class Toolbox:
                     return Done(name, args, False, f"Not written: this would remove {lost} from the page, and the task "
                                 "did not ask for that. Change only what was asked, with edit_file, and keep the rest.",
                                 (time.perf_counter() - t) * 1000)
+            wrong = shape_problem(str(_arg(args, "path", "")), content)
+            if wrong:
+                return Done(name, args, False, f"Not written: {wrong}", (time.perf_counter() - t) * 1000)
             w = ws.write(str(_arg(args, "path", "")), content)
             lines = content.count("\n") + (0 if content.endswith("\n") or not content else 1)
             verb = "made" if w.before is None else "replaced"
-            return Done(name, args, True, f"{verb} {w.path}: {lines} lines, {w.bytes:,} bytes",
-                        (time.perf_counter() - t) * 1000, wrote=w, content=content)
+            return Done(name, args, True, f"{verb} {w.path}: {lines} lines, {w.bytes:,} bytes"
+                        + _parses(w.path, content), (time.perf_counter() - t) * 1000, wrote=w, content=content)
         old, new = _arg(args, "old_text"), _arg(args, "new_text")
         if not isinstance(old, str) or not isinstance(new, str):
             raise Outside("edit_file needs old_text and new_text")
@@ -327,9 +383,13 @@ class Toolbox:
         else:  # matched ignoring indentation: the line its first non-blank line was on
             first = next((x.strip() for x in old.split("\n") if x.strip()), "")
             offset = next((i for i, x in enumerate(w.before.split("\n")) if x.strip() == first), 0)
+        try:
+            after = (ws.root / w.path).read_text(errors="ignore")
+        except OSError:
+            after = ""
         return Done(name, args, True, f"changed {w.path}: {old.count(chr(10)) + 1} lines replaced by "
-                    f"{new.count(chr(10)) + 1}", (time.perf_counter() - t) * 1000, wrote=w, offset=offset,
-                    content=new)
+                    f"{new.count(chr(10)) + 1}" + _parses(w.path, after), (time.perf_counter() - t) * 1000, wrote=w,
+                    offset=offset, content=new)
 
     def _would_lose(self, path: str, content: str) -> str:
         """What a whole-file rewrite would drop from a page that already works: scripts, buttons, form fields and

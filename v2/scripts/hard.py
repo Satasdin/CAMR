@@ -85,7 +85,7 @@ def fact_words(told: str) -> list[str]:
     return [w for w in got if w not in STOP_CAPS]
 
 
-def brief_rules(link, url: str, told: list[str], wait: float = 2.5) -> dict:
+def brief_rules(link, url: str, told: list[str], wait: float = 2.5, countdown: bool = True) -> dict:
     """The brief's own rules the motion check does not cover, read off the page in Chrome at a desktop's width:
     the countdown's numbers change from one moment to the next, and every told fact is on the page (a fact counts
     when at least 70% of its names and numbers are in the page's text). "Nothing that was not told" is left to a
@@ -96,7 +96,7 @@ def brief_rules(link, url: str, told: list[str], wait: float = 2.5) -> dict:
     first = read()
     time.sleep(wait)
     second = read()
-    ticks = re.findall(r"\d+", first) != re.findall(r"\d+", second)
+    ticks = re.findall(r"\d+", first) != re.findall(r"\d+", second) if countdown else None
     page = second.lower()
     facts = []
     for t in told:
@@ -106,11 +106,17 @@ def brief_rules(link, url: str, told: list[str], wait: float = 2.5) -> dict:
                       "ok": not words or len(have) / len(words) >= 0.7,
                       "missing": [w for w in words if w.lower() not in page]})
     return {"countdown_ticks": ticks, "facts": facts, "facts_ok": sum(f["ok"] for f in facts),
-            "facts_of": len(facts), "passed": ticks and all(f["ok"] for f in facts)}
+            "facts_of": len(facts), "passed": ticks is not False and all(f["ok"] for f in facts)}
+
+
+def has_countdown(brief: dict) -> bool:
+    """Only a brief that asks for a countdown is checked for one."""
+    return "countdown" in (brief.get("brief", "") + " " + " ".join(brief.get("rules", []))).lower()
 
 
 def show_rules(r: dict) -> None:
-    print(f"  countdown ticks: {'pass' if r['countdown_ticks'] else 'FAIL'}")
+    if r["countdown_ticks"] is not None:
+        print(f"  countdown ticks: {'pass' if r['countdown_ticks'] else 'FAIL'}")
     print(f"  told facts on the page: {r['facts_ok']} of {r['facts_of']}")
     for f in r["facts"]:
         if not f["ok"]:
@@ -157,7 +163,7 @@ def check(bid: str, src: Path, name: str | None = None) -> dict:
     link = playwright_link(dest)
     try:
         got = browser_check(link, serving(ws).url("index.html"), motion=want)
-        rules = brief_rules(link, serving(ws).url("index.html"), brief["told"])
+        rules = brief_rules(link, serving(ws).url("index.html"), brief["told"], countdown=has_countdown(brief))
     finally:
         link.close()
         close_all()
@@ -252,7 +258,7 @@ def run(bid: str, model: str, minutes: float, tag: str = "") -> dict:
     if (folder / "index.html").exists():
         link = playwright_link(folder)
         try:
-            rules = brief_rules(link, serving(desk.workspace).url("index.html"), told)
+            rules = brief_rules(link, serving(desk.workspace).url("index.html"), told, countdown=has_countdown(brief))
         finally:
             link.close()
     out = {"brief": bid, "model": model, "tag": tag, "skills": os.environ.get("CAMR_SKILLS") or "shipped",
@@ -293,7 +299,9 @@ def main(argv=None) -> None:
 
         link = playwright_link(a.folder.resolve())
         try:
-            r = brief_rules(link, serving(Workspace(a.folder.resolve())).url("index.html"), briefs()[a.brief]["told"])
+            b = briefs()[a.brief]
+            r = brief_rules(link, serving(Workspace(a.folder.resolve())).url("index.html"), b["told"],
+                            countdown=has_countdown(b))
         finally:
             link.close()
             close_all()
