@@ -288,8 +288,12 @@ class Toolbox:
         if not isinstance(old, str) or not isinstance(new, str):
             raise Outside("edit_file needs old_text and new_text")
         w = ws.edit(str(_arg(args, "path", "")), old, new)
-        at = w.before.index(old)
-        offset = w.before[:at].count("\n")
+        at = w.before.find(old)
+        if at >= 0:
+            offset = w.before[:at].count("\n")
+        else:  # matched ignoring indentation: the line its first non-blank line was on
+            first = next((x.strip() for x in old.split("\n") if x.strip()), "")
+            offset = next((i for i, x in enumerate(w.before.split("\n")) if x.strip() == first), 0)
         return Done(name, args, True, f"changed {w.path}: {old.count(chr(10)) + 1} lines replaced by "
                     f"{new.count(chr(10)) + 1}", (time.perf_counter() - t) * 1000, wrote=w, offset=offset,
                     content=new)

@@ -728,3 +728,16 @@ def test_an_edit_that_differs_only_in_indentation_is_made_once_and_indented_as_t
         ws.edit("b.js", "x();", "y();")
     with pytest.raises(Outside):
         ws.edit("b.js", "z();", "y();")
+
+
+def test_the_edit_tool_takes_an_edit_that_differs_only_in_indentation(tmp_path):
+    from camr_engine.agentic.gate import Gate
+    from camr_engine.agentic.tools import Toolbox
+    from camr_engine.agentic.workspace import Workspace
+
+    (tmp_path / "app.js").write_text("const app = () => {\n  const total = 0;\n  const message = '';\n  go();\n};\n")
+    box = Toolbox(Workspace(tmp_path, []), Gate())
+    done = box.run("edit_file", {"path": "app.js", "old_text": "const total = 0;\nconst message = '';",
+                                 "new_text": "let total = 0;\nlet message = '';"}, owner="r")
+    assert done.ok and done.offset == 1
+    assert "  let total = 0;\n  let message = '';" in (tmp_path / "app.js").read_text()
