@@ -51,6 +51,15 @@ enum Script {
                 case "remember", "ask":
                     world.chat.draft = arg
                     await world.chat.send(remember: verb == "remember")
+                case "learn-decide":  // learn-decide: chat | drop | new | shelf   (waits for the card first)
+                    for _ in 0..<600 where !world.chat.learning.deciding && world.chat.learning.state != "failed" {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
+                    if world.chat.learning.deciding { await world.chat.learning.decide(arg) }
+                case "learn-wait":  // learn-wait: until the decision card shows (or the learning fails)
+                    for _ in 0..<600 where !world.chat.learning.deciding && world.chat.learning.state != "failed" {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
                 case "compare":
                     world.chat.draft = arg
                     await world.chat.compare()

@@ -28,6 +28,7 @@ final class LearnModel: ObservableObject {
     @Published var outcome = ""
     let engine: Engine
     private var polling: Task<Void, Never>?
+    var touched: [String: Bool] = [:]  // notes the person ticked or unticked themselves: their tick wins
 
     init(engine: Engine) { self.engine = engine }
 
@@ -48,12 +49,15 @@ final class LearnModel: ObservableObject {
 
     func start(_ topic: String) async {
         error = ""
+        touched = [:]
         outcome = ""
         do {
             let got = try await engine.post("/api/learn/start", ["topic": topic])
             take(got.dict("learning") ?? [:], card: nil)
             poll()
         } catch {
+            self.topic = topic
+            self.state = "failed"  // the card shows why it could not start
             self.error = "\(error.localizedDescription)"
         }
     }
@@ -99,11 +103,10 @@ final class LearnModel: ObservableObject {
         error = j.str("error") ?? ""
         pages = j.list("pages").map { ($0.str("title") ?? "", $0.str("url") ?? "", Int($0.num("notes") ?? 0),
                                        $0.str("error") ?? "") }
-        let old = Dictionary(uniqueKeysWithValues: notes.map { ($0.id, $0.keep) })
         notes = j.list("notes").map {
             let id = $0.str("id") ?? ""
             return Note(id: id, text: $0.str("text") ?? "", quote: $0.str("quote") ?? "", url: $0.str("url") ?? "",
-                        title: $0.str("title") ?? "", keep: old[id] ?? (($0["keep"] as? Bool) ?? true),
+                        title: $0.str("title") ?? "", keep: touched[id] ?? (($0["keep"] as? Bool) ?? true),
                         known: ($0["known"] as? Bool) ?? false, held: $0.str("held"))
         }
         let s = j.dict("suggestion") ?? [:]
@@ -175,7 +178,8 @@ struct LearnCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach($model.notes) { $n in
                         HStack(alignment: .top, spacing: 8) {
-                            Toggle("", isOn: $n.keep).toggleStyle(.checkbox).labelsHidden()
+                            Toggle("", isOn: Binding(get: { n.keep }, set: { n.keep = $0; model.touched[n.id] = $0 }))
+                                .toggleStyle(.checkbox).labelsHidden()
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(n.text).font(Theme.ui(12.5)).foregroundStyle(n.keep ? Theme.text : Theme.dim)
                                 HStack(spacing: 6) {

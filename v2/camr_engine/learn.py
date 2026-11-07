@@ -31,7 +31,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from html.parser import HTMLParser
 from typing import Callable, Iterable
 
@@ -101,8 +101,10 @@ class Learning:
         self.log.append(text)
 
     def view(self) -> dict:
-        d = asdict(self)
-        d.pop("stop", None)
+        # field by field: the stop flag holds a lock, which asdict would try to copy
+        d = {f.name: getattr(self, f.name) for f in fields(self) if f.name not in ("stop", "notes")}
+        d = json.loads(json.dumps(d))  # copies of the lists, so a reader never sees them change mid-answer
+        d["notes"] = [asdict(n) for n in list(self.notes)]
         d["kept"] = sum(1 for n in self.notes if n.keep)
         return d
 
@@ -214,7 +216,7 @@ class _Text(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag in SKIP_TAGS:
             self.skip += 1
-        elif tag == "title":
+        elif tag == "title" and not self.title and not self.skip:  # the page's own title, not an icon's <title>
             self._in_title = True
         elif tag in BLOCK_TAGS:
             self.parts.append("\n")

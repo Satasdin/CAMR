@@ -148,3 +148,17 @@ def test_a_connection_only_ever_reaches_a_checked_public_address(monkeypatch):
     monkeypatch.setattr(sk, "getaddrinfo", lambda *a, **k: [(sk.AF_INET, sk.SOCK_STREAM, 6, "", ("10.0.0.5", 80))])
     with pytest.raises(urllib.error.URLError):
         learn._connect_public("inside.example", 80, 5)
+
+
+def test_a_learning_can_be_shown_while_it_runs():
+    job = learn.Learning("j", "topic here")
+    job.notes.append(learn.Note("1", "a fact long enough", "q", "u", "t"))
+    v = job.view()
+    assert v["topic"] == "topic here" and v["kept"] == 1 and "stop" not in v
+    json.dumps(v)
+
+
+def test_an_icon_title_inside_the_page_is_not_the_page_title():
+    title, _ = learn.html_text("<html><head><title>GSAP Docs</title></head><body><svg><title>Notifications</title>"
+                               "</svg><p>Body text here.</p></body></html>")
+    assert title == "GSAP Docs"
