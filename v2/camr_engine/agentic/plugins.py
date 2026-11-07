@@ -43,13 +43,16 @@ CHECK = r"""() => {
 
 
 def review_tools(servers) -> list[str]:
-    """The ``mcp__<server>__<tool>`` names a reviewer may call: those of the connected plugins."""
+    """The ``mcp__<server>__<tool>`` names a reviewer may call: those of the connected plugins the person lets run
+    without asking. A plugin that asks first is left out: one call nobody is there to allow would hold the whole
+    build for the gate's ten minutes, and the page test's own Chrome check runs either way."""
     from camr_engine.agentic.servers import tool_name
 
     out = []
     for p in CATALOG:
         link = servers.link(p["id"]) if servers is not None else None
-        if link is not None and link.state == "connected":
+        spec = servers.spec(p["id"]) if servers is not None and hasattr(servers, "spec") else None
+        if link is not None and link.state == "connected" and spec is not None and spec.trusted:
             have = {t["name"] for t in link.tools}
             out += [tool_name(p["id"], t) for t in p["review_tools"] if t in have]
     return out

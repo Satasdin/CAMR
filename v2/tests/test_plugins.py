@@ -72,10 +72,13 @@ def test_the_chrome_check_reads_the_page_presses_buttons_and_reads_chromes_error
                                           "browser_console_messages"]
 
 
-def test_the_reviewer_is_offered_a_few_browser_tools_only_when_playwright_is_connected(tmp_path):
+def test_the_reviewer_is_offered_a_few_browser_tools_only_when_playwright_runs_without_asking(tmp_path):
     servers = Servers(tmp_path / "mcp.json", tmp_path / "logs")
     assert review_tools(servers) == []
+    servers.add(Spec("playwright", "npx", []))
     servers.links["playwright"] = Link()
+    assert review_tools(servers) == []  # it asks first: a call nobody allows would hold the build
+    servers.trust("playwright", True)
     got = review_tools(servers)
     assert "mcp__playwright__browser_click" in got and not any("run_code_unsafe" in t for t in got)
     assert len(got) == 5
