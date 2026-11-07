@@ -299,7 +299,7 @@ class FakeBrain:
                    "lean": lean, "fixes": []}
         return Thought(text, pieces, 0.07, 0.5, 900, len(pieces), 80.0, mem)
 
-    def keep(self, text, to=None):
+    def keep(self, text, to=None, source="model"):
         self.kept.append(text)
         self.kept_to = to
         return {"reach": "project:kitchen", "moment": 9, "room": 1} if self.memory_on else None
@@ -596,7 +596,7 @@ def test_a_run_counts_as_running_until_its_answer_is_kept(ws):
     release = threading.Event()
 
     class Slow(FakeBrain):
-        def keep(self, text, to=None):
+        def keep(self, text, to=None, source="model"):
             release.wait(5)
             return super().keep(text, to)
 
@@ -612,7 +612,7 @@ def test_a_run_counts_as_running_until_its_answer_is_kept(ws):
     assert r.state == "done" and not r.live and r.turns[-1]["kind"] == "kept"
 
     class Broken(FakeBrain):
-        def keep(self, text, to=None):
+        def keep(self, text, to=None, source="model"):
             raise OSError("disk full")
 
     r = make_run(ws, ["Done."], memory=True)

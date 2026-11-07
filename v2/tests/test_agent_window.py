@@ -198,7 +198,7 @@ def test_a_made_up_fact_is_asked_about_kept_as_told_and_sent_back(box):
 
     brain = _Brain([WRITE, "Done.", "I will ask the user.", edit, "Done."])
     brain.memory_on = True
-    run = Run("r", "make the page", brain=brain, tools=tools, persona=BUILT_IN[0], gate=gate, keep=False)
+    run = Run("r", "make the page", brain=brain, tools=tools, persona=BUILT_IN[0], gate=gate, keep=False, label="make the page")
     done = threading.Event()
 
     def browser():
