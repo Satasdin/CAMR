@@ -16,16 +16,20 @@ from dataclasses import dataclass, field
 WAIT_S = 600.0  # an ask nobody answers is denied after ten minutes
 
 
+ANSWERED = ("question", "browser")  # what is answered rather than allowed
+
+
 @dataclass
 class Ask:
     id: str
-    kind: str  # "shell" or "mcp"
-    what: dict  # exactly what will run: {"command", "cwd"} or {"server", "tool", "arguments"}
+    kind: str  # "shell" or "mcp"; "question" (the person answers) or "browser" (the app answers)
+    what: dict  # exactly what will run: {"command", "cwd"} or {"server", "tool", "arguments"}; or {"question"}, {"path"}
     owner: str  # the run that asked
     label: str = ""  # who asked, for the page: the thread's title
     at: float = field(default_factory=time.time)
     decision: str | None = None  # "allowed", "denied", "timed out" or "stopped"
     decided_at: float | None = None
+    reply: str | None = None  # the answer, for a question or a browser's report
     _done: threading.Event = field(default_factory=threading.Event, repr=False)
 
     @property
@@ -70,6 +74,17 @@ class Gate:
             if a is None:
                 raise KeyError(ask_id)
         self._settle(a, "allowed" if allow else "denied")
+        return a
+
+    def answer(self, ask_id: str, reply: str) -> Ask:
+        """The answer to a question or a browser's report. Never runs anything: a shell command or an MCP call can
+        only be allowed by ``decide``, so an answer can never pass as an approval. KeyError as ``decide``."""
+        with self.lock:
+            a = self.pending.get(ask_id)
+            if a is None or a.kind not in ANSWERED:
+                raise KeyError(ask_id)
+            a.reply = reply
+        self._settle(a, "answered")
         return a
 
     def _settle(self, a: Ask, decision: str) -> None:

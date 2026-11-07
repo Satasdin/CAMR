@@ -48,6 +48,17 @@ AGENT = "CAMR/0.1 (a local assistant; one page fetched per question)"
 THINKING_MODELS = ("Qwen3-1.7B", "Qwen3-8B", "Qwen3-4B-4bit", "Qwen3-0.6B", "Qwen3-14B")  # hybrid: thinking on or off
 
 
+_BUILD = re.compile(r"\b(build|make|create|develop|design|code)\b.{0,60}\b(web ?site|web ?app|web application|site|"
+                    r"landing page|home ?page|web ?page|page|app|project|script|game)\b", re.I)
+_CHANGE = re.compile(r"^\s*(please\s+)?(change|add|remove|fix|rename|replace|update|move|make|put|use|delete|show|hide)\b", re.I)
+
+
+def wants_agent(text: str, project_open: bool = False) -> bool:
+    """A request to make files, which the agent does, rather than a question the chat answers. With a project open,
+    an instruction to change something goes to it too."""
+    return bool(_BUILD.search(text) or (project_open and _CHANGE.search(text)))
+
+
 def can_think(repo: str | None) -> bool:
     """Whether the model is a hybrid thinking build (Qwen3 1.7B, 8B…); the 4B 2507 Instruct build never thinks."""
     return bool(repo) and "Instruct" not in repo and any(m in repo for m in THINKING_MODELS)

@@ -111,7 +111,7 @@ def test_a_run_waits_for_an_exact_yes_before_its_command(tmp_path, project):
     tid = api("/api/code/thread", {"title": "try the shell"})[1]["id"]
     status, run = api("/api/code/run", {"thread": tid, "task": "Write hi to shell.txt"})
     assert status == 200 and run["state"] in ("queued", "thinking", "tool", "waiting")
-    assert app.made[-1]["reads"] == ["session", "project", "global", "project:coding"] and app.made[-1]["project"] == "kitchen"
+    assert app.made[-1]["reads"][:4] == ["session", "project", "global", "project:coding"] and app.made[-1]["project"] == "kitchen"
     snap = wait_for(api, run["id"], lambda s: s["waiting"])
     (ask,) = snap["waiting"]
     assert ask["what"]["command"] == "echo hi > shell.txt" and not (project / "shell.txt").exists()
@@ -173,7 +173,7 @@ def test_memory_off_personas_settings_and_skills(tmp_path, project):
     tid = api("/api/code/thread", {})[1]["id"]
     rid = api("/api/code/run", {"thread": tid, "task": "Review fees.py"})[1]["id"]
     wait_for(api, rid, lambda x: x["state"] == "done")
-    assert app.made[-1]["memory"] is False and app.made[-1]["reads"] == ["project", "global", "project:coding"]
+    assert app.made[-1]["memory"] is False and app.made[-1]["reads"][:3] == ["project", "global", "project:coding"]
     assert api("/api/code/skill?name=style")[1]["text"] == "# House style\nPlain words."
     assert api("/api/code/skill?name=nope")[0] == 404
     status, got = api("/api/code/persona", {"id": "ops", "name": "Ops", "system": "Deploy.", "reads": ["agent"],

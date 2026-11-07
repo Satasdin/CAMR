@@ -44,8 +44,17 @@ def desk(app) -> Desk:
         root = getattr(app, "agentic_root", None) or base / "code"
         keep_out = [Path(memory.path), *(base / k for k in KINDS)] if memory is not None else []
         brains = getattr(app, "brain_factory", None) or engine_brains(app)
-        return Desk(Path(root), brains=brains, model_lock=getattr(app, "lock", None), measuring=active,
-                    skills_dir=getattr(app, "skills_dir", None), keep_out=keep_out)
+        d = Desk(Path(root), brains=brains, model_lock=getattr(app, "lock", None), measuring=active,
+                 skills_dir=getattr(app, "skills_dir", None), keep_out=keep_out)
+        from camr_engine.app.routes.chat import talk
+        from camr_engine.shelves import SHELVES
+
+        t = talk(app)
+        if t is not None:  # the agent in the one window reads the chat's shelves and is checked against its memory
+            d.shelf_notes = t.shelf_notes
+            d.fact_check = t.page_check
+            d.shelf_index = lambda: "\n".join(f"- {s.name}: {s.about[:120]}" for s in SHELVES)
+        return d
 
     return part(app, "_code_desk", make)
 
@@ -129,10 +138,21 @@ def register(routes: Routes) -> None:
     @guard
     def run_start(req: Request) -> dict:
         memory = req.body.get("memory")
+        context = req.body.get("context")
+        context = [str(c)[:1000] for c in context[:8]] if isinstance(context, list) else None
         run = desk(req.app).start(req.str("thread", limit=40), req.str("task", limit=8000),
                                   memory=memory if isinstance(memory, bool) else None,
-                                  persona=req.str("persona", limit=40) or None)
+                                  persona=req.str("persona", limit=40) or None, window=req.bool("window"),
+                                  max_steps=req.int("max_steps", None, lo=1, hi=60), context=context)
         return run.snapshot()
+
+    @routes.post("/api/code/answer")
+    @guard
+    def answer(req: Request) -> dict:
+        reply = req.body.get("text")
+        if not isinstance(reply, str) or len(reply) > 200_000:
+            raise Refused(400, "text is the answer")
+        return desk(req.app).gate.answer(req.str("id", limit=40), reply).show()
 
     @routes.get("/api/code/run")
     @guard

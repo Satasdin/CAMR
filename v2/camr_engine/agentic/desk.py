@@ -40,6 +40,7 @@ from camr_engine.agentic.servers import Servers
 from camr_engine.agentic.skills import Skills
 from camr_engine.agentic.tools import Toolbox
 from camr_engine.agentic.workspace import Outside, Workspace, check_root, sha
+from camr_engine.shelves import SHELVES
 
 MAX_RUNS = 40  # runs kept in RAM (finished ones are in their thread's file too)
 MAX_THREADS = 200
@@ -258,6 +259,8 @@ class Desk:
         if "project" in reads:  # the Coding shelf (camr_engine.shelves) holds code work from every workspace
             reads = [*reads, CODING_SHELF]
             writes = CODING_SHELF if writes == "project" else writes
+            # and the user's own shelves are always in view: what they told about a project must reach its code
+            reads += [s.reach for s in SHELVES if s.reach not in reads and s.reach != "global" and not s.called]
         spec = {"memory": memory, "session": thread, "project": project, "agent": persona.id, "reads": reads,
                 "writes": writes, "pool": self._pool() if memory else None}
         key = (memory, thread, project, persona.id, tuple(reads), writes)
@@ -274,7 +277,7 @@ class Desk:
             return b
 
     def start(self, thread: str, task: str, *, memory: bool | None = None, persona: str | None = None,
-              max_steps: int | None = None) -> Run:
+              max_steps: int | None = None, window: bool = False, context: list[str] | None = None) -> Run:
         """Start a task in a thread, as ``persona`` (by default the one chosen in the rack, whatever the thread ran
         as before: the thread takes it on)."""
         why = self.can_run()
@@ -291,13 +294,16 @@ class Desk:
                 raise Busy("this thread is running already")
             brain = self.brain_for(p, thread, memory)
             notes = self._take_fixes()
-            tools = Toolbox(self.workspace, self.gate, skills=self.skills, servers=self.servers, allows=p.allows)
+            tools = Toolbox(self.workspace, self.gate, skills=self.skills, servers=self.servers, allows=p.allows,
+                            window=window, shelf_notes=self.shelf_notes if memory else None,
+                            fact_check=self.fact_check if memory else None)
+            notes = [*(context or []), *notes]
             t["count"] = int(t.get("count", len(t.get("runs", [])))) + 1  # runs ever started (the file keeps 20)
             rid = f"{thread}-{t['count']}"
             run = Run(rid, task, brain=brain, tools=tools, persona=p, gate=self.gate, model_lock=self.model_lock,
                       label=t.get("title") or task[:40], workspace=self.workspace.name, skills=self.skills.index(),
                       marks=self.marks, notes=notes, max_steps=max_steps or 12, measuring=self.measuring,
-                      on_step=self._watch)
+                      on_step=self._watch, shelves=self.shelf_index() if window and memory else "")
             run.thread_id = thread
             self.runs[rid] = run
             finished = [k for k, r in self.runs.items() if not r.live]
@@ -308,6 +314,11 @@ class Desk:
             self._write_thread(t)
         run.start()
         return run
+
+    # what the window's app gives the agent, when it is there: a shelf's notes, the shelves' names, and the fact check
+    shelf_notes = None
+    fact_check = None
+    shelf_index = staticmethod(lambda: "")
 
     def _watch(self, run: Run, turn: dict) -> None:
         if turn["kind"] == "call":

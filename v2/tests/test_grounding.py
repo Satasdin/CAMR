@@ -37,3 +37,14 @@ def test_an_answer_is_checked_for_names_and_numbers_too():
 
 def test_nothing_checkable_passes():
     assert answer_check("yes it does", [NOTES]) == {"checked": 0, "grounded": 0, "invented": []}
+
+
+def test_what_goes_to_the_agent():
+    from camr_engine.assistant import wants_agent
+
+    assert wants_agent("Build Kahawa Corner a small website where a customer can order")
+    assert wants_agent("create a landing page for my bakery")
+    assert not wants_agent("What is the capital of Kenya?")
+    assert not wants_agent("change the colour to green")
+    assert wants_agent("change the colour to green", project_open=True)
+    assert not wants_agent("What colour is it now?", project_open=True)

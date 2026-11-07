@@ -51,6 +51,9 @@ Call tools as the tool list says; one reply may call several. Read a file before
 text copied exactly from the file; write_file writes a whole file.
 run_shell and the MCP tools wait for the user to allow each call, and the user may refuse.
 When the task is done, reply in plain words with what you did, and call no tool."""
+WINDOW_RULES = """If the task needs a fact you were not given and your notes do not hold it (a price, a phone number, an
+address, a name, a time), call ask_user. Never make one up. After you write or change a web page, call open_page on it
+and fix what it reports before you finish. Call read_shelf when a shelf would help with what you are doing."""
 
 _DEFINES = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?(?:def|class|function|const|let|var|fn|func|struct|type)\s+"
                       r"([A-Za-z_][A-Za-z0-9_]*)", re.M)
@@ -67,11 +70,12 @@ class Run:
                  notes_title: str = "Since your last task, the user said:",
                  max_steps: int = MAX_STEPS, step_tokens: int = STEP_TOKENS, keep: bool = True,
                  measuring: Callable[[], dict | None] | None = None, on_step: Callable[[Run, dict], None] | None = None,
-                 on_think: Callable[[Run, Thought], None] | None = None):
+                 on_think: Callable[[Run, Thought], None] | None = None, shelves: str = ""):
         self.id, self.task = rid, task
         self.brain, self.tools, self.persona, self.gate = brain, tools, persona, gate
         self.model_lock = model_lock or threading.Lock()
         self.label, self.workspace, self.skills, self.marks = label, workspace, skills, marks
+        self.shelves = shelves
         self.notes, self.notes_title = list(notes or []), notes_title
         self.max_steps, self.step_tokens, self.keep_it = max_steps, step_tokens, keep
         self.room = step_tokens  # the next reply's token limit (doubled after a reply cut off inside a call)
@@ -266,6 +270,10 @@ class Run:
 
     def system(self) -> str:
         text = f"{self.persona.system}\n\n{RULES.format(ws=self.workspace or 'none chosen')}"
+        if getattr(self.tools, "window", False):
+            text += f"\n{WINDOW_RULES}"
+            if self.shelves:
+                text += f"\nShelves you can read with read_shelf:\n{self.shelves}"
         if self.skills:
             text += f"\nSkills you can read with load_skill:\n{self.skills}"
         return text

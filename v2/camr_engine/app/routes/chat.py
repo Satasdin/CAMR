@@ -506,7 +506,25 @@ class Talk:
             return {"checked": len(found), "grounded": len(found) - len(bad), "invented": bad[:12]}
         return answer_check(answer, self._told(session, text, CHECK_NOTES))
 
-    def _told(self, session, text: str, k: int) -> list[str]:
+    def shelf_notes(self, name: str, question: str, k: int = 6) -> list[str] | None:
+        """What a shelf holds about a question, for the agent's read_shelf: None for no such shelf."""
+        shelf = BY_NAME.get(name) or next((s for s in SHELVES if s.label.lower() == name.lower()), None)
+        if shelf is None:
+            return None
+        with self.lock:
+            session = self._open()
+            return self.run(lambda: self._told(session, question, k, only=shelf.reach))
+
+    def page_check(self, text: str) -> list[str]:
+        """Facts a person would read on a page (money, phone, e-mail, time) that memory does not hold."""
+        from camr_engine.grounding import invented
+
+        with self.lock:
+            session = self._open()
+            notes = self.run(lambda: self._told(session, text[:800], 40))
+        return [f.text for f in invented(text, "\n".join(notes)) if f.kind in ("money", "phone", "email", "time")]
+
+    def _told(self, session, text: str, k: int, only: str | None = None) -> list[str]:
         """The closest notes a fact can be backed by, closest first: what the user told and files they gave. Never what
         came through the model (its answers, and research, which keeps its answer and not the page), filtered before
         the ``k`` are taken and by the moment's tags. A note older than those tags is known by how it starts."""
@@ -516,9 +534,9 @@ class Talk:
 
         vec = np.asarray(session.embedder.encode_one(text, is_query=True), dtype=np.float32)
         scored = []
-        for m in session.memories.values():
+        for r, m in session.memories.items():
             v = m.rooms.vectors
-            if not v.size or not m.rooms.moments:
+            if not v.size or not m.rooms.moments or (only is not None and r.label != only):
                 continue
             sims = v @ vec
             kept = 0
@@ -1148,6 +1166,12 @@ def register(routes: Routes) -> None:
     def shelf_remove(req: Request) -> dict:
         name = req.str("name", limit=20)
         return _shelves(req, lambda root: {"put_away": shelf_list.remove(root, name)})
+
+    @routes.post("/api/chat/intent")
+    def intent(req: Request) -> dict:
+        from camr_engine.assistant import wants_agent
+
+        return {"agent": wants_agent(req.str("text", limit=8000), req.bool("project_open"))}
 
     @routes.post("/api/live/stop")
     def live_stop(req: Request) -> dict:

@@ -41,6 +41,7 @@ class Shelf:
     reach: str  # the reach that holds it
     about: str  # what belongs on it, as the sorter reads it
     like: tuple[str, ...] = ()  # a few moments that belong on it: the sorter's target is their mean with ``about``
+    called: bool = False  # curated knowledge: read only when it is called for, never filed onto by the sorter
 
 
 DEFAULTS = (
@@ -92,7 +93,8 @@ def load(root: Path) -> list[Shelf]:
     """The shelves of the memory at ``root``: its own list, or the four it starts with."""
     try:
         rows = json.loads(_file(root).read_text())
-        _set(Shelf(r["name"], r["label"], r["reach"], r.get("about", ""), tuple(r.get("like", ()))) for r in rows)
+        _set(Shelf(r["name"], r["label"], r["reach"], r.get("about", ""), tuple(r.get("like", ())),
+                   bool(r.get("called"))) for r in rows)
     except (OSError, ValueError, KeyError, TypeError):
         _set(DEFAULTS)
     return list(SHELVES)
@@ -100,8 +102,8 @@ def load(root: Path) -> list[Shelf]:
 
 def _save(root: Path) -> None:
     Path(root).mkdir(parents=True, exist_ok=True)
-    rows = [{"name": s.name, "label": s.label, "reach": s.reach, "about": s.about, "like": list(s.like)}
-            for s in SHELVES]
+    rows = [{"name": s.name, "label": s.label, "reach": s.reach, "about": s.about, "like": list(s.like),
+             "called": s.called} for s in SHELVES]
     tmp = _file(root).with_suffix(".tmp")
     tmp.write_text(json.dumps(rows, indent=1))
     tmp.replace(_file(root))
@@ -137,7 +139,7 @@ def rename(root: Path, name: str, label: str) -> Shelf:
     if any(s.label.lower() == label.lower() and s.name != name for s in SHELVES):
         raise ValueError(f"there is already a shelf called {label}")
     old = BY_NAME[name]
-    new = Shelf(old.name, label, old.reach, old.about, old.like)
+    new = Shelf(old.name, label, old.reach, old.about, old.like, old.called)
     _set(new if s.name == name else s for s in SHELVES)
     _save(root)
     return new
@@ -194,7 +196,7 @@ class Sorter:
     """Which shelf a moment belongs on: the shelf whose description is closest to it by the embedder."""
 
     def __init__(self, embedder, shelves: Iterable[Shelf] = SHELVES):
-        self.shelves = list(shelves)
+        self.shelves = [s for s in shelves if not s.called] or list(shelves)
         rows = []
         for s in self.shelves:
             v = np.mean([np.asarray(embedder.encode_one(t), dtype=np.float32) for t in (s.about, *s.like)], axis=0)
