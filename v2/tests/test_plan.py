@@ -421,3 +421,8 @@ def test_a_documents_brief_gets_what_was_told_and_many_made_up_facts_mean_a_rewr
     assert (redo.role, redo.title) == ("writer", "Write price-list.md again from the brief")
     task = desk.run(redo.runs[0]).task
     assert "$150" in task and "none of them may appear" in task and "What the check found" in task
+
+
+def test_files_that_differ_only_in_case_are_one_file():
+    assert files_named("style.css, index.html, Index.html, app.js, App.js") == ["style.css", "index.html", "app.js"]
+    assert files_named("Index.html and style.css") == ["style.css", "index.html"]

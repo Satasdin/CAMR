@@ -134,7 +134,10 @@ def files_named(text: str) -> list[str]:
     then the rest. Never a path that climbs out of the project, nor the team's own notes."""
     found = []
     for f in _FILE.findall(text):
-        if f in TEAM_FILES or ".." in f or f.startswith("/") or f in found:
+        if f.lower() == "index.html":
+            f = "index.html"
+        # a Mac's disk does not tell Index.html from index.html: one file, named once
+        if f in TEAM_FILES or ".." in f or f.startswith("/") or f.lower() in {x.lower() for x in found}:
             continue
         found.append(f)
     order = {"design": 0, "builder": 1, "behaviour": 2, "coder": 3}

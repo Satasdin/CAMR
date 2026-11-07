@@ -38,7 +38,7 @@ def test_a_step_goes_through_the_metered_client_and_parses_the_same_way():
     assert (t.prompt_tokens, t.gen_tokens) == (900, 40) and not b.memory_on
 
 
-def test_an_ollama_model_gets_the_same_words_with_thinking_off():
+def test_an_ollama_model_gets_the_same_words_and_its_reasoning_is_kept_apart():
     from camr_engine.agentic.ollama_brain import OllamaBrain
 
     sent = []
@@ -51,7 +51,7 @@ def test_an_ollama_model_gets_the_same_words_with_thinking_off():
     b = OllamaBrain("qwen3:4b", post=post)
     t = b.think(Prompt("You build.", "Task: x", SPEC, ask="x", max_tokens=3000))
     body = sent[0]
-    assert body["model"] == "qwen3:4b" and body["think"] is False and body["options"]["num_predict"] == 3000
+    assert body["model"] == "qwen3:4b" and body["think"] is True and body["options"]["num_predict"] == 3000 + 4096
     assert body["messages"][0]["content"] == system_with_tools("You build.", SPEC)
     assert [c.name for c in calls(t.text, known={"write_file"})] == ["write_file"]
     assert (t.prompt_tokens, t.gen_tokens, t.decode_tps, b.label, b.memory_on) == (700, 30, 30.0, "ollama:qwen3:4b", False)

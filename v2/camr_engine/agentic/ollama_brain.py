@@ -4,8 +4,8 @@ into it, and Ollama does not let anything in at that level. So with an Ollama mo
 as the told notes in each prompt, as text, and nothing it does is kept as notes (``memory_on`` is False).
 
 The tools are offered in the instructions in the same words the local model's template uses (as for Claude,
-camr_engine.agentic.claude_brain), and the reply is parsed by the same parser. Thinking is off, as for the local
-model's agent steps. Only the Ollama server on this Mac is spoken to.
+camr_engine.agentic.claude_brain), and the reply is parsed by the same parser. Its reasoning, when it reasons, is
+kept apart by Ollama and not read as the answer. Only the Ollama server on this Mac is spoken to.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from camr_engine.agentic.claude_brain import system_with_tools
 
 HOST = "http://127.0.0.1:11434"
 TIMEOUT_S = 900
+THINK_ROOM = 4096  # tokens of reasoning allowed before the answer
 
 
 def models(host: str = HOST) -> list[dict]:
@@ -47,8 +48,10 @@ class OllamaBrain:
 
     def think(self, p: Prompt) -> Thought:
         t = time.perf_counter()
-        got = self.post({"model": self.model, "stream": False, "think": False,
-                         "options": {"num_predict": p.max_tokens, "num_ctx": 32768},
+        # some Qwen3 builds in Ollama (the 2507 thinking one, as qwen3:4b) always reason: told not to, they write the
+        # reasoning into the answer until the limit. Asked to think, Ollama keeps it apart, and only the answer is read
+        got = self.post({"model": self.model, "stream": False, "think": True,
+                         "options": {"num_predict": p.max_tokens + THINK_ROOM, "num_ctx": 32768},
                          "messages": [{"role": "system", "content": system_with_tools(p.system, p.tools)},
                                       {"role": "user", "content": p.user}]})
         text = (got.get("message") or {}).get("content") or ""
