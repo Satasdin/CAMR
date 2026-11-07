@@ -17,6 +17,7 @@ RULE Use at least three depth layers, each with its own data-speed, moved with t
 RULE Animate only transform and opacity; never top, left, width or height.
 RULE Keep one renderer and one animation loop. Outside the loop (a model loaded, a resize, the calm version) call render() once.
 RULE Every word on the page comes from the brief. If a fact is missing, leave that part out rather than write a placeholder.
+RULE Size the scene to the window on resize: renderer.setSize, camera.aspect, then camera.updateProjectionMatrix().
 RULE Check a moving page in a real browser: frames a second while scrolling, a clean console, the calm version, and screenshots down the page.
 CORRECTION Wrong: const scene = ... and later scene = ... again. Criticism: the script stops with a TypeError and nothing moves. Right: make each object once and change its properties. Why: a const cannot be given a new value.
 CORRECTION Wrong: "Headline placeholder", "Company name" and a countdown of dashes. Criticism: the page looks finished but says nothing true. Right: the company's name, line, launch and numbers as told. Why: the facts are the page.
@@ -24,3 +25,5 @@ CORRECTION Wrong: makeRocket for a launch company's page when the detailed rocke
 CORRECTION Wrong: the section heading "The mission" sitting on the rocket as it lifts off. Criticism: unreadable where the model is busy. Right: the sections on the other side of the screen, each heading on a panel. Why: text must read on everything behind it.
 CORRECTION Wrong: gsap.from(... opacity: 0) also running with reduced motion on. Criticism: the text never appears for people who asked for calm. Right: no gsap at all when calm is true. Why: the calm version must show everything as it ends up.
 CORRECTION Wrong: const flame = rocket.getObjectByName('flame') at the top of the file. Criticism: the flame never shows once the detailed rocket has loaded. Right: look it up in the timeline's onUpdate and in the loop. Why: the stand-in and its flame are replaced.
+CORRECTION Wrong: three.js or GSAP loaded from a CDN address. Criticism: the preview blocks the network, so the page shows nothing. Right: the files in vendor/, through the import map. Why: a page must work with what it carries.
+CORRECTION Wrong: the parallax layers moved with background-position or top. Criticism: the page stutters below 50 frames a second. Right: gsap's y on each layer, with will-change: transform. Why: transforms are drawn by the GPU without laying the page out again.

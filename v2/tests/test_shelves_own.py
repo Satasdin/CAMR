@@ -83,10 +83,10 @@ def test_an_unknown_shelf_is_refused(tmp_path):
             fn()
 
 
-def test_nine_curated_shelves_ship_with_rules_and_corrections():
+def test_ten_curated_shelves_ship_with_rules_and_corrections():
     got = {c["name"]: c for c in shelves.curated()}
-    assert set(got) == {"agents", "coding", "debugging", "deployment", "design", "reasoning", "security", "shelves",
-                        "writing"}
+    assert set(got) == {"agents", "coding", "debugging", "deployment", "design", "motion", "reasoning", "security",
+                        "shelves", "writing"}
     for c in got.values():
         assert sum(n.startswith("RULE ") for n in c["notes"]) == 16
         assert sum(n.startswith("CORRECTION ") for n in c["notes"]) == 8
