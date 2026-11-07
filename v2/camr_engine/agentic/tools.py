@@ -335,7 +335,7 @@ class Toolbox:
         ms = (time.perf_counter() - t) * 1000
         from camr_engine.agentic.lint import page_problems
 
-        static = page_problems(self.workspace.root, path)  # seen in the files themselves, without running them
+        static = page_problems(self.workspace, path)  # seen in the files themselves, without running them
         if ask.decision != "answered":
             return Done("open_page", args, False, "No browser reported on the page, so it was not tested." + (
                 " In its files:\n- " + "\n- ".join(static) if static else ""), ms)

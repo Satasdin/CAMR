@@ -46,12 +46,14 @@ def _syntax(path: Path) -> str | None:
     return f"{msg.strip()}" + (f" (line {line})" if line.isdigit() else "")
 
 
-def page_problems(root: Path, page: str) -> list[str]:
-    """Problems in ``page`` (inside ``root``) and the local scripts it loads."""
-    root = Path(root)
+def page_problems(ws, page: str) -> list[str]:
+    """Problems in ``page`` and the local scripts it loads, read through the workspace ``ws``
+    (camr_engine.agentic.workspace), which keeps to the project and leaves symlinks out and files of secrets alone."""
+    from camr_engine.agentic.workspace import Outside
+
     try:
-        html = (root / page).read_text(errors="replace")
-    except OSError:
+        html = ws.text(page)[1]
+    except (Outside, OSError):
         return []
     ids = {i.strip() for i in IDS.findall(html)}
     classes = {c for group in CLASSES.findall(html) for c in group.split()}
@@ -60,12 +62,11 @@ def page_problems(root: Path, page: str) -> list[str]:
     for src in SCRIPT_SRC.findall(html):
         if re.match(r"^[a-z]+:|^//", src, re.I):
             continue
-        f = (root / page).parent / src
+        rel = (Path(page).parent / src).as_posix()
         try:
-            if not f.resolve().is_relative_to(root.resolve()) or not f.is_file():
-                continue
-            scripts.append((src, f, f.read_text(errors="replace")))
-        except OSError:
+            f = ws.path(rel)
+            scripts.append((src, f, ws.text(rel)[1]))
+        except (Outside, OSError):
             continue
     for src, f, js in scripts:
         bad = _syntax(f)

@@ -199,12 +199,13 @@ class Lead:
     # -- the plan
 
     def _files(self) -> list[str]:
-        root = Path(self.desk.workspace.root)
+        """The project's files, as the workspace lists them (no symlinks, no files of secrets, no dot-folders)."""
         out = []
-        for p in sorted(root.rglob("*")):
-            rel = p.relative_to(root).as_posix()
-            if p.is_file() and not any(s.startswith(".") for s in rel.split("/")) and rel not in TEAM_FILES:
-                out.append(rel)
+        for f in self.desk.workspace.tree():
+            rel = f["path"]
+            if f["dir"] or f.get("secret") or rel in TEAM_FILES or any(x.startswith(".") for x in rel.split("/")):
+                continue
+            out.append(rel)
         return out[:200]
 
     def _first_plan(self) -> Plan:
@@ -415,10 +416,8 @@ class Lead:
         """Why a part is not done, or "" when it is."""
         if run.state == "failed":
             return f"its run failed ({(run.error or '')[:120]})"
-        if part.target and part.role != "change":
-            f = Path(self.desk.workspace.root) / part.target
-            if not f.is_file() or not f.read_text(errors="replace").strip():
-                return f"{part.target} was not written"
+        if part.target and part.role != "change" and not self._read(part.target).strip():
+            return f"{part.target} was not written"
         if part.role == "change" and not run._made():
             return "nothing was changed"
         return ""
@@ -426,10 +425,12 @@ class Lead:
     # -- what each specialist reads
 
     def _read(self, rel: str, limit: int = SHOWN) -> str:
-        f = Path(self.desk.workspace.root) / rel
+        """A project file through the workspace, which keeps to the project and leaves files of secrets alone."""
+        from camr_engine.agentic.workspace import Outside
+
         try:
-            text = f.read_text(errors="replace") if f.is_file() else ""
-        except OSError:
+            text = self.desk.workspace.text(rel)[1]
+        except (Outside, OSError):
             return ""
         return text if len(text) <= limit else text[:limit] + f"\n… {len(text) - limit:,} more characters"
 
@@ -454,7 +455,7 @@ class Lead:
             return f"Read {t} with read_file first, then make only this change with edit_file. Keep everything else."
         if part.role == "review":
             return ""
-        if t and (Path(self.desk.workspace.root) / t).exists():
+        if t and t in self._files():
             return f"{t} exists already: read it with read_file, then fix it with edit_file or write it again whole."
         return f"Write {t} now with write_file, whole. Write no other file."
 
@@ -523,8 +524,13 @@ class Lead:
         ws = self.desk.workspace
         if ws is None:
             return
+        from camr_engine.agentic.workspace import Outside
+
         try:
-            (Path(ws.root) / "PLAN.md").write_text(self.plan.markdown())
+            ws.write("PLAN.md", self.plan.markdown())  # atomic, never through a symlink, never outside the project
+        except (Outside, OSError):
+            pass
+        try:
             folder = Path(self.desk.root) / "plans"
             folder.mkdir(parents=True, exist_ok=True)
             (folder / f"{self.id}.json").write_text(json.dumps(self.snapshot(), indent=1))

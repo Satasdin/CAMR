@@ -265,3 +265,11 @@ def test_a_limited_window_keeps_every_step_inside_it(desk):
 def test_the_window_setting_is_kept_and_has_a_floor(desk):
     assert desk.configure(window_tokens=100)["window_tokens"] == 2048
     assert desk.configure(window_tokens=0)["window_tokens"] is None
+
+
+def test_the_plan_is_never_written_through_a_symlink(desk, tmp_path):
+    victim = tmp_path / "victim.txt"
+    victim.write_text("keep me")
+    (desk.workspace.root / "PLAN.md").symlink_to(victim)
+    build(desk, "Build a website for a small bookshop")
+    assert victim.read_text() == "keep me"

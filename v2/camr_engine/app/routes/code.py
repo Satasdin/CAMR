@@ -24,6 +24,8 @@ The page is the only client (the server checks its launch token on every call); 
 
 from __future__ import annotations
 
+import os
+
 from pathlib import Path
 
 from camr_engine.agentic.desk import Busy, Desk, engine_brains
@@ -80,6 +82,11 @@ def desk(app) -> Desk:
         root = getattr(app, "agentic_root", None) or base / "code"
         keep_out = [Path(memory.path), *(base / k for k in KINDS)] if memory is not None else []
         brains = getattr(app, "brain_factory", None) or on_session_thread(app, engine_brains(app))
+        other = os.environ.get("CAMR_AGENT_MODEL", "")
+        if other.startswith("claude-"):  # the side-by-side (T7): the same agent with Claude writing, metered and capped
+            from camr_engine.agentic.claude_brain import ClaudeBrain
+
+            brains = lambda spec: ClaudeBrain(other)  # noqa: E731
         d = Desk(Path(root), brains=brains, model_lock=getattr(app, "lock", None), measuring=active,
                  skills_dir=getattr(app, "skills_dir", None), keep_out=keep_out)
         from camr_engine.app.routes.chat import talk
