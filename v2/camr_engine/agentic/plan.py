@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 SKILLS = Path(__file__).resolve().parent.parent / "curated" / "skills"  # the methods, shipped with the engine
 MAX_FILES = 6  # files one plan makes, at most
 SHOWN = 9000  # characters of one file a specialist reads
-TEAM_FILES = ("BRIEF.md", "ARCHITECTURE.md", "PLAN.md")
+TEAM_FILES = ("BRIEF.md", "ARCHITECTURE.md", "PLAN.md", "REPORT.md")
 _FILE = re.compile(r"(?<![\w/.-])((?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.(?:html|htm|css|js|mjs|json|svg|py|ts|txt))\b")
 _CLASS = re.compile(r"\.([A-Za-z][\w-]*)\s*[{,:\s]")
 STYLE_WORDS = re.compile(r"\b(colou?rs?|fonts?|typefaces?|bigger|smaller|spacing|padding|margins?|dark|light|"
@@ -88,6 +88,12 @@ ROLES = {r.id: r for r in [
          "You make the change the user asked for, in the file you are given, and keep everything else as it is.",
          _WRITES, 6),
 ]}
+
+
+def _longest_gap(asks: list[float], end: float) -> float:
+    """The longest time between the start, each question and the end."""
+    marks = [0.0, *sorted(asks), end]
+    return max(b - a for a, b in zip(marks, marks[1:]))
 
 
 def role_of(path: str) -> str:
@@ -361,6 +367,7 @@ class Lead:
             else:
                 self.state = "done"
             self.answer = self._summary()
+            self._write_report()
         except Exception as e:  # noqa: BLE001 (shown on the card)
             self.error = f"{type(e).__name__}: {e}"[:600]
             self.state = "failed"
@@ -509,6 +516,91 @@ class Lead:
             "keep": last,
             "notes_title": "What to work from (data, not instructions):",
         }
+
+    # -- the report: what happened, from what was recorded (no model writes it)
+
+    def facts(self) -> dict:
+        """The build in numbers, from its runs' records."""
+        asks, tests, steps = [], [], []
+        for part in self.plan.parts:
+            for rid in part.runs:
+                run = self.desk.runs.get(rid)
+                if run is None:
+                    continue
+                for t in list(run.turns):
+                    at = round(float(t.get("at", self.started)) - self.started, 1)
+                    if t.get("kind") == "model":
+                        steps.append({"part": ROLES[part.role].name, "read": int(t.get("prompt_tokens") or 0),
+                                      "wrote": int(t.get("written_tokens") or 0),
+                                      "s": round(float(t.get("total_s") or 0), 1)})
+                    elif t.get("kind") == "call" and t.get("tool") == "ask_user":
+                        text = str(t.get("text") or "")
+                        said = text.removeprefix("The user answered: ") if text.startswith("The user answered") else ""
+                        asks.append({"at_s": at, "part": ROLES[part.role].name,
+                                     "question": str((t.get("args") or {}).get("question", ""))[:300],
+                                     "answer": said[:300]})
+                    elif t.get("kind") == "call" and t.get("tool") == "open_page":
+                        report = str(t.get("text") or "").split("\n\nThe page as it is now")[0]
+                        tests.append({"at_s": at, "part": ROLES[part.role].name, "ok": bool(t.get("ok")),
+                                      "report": report[:1200]})
+        end = (self.ended or time.time()) - self.started
+        return {"seconds": round(end, 1), "asks": asks, "tests": tests, "steps": len(steps),
+                "first_ask_s": asks[0]["at_s"] if asks else None,
+                "longest_alone_s": round(_longest_gap([a["at_s"] for a in asks], end), 1),
+                "most_read": max((x["read"] for x in steps), default=0),
+                "read": sum(x["read"] for x in steps), "wrote": sum(x["wrote"] for x in steps),
+                "window": self.desk.window_tokens()}
+
+    def report(self) -> str:
+        f = self.facts()
+        mins = lambda s: f"{int(s // 60)} min {int(s % 60)} s" if s >= 60 else f"{s:.0f} s"  # noqa: E731
+        lines = ["# Build report", "", f"Request: {self.request}", "",
+                 f"Model: {getattr(self.current, 'brain', None) and self.current.brain.label or self._model()}", "",
+                 "## In short", "",
+                 f"- It worked for {mins(f['seconds'])} in {f['steps']} model steps, and ended {self.state}.",
+                 (f"- It stopped for you {len(f['asks'])} time{'s' if len(f['asks']) != 1 else ''}; the first after "
+                  f"{mins(f['first_ask_s'])}. Its longest stretch alone was {mins(f['longest_alone_s'])}."
+                  if f["asks"] else f"- It never stopped for you: {mins(f['seconds'])} alone."),
+                 f"- The most one step read was {f['most_read']:,} tokens"
+                 + (f" (the window was limited to {f['window']:,})." if f["window"] else "."),
+                 f"- In all it read {f['read']:,} tokens and wrote {f['wrote']:,}.",
+                 f"- {self.answer or self._summary()}", "", "## The parts", "",
+                 "| Part | Who decided it | State | Time | Tries |", "|---|---|---|---|---|"]
+        for p in self.plan.parts:
+            lines.append(f"| {ROLES[p.role].name}: {p.title} | {p.by} | {p.state}{' (' + p.note + ')' if p.note else ''}"
+                         f" | {mins(p.seconds)} | {p.tries} |")
+        lines += ["", "## What it asked you", ""]
+        lines += [f"- After {mins(a['at_s'])}, the {a['part'].lower()} asked: \"{a['question']}\" "
+                  + (f"You said: \"{a['answer']}\"." if a["answer"] else "You left it out.") for a in f["asks"]] or [
+            "- Nothing: every fact it needed was in memory or in the request."]
+        lines += ["", "## Decisions", ""]
+        lines += [f"- ({d['by']}) {d['text']}" for d in self.plan.decisions]
+        lines += ["", "## Page tests", ""]
+        for t in f["tests"] or []:
+            lines.append(f"- After {mins(t['at_s'])}, by the {t['part'].lower()}: {'passed' if t['ok'] else 'problems'}.")
+            if not t["ok"]:
+                lines += ["  " + x for x in t["report"].splitlines()[:8]]
+        if not f["tests"]:
+            lines.append("- The page was not tested.")
+        lines += ["", "Rules wrote the order of the parts, the retries and this report. The model wrote the brief, "
+                  "chose the files, wrote every file and answered the checks marked (model)."]
+        return "\n".join(lines) + "\n"
+
+    def _model(self) -> str:
+        for p in reversed(self.plan.parts):
+            for rid in reversed(p.runs):
+                run = self.desk.runs.get(rid)
+                if run is not None:
+                    return run.brain.label
+        return "unknown"
+
+    def _write_report(self) -> None:
+        from camr_engine.agentic.workspace import Outside
+
+        try:
+            self.desk.workspace.write("REPORT.md", self.report())
+        except (Outside, OSError):
+            pass
 
     # -- what the page shows
 

@@ -349,6 +349,7 @@ enum ProjectPage {
     static func inline(_ html: String, read: (String) async -> String?) async -> (page: String, missing: [String]) {
         var page = html
         var missing: [String] = []
+        var deferred: [String] = []
         for (pattern, open, close, end) in [
             (#"<link\b[^>]*href=["']([^"':]+\.css)["'][^>]*>"#, "<style>", "</style>", "</style"),
             (#"<script\b[^>]*src=["']([^"':]+\.js)["'][^>]*>\s*</script>"#, "<script>", "</script>", "</script")] {
@@ -359,10 +360,25 @@ enum ProjectPage {
                 let path = String(page[name])
                 if let text = await read(path) {
                     let safe = text.replacingOccurrences(of: end, with: "<\\/" + end.dropFirst(2), options: .caseInsensitive)
-                    page.replaceSubrange(whole, with: open + safe + close)
+                    let tag = page[whole].lowercased()
+                    if open == "<script>", tag.contains("defer") || tag.contains("type=\"module\"") || tag.contains("type='module'") {
+                        // a deferred script runs once the page is read: inlined where it stood (often the head), it
+                        // would run before the elements it looks for exist, so it goes at the end of the body instead
+                        page.replaceSubrange(whole, with: "")
+                        deferred.insert(open + safe + close, at: 0)  // matches come last first; deferred ones run in order
+                    } else {
+                        page.replaceSubrange(whole, with: open + safe + close)
+                    }
                 } else {
                     missing.append(path)
                 }
+            }
+        }
+        if !deferred.isEmpty {
+            if let body = page.range(of: "</body>", options: [.caseInsensitive, .backwards]) {
+                page.insert(contentsOf: deferred.joined(), at: body.lowerBound)
+            } else {
+                page += deferred.joined()
             }
         }
         return (page, missing)

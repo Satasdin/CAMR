@@ -273,3 +273,14 @@ def test_the_plan_is_never_written_through_a_symlink(desk, tmp_path):
     (desk.workspace.root / "PLAN.md").symlink_to(victim)
     build(desk, "Build a website for a small bookshop")
     assert victim.read_text() == "keep me"
+
+
+def test_a_build_ends_with_a_report_written_from_its_records(desk):
+    lead = build(desk, "Build a website for a small bookshop")
+    text = (desk.workspace.root / "REPORT.md").read_text()
+    assert text.startswith("# Build report") and "It never stopped for you" in text
+    assert "| Designer: Write style.css | model | done |" in text
+    assert "(model) The architect named the files" in text and "passed" in text
+    f = lead.facts()
+    assert f["steps"] >= 6 and f["asks"] == [] and f["longest_alone_s"] == f["seconds"]
+    assert "REPORT.md" not in lead.answer
