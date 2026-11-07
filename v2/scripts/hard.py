@@ -76,6 +76,47 @@ def briefs(path: Path = HARD) -> dict[str, dict]:
     return out
 
 
+STOP_CAPS = {"The", "Its", "It", "A", "An", "On", "From", "To", "In", "Of"}
+
+
+def fact_words(told: str) -> list[str]:
+    """The words a told fact must show: its names and its numbers ("Halcyon-7", "14:00", "550"), not "The"."""
+    got = re.findall(r"[A-Z][A-Za-z0-9-]+|\d[\d,.:]*\d|\d", told)
+    return [w for w in got if w not in STOP_CAPS]
+
+
+def brief_rules(link, url: str, told: list[str], wait: float = 2.5) -> dict:
+    """The brief's own rules the motion check does not cover, read off the page in Chrome at a desktop's width:
+    the countdown's numbers change from one moment to the next, and every told fact is on the page (a fact counts
+    when at least 70% of its names and numbers are in the page's text). "Nothing that was not told" is left to a
+    person's eye."""
+    link.call("browser_navigate", {"url": url})
+    link.call("browser_resize", {"width": 1440, "height": 900})
+    read = lambda: str(link.call("browser_evaluate", {"function": "() => document.body.innerText"}).get("text", ""))
+    first = read()
+    time.sleep(wait)
+    second = read()
+    ticks = re.findall(r"\d+", first) != re.findall(r"\d+", second)
+    page = second.lower()
+    facts = []
+    for t in told:
+        words = fact_words(t)
+        have = [w for w in words if w.lower() in page]
+        facts.append({"fact": t, "shown": len(have), "of": len(words),
+                      "ok": not words or len(have) / len(words) >= 0.7,
+                      "missing": [w for w in words if w.lower() not in page]})
+    return {"countdown_ticks": ticks, "facts": facts, "facts_ok": sum(f["ok"] for f in facts),
+            "facts_of": len(facts), "passed": ticks and all(f["ok"] for f in facts)}
+
+
+def show_rules(r: dict) -> None:
+    print(f"  countdown ticks: {'pass' if r['countdown_ticks'] else 'FAIL'}")
+    print(f"  told facts on the page: {r['facts_ok']} of {r['facts_of']}")
+    for f in r["facts"]:
+        if not f["ok"]:
+            print(f"    missing from \"{f['fact'][:60]}\": {', '.join(f['missing'])}")
+
+
 def playwright_link(cwd: Path):
     from camr_engine.agentic.plugins import BY_ID
     from camr_engine.agentic.servers import Link, Spec
@@ -116,6 +157,7 @@ def check(bid: str, src: Path, name: str | None = None) -> dict:
     link = playwright_link(dest)
     try:
         got = browser_check(link, serving(ws).url("index.html"), motion=want)
+        rules = brief_rules(link, serving(ws).url("index.html"), brief["told"])
     finally:
         link.close()
         close_all()
@@ -124,7 +166,8 @@ def check(bid: str, src: Path, name: str | None = None) -> dict:
     print(f"  wanted: {sorted(want)}; errors: {got.get('errors')}; failed: {len(got.get('failed') or [])}")
     show(got.get("motion") or {})
     print(f"  strip: {kept['strip']}")
-    return {"dest": str(dest), "check": got, "kept": kept}
+    show_rules(rules)
+    return {"dest": str(dest), "check": got, "kept": kept, "rules": rules}
 
 
 def brains(model: str):
@@ -193,7 +236,10 @@ def run(bid: str, model: str, minutes: float) -> dict:
     t = threading.Thread(target=answer_asks, daemon=True)
     t.start()
     thread = desk.new_thread(f"{bid} {brief['title']}")["id"]
-    lead = desk.build(thread, brief["brief"], memory=False)
+    # the facts go in with the request, as a person would type them: the parts that design and write the page have
+    # no way to ask, and a build that never got the facts can only fill the page with placeholders
+    request = brief["brief"] + ("\n\nWhat you need to know:\n" + "\n".join(f"- {t}" for t in told) if told else "")
+    lead = desk.build(thread, request, memory=False)
     lead.thread_obj.join(minutes * 60)
     if lead.live:
         lead.stop()
@@ -201,12 +247,22 @@ def run(bid: str, model: str, minutes: float) -> dict:
     stop.set()
     t.join(5)
     desk.servers.close()
+    rules = None
+    if (folder / "index.html").exists():
+        link = playwright_link(folder)
+        try:
+            rules = brief_rules(link, serving(desk.workspace).url("index.html"), told)
+        finally:
+            link.close()
     out = {"brief": bid, "model": model, "folder": str(folder), "state": lead.state, "seconds": lead.facts()["seconds"],
-           "parts": [(x.role, x.target, x.state) for x in lead.plan.parts], "motion": motion.read_report(desk.workspace)}
+           "parts": [(x.role, x.target, x.state) for x in lead.plan.parts], "motion": motion.read_report(desk.workspace),
+           "rules": rules}
     (folder / "report").mkdir(exist_ok=True)
     (folder / "report" / "run.json").write_text(json.dumps(out, indent=1))
     print(json.dumps({k: v for k, v in out.items() if k != "motion"}, indent=1))
     print((folder / "REPORT.md").read_text() if (folder / "REPORT.md").exists() else "(no REPORT.md)")
+    if rules:
+        show_rules(rules)
     return out
 
 
@@ -222,10 +278,23 @@ def main(argv=None) -> None:
     r.add_argument("--model", required=True)
     r.add_argument("--minutes", type=float, default=45)
     sub.add_parser("list", help="the briefs in HARD.md")
+    k = sub.add_parser("rules", help="the brief's own rules (countdown, told facts) on a page already built")
+    k.add_argument("brief")
+    k.add_argument("folder", type=Path)
     a = ap.parse_args(argv)
     if a.cmd == "list":
         for k, b in briefs().items():
             print(f"{k}: {b['title']}\n  {b['brief']}\n  rules: {len(b['rules'])}, told: {len(b['told'])}")
+    elif a.cmd == "rules":
+        from camr_engine.agentic.serve import close_all, serving
+
+        link = playwright_link(a.folder.resolve())
+        try:
+            r = brief_rules(link, serving(Workspace(a.folder.resolve())).url("index.html"), briefs()[a.brief]["told"])
+        finally:
+            link.close()
+            close_all()
+        show_rules(r)
     elif a.cmd == "check":
         check(a.brief, a.folder.resolve(), a.name)
     else:
