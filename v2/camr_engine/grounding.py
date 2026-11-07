@@ -24,6 +24,8 @@ HEX = re.compile(r"#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b")
 URL = re.compile(r"https?://[^\s\"'<>)]+|www\.[^\s\"'<>)]+")
 NUMBER = re.compile(r"(?<![\w#.,:-])\d[\d,]*(?:\.\d+)?(?![\w:])")
 NAME = re.compile(r"\b[A-Z][a-zA-Z'’]+(?:\s+[A-Z][a-zA-Z'’]+)+")
+COMMANDS = {"Build", "Make", "Create", "Add", "Change", "Remove", "Use", "Show", "Write", "Design", "Develop", "Fix", "Put",
+            "Update", "Delete", "Rename", "Replace", "Move", "Please", "Our", "The", "A", "An", "Open", "Closed", "Colours", "Colors"}
 COMMON_NAMES = {"Opening Hours", "Our Menu", "Contact Us", "Find Us", "Visit Us", "About Us", "All Rights Reserved",
                 "Get In Touch", "Monday To", "Welcome To", "Add To Cart", "Order Now", "Your Order", "The Menu",
                 "Follow Us", "Book Now", "Call Us", "Menu Items", "Our Story", "Your Cart"}
@@ -92,6 +94,9 @@ def facts_in(text: str, *, names: bool = False, numbers: bool = False) -> list[F
     if names:
         for m in NAME.finditer(text):
             name = re.sub(r"['’]s?$", "", m.group(0))  # Kahawa Corner's is Kahawa Corner
+            first, _, rest = name.partition(" ")
+            if first in COMMANDS and rest:  # "Build Kahawa Corner" is a request about Kahawa Corner
+                name = rest
             if name.title() in COMMON_NAMES:
                 continue
             f = Fact("name", name, name.lower())

@@ -52,3 +52,7 @@ def test_what_goes_to_the_agent():
     assert not wants_agent("change the colour to green")
     assert wants_agent("change the colour to green", project_open=True)
     assert not wants_agent("What colour is it now?", project_open=True)
+
+
+def test_a_command_is_not_part_of_a_name():
+    assert [f.text for f in facts_in("Build Kahawa Corner a site", names=True)] == ["Kahawa Corner"]
