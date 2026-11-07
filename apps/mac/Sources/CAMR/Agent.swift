@@ -200,7 +200,9 @@ extension ChatModel {
         let base = String(docx.dropLast(5))
         let folder = URL(fileURLWithPath: root)
         var pdf: URL?
-        if files.contains(base + ".html"), let html = await readProjectFile(base + ".html") {
+        // the page is rendered again by the engine from the Markdown (escaped, by rule): never a project file as it is
+        let q = (base + ".md").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? base
+        if files.contains(base + ".md"), let html = (try? await engine.get("/api/code/document?path=\(q)"))?.str("html") {
             let out = folder.appendingPathComponent(base + ".pdf")
             if await DocumentPDF.make(html: html, out: out) { pdf = out }
         }

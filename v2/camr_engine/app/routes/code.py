@@ -318,6 +318,70 @@ def register(routes: Routes) -> None:
         name = req.str("name", limit=64)
         return {"name": name, "text": desk(req.app).skills.load(name)}
 
+    @routes.get("/api/code/document")
+    @guard
+    def document_page(req: Request) -> dict:
+        """A document's print page, rendered now from its Markdown (camr_engine.documents): escaped by rule, so what
+        the app prints never comes from a file a model wrote as HTML."""
+        from camr_engine.documents import parse, title_of, to_html
+
+        d = desk(req.app)
+        if d.workspace is None:
+            raise Refused(409, "choose a workspace first")
+        path = req.str("path", limit=1024)
+        if not path.lower().endswith(".md"):
+            raise Refused(400, "a document's text is a .md file")
+        text = d.workspace.text(path)[1]
+        brief = ""
+        try:
+            brief = d.workspace.text("BRIEF.md")[1]
+        except Exception:  # noqa: BLE001 (no brief: the plain colour)
+            pass
+        import re as _re
+
+        accent = next(iter(_re.findall(r"#[0-9a-fA-F]{6}\b", brief)), "#1a1a1a")
+        blocks = parse(text)
+        return {"html": to_html(blocks, accent=accent, title=title_of(blocks, Path(path).stem))}
+
+    @routes.get("/api/code/plugins")
+    @guard
+    def plugins_list(req: Request) -> dict:
+        """The plugins the app knows how to start, and how each stands here."""
+        from camr_engine.agentic.plugins import CATALOG
+
+        servers = {s["name"]: s for s in desk(req.app).servers.show()}
+        return {"plugins": [{"id": p["id"], "name": p["name"], "about": p["about"],
+                             "added": p["id"] in servers, **({k: servers[p["id"]].get(k) for k in
+                                                              ("state", "error", "trusted", "calls")}
+                                                           if p["id"] in servers else {"state": "idle"})}
+                            for p in CATALOG]}
+
+    @routes.post("/api/code/plugins/add")
+    @guard
+    def plugins_add(req: Request) -> dict:
+        """Add a plugin from the catalog and connect it."""
+        from camr_engine.agentic.plugins import BY_ID
+        from camr_engine.agentic.servers import Spec
+
+        p = BY_ID.get(req.str("id", limit=40))
+        if p is None:
+            raise Refused(404, "no such plugin")
+        d = desk(req.app)
+        if d.servers.spec(p["id"]) is None:
+            d.servers.add(Spec(p["id"], p["command"], list(p["args"])))
+        d.servers.connect(p["id"], d.workspace.root if d.workspace else None)
+        return plugins_list(req)
+
+    @routes.post("/api/code/plugins/trust")
+    @guard
+    def plugins_trust(req: Request) -> dict:
+        """Whether a plugin's calls run without asking: the person's choice."""
+        on = req.body.get("on")
+        if not isinstance(on, bool):
+            raise Refused(400, "on is true or false")
+        desk(req.app).servers.trust(req.str("id", limit=40), on)
+        return plugins_list(req)
+
     @routes.post("/api/code/mcp/add")
     @guard
     def mcp_add(req: Request) -> dict:
