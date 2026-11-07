@@ -189,6 +189,7 @@ extension ChatModel {
             turns[k].agent?.seconds = Date().timeIntervalSince(started)
             await refreshFiles(at: k)
             if await showDocument(root: root, at: k) {
+            } else if showNotebook(root: root, at: k) {
             } else if let page = await loadedPage("index.html") { PreviewCenter.shared.show(code: page.page, project: root) }
         } catch {
             turns[k].text = error.localizedDescription
@@ -215,6 +216,16 @@ extension ChatModel {
         }
         PreviewCenter.shared.show(pdf: pdf, docx: folder.appendingPathComponent(docx), project: root)
         await refreshFiles(at: k)
+        return true
+    }
+
+    /// A notebook the agent made (or a Python script, when it made no page): shown in the Notebook or Script tab.
+    private func showNotebook(root: String, at k: Int) -> Bool {
+        let files = turns[k].agent?.files ?? []
+        let nb = files.first(where: { $0.hasSuffix(".ipynb") })
+        let py = files.contains(where: { $0.hasSuffix(".html") }) ? nil : files.first(where: { $0.hasSuffix(".py") })
+        guard nb != nil || py != nil else { return false }
+        PreviewCenter.shared.show(notebook: nb, script: py, project: root)
         return true
     }
 
@@ -269,6 +280,11 @@ extension ChatModel {
         if kind == "shell", let c = what.str("command") {
             return c + "\n\nin " + (what.str("cwd") ?? "the project folder")
         }
+        if kind == "python", let p = what.str("path") {
+            let shut = (what["sandboxed"] as? Bool) == true ? "shut in: no network, writes only in the project folder"
+                : "not shut in on this Mac: only the time limits and the project folder"
+            return "\(what.str("kind") ?? "notebook") \(p) · \(what.str("limits") ?? "") · \(shut)\n\n" + (what.str("code") ?? "")
+        }
         if kind == "mcp", let server = what.str("server"), let tool = what.str("tool") {
             let args = what["arguments"].flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.prettyPrinted, .sortedKeys]) }
             return "\(server) · \(tool)\n" + (args.map { String(decoding: $0, as: UTF8.self) } ?? "{}")
@@ -285,7 +301,8 @@ extension ChatModel {
         let center = PreviewCenter.shared
         await refreshFiles(at: k)
         center.show(code: page.page, project: turns[k].agent?.project)
-        var got = await tester.test(html: page.page, scripts: center.scripts || center.agentScripts || center.agentScriptsThisRun)
+        var got = await tester.test(html: page.page, scripts: center.scripts || center.agentScripts || center.agentScriptsThisRun,
+                                   root: turns[k].agent?.project)
         if !page.missing.isEmpty {
             got["errors"] = ((got["errors"] as? [String]) ?? []) + page.missing.map { "the page links to \($0), which does not exist" }
         }
@@ -339,6 +356,11 @@ extension ChatModel {
         case "read_shelf":
             return AgentStep(icon: "books.vertical", title: "Called the \(args.str("shelf") ?? "") shelf", detail: args.str("question") ?? "", ok: ok, memory: true)
         case "run_shell": return AgentStep(icon: "terminal", title: "Ran \(args.str("command") ?? "")", detail: ok ? "" : text, ok: ok)
+        case "notebook_write": return AgentStep(icon: "book.pages", title: "Wrote \(path)", detail: text, ok: ok)
+        case "notebook_edit_cell":
+            return AgentStep(icon: "pencil", title: "Changed cell \(Int(args.num("index") ?? 0)) of \(path)", detail: ok ? "" : text, ok: ok)
+        case "notebook_run", "python_run":
+            return AgentStep(icon: "play.rectangle", title: "Ran \(path)", detail: ok ? "" : String(text.prefix(600)), ok: ok)
         default: return AgentStep(icon: "wrench", title: tool, detail: text, ok: ok)
         }
     }
@@ -478,7 +500,8 @@ struct AskRow: View {
                     Button("Leave it out") { send("") }.buttonStyle(.plain).foregroundStyle(Theme.dim).font(Theme.mono(11))
                 }
             } else {
-                Text(ask.kind == "shell" ? "Run this command?" : ask.kind == "mcp" ? "Let this tool run with these arguments?"
+                Text(ask.kind == "shell" ? "Run this command?" : ask.kind == "python" ? "Run this Python?"
+                     : ask.kind == "mcp" ? "Let this tool run with these arguments?"
                      : "The agent wants to do something this window cannot show.")
                     .font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
                 Text(ask.text).font(Theme.mono(12)).foregroundStyle(Theme.text).textSelection(.enabled)

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Halcyon Launch Systems</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports": {"three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/"}}</script>
+</head>
+<body>
+  <div class="sky" aria-hidden="true">
+    <div class="layer layer-glow" data-speed="0.15"></div>
+    <div class="layer layer-far" data-speed="0.3"></div>
+    <div class="layer layer-near" data-speed="0.6"></div>
+    <div class="layer layer-haze" data-speed="0.9"></div>
+  </div>
+  <canvas id="scene" aria-label="A rocket on its launch pad, turning and lifting off as the page scrolls"></canvas>
+
+  <header class="site-header">
+    <a class="brand" href="#top">Halcyon</a>
+    <nav><a href="#mission">Mission</a><a href="#vehicle">Vehicle</a><a href="#site">Launch site</a></nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" id="hero">
+      <p class="kicker reveal">Halcyon Launch Systems</p>
+      <h1 class="reveal">Orbit, on schedule.</h1>
+      <p class="lede reveal">Reusable small-lift rockets for science and communications payloads.</p>
+      <div class="countdown reveal" id="countdown" aria-live="polite">
+        <span class="label">Next launch, Halcyon-7</span>
+        <span class="clock"><b id="cd-days">00</b>d <b id="cd-hours">00</b>h <b id="cd-mins">00</b>m <b id="cd-secs">00</b>s</span>
+      </div>
+      <a class="btn reveal" href="#mission">See the mission</a>
+    </section>
+
+    <section class="panel" id="mission">
+      <h2 class="reveal">The mission</h2>
+      <p class="reveal">Halcyon-7 carries three weather satellites to a 550 km sun-synchronous orbit.</p>
+      <ul class="facts reveal">
+        <li><b>550 km</b> target orbit</li>
+        <li><b>3</b> satellites</li>
+        <li><b>8 min 40 s</b> to orbit</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="vehicle">
+      <h2 class="reveal">The vehicle</h2>
+      <p class="reveal">Two stages, one reusable booster, nine engines on the first stage.</p>
+      <ul class="facts reveal">
+        <li><b>32 m</b> tall</li>
+        <li><b>1,200 kg</b> to low orbit</li>
+        <li><b>9</b> engines</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="site">
+      <h2 class="reveal">The launch site</h2>
+      <p class="reveal">Pad 2, on the coast, with a clear range over open water to the east.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer"><p>Halcyon Launch Systems. A reference page for CAMR's hard briefs.</p></footer>
+
+  <script src="vendor/gsap/gsap.min.js"></script>
+  <script src="vendor/gsap/ScrollTrigger.min.js"></script>
+  <script type="module" src="motion.js"></script>
+</body>
+</html>

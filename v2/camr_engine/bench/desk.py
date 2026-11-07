@@ -92,8 +92,12 @@ def configure(engine: Engine, settings: dict) -> None:
     m.desk_order = settings.get("desk_order", "date")
     m.closest = settings.get("closest", CLOSEST)
     m.reread = settings.get("reread", "all")
+    from camr_engine.memory import FINDER
+
+    m.finder = settings.get("finder", FINDER)
     engine.settings = {**{k: v for k, v in engine.settings.items()
-                          if k not in ("desk_rooms", "desk_tokens", "desk_order", "closest", "reread")}, **settings}
+                          if k not in ("desk_rooms", "desk_tokens", "desk_order", "closest", "reread", "finder")},
+                       **settings}
 
 
 def compare(model: str, snap: Path, haul: Path, cut: str, variants: Sequence[str], *, per_family: int = 10,

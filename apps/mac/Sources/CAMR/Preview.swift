@@ -34,6 +34,17 @@ final class PreviewCenter: ObservableObject {
     @Published var pdf: URL?
     @Published var docx: URL?
     @Published var docVersion = 0
+    /// A notebook or a Python script of the project, shown in the Notebook and Script tabs (Notebook.swift).
+    @Published var notebook: String?
+    @Published var script: String?
+
+    func show(notebook: String?, script: String? = nil, project: String? = nil) {
+        self.notebook = notebook
+        self.script = script
+        self.project = project
+        docVersion += 1
+        tab = notebook != nil ? "notebook" : script != nil ? "script" : tab
+    }
 
     func show(pdf: URL?, docx: URL?, project: String? = nil) {
         self.pdf = pdf
@@ -54,6 +65,8 @@ final class PreviewCenter: ObservableObject {
     func close() {
         pdf = nil
         docx = nil
+        notebook = nil
+        script = nil
         code = nil
         project = nil
         files = []
@@ -82,16 +95,20 @@ struct PreviewDock: View {
     @ObservedObject var center: PreviewCenter
 
     var body: some View {
-        if center.code != nil || center.pdf != nil || center.docx != nil {
+        if center.code != nil || center.pdf != nil || center.docx != nil || center.notebook != nil || center.script != nil {
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
                     Picker("", selection: $center.tab) {
+                        if center.notebook != nil { Text("Notebook").tag("notebook") }
+                        if center.script != nil { Text("Script").tag("script") }
                         if center.pdf != nil { Text("PDF").tag("pdf") }
                         if center.docx != nil { Text("Word").tag("word") }
                         if center.code != nil { Text("Page").tag("page") }
                         Text("Files \(center.files.count)").tag("files")
                     }
-                    .pickerStyle(.segmented).frame(width: center.pdf != nil ? 230 : 130).labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: center.pdf != nil ? 230 : 130 + (center.notebook != nil ? 90 : 0) + (center.script != nil ? 70 : 0))
+                    .labelsHidden()
                     if center.tab == "pdf" || center.tab == "word", let f = center.tab == "pdf" ? center.pdf : center.docx {
                         Button { NSWorkspace.shared.open(f) } label: { Label("Open", systemImage: "arrow.up.forward.app") }
                             .buttonStyle(.plain).font(Theme.mono(10)).foregroundStyle(Theme.dim)
@@ -120,7 +137,11 @@ struct PreviewDock: View {
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(Theme.panel)
-                if center.tab == "pdf", let f = center.pdf {
+                if center.tab == "notebook", let p = center.notebook {
+                    NotebookPane(path: p, version: center.docVersion).frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if center.tab == "script", let p = center.script {
+                    ScriptPane(path: p, version: center.docVersion).frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if center.tab == "pdf", let f = center.pdf {
                     PDFPane(url: f, version: center.docVersion).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if center.tab == "word", let f = center.docx {
                     QuickLookPane(url: f, version: center.docVersion).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -160,7 +181,11 @@ struct PreviewDock: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(center.files, id: \.self) { f in
-                        Button(f) { center.open(file: f) }
+                        Button(f) {
+                            if f.hasSuffix(".ipynb") { center.show(notebook: f, script: center.script, project: center.project) }
+                            else if f.hasSuffix(".py") { center.show(notebook: center.notebook, script: f, project: center.project); center.tab = "script" }
+                            else { center.open(file: f) }
+                        }
                             .buttonStyle(.plain).font(Theme.mono(11))
                             .foregroundStyle(center.openPath == f ? Theme.memory : Theme.dim)
                             .padding(.horizontal, 8).padding(.vertical, 5)
@@ -186,6 +211,10 @@ struct PreviewDock: View {
 /// content rule list (in place before anything loads; if it cannot be compiled, nothing loads), a content security
 /// policy in the page, and no navigating away. With scripts on, WebRTC is also taken off the page, which narrows what
 /// a script can do but is not a boundary: the process has network access.
+///
+/// The page lives at camr-page://page/, an address of the app's own (ProjectFiles): there it may load its project's
+/// own files (vendored libraries as ES modules through an import map, .glb models) and nothing else, as every network
+/// address stays blocked by the rule list and the policy.
 enum ShutIn {
     static let blocked = """
     [{"trigger":{"url-filter":"^https?://"},"action":{"type":"block"}},
@@ -193,9 +222,11 @@ enum ShutIn {
      {"trigger":{"url-filter":"^file:"},"action":{"type":"block"}},
      {"trigger":{"url-filter":"^ftp://"},"action":{"type":"block"}}]
     """
-    static let origin = URL(string: "https://page.camr.invalid/")
-    static let policy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
-        + "font-src data:; media-src data:; base-uri 'none'; form-action 'none'; frame-src 'none'"
+    static let scheme = "camr-page"
+    static let origin = URL(string: "\(scheme)://page/")
+    static let policy = "default-src 'none'; script-src 'unsafe-inline' \(scheme):; style-src 'unsafe-inline' \(scheme):; "
+        + "img-src data: blob: \(scheme):; font-src data: \(scheme):; media-src data: blob: \(scheme):; "
+        + "connect-src data: blob: \(scheme):; base-uri 'none'; form-action 'none'; frame-src 'none'"
 
     /// The page with the policy as the first thing in its head, so it covers everything after it.
     static func page(_ html: String) -> String {
@@ -217,6 +248,7 @@ enum ShutIn {
         var scripts: @MainActor () -> Bool = { false }
         var problem: @MainActor (String) -> Void = { _ in }
         var finished: (@MainActor () -> Void)?
+        let files = ProjectFiles()  // the project's own files, for this page only; none until a project is set
 
         func open(_ code: String, in web: WKWebView) {
             guard ready else {
@@ -224,9 +256,9 @@ enum ShutIn {
                 return
             }
             ownLoad = true
-            // a fixed address that never resolves (.invalid), so the page has an origin of its own: with none, WebKit
-            // hides every script error as "Script error." and nothing can be fixed from it. The policy still lets
-            // nothing load, and navigating away is still refused
+            // an address of the app's own, so the page has an origin: with none, WebKit hides every script error as
+            // "Script error." and nothing can be fixed from it. Only the project's files load from it (ProjectFiles);
+            // the network stays blocked, and navigating away is still refused
             web.loadHTMLString(ShutIn.page(code), baseURL: ShutIn.origin)
         }
 
@@ -267,6 +299,7 @@ enum ShutIn {
     static func web(_ guardian: Guard, frame: NSRect = .zero) -> WKWebView {
         let cfg = WKWebViewConfiguration()
         cfg.websiteDataStore = .nonPersistent()
+        cfg.setURLSchemeHandler(guardian.files, forURLScheme: scheme)
         // errors in the page are reported, as a browser's console would
         let watch = """
         window.addEventListener('error', function (e) {
@@ -325,6 +358,7 @@ struct PageView: NSViewRepresentable {
     func updateNSView(_ web: WKWebView, context: Context) {
         guard context.coordinator.loaded != loads else { return }
         context.coordinator.loaded = loads
+        context.coordinator.files.root = center.project.flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
         context.coordinator.open(code, in: web)
     }
 }
@@ -342,8 +376,9 @@ final class PageTester {
     """
     private var keep: [AnyObject] = []
 
-    func test(html: String, scripts: Bool) async -> [String: Any] {
+    func test(html: String, scripts: Bool, root: String? = nil) async -> [String: Any] {
         let guardian = ShutIn.Guard()
+        guardian.files.root = root.flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
         var errors: [String] = []
         guardian.scripts = { scripts }
         guardian.problem = { line in if errors.count < 10 { errors.append(line) } }
@@ -405,7 +440,11 @@ enum ProjectPage {
                 if let text = await read(path) {
                     let safe = text.replacingOccurrences(of: end, with: "<\\/" + end.dropFirst(2), options: .caseInsensitive)
                     let tag = page[whole].lowercased()
-                    if open == "<script>", tag.contains("defer") || tag.contains("type=\"module\"") || tag.contains("type='module'") {
+                    if open == "<script>", tag.contains("type=\"module\"") || tag.contains("type='module'") {
+                        // a module loads from the project itself (ProjectFiles), so its imports resolve as written
+                        continue
+                    }
+                    if open == "<script>", tag.contains("defer") {
                         // a deferred script runs once the page is read: inlined where it stood (often the head), it
                         // would run before the elements it looks for exist, so it goes at the end of the body instead
                         page.replaceSubrange(whole, with: "")
@@ -427,4 +466,56 @@ enum ProjectPage {
         }
         return (page, missing)
     }
+}
+
+/// The project's own files for the shut-in page, at camr-page://page/<path>: read-only, GET only, inside the project
+/// once symlinks are followed, never a dot-file or a file of secrets, at most `limit` bytes, with the types a browser
+/// insists on for module scripts and models. With no project set, nothing is served.
+final class ProjectFiles: NSObject, WKURLSchemeHandler {
+    var root: URL?
+    static let limit = 32_000_000
+    static let types = ["js": "text/javascript", "mjs": "text/javascript", "css": "text/css", "html": "text/html",
+                        "htm": "text/html", "json": "application/json", "map": "application/json", "svg": "image/svg+xml",
+                        "glb": "model/gltf-binary", "gltf": "model/gltf+json", "bin": "application/octet-stream",
+                        "wasm": "application/wasm", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+                        "webp": "image/webp", "gif": "image/gif", "woff2": "font/woff2", "woff": "font/woff",
+                        "txt": "text/plain", "md": "text/markdown"]
+    static let secret = try? NSRegularExpression(
+        pattern: #"^(\.env.*|\.netrc|\.npmrc|\.pypirc|\.pgpass|id_(rsa|dsa|ecdsa|ed25519)(\.pub)?|.*\.(pem|key|p12|pfx|keychain|kdbx))$"#,
+        options: .caseInsensitive)
+
+    /// The file a camr-page address names inside `root`, or nil.
+    static func file(_ url: URL?, in root: URL?) -> URL? {
+        guard let url, let root, url.scheme == ShutIn.scheme, url.host == "page" else { return nil }
+        let parts = url.path.split(separator: "/").map(String.init)
+        guard !parts.isEmpty, !parts.contains(where: { $0.hasPrefix(".") || $0.contains("\\") }) else { return nil }
+        let base = root.standardizedFileURL.resolvingSymlinksInPath()
+        let target = parts.reduce(base) { $0.appendingPathComponent($1) }.standardizedFileURL.resolvingSymlinksInPath()
+        guard target.path.hasPrefix(base.path + "/") else { return nil }
+        let name = target.lastPathComponent
+        if let re = secret, re.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) != nil { return nil }
+        var dir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: target.path, isDirectory: &dir), !dir.boolValue else { return nil }
+        return target
+    }
+
+    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        let url = task.request.url ?? ShutIn.origin!
+        guard (task.request.httpMethod ?? "GET") == "GET", let f = Self.file(url, in: root),
+              let size = (try? f.resourceValues(forKeys: [.fileSizeKey]))?.fileSize, size <= Self.limit,
+              let data = try? Data(contentsOf: f) else {
+            task.didReceive(HTTPURLResponse(url: url, statusCode: 404, httpVersion: "HTTP/1.1",
+                                            headerFields: ["Content-Type": "text/plain", "Content-Length": "0"])!)
+            task.didFinish()
+            return
+        }
+        let type = Self.types[f.pathExtension.lowercased()] ?? "application/octet-stream"
+        task.didReceive(HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
+                                        headerFields: ["Content-Type": type, "Content-Length": "\(data.count)",
+                                                       "Cache-Control": "no-store"])!)
+        task.didReceive(data)
+        task.didFinish()
+    }
+
+    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
 }

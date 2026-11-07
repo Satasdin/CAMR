@@ -36,6 +36,7 @@ import numpy as np
 from camr_engine.core import CORE_TOKENS, Core
 from camr_engine.live import current
 from camr_engine.events import EventLog, Looks, used
+from camr_engine.finder import FINDERS, LineIndex
 from camr_engine.metrics import Meter, folder_bytes, measure
 from camr_engine.notes import GROUP, Notebook, pack, unpack
 from camr_engine.rooms import Rooms
@@ -48,13 +49,14 @@ _SLOT = "⁣NOTES⁣"  # where the room goes; never typed by a person
 
 ROOM_TOKENS = 512  # at most 57 MB of notes on the 1.7B, inside the 256 MB allowance
 JOIN = 0.80  # how close a moment must be to a room's closest moment to join it
-CLOSEST = 4  # moments re-read as words after the room
+CLOSEST = 6  # moments re-read as words after the room (E-63; 4 until then, E-18)
 DESK_ROOMS = 1  # rooms laid on the desk as notes: the closest moment's room, and the next closest awake ones
 DESK_ORDERS = ("date", "best_last")  # several rooms on the desk: oldest room first, or the best room nearest the question
 SCAN = 64  # moments looked down for the further rooms of a desk
 REREADS = ("all", "off_desk")  # the closest moments re-read as words: all of them, or only those not on the desk
 ALLOWANCE_BYTES = 256 * 2**20
 STEP_REUSE_MIN = 256  # tokens an agent step must share with the step before for its read to be reused
+FINDER = "words"  # how the closest moments are found: "words" (lines' words + embeddings, E-63) or "dense"
 BITS = 8  # new rooms' notes on the SSD: 8 bits held the Long Haul's answers (DECISIONS.md, E-54)
 _OWN = object()  # "this memory's own core", as against a core (or None) a session passes in
 
@@ -105,8 +107,13 @@ class Memory:
                  notebook: Notebook | None = None, vault: Vault | bool = False, reach: str | None = None,
                  core: Core | bool = False, core_tokens: int = CORE_TOKENS, tiers: Tiers | None = None,
                  metrics: Meter | bool = False, bits: int = BITS, desk_rooms: int = DESK_ROOMS,
-                 desk_tokens: int | None = None, desk_order: str = "date", reread: str = "all"):
+                 desk_tokens: int | None = None, desk_order: str = "date", reread: str = "all",
+                 finder: str = FINDER):
         self.reader, self.embedder, self.closest, self.allowance = reader, embedder, closest, allowance
+        if finder not in FINDERS:
+            raise ValueError(f"finder is one of {FINDERS}, not {finder!r}")
+        self.finder = finder
+        self._lines: LineIndex | None = None  # built from the moments' texts the first time words are asked
         if desk_rooms < 1 or desk_order not in DESK_ORDERS:
             raise ValueError(f"a desk holds at least one room, laid in one of {DESK_ORDERS}")
         if reread not in REREADS:
@@ -173,6 +180,8 @@ class Memory:
         if bits != 16:  # the hot copy holds what the file holds
             notes = unpack(packed, self.notebook.shape, self.dtype, bits)
         m = self.rooms.add(text, day, vec, packed, rid)
+        if self._lines is not None:
+            self._lines.add(text)
         slept: list[int] = []
         try:
             note = self._note(m, date, tags, pinned) if self.vault is not None else None
@@ -193,13 +202,22 @@ class Memory:
             return Recall(None, [], 0, 0, seconds={"choose": time.perf_counter() - t}, reach=self.reach)
         q = self.embedder.encode_one(question, is_query=True) if vec is None else vec
         sims = self.rooms.vectors @ q
-        order = np.argsort(-sims)
+        if self.finder == "words":
+            order = self.lines().order(question, sims)
+        else:
+            order = np.argsort(-sims)
         room = self.rooms.rooms[self.rooms.moments[int(order[0])].room]
         closest = sorted(int(m) for m in order[:self.closest])
         more = self._more_rooms(order, room.rid) if self.desk_rooms > 1 else []
         return Recall(room.rid, closest, room.tokens, self.rooms.room_bytes(room.rid),
                       seconds={"choose": time.perf_counter() - t}, score=float(sims[int(order[0])]), reach=self.reach,
                       more=more)
+
+    def lines(self) -> LineIndex:
+        """Every moment's lines, by their words (camr_engine.finder), built on first use from the moments' texts."""
+        if self._lines is None or self._lines.moments != len(self.rooms.moments):
+            self._lines = LineIndex(m.text for m in self.rooms.moments)
+        return self._lines
 
     def _more_rooms(self, order, first: int) -> list[int]:
         """The further rooms for the desk: those holding the next closest moments, in that order, each awake (an

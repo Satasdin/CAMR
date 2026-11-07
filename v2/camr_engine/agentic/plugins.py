@@ -72,9 +72,23 @@ def _result(text: str) -> str:
     return got
 
 
-def browser_check(link, url: str) -> dict:
+def browser_check(link, url: str, motion: set[str] | None = None) -> dict:
     """The page at ``url`` checked in Playwright's Chrome, as the app's own browser reports it: {text, errors, failed,
-    runsOff, brokenImages, deadLinks, scriptsRan, by}."""
+    runsOff, brokenImages, deadLinks, scriptsRan, by}. With ``motion`` (the motion rules a hard brief wants,
+    camr_engine.agentic.motion.wants), the page is also measured at a desktop's width while it scrolls and with
+    reduced motion: the result is under "motion", and each rule it breaks is added to "failed"."""
+    report = _check(link, url)
+    if motion and "by" in report:
+        from camr_engine.agentic.motion import chrome_motion
+
+        got = chrome_motion(link, url, set(motion))
+        report["motion"] = got
+        report["failed"] = [*report.get("failed", []), *got["failed"]]
+        report["errors"] = [*report["errors"], *[e for e in got["console"] if e not in report["errors"]]]
+    return report
+
+
+def _check(link, url: str) -> dict:
     nav = link.call("browser_navigate", {"url": url})
     if not nav.get("ok"):
         return {"errors": [f"Playwright could not open the page: {str(nav.get('text'))[:300]}"], "by": "playwright"}

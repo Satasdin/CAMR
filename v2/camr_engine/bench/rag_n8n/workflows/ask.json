@@ -1,0 +1,253 @@
+{
+  "id": "CamrRagAsk000001",
+  "name": "CAMR RAG - ask",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "camr-rag-ask",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "7b0c6a52-5f0e-4f55-9d0c-1a2b3c4d5e02"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const DEFAULTS = {\n  \"collection\": \"camr_rag\",\n  \"chat_model\": \"qwen3:4b-instruct-2507-q4_K_M\",\n  \"embed_model\": \"qwen3-embedding:0.6b\",\n  \"k\": 8,\n  \"budget\": 720,\n  \"order\": \"date\",\n  \"num_ctx\": 8192,\n  \"max_tokens\": 120,\n  \"intro\": \"You answer questions about a project's history: one developer's log of chats, decisions, code, notes and lessons. Notes from that history come before each question. Answer from them only. When they never say, answer \\\"I don't know\\\". Keep each answer short unless the question asks for code or a page.\",\n  \"instruction\": \"Instruct: Given a question about the user's life, retrieve the user's notes that answer it\\nQuery:\",\n  \"keep_alive\": \"30m\"\n};\nconst b = $input.first().json.body || {};\nif (!b.question) throw new Error('the request has no question');\nconst q = { ...DEFAULTS };\nfor (const key of Object.keys(DEFAULTS)) if (b[key] !== undefined && b[key] !== null) q[key] = b[key];\nq.question = b.question;\nq.today = b.today || null;  // \"Monday 22 September 2025\": the history's today, given by the caller\nq.then = b.then || '';  // one line on the form of the answer (an HTML page, a Python block, the working)\nq.query = q.instruction + q.question;\nq.t0 = Date.now();\nreturn [{ json: q }];\n"
+      },
+      "name": "Read question",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.embed_model, input: $json.query, keep_alive: $json.keep_alive }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "name": "Embed question (Ollama)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const q = $('Read question').first().json;\nconst t1 = Date.now();\nreturn [{ json: { collection: q.collection, vector: $input.first().json.embeddings[0], k: q.k, t1,\n                  embed_ms: t1 - q.t0 } }];\n"
+      },
+      "name": "Search request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://qdrant:6333/collections/{{ $json.collection }}/points/query",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.vector, limit: $json.k, with_payload: true }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "name": "Search (Qdrant)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// The pure functions the two n8n workflows' Code nodes run: cutting events into chunks (ingest), and choosing the\n// chunks that fit the memory budget and writing the prompt around them (ask).\n//\n// build.py puts this file, followed by a few lines of glue, into each Code node, so the workflow a person opens in\n// the n8n editor holds the whole logic. camr_engine/bench/rag_n8n/pipeline.py is the same logic in Python; the tests\n// run both on the same input (this file with node) and require the same output.\n//\n// String lengths here are UTF-16 code units and Python's are code points: they differ only for characters outside\n// the Basic Multilingual Plane (emoji), which only moves where an over-long event is cut.\n\nconst CHARS_PER_TOKEN = 3.5; // the Long Haul's text: 3.49 characters a Qwen3 token (used only when no count is given)\nconst PART_STRIDE = 64; // a point's id is event index * 64 + part, so an event may be cut into at most 64 parts\n\nfunction estimateTokens(text) {\n  return Math.max(1, Math.ceil(text.length / CHARS_PER_TOKEN));\n}\n\nfunction head(e) {\n  // The date stamp every line carries, as CAMR dates its moments: \"[2025-09-22, day 1] \".\n  const day = e.day === undefined || e.day === null ? '' : `, day ${e.day}`;\n  return `[${e.date}${day}] `;\n}\n\nfunction splitText(text, maxChars) {\n  // Pieces of at most maxChars characters, cut at the last newline, else at the last space, else anywhere.\n  const out = [];\n  let rest = text;\n  while (rest.length > maxChars) {\n    let cut = rest.lastIndexOf('\\n', maxChars);\n    if (cut < maxChars / 2) cut = rest.lastIndexOf(' ', maxChars);\n    if (cut < maxChars / 2) cut = maxChars;\n    out.push(rest.slice(0, cut));\n    rest = rest.slice(cut).replace(/^[\\n ]+/, '');\n  }\n  if (rest.length) out.push(rest);\n  return out;\n}\n\nfunction pieces(e, limit) {\n  // One event as dated lines of at most `limit` tokens: the whole event, or, when it is longer, its parts, each\n  // with the date stamp. `e.tokens` is the dated line's token count (with its newline) when the caller knows it.\n  const h = head(e);\n  const full = h + e.text;\n  const n = typeof e.tokens === 'number' && e.tokens > 0 ? e.tokens : estimateTokens(full);\n  if (n <= limit) return [{ text: full, tokens: n, part: 0 }];\n  const perChar = n / full.length;\n  const maxChars = Math.max(1, Math.floor(limit / perChar) - h.length);\n  return splitText(e.text, maxChars).map((p, j) => ({\n    text: h + p,\n    tokens: Math.min(limit, Math.ceil((h.length + p.length) * perChar)),\n    part: j,\n  }));\n}\n\nfunction chunkEvents(events, limit) {\n  // Consecutive events packed into chunks of at most `limit` tokens, in order; an event never straddles two chunks\n  // unless it is longer than a chunk on its own. Each chunk keeps its dates, days and event indices.\n  const chunks = [];\n  let cur = null;\n  for (const e of events) {\n    for (const p of pieces(e, limit)) {\n      if (cur && cur.tokens + p.tokens > limit) {\n        chunks.push(cur);\n        cur = null;\n      }\n      if (!cur) {\n        cur = {\n          id: e.i * PART_STRIDE + p.part, lines: [], tokens: 0, event_ids: [],\n          date_from: e.date, date_to: e.date,\n          day_from: e.day === undefined ? null : e.day, day_to: e.day === undefined ? null : e.day,\n        };\n      }\n      cur.lines.push(p.text);\n      cur.tokens += p.tokens;\n      if (cur.event_ids[cur.event_ids.length - 1] !== e.i) cur.event_ids.push(e.i);\n      cur.date_to = e.date;\n      cur.day_to = e.day === undefined ? null : e.day;\n    }\n  }\n  if (cur) chunks.push(cur);\n  return chunks.map((c) => ({\n    id: c.id, text: c.lines.join('\\n'), tokens: c.tokens, event_ids: c.event_ids,\n    date_from: c.date_from, date_to: c.date_to, day_from: c.day_from, day_to: c.day_to,\n  }));\n}\n\nfunction selectChunks(hits, k, budget, order) {\n  // The first `k` hits (closest first) that fit `budget` tokens together: a hit past the budget is skipped, and a\n  // shorter one further down may still fit. Then put in date order (the history's order), or kept closest first.\n  const picked = [];\n  let total = 0;\n  for (const h of hits.slice(0, k)) {\n    const n = h.payload.tokens;\n    if (total + n > budget) continue;\n    picked.push(h);\n    total += n;\n  }\n  if (order === 'date') picked.sort((a, b) => a.id - b.id);\n  return { picked, tokens: total };\n}\n\nfunction notesText(picked) {\n  return picked.map((h) => h.payload.text + '\\n').join('');\n}\n\nfunction systemPrompt(intro, notes, today, then) {\n  // CAMR's prompt with the notes as words: the instructions, the notes, today's date, the family's line.\n  const date = today ? `\\nToday is ${today}.` : '';\n  return `${intro}\\n\\nNotes:\\n${notes}End of notes.${date}` + (then ? `\\n\\n${then}` : '');\n}\n\n// --- this node ---\nconst q = $('Read question').first().json;\nconst s = $('Search request').first().json;\nconst hits = ($input.first().json.result || {}).points || [];\nconst t2 = Date.now();\nconst sel = selectChunks(hits, q.k, q.budget, q.order);\nconst system = systemPrompt(q.intro, notesText(sel.picked), q.today, q.then);\nconst chat = {\n  model: q.chat_model,\n  messages: [{ role: 'system', content: system }, { role: 'user', content: q.question }],\n  stream: false, think: false, keep_alive: q.keep_alive,\n  options: { ...{\"temperature\": 0.0, \"seed\": 0}, num_ctx: q.num_ctx, num_predict: q.max_tokens },\n};\nreturn [{ json: {\n  chat, system, memory_tokens: sel.tokens, hits: hits.length, t2,\n  search_ms: t2 - s.t1, retrieval_ms: t2 - q.t0,\n  picked: sel.picked.map((h) => ({ id: h.id, score: h.score, tokens: h.payload.tokens, date_from: h.payload.date_from,\n                                   date_to: h.payload.date_to, event_ids: h.payload.event_ids })),\n} }];\n"
+      },
+      "name": "Build prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/chat",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.chat) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "name": "Answer (Ollama chat)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const q = $('Read question').first().json;\nconst s = $('Search request').first().json;\nconst p = $('Build prompt').first().json;\nconst r = $input.first().json;\nconst t3 = Date.now();\nconst m = r.message || {};\nreturn [{ json: {\n  answer: m.content || '', thinking: m.thinking || '', model: r.model, done_reason: r.done_reason || null,\n  memory_tokens: p.memory_tokens, hits: p.hits, chunks: p.picked, system: p.system,\n  settings: { k: q.k, budget: q.budget, order: q.order, num_ctx: q.num_ctx, max_tokens: q.max_tokens,\n              collection: q.collection, chat_model: q.chat_model, embed_model: q.embed_model },\n  timings: {\n    embed_ms: s.embed_ms, search_ms: p.search_ms, retrieval_ms: p.retrieval_ms, generate_ms: t3 - p.t2,\n    total_ms: t3 - q.t0,\n    prompt_eval_count: r.prompt_eval_count ?? null, prompt_eval_duration: r.prompt_eval_duration ?? null,\n    eval_count: r.eval_count ?? null, eval_duration: r.eval_duration ?? null,\n    load_duration: r.load_duration ?? null, total_duration: r.total_duration ?? null,\n  },\n} }];\n"
+      },
+      "name": "Answer + timings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read question": {
+      "main": [
+        [
+          {
+            "node": "Embed question (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed question (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Search request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search request": {
+      "main": [
+        [
+          {
+            "node": "Search (Qdrant)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search (Qdrant)": {
+      "main": [
+        [
+          {
+            "node": "Build prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build prompt": {
+      "main": [
+        [
+          {
+            "node": "Answer (Ollama chat)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer (Ollama chat)": {
+      "main": [
+        [
+          {
+            "node": "Answer + timings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer + timings": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

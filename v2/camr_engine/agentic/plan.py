@@ -26,6 +26,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from camr_engine.agentic import motion as moving
 from camr_engine.agentic.loop import WEBSITE
 
 if TYPE_CHECKING:
@@ -35,6 +36,8 @@ SKILLS = Path(__file__).resolve().parent.parent / "curated" / "skills"  # the me
 MAX_FILES = 6  # files one plan makes, at most
 SHOWN = 9000  # characters of one file a specialist reads
 TEAM_FILES = ("BRIEF.md", "ARCHITECTURE.md", "PLAN.md", "REPORT.md")
+APART = ("vendor/", "report/")  # copied in by the app (libraries, models) or written by its checks: never a part
+MOTION_FILE = "motion.js"  # the motion part's file, an ES module
 _FILE = re.compile(r"(?<![\w/.-])((?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.(?:html|htm|css|js|mjs|json|svg|py|ts|txt))\b")
 _CLASS = re.compile(r"\.([A-Za-z][\w-]*)\s*[{,:\s]")
 STYLE_WORDS = re.compile(r"\b(colou?rs?|fonts?|typefaces?|bigger|smaller|spacing|padding|margins?|dark|light|"
@@ -47,6 +50,12 @@ BEHAVIOUR_WORDS = re.compile(r"\b(clicks?|total|cart|basket|counts?|calculat\w*|
 ENDED = ("done", "stopped", "failed")
 DOCUMENT = re.compile(r"\b(pdf|word (?:doc|document|file)|docx|\.docx|document|report|letter|proposal|memo|essay|"
                       r"cv|r[eé]sum[eé]|brochure|newsletter|handout|price list|invoice|quotation|flyer|leaflet)\b", re.I)
+NOTEBOOK = re.compile(r"\b(notebook|jupyter|ipynb)\b", re.I)  # asked for by name
+ANALYSIS = re.compile(r"\b(analy[sz]e|analy[sz]is|plots?|plotting|charts?|graphs?|histograms?|scatter|regression|"
+                      r"correlat\w*|statistics|stats|dataset|data ?set|data ?frame|pandas|csv|tsv|xlsx|spreadsheet|"
+                      r"visuali[sz]e|visuali[sz]ation|trend|average|median)\b", re.I)
+DATA_FILES = (".csv", ".tsv", ".xlsx", ".xls", ".json", ".parquet", ".txt")
+NB_FIXES = 2  # times the lead plans a fix for a notebook cell that fails, before it says so and stops
 CHECKS = 2  # times the lead checks a reviewed page against the brief and plans what is missing
 CHECK_SYSTEM = ("You check a web page against a list of things people must be able to do on it. For each numbered "
                 "item, answer on its own line with the number, then yes or no, then a few words: yes only when the "
@@ -85,6 +94,10 @@ ROLES = {r.id: r for r in [
          "You write the JavaScript that makes the page work, as the architecture describes, for the elements the page "
          "already has.", _WRITES, 6),
     Role("coder", "Coder", "", "You write one file of the project, as the architecture describes.", _WRITES, 6),
+    Role("motion", "Motion", "scroll-motion",
+         "You write motion.js, the page's motion, as an ES module: the 3D scene, the scroll-driven timelines and the "
+         "depth layers the brief asks for, with the vendored libraries only (no network), for the elements the page "
+         "already has, and a calm version that does not move when the person asks for reduced motion.", _WRITES, 6),
     Role("review", "Reviewer", "review",
          "You are the reviewer on a small team. You test the page in the browser and fix what is wrong, without "
          "breaking what works.", ("open_page", "edit_file", "write_file", "read_file", "ask_user"), 10),
@@ -92,6 +105,12 @@ ROLES = {r.id: r for r in [
          "You are the writer on a small team. You write the document the person asked for, as Markdown, from the "
          "brief, with every fact copied exactly.", ("write_file", "edit_file", "read_file", "read_shelf"), 6),
     Role("render", "Renderer", "", "", (), 0),
+    Role("analyst", "Analyst", "notebooks",
+         "You are the analyst on a small team. You answer the user's question about their data with a Jupyter "
+         "notebook: small cells, one idea each, that print what they find and draw the charts asked for. You run it "
+         "and fix every cell that fails.",
+         ("notebook_write", "notebook_edit_cell", "notebook_run", "read_file", "list_files", "read_shelf"), 8),
+    Role("nbcheck", "Runner", "", "", (), 0),  # by rule: the lead runs the notebook itself
     Role("change", "Editor", "",
          "You make the change the user asked for, in the file you are given, and keep everything else as it is.",
          _WRITES, 6),
@@ -109,6 +128,35 @@ def doc_name(request: str) -> str:
             kind = f"{w}-{kind}"
             break
     return kind[:40] or "document"
+
+
+def wants_notebook(request: str, files: list[str]) -> bool:
+    """A request for a notebook: by name; or about data (analyse, plot, chart, a CSV) when it is not a website and the
+    project holds no page to change, or holds data or a notebook already. A rule."""
+    if NOTEBOOK.search(request):
+        return True
+    if not ANALYSIS.search(request) or WEBSITE.search(request):
+        return False
+    low = [f.lower() for f in files]
+    if any(f.endswith((".ipynb", *DATA_FILES)) for f in low):
+        return True
+    return not any(f.endswith((".html", ".htm", ".js", ".css")) for f in low)
+
+
+def nb_name(request: str, files: list[str]) -> str:
+    """The notebook's file: the one the request names, the project's own notebook, else after the data file the
+    request names (sales.csv: sales-analysis.ipynb), else analysis.ipynb."""
+    named = re.findall(r"[\w./-]+\.ipynb\b", request)
+    if named and ".." not in named[0] and not named[0].startswith("/"):
+        return named[0]
+    own = [f for f in files if f.lower().endswith(".ipynb")]
+    if len(own) == 1:
+        return own[0]
+    data = re.findall(r"([\w-]+)\.(?:csv|tsv|xlsx|xls|json|parquet)\b", request, re.I)
+    if not data:
+        data = [Path(f).stem for f in files if f.lower().endswith(DATA_FILES[:4])][:1]
+    stem = re.sub(r"[^a-z0-9]+", "-", data[0].lower()).strip("-")[:30] if data else ""
+    return f"{stem}-analysis.ipynb" if stem else "analysis.ipynb"
 
 
 def _longest_gap(asks: list[float], end: float) -> float:
@@ -137,7 +185,8 @@ def files_named(text: str) -> list[str]:
         if f.lower() == "index.html":
             f = "index.html"
         # a Mac's disk does not tell Index.html from index.html: one file, named once
-        if f in TEAM_FILES or ".." in f or f.startswith("/") or f.lower() in {x.lower() for x in found}:
+        if f in TEAM_FILES or ".." in f or f.startswith("/") or f.lower() in {x.lower() for x in found} or \
+                f.lstrip("./").startswith(APART):
             continue
         found.append(f)
     order = {"design": 0, "builder": 1, "behaviour": 2, "coder": 3}
@@ -238,6 +287,8 @@ class Lead:
         self.plan = self._first_plan()
         self.thread_obj: threading.Thread | None = None
         self.checks = 0
+        self.approved: set[str] = set()  # notebooks the person allowed to run: asked once per build, not per part
+        self.nb_fixes = 0
 
     # -- the plan
 
@@ -246,13 +297,26 @@ class Lead:
         out = []
         for f in self.desk.workspace.tree():
             rel = f["path"]
-            if f["dir"] or f.get("secret") or rel in TEAM_FILES or any(x.startswith(".") for x in rel.split("/")):
+            if f["dir"] or f.get("secret") or rel in TEAM_FILES or any(x.startswith(".") for x in rel.split("/")) \
+                    or rel.startswith(APART):
                 continue
             out.append(rel)
         return out[:200]
 
     def _first_plan(self) -> Plan:
         files = self._files()
+        if wants_notebook(self.request, files):  # an analysis: the notebook, then the lead runs it and plans fixes
+            name = nb_name(self.request, files)
+            verb = "Change" if name in files else "Write"
+            plan = Plan(self.request, "notebook", [
+                Part("p1", "analyst", f"{verb} the notebook ({name})", name, "rule",
+                     "an analysis is a notebook the person can read and run"),
+                Part("p2", "nbcheck", f"Run {name} and check every cell", name, "rule",
+                     "every notebook is run before it is shown as done"),
+            ])
+            plan.decide("rule", "A request about data: a notebook, then it is run cell by cell; a cell that fails gets "
+                        f"a fix planned (at most {NB_FIXES} times).")
+            return plan
         if files:  # a project that has files already: the request is a change to it
             targets = change_targets(self.request, files)
             plan = Plan(self.request, "change", [
@@ -300,15 +364,42 @@ class Lead:
                 self.plan.decide("rule", "A website gets a stylesheet, which the architecture did not name: added.")
         elif not named:
             self.plan.decide("rule", "The architecture named no file to make, so nothing more is planned.")
+        motion = self.plan.kind == "website" and moving.asks_motion(self.request)
+        if motion:
+            self._vendor()
         n = len(self.plan.parts)
-        for f in files_named("\n".join(named)):
+        for f in files_named("\n".join(x for x in named if x.lower() != MOTION_FILE)):
             n += 1
             role = role_of(f)
             self.plan.parts.append(Part(f"p{n}", role, f"Write {f}", f, "model", "the architecture names it"))
+        if motion:  # after the stylesheet and the pages it moves, before the behaviour
+            at = max((i + 1 for i, p in enumerate(self.plan.parts) if p.role in ("design", "builder")),
+                     default=len(self.plan.parts))
+            n += 1
+            self.plan.parts.insert(at, Part(f"p{n}", "motion", f"Write {MOTION_FILE} (3D, scroll motion, layers)",
+                                            MOTION_FILE, "rule", "the brief asks for motion"))
+            self.plan.decide("rule", f"The brief asks for motion, so {MOTION_FILE} is made by a motion part after the "
+                             "stylesheet and the page (it moves their elements) and before the behaviour; the page "
+                             "test measures it by the motion rules in Chrome.")
         if self.plan.kind == "website":
             n += 1
             self.plan.parts.append(Part(f"p{n}", "review", "Test the page and fix it", None, "rule",
                                         "every page is tested before it is shown as done"))
+
+    def kits(self) -> list[str]:
+        return moving.kits_for(self.request)
+
+    def _vendor(self) -> None:
+        """The vendored libraries the motion needs, copied into vendor/ (a rule: the page needs no network)."""
+        from camr_engine.agentic.workspace import Outside
+
+        try:
+            copied = moving.install(self.desk.workspace, self.kits())
+        except (Outside, OSError) as e:
+            self.plan.decide("rule", f"The vendored libraries could not be copied in: {e}"[:300])
+            return
+        self.plan.decide("rule", f"The brief asks for motion, so the vendored kits ({', '.join(self.kits())}) are in "
+                         f"vendor/ ({len(copied)} files copied): no network at page time.")
 
     def _render(self, part: Part) -> None:
         """The document's files, made by rule from what the writer wrote: first a check of its facts against what the
@@ -355,6 +446,69 @@ class Lead:
         part.state = "done"
         self.plan.decide("rule", f"Made {part.target} and {part.target.removesuffix('.docx')}.html from {src}"
                          + (f"; still not told: {', '.join(made_up[:8])}" if made_up else "") + ".")
+
+    def _run_notebook(self, part: Part) -> None:
+        """The lead runs the notebook itself (a rule, not the model's word that it works): every cell in order in a
+        fresh kernel. A cell that fails gets a fix planned from its error, then another run, at most NB_FIXES times.
+        The person allows the first run of the build, unless they already did for the analyst's own run."""
+        from camr_engine import notebooks as nbm
+        from camr_engine.agentic.workspace import Outside
+
+        t0 = time.time()
+        part.state = "running"
+        self._save()
+        ws = self.desk.workspace
+        try:
+            p = ws.path(part.target)
+            if not p.is_file():
+                part.state, part.note = "failed", f"{part.target} was not written"
+                return
+            if str(p) not in self.approved:
+                nb = nbm.load(ws, part.target)
+                code = "\n\n".join(f"# cell {i}\n{c['source']}" for i, c in enumerate(nb["cells"])
+                                   if c.get("cell_type") == "code")
+                run = self.current
+                ask = self.desk.gate.ask("python", {
+                    "kind": "notebook", "path": part.target, "cwd": str(ws.root), "sandboxed": nbm.sandbox_works(),
+                    "code": code[:20_000], "limits": f"{nbm.CELL_S:g} s a cell, {nbm.RUN_S:g} s in all"},
+                    owner=run.id if run is not None else self.id, label=self.request[:60], cancel=self.cancel)
+                if not ask.allowed:
+                    part.state, part.note = "failed", f"not run: the person did not allow it ({ask.decision})"
+                    self.plan.decide("rule", f"{part.target} was not run, so it is untested.")
+                    return
+                self.approved.add(str(p))
+            got = nbm.NOTEBOOKS.run(ws, part.target, cancel=self.cancel)
+        except (Outside, ValueError, RuntimeError) as e:
+            part.state, part.note = "failed", f"{e}"[:200]
+            return
+        finally:
+            part.seconds += time.time() - t0
+        if got["state"] == "done":
+            part.state, part.note = "done", f"{len(got['ran'])} cells ran, no errors ({got['seconds']:g} s)"
+            self.plan.decide("rule", f"Ran every code cell of {part.target}: no errors.")
+            return
+        if got["state"] == "stopped" or self.cancel.is_set():
+            part.state = "stopped"
+            return
+        failed = got["failed"]
+        what = "".join(nbm.output_text(o, 1500) for o in nbm.cell_errors(got["notebook"]["cells"][failed])) \
+            if failed is not None else str(got.get("error") or got["state"])
+        if self.nb_fixes >= NB_FIXES or failed is None:
+            part.state, part.note = "failed", (f"cell {failed} still fails" if failed is not None else what)[:200]
+            self.plan.decide("rule", f"{part.target} still fails after {self.nb_fixes} fixes; it is left as it is, "
+                             "with the error showing in the cell.")
+            return
+        self.nb_fixes += 1
+        part.state, part.note = "done", f"cell {failed} failed; a fix is planned"
+        src = got["notebook"]["cells"][failed]["source"]
+        self.plan.decide("rule", f"Cell {failed} of {part.target} failed when run, so a fix is planned from its error "
+                         "(the run outweighs the model's own reading).")
+        n = len(self.plan.parts)
+        self.plan.parts.append(Part(f"p{n + 1}", "analyst", f"Fix cell {failed} of {part.target}", part.target, "rule",
+                                    "the notebook's run failed", detail=(
+                                        f"Cell {failed} failed with:\n{what}\n\nCell {failed} as it is:\n{src}")[:2500]))
+        self.plan.parts.append(Part(f"p{n + 2}", "nbcheck", f"Run {part.target} again", part.target, "rule",
+                                    "every fix is run"))
 
     def musts(self) -> list[str]:
         """What people must be able to do, as the brief lists it."""
@@ -436,6 +590,8 @@ class Lead:
         js = next((f for f in files if f.lower().endswith((".js", ".mjs"))), None)
         script = js and re.search(r"pressing|script|TypeError|ReferenceError|\.js\b", problems)
         target = js if script else ("index.html" if "index.html" in files else (files[0] if files else "index.html"))
+        if MOTION_FILE in files and re.search(r"motion check|motion\.js", problems):
+            target = MOTION_FILE  # the motion rules failed: the motion part's file
         self.plan.decide("rule", f"The page's last test still shows problems, so {target} gets a fix planned from "
                          "them (the test outweighs the model's own reading).")
         n = len(self.plan.parts)
@@ -477,6 +633,8 @@ class Lead:
                     if getattr(self, "_redo", False):  # a fix went in before it: run that, then render again
                         self._redo = False
                         continue
+                elif part.role == "nbcheck":
+                    self._run_notebook(part)
                 else:
                     self._do(part, last=i == len(self.plan.parts) - 1 and part.role != "architect")
                 self._save()
@@ -512,6 +670,8 @@ class Lead:
             from camr_engine.agentic.plugins import review_tools
 
             tools += review_tools(self.desk.servers)
+        if part.role == "coder" and (part.target or "").lower().endswith(".py"):
+            tools.append("python_run")  # a Python file is run, as the person will run it
         persona = replace(coder, name=role.name, system=role.system, tools=tools)
         task = self._task(part)
         for attempt in (1, 2):
@@ -584,10 +744,17 @@ class Lead:
             "behaviour": f'Write {t}, the behaviour the architecture describes, for the elements in the page. '
                          f'The request: "{r}"',
             "coder": f'Write {t}, as the architecture says. The request: "{r}"',
+            "motion": f'Write {t}, the motion the brief asks for, as an ES module, for the elements in the page, with '
+                      f'the vendored files only. The request: "{r}"',
             "review": f'Test the page and fix what its test reports. The request: "{r}"',
             "writer": f'Write {t}, the document, from the brief. The request: "{r}"' + (
                 "" if not part.detail else ". The last version made things up."),
             "render": "",
+            "nbcheck": "",
+            "analyst": (f'Fix {t}: {part.title[0].lower() + part.title[1:]}, then run it with notebook_run. '
+                        f'The request: "{r}"' if part.detail else
+                        f'Write {t}, a notebook that answers: "{r}". Then run it with notebook_run and fix any '
+                        'cell that fails.'),
             "change": f'In {t}: {r}' if self.plan.kind == "change" else
                       f'In {t}: {part.title[0].lower() + part.title[1:]}. The request: "{r}"',
         }[part.role] + (f"\n\nWhat the check found:\n{part.detail}" if part.detail else "")
@@ -598,6 +765,13 @@ class Lead:
             return f"Read {t} with read_file first, then make only this change with edit_file. Keep everything else."
         if part.role == "review":
             return ""
+        if part.role == "analyst":
+            if part.detail:
+                return "Change the failing cell with notebook_edit_cell (its index, the whole new source)."
+            if t in self._files():
+                return (f"{t} exists already (its cells are in your notes): change the cells that need it with "
+                        "notebook_edit_cell, then run it with notebook_run.")
+            return f"Write {t} now with notebook_write: a list of cells, each {{kind, source}}."
         if part.role == "writer" and part.detail:
             return f"Write {t} again now with write_file, whole, using only the facts in the brief."
         if t and t in self._files():
@@ -622,11 +796,16 @@ class Lead:
             "builder": ["BRIEF.md", "ARCHITECTURE.md"],
             "behaviour": ["ARCHITECTURE.md", "BRIEF.md"],
             "coder": ["BRIEF.md", "ARCHITECTURE.md"],
+            "motion": ["ARCHITECTURE.md", "BRIEF.md"],
             "review": ["BRIEF.md"],
             "change": ["BRIEF.md"],
             "writer": ["BRIEF.md"],
             "render": [],
+            "nbcheck": [],
+            "analyst": [],
         }[part.role]
+        if part.role == "analyst":
+            out += self._data_notes(part.target)
         for rel in reads:
             text = self._read(rel)
             if text:
@@ -642,14 +821,69 @@ class Lead:
 
             out.append("A real Chrome is connected (the browser_ tools). The page is at "
                        f"{serving(self.desk.workspace).url('index.html')}: open it there, never as a file.")
-        if part.role == "behaviour":
+        if part.role in ("behaviour", "motion"):
             page = self._read("index.html")
             if page:
                 out.append(f"index.html, as it is now:\n{page}")
+        if moving.asks_motion(self.request) and self.plan.kind == "website":
+            out += self._motion_context(part)
+        return out
+
+    def _motion_context(self, part: Part) -> list[str]:
+        """For a brief that asks for motion: the vendored files to the architect, the exact loading HTML to the
+        builder, and the methods (skill cards) to the motion part."""
+        kits = self.kits()
+        if part.role == "architect":
+            return ["The project gets these vendored files in vendor/ (no network at page time). Under a heading "
+                    "'Vendor files', list the ones the page uses, and plan motion.js (an ES module) for the motion:\n"
+                    + moving.catalog(kits)]
+        if part.role == "builder" and part.target and part.target.lower().endswith((".html", ".htm")):
+            needs = ['a <canvas id="scene"></canvas> for the 3D scene'] if "three" in kits else []
+            needs += ['the depth layers as empty divs with class "layer" and a data-speed from 0.1 (far) to 1 (near)',
+                      'class "reveal" on what should slide in as it reaches the screen']
+            return ["Paste this into the page exactly, just before </body> (it loads the vendored libraries and "
+                    f"motion.js, which the motion part writes):\n{moving.loader(kits)}\n\nThe motion needs, in the page: "
+                    + "; ".join(needs) + "."]
+        if part.role == "motion":
+            from camr_engine.agentic.skills import Skills
+
+            cards = (["3d-scene"] if "three" in kits else []) + (["layers"] if moving.LAYERS.search(self.request) else [])
+            out = ["The vendored files in vendor/ (use these, never a network address):\n" + moving.catalog(kits)]
+            for name in cards:
+                try:
+                    out.append(f"The method for {name}:\n{Skills(SKILLS).load(name)}")
+                except KeyError:
+                    pass
+            return out
+        return []
+
+    def _data_notes(self, target: str | None) -> list[str]:
+        """What an analyst needs to see: the project's data files (each one's first lines, so it knows the columns)
+        and the notebook's cells as they are, when it exists."""
+        from camr_engine import notebooks as nbm
+
+        out = []
+        data = [f for f in self._files() if f.lower().endswith(DATA_FILES)][:6]
+        for f in data:
+            head = "\n".join(self._read(f, 1200).splitlines()[:6])
+            if f.lower().endswith((".csv", ".tsv", ".txt", ".json")) and head:
+                out.append(f"{f}, its first lines (read it in the notebook with its path as it is here):\n{head}")
+            else:
+                out.append(f"{f} is in the project folder.")
+        if not data:
+            out.append("The project folder holds no data file. If the request needs data the user did not give, make "
+                       "a small example in the notebook and say plainly that it is an example.")
+        if target and target in self._files():
+            try:
+                nb = nbm.load(self.desk.workspace, target)
+                out.append(f"{target}, its cells now:\n" + nbm.text_view(nb, sources=True, limit=600)[:SHOWN])
+            except ValueError:
+                pass
         return out
 
     def _opts(self, part: Part, *, last: bool) -> dict:
         return {
+            "approved": self.approved,
             "target": part.target if part.role != "review" else None,
             "first": self._first(part),
             "must_write": part.role != "review",
@@ -738,6 +972,15 @@ class Lead:
                 lines += ["  " + x for x in t["report"].splitlines()[:8]]
         if not f["tests"]:
             lines.append("- The page was not tested.")
+        kept = moving.read_report(self.desk.workspace) if self.desk.workspace is not None else None
+        if kept:  # the last motion check in Chrome, by rule (camr_engine.agentic.motion)
+            m = kept.get("measured") or {}
+            lines += ["", "## Motion check (Chrome, by rule)", ""]
+            lines += moving.summary(kept)
+            lines.append(f"- Measured: {m.get('frames')} frames in {m.get('seconds')} s of scrolling over "
+                         f"{m.get('max')} px; {m.get('layers', 0)} layer speeds.")
+            if kept.get("strip"):
+                lines.append("- Screenshots down the page: " + ", ".join(kept["strip"]))
         lines += ["", "Rules wrote the order of the parts, the retries and this report. The model wrote the brief, "
                   "chose the files, wrote every file and answered the checks marked (model)."]
         return "\n".join(lines) + "\n"

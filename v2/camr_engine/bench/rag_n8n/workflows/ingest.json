@@ -1,0 +1,197 @@
+{
+  "id": "CamrRagIngest001",
+  "name": "CAMR RAG - ingest",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "camr-rag-ingest",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "7b0c6a52-5f0e-4f55-9d0c-1a2b3c4d5e01"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// The pure functions the two n8n workflows' Code nodes run: cutting events into chunks (ingest), and choosing the\n// chunks that fit the memory budget and writing the prompt around them (ask).\n//\n// build.py puts this file, followed by a few lines of glue, into each Code node, so the workflow a person opens in\n// the n8n editor holds the whole logic. camr_engine/bench/rag_n8n/pipeline.py is the same logic in Python; the tests\n// run both on the same input (this file with node) and require the same output.\n//\n// String lengths here are UTF-16 code units and Python's are code points: they differ only for characters outside\n// the Basic Multilingual Plane (emoji), which only moves where an over-long event is cut.\n\nconst CHARS_PER_TOKEN = 3.5; // the Long Haul's text: 3.49 characters a Qwen3 token (used only when no count is given)\nconst PART_STRIDE = 64; // a point's id is event index * 64 + part, so an event may be cut into at most 64 parts\n\nfunction estimateTokens(text) {\n  return Math.max(1, Math.ceil(text.length / CHARS_PER_TOKEN));\n}\n\nfunction head(e) {\n  // The date stamp every line carries, as CAMR dates its moments: \"[2025-09-22, day 1] \".\n  const day = e.day === undefined || e.day === null ? '' : `, day ${e.day}`;\n  return `[${e.date}${day}] `;\n}\n\nfunction splitText(text, maxChars) {\n  // Pieces of at most maxChars characters, cut at the last newline, else at the last space, else anywhere.\n  const out = [];\n  let rest = text;\n  while (rest.length > maxChars) {\n    let cut = rest.lastIndexOf('\\n', maxChars);\n    if (cut < maxChars / 2) cut = rest.lastIndexOf(' ', maxChars);\n    if (cut < maxChars / 2) cut = maxChars;\n    out.push(rest.slice(0, cut));\n    rest = rest.slice(cut).replace(/^[\\n ]+/, '');\n  }\n  if (rest.length) out.push(rest);\n  return out;\n}\n\nfunction pieces(e, limit) {\n  // One event as dated lines of at most `limit` tokens: the whole event, or, when it is longer, its parts, each\n  // with the date stamp. `e.tokens` is the dated line's token count (with its newline) when the caller knows it.\n  const h = head(e);\n  const full = h + e.text;\n  const n = typeof e.tokens === 'number' && e.tokens > 0 ? e.tokens : estimateTokens(full);\n  if (n <= limit) return [{ text: full, tokens: n, part: 0 }];\n  const perChar = n / full.length;\n  const maxChars = Math.max(1, Math.floor(limit / perChar) - h.length);\n  return splitText(e.text, maxChars).map((p, j) => ({\n    text: h + p,\n    tokens: Math.min(limit, Math.ceil((h.length + p.length) * perChar)),\n    part: j,\n  }));\n}\n\nfunction chunkEvents(events, limit) {\n  // Consecutive events packed into chunks of at most `limit` tokens, in order; an event never straddles two chunks\n  // unless it is longer than a chunk on its own. Each chunk keeps its dates, days and event indices.\n  const chunks = [];\n  let cur = null;\n  for (const e of events) {\n    for (const p of pieces(e, limit)) {\n      if (cur && cur.tokens + p.tokens > limit) {\n        chunks.push(cur);\n        cur = null;\n      }\n      if (!cur) {\n        cur = {\n          id: e.i * PART_STRIDE + p.part, lines: [], tokens: 0, event_ids: [],\n          date_from: e.date, date_to: e.date,\n          day_from: e.day === undefined ? null : e.day, day_to: e.day === undefined ? null : e.day,\n        };\n      }\n      cur.lines.push(p.text);\n      cur.tokens += p.tokens;\n      if (cur.event_ids[cur.event_ids.length - 1] !== e.i) cur.event_ids.push(e.i);\n      cur.date_to = e.date;\n      cur.day_to = e.day === undefined ? null : e.day;\n    }\n  }\n  if (cur) chunks.push(cur);\n  return chunks.map((c) => ({\n    id: c.id, text: c.lines.join('\\n'), tokens: c.tokens, event_ids: c.event_ids,\n    date_from: c.date_from, date_to: c.date_to, day_from: c.day_from, day_to: c.day_to,\n  }));\n}\n\nfunction selectChunks(hits, k, budget, order) {\n  // The first `k` hits (closest first) that fit `budget` tokens together: a hit past the budget is skipped, and a\n  // shorter one further down may still fit. Then put in date order (the history's order), or kept closest first.\n  const picked = [];\n  let total = 0;\n  for (const h of hits.slice(0, k)) {\n    const n = h.payload.tokens;\n    if (total + n > budget) continue;\n    picked.push(h);\n    total += n;\n  }\n  if (order === 'date') picked.sort((a, b) => a.id - b.id);\n  return { picked, tokens: total };\n}\n\nfunction notesText(picked) {\n  return picked.map((h) => h.payload.text + '\\n').join('');\n}\n\nfunction systemPrompt(intro, notes, today, then) {\n  // CAMR's prompt with the notes as words: the instructions, the notes, today's date, the family's line.\n  const date = today ? `\\nToday is ${today}.` : '';\n  return `${intro}\\n\\nNotes:\\n${notes}End of notes.${date}` + (then ? `\\n\\n${then}` : '');\n}\n\n// --- this node ---\nconst body = $input.first().json.body || {};\nconst t0 = Date.now();\nconst limit = body.chunk_tokens || 512;\nconst events = body.events || [];\nconst chunks = chunkEvents(events, limit);\nreturn [{ json: {\n  collection: body.collection || \"camr_rag\",\n  embed_model: body.embed_model || \"qwen3-embedding:0.6b\",\n  events: events.length, chunk_limit: limit, chunks, t0,\n} }];\n"
+      },
+      "name": "Chunk events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.embed_model, input: $json.chunks.map(c => c.text), truncate: true, keep_alive: \"30m\" }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "name": "Embed chunks (Ollama)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const prev = $('Chunk events').first().json;\nconst emb = $input.first().json;\nconst t1 = Date.now();\nif (!emb.embeddings || emb.embeddings.length !== prev.chunks.length) {\n  throw new Error(`Ollama gave ${emb.embeddings ? emb.embeddings.length : 0} vectors for ${prev.chunks.length} chunks`);\n}\nconst points = prev.chunks.map((c, j) => ({\n  id: c.id,\n  vector: emb.embeddings[j],\n  payload: { text: c.text, tokens: c.tokens, event_ids: c.event_ids, date_from: c.date_from, date_to: c.date_to,\n             day_from: c.day_from, day_to: c.day_to },\n}));\nreturn [{ json: { collection: prev.collection, points, t1, embed_ms: t1 - prev.t0,\n                  embed_prompt_tokens: emb.prompt_eval_count || null,\n                  embed_load_ms: emb.load_duration ? emb.load_duration / 1e6 : null } }];\n"
+      },
+      "name": "Qdrant points",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://qdrant:6333/collections/{{ $json.collection }}/points?wait=true",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ points: $json.points }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "name": "Upsert (Qdrant)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const c = $('Chunk events').first().json;\nconst p = $('Qdrant points').first().json;\nconst now = Date.now();\nreturn [{ json: {\n  ok: true, collection: c.collection, events: c.events, chunks: c.chunks.length,\n  chunk_tokens: c.chunks.reduce((n, x) => n + x.tokens, 0), first_point: c.chunks.length ? c.chunks[0].id : null,\n  timings: { chunk_embed_ms: p.embed_ms, upsert_ms: now - p.t1, total_ms: now - c.t0,\n             embed_prompt_tokens: p.embed_prompt_tokens, embed_load_ms: p.embed_load_ms },\n  qdrant: $input.first().json.status || null,\n} }];\n"
+      },
+      "name": "Ingest report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Chunk events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk events": {
+      "main": [
+        [
+          {
+            "node": "Embed chunks (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed chunks (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Qdrant points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant points": {
+      "main": [
+        [
+          {
+            "node": "Upsert (Qdrant)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert (Qdrant)": {
+      "main": [
+        [
+          {
+            "node": "Ingest report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ingest report": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

@@ -1,0 +1,55 @@
+# n8n and Qdrant for the n8n RAG contender, on this Mac only (both bound to 127.0.0.1).
+# Brought up by `python -m camr_engine.bench.rag_n8n up`, which writes work/n8n/.env (the paths below, the
+# encryption key and the local owner login) and passes it with --env-file. Ollama runs on the host; n8n reaches it at
+# host.docker.internal:11434.
+name: camr-rag
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CAMR_QDRANT_PORT:-6333}:6333"
+    environment:
+      QDRANT__TELEMETRY_DISABLED: "true"
+    volumes:
+      - ${CAMR_N8N_WORK:?run python -m camr_engine.bench.rag_n8n up}/qdrant.nosync:/qdrant/storage
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    ports:
+      - "127.0.0.1:${CAMR_N8N_PORT:-5678}:5678"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?}
+      N8N_HOST: "127.0.0.1"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "http"
+      N8N_WEBHOOK_URL: "http://127.0.0.1:${CAMR_N8N_PORT:-5678}/"
+      N8N_SECURE_COOKIE: "false"
+      GENERIC_TIMEZONE: "UTC"
+      # no telemetry, no banners, no calls home
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_DIAGNOSTICS_CONFIG_FRONTEND: ""
+      N8N_DIAGNOSTICS_CONFIG_BACKEND: ""
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "false"
+      N8N_HIRING_BANNER_ENABLED: "false"
+      N8N_COMMUNITY_PACKAGES_ENABLED: "false"
+      EXTERNAL_FRONTEND_HOOKS_URLS: ""
+      # executions: keep failures only, so thousands of ingest batches do not fill the database
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: "none"
+      EXECUTIONS_DATA_SAVE_ON_ERROR: "all"
+      EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "48"
+      N8N_PAYLOAD_SIZE_MAX: "64"
+      N8N_RUNNERS_TASK_TIMEOUT: "300"
+    volumes:
+      - ${CAMR_N8N_WORK:?}/n8n.nosync:/home/node/.n8n
+      - ${CAMR_RAG_WORKFLOWS:?}:/workflows:ro

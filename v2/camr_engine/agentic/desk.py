@@ -48,7 +48,8 @@ MAX_LEADS = 12  # plans kept in RAM (each is in plans/ too)
 # what a plan's part may set on its run (camr_engine.agentic.plan), by option name: the run's attribute
 RUN_OPTS = {"target": "target", "first": "first", "must_write": "must_write", "page_tests": "page_tests_max",
             "test_first": "test_first", "ask_first": "ask_first", "keep_request": "keep_request",
-            "told_notes": "told_notes", "keep": "keep_it", "notes_title": "notes_title"}
+            "told_notes": "told_notes", "keep": "keep_it", "notes_title": "notes_title",
+            "approved": "approved"}  # notebooks the person allowed to run in this build (one set for every part)
 MAX_THREADS = 200
 RECENT = 8
 FIXES = 8  # fixes told to the next run, per workspace
@@ -341,6 +342,8 @@ class Desk:
                 setattr(run, RUN_OPTS[k], v)
             if opts and "keep_request" in opts:
                 run.keep_request = bool(opts["keep_request"]) and bool(memory)
+            if opts and isinstance(opts.get("approved"), set):
+                tools.approved = opts["approved"]
             self.runs[rid] = run
             finished = [k for k, r in self.runs.items() if not r.live]
             for k in finished[:max(0, len(self.runs) - MAX_RUNS)]:

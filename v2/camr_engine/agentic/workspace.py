@@ -38,6 +38,7 @@ except ImportError:  # pragma: no cover (installed with mlx-lm)
 READ_LIMIT = 256_000  # characters of one file the model reads at once
 WRITE_LIMIT = 1_000_000  # bytes of one file the model writes
 EDITOR_LIMIT = 2_000_000  # bytes of one file the editor opens
+COPY_LIMIT = 8_000_000  # bytes of one file the app copies in (a vendored library or model)
 LIST_LIMIT = 400
 TREE_LIMIT = 3000
 SEARCH_LIMIT = 100
@@ -339,6 +340,29 @@ class Workspace:
             Path(tmp).unlink(missing_ok=True)
             raise
         return Wrote(self.rel(p), before, text, len(data))
+
+    def put(self, rel: str, data: bytes, limit: int = COPY_LIMIT) -> str:
+        """Copy bytes into a file: what the app itself brings in (a vendored library, a model), never the model's
+        text. The same checks as ``write`` (inside, not .git, not a secret, never through a symlink) and atomic; at
+        most ``limit`` bytes. Returns the file's path relative to the workspace."""
+        if not isinstance(data, (bytes, bytearray)) or len(data) > limit:
+            raise Outside(f"a file copied into the workspace is bytes, at most {limit // 1_000_000} MB")
+        p = self.path(rel, write=True)
+        if p.is_dir():
+            raise Outside(f"{rel} is a folder")
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if not p.parent.resolve().is_relative_to(self.root):
+            raise Outside(f"{rel} leads outside the workspace")
+        fd, tmp = tempfile.mkstemp(dir=p.parent, prefix=".camr-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+            os.chmod(tmp, 0o644)
+            os.replace(tmp, p)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
+        return self.rel(p)
 
     def edit(self, rel: str, old: str, new: str) -> Wrote:
         """Replace the one place ``old`` appears with ``new``. ``old`` must appear exactly once."""

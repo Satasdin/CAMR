@@ -2,6 +2,11 @@
 like most browsers driven by a tool, refuses file: addresses. Read-only, GET and HEAD only, and every path goes through
 the workspace (camr_engine.agentic.workspace), so nothing outside the project, no symlink out of it and no file of
 secrets is ever served. One server per workspace, started when first asked for, on a port the system picks.
+
+Pages may load the project's own files only: vendored libraries (``vendor/``, ES modules with import maps) and models
+(``.glb``, ``.gltf``) are served with the types a browser insists on for them, and every response carries a content
+security policy that lets the page reach this server and nothing else, so a page tested in Chrome is as shut off from
+the network as in the app's own preview.
 """
 
 from __future__ import annotations
@@ -12,6 +17,24 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
 
 _servers: dict[str, "PageServer"] = {}
+TYPES = {".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".html": "text/html",
+         ".htm": "text/html", ".json": "application/json", ".map": "application/json", ".svg": "image/svg+xml",
+         ".glb": "model/gltf-binary", ".gltf": "model/gltf+json", ".bin": "application/octet-stream",
+         ".wasm": "application/wasm", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+         ".webp": "image/webp", ".ktx2": "image/ktx2", ".hdr": "image/vnd.radiance", ".woff2": "font/woff2",
+         ".woff": "font/woff", ".txt": "text/plain", ".md": "text/markdown"}
+# the project's own files, inline code and data: nothing on any other host (the app's preview blocks the same)
+POLICY = ("default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; "
+          "img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; "
+          "connect-src 'self' data: blob:; worker-src 'self' blob:; frame-src 'none'; form-action 'none'")
+
+
+def kind_of(name: str) -> str:
+    """The media type a browser needs for a file: a module script must be JavaScript, a model a glTF type."""
+    from pathlib import PurePosixPath
+
+    return TYPES.get(PurePosixPath(name).suffix.lower()) or mimetypes.guess_type(name)[0] or "application/octet-stream"
+
 _lock = threading.Lock()
 
 
@@ -35,7 +58,7 @@ class PageServer:
                     data = p.read_bytes()
                 except Exception:  # noqa: BLE001 (Outside, or unreadable: not found, saying nothing more)
                     return None
-                return data, mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+                return data, kind_of(p.name)
 
             def do_GET(self):  # noqa: N802
                 self._send(body=True)
@@ -59,6 +82,8 @@ class PageServer:
                 self.send_header("Content-Type", kind + ("; charset=utf-8" if kind.startswith("text/") else ""))
                 self.send_header("Content-Length", str(len(data)))
                 self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Security-Policy", POLICY)
                 self.end_headers()
                 if body:
                     self.wfile.write(data)

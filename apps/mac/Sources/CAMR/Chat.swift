@@ -39,6 +39,13 @@ struct Measured {
     var answerTokens = 0
     var decodeTps: Double?
     var source = ""  // the room, or the chunks, it answered from
+    // the session meters (Meters.swift)
+    var prefillTps: Double?  // prompt processing: tokens read as text per second before the first word
+    var context = 0  // every token the model saw for this answer
+    var held: Int?  // every token the memory holds
+    var diskBytes: Double?
+    var gbps: Double?  // the SSD's speed for this answer's notes
+    var roomsLaid = 0
 
     init() {}
 
@@ -54,6 +61,12 @@ struct Measured {
         readBytes = d.num("read_bytes") ?? 0
         answerTokens = Int(d.num("answer_tokens") ?? 0)
         decodeTps = d.num("decode_tps")
+        prefillTps = d.num("prefill_tps")
+        context = Int(d.num("context_tokens") ?? 0)
+        held = d.num("history_tokens").map { Int($0) }
+        diskBytes = d.num("disk_bytes")
+        gbps = d.num("gbps")
+        roomsLaid = Int(d.dict("source")?.num("rooms_laid") ?? 0)
         func shelf(_ name: String?) -> String? { shelves.first(where: { $0.name == name })?.label }
         if let src = d.dict("source") {
             if let room = src.num("room") {
@@ -120,9 +133,12 @@ final class ChatModel: ObservableObject {
     var scriptAnswers: [String] = []  // a rehearsal's answers to the agent's questions, in order
     static weak var current: ChatModel?
 
+    let learning: LearnModel  // learning from the web (Learn.swift)
+
     init(engine: Engine, weights: WeightsModel) {
         self.engine = engine
         self.weights = weights
+        self.learning = LearnModel(engine: engine)
         ChatModel.current = self
     }
 
@@ -307,6 +323,11 @@ final class ChatModel: ObservableObject {
     func send(_ mode: Mode) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !busy else { return }
+        if mode == .ask, let topic = LearnModel.topic(in: text) {  // "learn about X": the learning layer, not a chat
+            draft = ""
+            await learning.start(topic)
+            return
+        }
         draft = ""
         busy = true
         defer { busy = false }
@@ -613,6 +634,7 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            MetersStrip(turns: chat.turns)
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
@@ -629,6 +651,7 @@ struct ChatView: View {
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(chat.turns[n - 2].id, anchor: .top) }
                 }
             }
+            LearnCard(model: chat.learning).padding(.bottom, 4)
             Composer(chat: chat, typing: chat.typing, engine: engine)
             ModelBand(w: chat.weights)
                 .padding(.horizontal, 32).padding(.bottom, 10)
@@ -705,6 +728,15 @@ struct Composer: View {
                     .buttonStyle(.plain).foregroundStyle(Theme.dim)
                     .help("Read a PDF, image, video, text or Markdown file into memory (images on this Mac, with on-device OCR)")
                 Spacer()
+                Button {
+                    let topic = chat.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard topic.count >= 3 else { return }
+                    chat.draft = ""
+                    Task { await chat.learning.start(topic) }
+                } label: { Label("Learn", systemImage: "books.vertical").labelStyle(.titleAndIcon) }
+                    .buttonStyle(Pill(color: Theme.memory.opacity(0.85)))
+                    .help("Learn about this from the web: read several pages, keep notes backed by quotes, then choose the shelf")
+                    .disabled(engine.phase != .ready || chat.learning.active)
                 Button { Task { await chat.send(.research) } } label: { Image(systemName: "globe") }
                     .buttonStyle(Pill(color: Theme.text.opacity(0.85)))
                     .keyboardShortcut(.return, modifiers: [.command, .shift])

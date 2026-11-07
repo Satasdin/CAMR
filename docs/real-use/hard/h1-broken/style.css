@@ -1,0 +1,81 @@
+:root {
+  --ink: #f4f6fb;
+  --dim: #aab3c5;
+  --night: #050816;
+  --accent: #ff6a3d;
+  --panel: rgba(8, 12, 30, 0.72);
+  --space: 1rem;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--night);
+  color: var(--ink);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+/* the depth layers, back to front; each is taller than the screen so moving it never shows an edge */
+.sky { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.layer { position: absolute; left: 0; right: 0; top: -20vh; height: 160vh; will-change: transform; }
+.layer-glow { background: radial-gradient(ellipse at 50% 80%, #1b2a6b 0%, #0b1030 45%, var(--night) 75%); }
+.layer-far {
+  background-image: radial-gradient(1px 1px at 20px 30px, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 120px 80px, #cfd8ff 50%, transparent 51%),
+    radial-gradient(1px 1px at 70px 150px, #fff 50%, transparent 51%);
+  background-size: 180px 180px;
+  opacity: 0.6;
+}
+.layer-near {
+  background-image: radial-gradient(2px 2px at 40px 60px, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 200px 140px, #ffe9c2 50%, transparent 51%);
+  background-size: 260px 260px;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+.layer-haze { top: 40vh; background: linear-gradient(to top, rgba(255, 106, 61, 0.18), transparent 60%); }
+@keyframes twinkle { from { opacity: 0.55; } to { opacity: 1; } }
+
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; display: block; pointer-events: none; }
+
+.site-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 3;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 1.5);
+  background: linear-gradient(to bottom, rgba(5, 8, 22, 0.9), transparent);
+}
+.brand { color: var(--ink); font-weight: 700; letter-spacing: 0.08em; text-decoration: none; text-transform: uppercase; }
+.site-header nav { display: flex; gap: var(--space); }
+.site-header nav a { color: var(--dim); text-decoration: none; font-size: 0.9rem; }
+
+main { position: relative; z-index: 2; }
+.hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 6rem 1.5rem 3rem; max-width: 36rem; }
+.kicker { color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.8rem; margin: 0; }
+h1 { font-size: clamp(2.4rem, 7vw, 4.5rem); line-height: 1.05; margin: 0.4rem 0; }
+.lede { color: var(--dim); font-size: 1.15rem; }
+
+.countdown { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; }
+.countdown .label { display: block; color: var(--dim); font-size: 0.85rem; }
+.countdown .clock { font-variant-numeric: tabular-nums; font-size: 1.6rem; }
+.countdown b { color: var(--ink); }
+
+.btn { align-self: flex-start; background: var(--accent); color: #fff; padding: 0.7rem 1.3rem; border-radius: 999px; text-decoration: none; font-weight: 600; }
+
+.panel { min-height: 90vh; padding: 4rem 1.5rem; max-width: 34rem; margin-left: auto; margin-right: 6vw; display: flex; flex-direction: column; justify-content: center; }
+.panel h2 { font-size: 2rem; margin: 0 0 0.5rem; }
+.panel p { color: var(--dim); background: var(--panel); padding: 0.75rem 1rem; border-radius: 10px; }
+.facts { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.facts li { background: var(--panel); border-radius: 10px; padding: 0.75rem; color: var(--dim); font-size: 0.85rem; }
+.facts b { display: block; color: var(--ink); font-size: 1.2rem; }
+
+.site-footer { position: relative; z-index: 2; padding: 3rem 1.5rem; color: var(--dim); font-size: 0.85rem; }
+
+@media (max-width: 640px) {
+  .panel { margin-right: 0; }
+  .facts { grid-template-columns: 1fr; }
+  .site-header nav { display: none; }
+}
+
+/* a badge that spins for ever, whatever the person asked for */
+.kicker { display: inline-block; animation: spin 6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

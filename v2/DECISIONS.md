@@ -760,3 +760,51 @@ answered; nothing on seed 1 has been run for this comparison.
   the budget binds) and CAMR with as many rooms as fit 512, 1,024, 2,048 and 4,096 tokens of notes, plus the improved
   desk's closest moments as words. Right answers and first word against the memory in view each measured. Expected:
   RAG's first word grows with the text it re-reads; CAMR's stays nearly flat.
+
+**E-63 Finding by words, line by line (development only, seed 2).** Where the Long Haul's answers were lost, measured
+before changing anything (`camr_engine.bench.haul.recall`): for each of the 63 told questions in the seed-2 1M sample,
+how high the moment holding the answer ranks among the memory's 8,740 moments. A question counts only the moments it
+needs (the newest value of a changed fact, the asked one of two lookalikes, both hops of a two-hop).
+
+| Finder | in the closest 4 | 8 | 16 |
+|---|---|---|---|
+| the embeddings (the engine until now) | 18 | 21 | 27 |
+| BM25 over whole moments | 40 | 44 | 47 |
+| BM25 line by line, a moment scoring as its best line | 40 | 45 | 48 |
+| lines + a second look for the bridge + the embeddings, fused (`finder=words`) | 41 | 49 | 49 |
+
+A moment is often a whole meeting note or a pasted group chat; one embedding for all of it blurs the one line a
+question needs, while a rare word (a name, a plate, a route, a price) finds it. The second look searches for the
+words the best line adds and the question lacks (the bridge of "Kevin handles payroll" for "which extension will
+Kevin get"), at three quarters of the first look's weight so it never undoes an exact name; the embeddings count
+half. These three weights were swept over 27 settings on this sample: every setting gave 44 to 49 in the closest 8,
+so the choice is not fine-tuned. A request to build a page also looks for the design system's words. Maths questions
+stay lost (a method taught once, asked again with new numbers, ranks 11th to 46th): that needs its own step.
+
+Answered by the 4B from the seed-2 1M memory (`camr_engine.bench.desk`, the yardstick's wording, 73 questions):
+
+| Desk | Right | First word p50 | Memory in view p50 |
+|---|---|---|---|
+| one room + 4 closest moments by embeddings (until now) | 34 | 0.44 s | 883 |
+| one room + 4 closest by `finder=words` (first version) | 51 | 0.49 s | 1,043 |
+| one room + 8 closest by `finder=words` (first version) | 50 | 0.82 s | 1,567 |
+
+This is a retrieval gain, not a notes gain: conventional RAG can use the same finder (`rag:...finder=words`), and
+the comparison reports RAG with and without it.
+
+The pre-registered rule (E-61: right answers summed over the seed-2 256K and 1M cuts; adopted only if at least 2
+better than the old desk), with the finder as it now stands (the page hint included):
+
+| Desk | 256K (of 41) | 1M (of 73) | Sum | First word p50 at 1M |
+|---|---|---|---|---|
+| one room + 4 closest by embeddings (the old desk) | 28 | 34 | 62 | 0.36 s |
+| one room + 4 closest by `finder=words` | 29 | 49 | 78 | 0.52 s |
+| **one room + 6 closest by `finder=words`** | **30** | **55** | **85** | **0.61 s** |
+| one room + 8 closest by `finder=words` | 30 | 53 | 83 | 0.71 s |
+
+Adopted: `finder=words`, 6 closest moments (`memory.FINDER`, `memory.CLOSEST`). At 1M it gains in every family
+but maths: fact 4 to 8, changed 3 to 10, two-hop 1 to 6, code 5 to 8, lookalike 5 to 10; never-told stays 8 to 9 of
+10. Pages now use the design system but still fail: all three run into the 1,200-token limit the yardstick gives
+every contender before their footer. These runs shared the GPU with the seed-1 16M run's telling; first-word times
+here are for comparing desks with each other only. Next: the same desks on seed 3 (a world never tuned on), then
+the held-out runs.

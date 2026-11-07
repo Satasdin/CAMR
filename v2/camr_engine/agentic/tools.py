@@ -85,7 +85,33 @@ SPECS = {
     "load_skill": _fn("load_skill", "Read the instructions of one of the skills listed in your instructions.", {
         "name": ("string", "the skill's name")}, ["name"]),
 }
+SPECS["notebook_write"] = {"type": "function", "function": {
+    "name": "notebook_write", "description": "Write a whole Jupyter notebook (.ipynb) from cells written as plain "
+    "Python and Markdown. Run it with notebook_run afterwards.", "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "the notebook, relative to the workspace, ending in .ipynb"},
+        "cells": {"type": "array", "description": "the cells in order", "items": {"type": "object", "properties": {
+            "kind": {"type": "string", "enum": ["code", "markdown"]},
+            "source": {"type": "string", "description": "the cell's text: Python code, or Markdown"}},
+            "required": ["kind", "source"]}}}, "required": ["path", "cells"]}}}
+SPECS["notebook_edit_cell"] = _fn("notebook_edit_cell", "Change one cell of a notebook: give its index (from 0) and "
+                                  "its whole new source. op insert adds a new cell at index; op delete removes one.", {
+                                      "path": ("string", "the notebook, relative to the workspace"),
+                                      "index": ("integer", "the cell's number, counting from 0"),
+                                      "source": ("string", "the cell's whole new text"),
+                                      "kind": ("string", "code or markdown (default: as it was; code for a new cell)"),
+                                      "op": ("string", "edit (default), insert or delete")}, ["path", "index"])
+SPECS["notebook_run"] = _fn("notebook_run", "Run a notebook and read what each cell printed, showed or raised. Without "
+                            "cell, every code cell runs in order in a fresh kernel, stopping at the first error. The "
+                            "user allows the first run.", {
+                                "path": ("string", "the notebook, relative to the workspace"),
+                                "cell": ("integer", "run only this cell (from 0), in the kernel as it is")}, ["path"])
+SPECS["python_run"] = _fn("python_run", "Run a Python script (.py) of the workspace and read its output. The user "
+                          "allows the first run.", {
+                              "path": ("string", "the script, relative to the workspace"),
+                              "timeout_s": ("integer", "seconds before it is stopped (default 120)")}, ["path"])
 LOCAL = ("read_file", "list_files", "search", "write_file", "edit_file")
+NOTEBOOK_TOOLS = ("notebook_write", "notebook_edit_cell", "notebook_run", "python_run")
+NOTEBOOK_SHOWN = 6000  # characters of a notebook's run the model reads back
 ALIASES = {"old_text": ("old_string", "old", "find", "search"), "new_text": ("new_string", "new", "replace"),
            "content": ("text", "contents", "code"), "path": ("file", "file_path", "filename", "folder", "dir"),
            "command": ("cmd",), "start_line": ("start", "offset", "line"), "lines": ("limit", "count")}
@@ -189,11 +215,15 @@ class Toolbox:
         self.task = ""  # what was asked, so that a removal that was asked for is not refused
         self.known = None  # what the run was told during it, as a function: answers count as told, memory or not
         self.told = told  # what the person told about a request: the notes it may rest on
+        self.approved: set[str] = set()  # notebooks and scripts the person allowed to run (shared by a plan's parts)
 
     def specs(self) -> list[dict]:
-        """The tool list for the chat template."""
+        """The tool list for the chat template. The notebook tools only for a persona that names them (the plan's
+        analyst): a persona with every tool does not carry their schemas in each prompt."""
         out = [SPECS[n] for n in ("read_file", "list_files", "search", "write_file", "edit_file", "run_shell")
                if self.workspace is not None and self.allows(n)]
+        if self.workspace is not None and not self.allows("\0every tool"):
+            out += [SPECS[n] for n in NOTEBOOK_TOOLS if self.allows(n)]
         if self.window and self.workspace is not None:
             out += [SPECS[n] for n in WINDOW_TOOLS if self.allows(n)
                     and (n != "read_shelf" or self.shelf_notes is not None)]
@@ -245,6 +275,8 @@ class Toolbox:
                 return Done(name, args, True, _clip(text), (time.perf_counter() - t) * 1000)
             if name == "run_shell":
                 return self._shell(args, t, owner, label, cancel, on_output, on_wait)
+            if name in NOTEBOOK_TOOLS:
+                return self._notebook(name, args, t, owner, label, cancel, on_wait)
             return self._mcp(name, args, t, owner, label, cancel, on_wait)
         except Outside as e:
             return Done(name, args, False, str(e), (time.perf_counter() - t) * 1000)
@@ -357,9 +389,12 @@ class Toolbox:
         problems += static
         chrome = self._chrome(path)
         if chrome:  # the same page in a real Chrome, through the Playwright plugin the person connected
+            moving = (chrome.get("motion") or {}).get("failed") or []  # the motion rules, one problem each
             for key, what in (("errors", "errors in Chrome"), ("failed", "in Chrome, checks that failed")):
-                if chrome.get(key):
-                    problems.append(f"{what}: {json.dumps(chrome[key], ensure_ascii=False)[:600]}")
+                shown = [x for x in chrome.get(key) or [] if x not in moving]
+                if shown:
+                    problems.append(f"{what}: {json.dumps(shown, ensure_ascii=False)[:600]}")
+            problems += [x[:500] for x in moving]
             if chrome.get("runsOff") and not got.get("runsOff"):
                 problems.append("in Chrome, the page runs off the side of a phone screen")
         if got.get("runsOff"):
@@ -409,11 +444,19 @@ class Toolbox:
         link = self.servers.link("playwright") if self.servers is not None else None
         if link is None or link.state != "connected":
             return None
+        from camr_engine.agentic.motion import keep_report, wants
+
+        try:  # a brief that asks for motion (or a page with a canvas or GSAP) is measured by the motion rules too
+            want = wants(self.task or "", self.workspace.text(path)[1])
+        except (Outside, OSError):
+            want = set()
         try:
-            got = browser_check(link, serving(self.workspace).url(path))
+            got = browser_check(link, serving(self.workspace).url(path), motion=want or None)
         except Exception as e:  # noqa: BLE001 (the app's own test still stands)
             return {"errors": [f"the Chrome check failed: {type(e).__name__}: {e}"[:300]]}
         got["errors"] = [e for e in got.get("errors", []) if "favicon.ico" not in e]
+        if got.get("motion"):  # the numbers and the screenshot strip, in the project's report folder
+            keep_report(self.workspace, got["motion"], path)
         return got
 
     def _shelf(self, args, t) -> Done:
@@ -451,6 +494,68 @@ class Toolbox:
         return Done("run_shell", args, ok, ran.summary(), (time.perf_counter() - t) * 1000, output=ran.output,
                     ask=ask.show())
 
+    def _notebook(self, name, args, t, owner, label, cancel, on_wait) -> Done:
+        """The notebook tools (camr_engine.notebooks). Writing and editing cells are like write_file and edit_file;
+        running asks the person the first time each notebook or script runs in this build, then not again."""
+        from camr_engine import notebooks as nbm
+
+        ws = self.workspace
+        ms = lambda: (time.perf_counter() - t) * 1000  # noqa: E731
+        path = str(_arg(args, "path", "") or "")
+        try:
+            if name == "notebook_write":
+                cells = args.get("cells", args.get("content"))
+                nb, w = nbm.write(ws, path, cells)
+                code = sum(c["cell_type"] == "code" for c in nb["cells"])
+                return Done(name, args, True, f"made {w.path}: {len(nb['cells'])} cells ({code} code, "
+                            f"{len(nb['cells']) - code} markdown). Run it with notebook_run.", ms(), wrote=w)
+            if name == "notebook_edit_cell":
+                index = _int(args.get("index", args.get("cell")), None)
+                if index is None:
+                    raise ValueError("notebook_edit_cell needs index, the cell's number from 0")
+                op = str(args.get("op") or "edit").lower()
+                src = _arg(args, "source", None) if "source" in args else args.get("code", args.get("text"))
+                nb, w = nbm.edit_cell(ws, path, index, src, kind=args.get("kind"), op=op)
+                done = {"edit": "changed", "insert": "added", "delete": "removed"}.get(op, op)
+                return Done(name, args, True, f"{done} cell {index} of {w.path}; it has {len(nb['cells'])} cells now."
+                            + (" Run it with notebook_run to see the new output." if op != "delete" else ""), ms(),
+                            wrote=w)
+            script = name == "python_run"
+            p = ws.path(path)  # inside the workspace, or Outside
+            if not p.is_file():
+                raise ValueError(f"there is no file {path}")
+            key, asked = str(p), None
+            if key not in self.approved:
+                code = (p.read_text(errors="replace") if script else
+                        "\n\n".join(f"# cell {i}\n{c['source']}" for i, c in enumerate(nbm.load(ws, path)["cells"])
+                                    if c.get("cell_type") == "code"))
+                what = {"kind": "script" if script else "notebook", "path": ws.rel(p), "cwd": str(ws.root),
+                        "sandboxed": nbm.sandbox_works(), "code": code[:20_000],
+                        "limits": f"{nbm.SCRIPT_S:g} s" if script else f"{nbm.CELL_S:g} s a cell, {nbm.RUN_S:g} s in all"}
+                if on_wait is not None:
+                    on_wait(what)
+                ask = self.gate.ask("python", what, owner=owner, label=label, cancel=cancel)
+                if not ask.allowed:
+                    return Done(name, args, False, f"the user did not run {path} ({ask.decision})", ms(),
+                                ask=ask.show())
+                self.approved.add(key)
+                asked = ask.show()
+            if script:
+                timeout = max(1, min(_int(_arg(args, "timeout_s"), int(nbm.SCRIPT_S)) or int(nbm.SCRIPT_S), 600))
+                got = nbm.run_script(ws, path, timeout_s=timeout, cancel=cancel)
+                head = (f"exit code {got['code']} in {got['seconds']:g} s" + (" (stopped: too long)"
+                                                                                 if got["timed_out"] else "")
+                        + (f"; it wrote {', '.join(got['made'])}" if got["made"] else ""))
+                return Done(name, args, got["code"] == 0 and not got["timed_out"],
+                            head + "\n" + _ends(got["output"] or "(no output)", NOTEBOOK_SHOWN), ms(),
+                            output=got["output"], ask=asked)
+            cell = _int(args.get("cell", args.get("index")), None)
+            got = nbm.NOTEBOOKS.run(ws, path, cell, cancel=cancel)
+            return Done(name, args, got["state"] == "done", _ran(path, got, nbm), ms(),
+                        output=nbm.text_view(got["notebook"], got["ran"], limit=4000), ask=asked)
+        except (ValueError, RuntimeError) as e:
+            return Done(name, args, False, str(e), ms())
+
     def _mcp(self, name, args, t, owner, label, cancel, on_wait) -> Done:
         server, tool = split_name(name) or ("", "")
         link = self.servers.link(server) if self.servers is not None else None
@@ -474,6 +579,23 @@ class Toolbox:
                         (time.perf_counter() - t) * 1000, ask=ask.show())
         got = link.call(ask.what["tool"], ask.what["arguments"])
         return Done(name, args, got["ok"], _clip(got["text"]), (time.perf_counter() - t) * 1000, ask=ask.show())
+
+
+def _ran(path: str, got: dict, nbm) -> str:
+    """A notebook's run as the model reads it: how it went, each cell's output, and a failed cell's source with its
+    line numbers, so it can be fixed with notebook_edit_cell."""
+    nb, ran, failed = got["notebook"], got["ran"], got["failed"]
+    head = {"done": f"Ran {len(ran)} cell{'s' if len(ran) != 1 else ''} of {path} in {got['seconds']:g} s: no errors.",
+            "error": f"Cell {failed} of {path} failed.",
+            "timeout": f"{path} ran too long and was stopped" + (f" at cell {failed}." if failed is not None else "."),
+            "stopped": f"{path} was stopped.",
+            "failed": f"{path} could not run: {got.get('error')}"}.get(got["state"], got["state"])
+    out = [head, nbm.text_view(nb, ran, limit=1200)[:NOTEBOOK_SHOWN]]
+    if failed is not None and 0 <= failed < len(nb["cells"]):
+        src = nb["cells"][failed]["source"].splitlines()
+        out += [f"\nCell {failed} as it is now:", *[f"{n:>4}│ {x}" for n, x in enumerate(src, 1)][:80],
+                f"\nFix it with notebook_edit_cell (index {failed}, the whole new source), then run the notebook again."]
+    return "\n".join(out)
 
 
 def missing_from(page: str, notes: list[str]) -> list[str]:

@@ -491,7 +491,7 @@ class Engine(Contender):
                 "peak_footprint_gb": _peak_footprint_gb()}
 
     def describe(self) -> dict:
-        from camr_engine.memory import CLOSEST, DESK_ROOMS, JOIN, ROOM_TOKENS
+        from camr_engine.memory import CLOSEST, DESK_ROOMS, FINDER, JOIN, ROOM_TOKENS
 
         shape = self.memory.notebook.shape if self.memory is not None else (
             kv_shape(config_of(self.repo)) if self.repo and config_of(self.repo) else None)
@@ -507,6 +507,7 @@ class Engine(Contender):
                 "desk_rooms": self.settings.get("desk_rooms", DESK_ROOMS),
                 "desk_tokens": self.settings.get("desk_tokens"), "desk_order": self.settings.get("desk_order", "date"),
                 "reread": self.settings.get("reread", "all"),
+                "finder": self.settings.get("finder", FINDER),
                 "kv_shape": None if shape is None else {"layers": shape.layers, "kv_heads": shape.kv_heads,
                                                         "head_dim": shape.head_dim, "rope_base": shape.rope_base,
                                                         "token_bytes": shape.token_bytes},
@@ -663,9 +664,10 @@ class Rag(Contender):
 
     def __init__(self, model: str, *, loader: Loader | None = None, reader=None, embedder=None,
                  dates: Callable[[int], dt.date] | None = None, day_numbers: bool = True, intro: str = INTRO,
-                 k: int = RAG_K, budget: int = RAG_TOKENS, order: str = "date"):
+                 k: int = RAG_K, budget: int = RAG_TOKENS, order: str = "date", finder: str = "dense"):
         if reader is None:
             parse(f"rag:{model}")
+        self.finder = finder  # "words": the engine's word finder (camr_engine.finder), so RAG gets the same search
         if order not in RAG_ORDERS:
             raise ValueError(f"order is one of {RAG_ORDERS}, not {order!r}")
         self.model, self.repo, self.name = model, MODELS.get(model), f"rag:{model}"
@@ -749,8 +751,16 @@ class Rag(Contender):
             return [], []
         self._flush()
         sims = self.vectors @ np.asarray(self.embedder.encode_one(question, is_query=True), dtype=np.float32)
+        if self.finder == "words":
+            from camr_engine.finder import LineIndex
+
+            if getattr(self, "_lines", None) is None or self._lines.moments != len(self.texts):
+                self._lines = LineIndex(self.texts)
+            ranked = self._lines.order(question, sims)
+        else:
+            ranked = np.argsort(-sims)
         picked, total = [], 0
-        for i in np.argsort(-sims)[:self.k]:
+        for i in ranked[:self.k]:
             n = self.counts[int(i)]
             if total + n > self.budget:
                 continue  # past the budget: a shorter one further down may still fit
@@ -802,7 +812,7 @@ class Rag(Contender):
 
     def describe(self) -> dict:
         return {"name": self.name, "kind": "rag", "model": self.model, "repo": self.repo, "embedder": EMBEDDER,
-                "k": self.k, "budget_tokens": self.budget, "order": self.order,
+                "k": self.k, "budget_tokens": self.budget, "order": self.order, "finder": self.finder,
                 "retrieval": "the question embedded (as a query), cosine over every moment's vector, the k closest "
                              "taken closest first while they fit the budget",
                 "moment": "[YYYY-MM-DD, day N] text" if self.days.day_numbers else "[YYYY-MM-DD] text",
@@ -964,8 +974,8 @@ def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
 
 # Settings a run can give the engine's desk (``--desk``) or RAG (``--rag``), by their short names.
 DESK_KEYS = {"rooms": ("desk_rooms", int), "tokens": ("desk_tokens", int), "order": ("desk_order", str),
-             "closest": ("closest", int), "reread": ("reread", str)}
-RAG_KEYS = {"k": ("k", int), "budget": ("budget", int), "order": ("order", str)}
+             "closest": ("closest", int), "reread": ("reread", str), "finder": ("finder", str)}
+RAG_KEYS = {"k": ("k", int), "budget": ("budget", int), "order": ("order", str), "finder": ("finder", str)}
 
 
 def parse_settings(kind: str, text: str | None) -> dict:

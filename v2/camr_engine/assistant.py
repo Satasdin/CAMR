@@ -58,6 +58,12 @@ _MAKING = re.compile(r"\b(make|create|write|prepare|generate|produce|draft|expor
 _DOC_MAKE = re.compile(r"\b(make|create|prepare|generate|produce|draft|put together)\b.{0,60}\b(document|report|"
                        r"proposal|brochure|newsletter|handout|price list|invoice|quotation|flyer|leaflet|cv|"
                        r"r[eé]sum[eé])\b", re.I)
+# a notebook (camr_engine.notebooks): asked for by name, or data to analyse or plot; never a question about one
+_NOTEBOOK = re.compile(r"\b(make|create|write|build|start|prepare|give me|do)\b.{0,60}\b(notebook|jupyter|ipynb)\b"
+                       r"|\banaly[sz]e\b.{0,80}\b(csv|tsv|xlsx|spreadsheet|data|dataset|file|numbers|sales|results)\b"
+                       r"|\b(csv|tsv|xlsx|spreadsheet|dataset)\b.{0,60}\b(analy[sz]e|plot|chart|graph)\b"
+                       r"|^\s*(please\s+)?(plot|chart|graph|visuali[sz]e|analy[sz]e)\b", re.I)
+_QUESTION = re.compile(r"^\s*(what|how|why|who|when|where|which|is|are|does|do|can|could|should)\b", re.I)
 _CHANGE = re.compile(r"^\s*(please\s+)?(change|add|remove|fix|rename|replace|update|move|make|put|use|delete|show|hide)\b", re.I)
 
 
@@ -65,6 +71,7 @@ def wants_agent(text: str, project_open: bool = False) -> bool:
     """A request to make files, which the agent does, rather than a question the chat answers. With a project open,
     an instruction to change something goes to it too."""
     return bool(_BUILD.search(text) or (_DOC_FILE.search(text) and _MAKING.search(text)) or _DOC_MAKE.search(text)
+                or (_NOTEBOOK.search(text) and not _QUESTION.match(text))
                 or (project_open and _CHANGE.search(text)))
 
 

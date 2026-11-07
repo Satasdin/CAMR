@@ -392,8 +392,9 @@ class Run:
             return False
         self._promises += 1
         files = self.target or ("index.html" if self.empty() else "the file you need to change")
+        writer = "notebook_write" if files.endswith(".ipynb") else "write_file or edit_file"
         self.history.append(("(answer)", {}, Done("(answer)", {}, False, (
-            f"Nothing has been written yet. Do not describe what you will do. Call write_file or edit_file now, on "
+            f"Nothing has been written yet. Do not describe what you will do. Call {writer} now, on "
             f"{files}, with the whole content."), 0.0)))
         self._force_write = True
         return True
@@ -571,7 +572,8 @@ class Run:
         specs = self.tools.specs()
         if self._force_write:
             self._force_write = False
-            return [x for x in specs if x["function"]["name"] in ("write_file", "edit_file", "read_file")]
+            return [x for x in specs if x["function"]["name"] in ("write_file", "edit_file", "read_file",
+                                                                  "notebook_write", "notebook_edit_cell")]
         last = [d.text for _, _, d in self.history[-2:]]
         if len(last) == 2 and all(t.startswith(AGAIN) for t in last):
             return [x for x in specs if x["function"]["name"] not in LOOKS]

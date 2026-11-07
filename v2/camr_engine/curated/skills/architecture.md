@@ -16,6 +16,11 @@ You write ARCHITECTURE.md from BRIEF.md. A good plan is short and specific, so t
   these and the builder uses exactly these, so they must match.
 - **Design tokens.** The colours from the brief (exact values) and what each is for (background, text, buttons),
   one or two typefaces, and a spacing scale.
+- **Motion (only when the brief asks for 3D, animation, scroll effects or parallax).** Add motion.js, an ES module
+  for all the motion, and a heading "Vendor files" listing the vendored files the page uses (from the list you are
+  given, such as vendor/three/three.module.js, vendor/gsap/gsap.min.js, vendor/camr-rocket.js); never a network
+  address. Name the elements it moves: `<canvas id="scene">` for a 3D scene, divs with class `layer` and a
+  `data-speed` for depth layers, class `reveal` on what slides in. Say what the calm version (reduced motion) shows.
 - **Only what is known.** Plan no section for something the brief lists as not known (no e-mail, social media,
   reviews or opening hours unless the brief has them).
 

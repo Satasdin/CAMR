@@ -1081,7 +1081,19 @@ def _pipe(mode: str, reply, *, retrieval_ms: float, memory_text: int, notes_toke
     those were memory, the notes it found already read (tokens and bytes on the desk), the bytes read from the SSD,
     and what it answered from."""
     metric = getattr(reply, "metrics", None)
-    return {"mode": mode, "first_word_s": round(float(reply.ttft_s), 4), "retrieval_ms": retrieval_ms,
+    # the session meters: prompt processing speed (tokens read as text per second before the first word), what the
+    # memory holds in all, and how fast the SSD gave up its notes
+    read = int(metric.new_tokens) if metric is not None else int(reply.prompt_tokens)
+    first = float(reply.ttft_s)
+    prefill_tps = getattr(metric, "prefill_tps", None) if metric is not None else None
+    if prefill_tps is None and first > 0 and read:
+        prefill_tps = round(read / first, 1)
+    meters = {"prefill_tps": prefill_tps,
+              "history_tokens": int(metric.history_tokens) if metric is not None else None,
+              "disk_bytes": int(metric.disk_bytes) if metric is not None else None,
+              "gbps": metric.gbps if metric is not None else None,
+              "tier": metric.tier if metric is not None else None}
+    return {"mode": mode, "first_word_s": round(float(reply.ttft_s), 4), "retrieval_ms": retrieval_ms, **meters,
             "prefill_tokens": int(metric.new_tokens) if metric is not None else None,
             "memory_text_tokens": int(memory_text), "notes_tokens": int(notes_tokens), "notes_bytes": int(notes_bytes),
             "read_bytes": int(read_bytes), "context_tokens": int(reply.prompt_tokens),

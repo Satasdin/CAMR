@@ -186,7 +186,8 @@ def test_a_run_keeps_a_clone_of_the_memory_at_each_cut_and_it_reads_back_several
     b = again.ask("Which brand is the oven?", max_tokens=120, family="fact")
     assert b.extra["rooms_laid"] == 2 and b.extra["memory_notes"] > a.extra["memory_notes"]
     dk.configure(again, {})
-    assert again.memory.desk_rooms == 1 and again.memory.closest == 4
+    from camr_engine.memory import CLOSEST
+    assert again.memory.desk_rooms == 1 and again.memory.closest == CLOSEST
     r = dk.rag_over(again, k=1)
     got = r.ask("Which brand is the oven?", max_tokens=120, family="fact")
     assert got.extra["moments_read"] == 1 and got.metrics["disk_gb"] is None and r.texts == [
