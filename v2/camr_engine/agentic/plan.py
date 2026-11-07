@@ -45,6 +45,8 @@ NEW_ELEMENT = re.compile(r"\b(add|put|show)\b.*\b(button|box|field|input|form|to
 BEHAVIOUR_WORDS = re.compile(r"\b(clicks?|total|cart|basket|counts?|calculat\w*|submit|saves?|filters?|sort|"
                              r"remembers?|localStorage|quantity|quantities)\b", re.I)
 ENDED = ("done", "stopped", "failed")
+DOCUMENT = re.compile(r"\b(pdf|word (?:doc|document|file)|docx|\.docx|document|report|letter|proposal|memo|essay|"
+                      r"cv|r[eé]sum[eé]|brochure|newsletter|handout|price list|invoice|quotation|flyer|leaflet)\b", re.I)
 CHECKS = 2  # times the lead checks a reviewed page against the brief and plans what is missing
 CHECK_SYSTEM = ("You check a web page against a list of things people must be able to do on it. For each numbered "
                 "item, answer on its own line with the number, then yes or no, then a few words: yes only when the "
@@ -86,10 +88,27 @@ ROLES = {r.id: r for r in [
     Role("review", "Reviewer", "review",
          "You are the reviewer on a small team. You test the page in the browser and fix what is wrong, without "
          "breaking what works.", ("open_page", "edit_file", "write_file", "read_file", "ask_user"), 10),
+    Role("writer", "Writer", "write-document",
+         "You are the writer on a small team. You write the document the person asked for, as Markdown, from the "
+         "brief, with every fact copied exactly.", ("write_file", "edit_file", "read_file", "read_shelf"), 6),
+    Role("render", "Renderer", "", "", (), 0),
     Role("change", "Editor", "",
          "You make the change the user asked for, in the file you are given, and keep everything else as it is.",
          _WRITES, 6),
 ]}
+
+
+def doc_name(request: str) -> str:
+    """A file name for a document, from what it is: price-list, cover-letter, report."""
+    formats = ("pdf", "word-doc", "word-document", "word-file", "docx", "document")
+    found = [re.sub(r"[^a-z0-9]+", "-", m.group(1).lower()).strip("-") for m in DOCUMENT.finditer(request)]
+    words = re.findall(r"[a-z0-9]+", request.lower())
+    kind = next((k for k in found if k not in formats), "document")  # what it is, before what file it goes in
+    for w in ("cover", "price", "business", "project", "annual", "monthly", "weekly", "sales", "progress"):
+        if w in words and not kind.startswith(w):
+            kind = f"{w}-{kind}"
+            break
+    return kind[:40] or "document"
 
 
 def _longest_gap(asks: list[float], end: float) -> float:
@@ -242,7 +261,18 @@ class Lead:
                 plan.parts.append(Part(f"p{len(targets) + 1}", "review", "Test the page and fix it", None, "rule",
                                        "every change to a page is tested"))
             return plan
-        kind = "website" if WEBSITE.search(self.request) else "code"
+        kind = "website" if WEBSITE.search(self.request) else "document" if DOCUMENT.search(self.request) else "code"
+        if kind == "document":  # a brief, the text, then the files made by rule
+            name = doc_name(self.request)
+            plan = Plan(self.request, kind, [
+                Part("p1", "research", "Write the brief (BRIEF.md)", "BRIEF.md", "rule", "every build starts from a brief"),
+                Part("p2", "writer", f"Write the document ({name}.md)", f"{name}.md", "rule", "a document is written as "
+                     "Markdown"),
+                Part("p3", "render", f"Make {name}.docx and the page for its PDF", f"{name}.docx", "rule",
+                     "the files are made by rule from the text, so they are always valid"),
+            ])
+            plan.decide("rule", "A request for a document: a brief, the text, then the Word file and the PDF.")
+            return plan
         plan = Plan(self.request, kind, [
             Part("p1", "research", "Write the brief (BRIEF.md)", "BRIEF.md", "rule", "every build starts from a brief"),
             Part("p2", "architect", "Decide the files and structure (ARCHITECTURE.md)", "ARCHITECTURE.md", "rule",
@@ -276,6 +306,49 @@ class Lead:
             n += 1
             self.plan.parts.append(Part(f"p{n}", "review", "Test the page and fix it", None, "rule",
                                         "every page is tested before it is shown as done"))
+
+    def _render(self, part: Part) -> None:
+        """The document's files, made by rule from what the writer wrote: first a check of its facts against what the
+        person told (made-up ones go back to the writer once), then the .docx and the page the app prints as the PDF."""
+        from camr_engine.agentic.workspace import Outside
+        from camr_engine.documents import parse, title_of, to_docx, to_html
+
+        t0 = time.time()
+        part.state = "running"
+        self._save()
+        src = part.target.removesuffix(".docx") + ".md"
+        text = self._read(src, 400_000)
+        if not text.strip():
+            part.state, part.note = "failed", f"{src} was not written"
+            return
+        made_up = self.desk.fact_check(text) if self.desk.fact_check is not None and self.memory else []
+        if made_up and not part.tries:  # once: the writer takes them out, or the person is asked when it cannot
+            part.tries = 1
+            self.plan.decide("rule", "The document says what nobody told: " + ", ".join(made_up[:8])
+                             + ". It goes back to the writer once.")
+            n = len(self.plan.parts)
+            self.plan.parts.insert(self.plan.parts.index(part), Part(
+                f"p{n + 1}", "change", f"Take out of {src} what nobody told", src, "rule", "the fact check found "
+                "facts that are not in memory", detail="Not told, so remove each (or the sentence it is in): "
+                + ", ".join(made_up[:12])))
+            part.state = "todo"
+            self._redo = True
+            return
+        blocks = parse(text)
+        accent = next(iter(re.findall(r"#[0-9a-fA-F]{6}\b", self._read("BRIEF.md"))), "#1a1a1a")
+        title = title_of(blocks, part.target.removesuffix(".docx"))
+        try:
+            path = self.desk.workspace.path(part.target, write=True)
+            to_docx(blocks, path, accent=accent, title=title)
+            self.desk.workspace.write(part.target.removesuffix(".docx") + ".html", to_html(blocks, accent=accent,
+                                                                                        title=title))
+        except (Outside, OSError) as e:
+            part.state, part.note = "failed", f"the files could not be made: {e}"[:200]
+            return
+        part.seconds += time.time() - t0
+        part.state = "done"
+        self.plan.decide("rule", f"Made {part.target} and {part.target.removesuffix('.docx')}.html from {src}"
+                         + (f"; still not told: {', '.join(made_up[:8])}" if made_up else "") + ".")
 
     def musts(self) -> list[str]:
         """What people must be able to do, as the brief lists it."""
@@ -393,7 +466,13 @@ class Lead:
             i = 0
             while i < len(self.plan.parts) and not self.cancel.is_set():
                 part = self.plan.parts[i]
-                self._do(part, last=i == len(self.plan.parts) - 1 and part.role != "architect")
+                if part.role == "render":
+                    self._render(part)
+                    if getattr(self, "_redo", False):  # a fix went in before it: run that, then render again
+                        self._redo = False
+                        continue
+                else:
+                    self._do(part, last=i == len(self.plan.parts) - 1 and part.role != "architect")
                 self._save()
                 if part.role == "architect" and part.state == "done":
                     self._after_architecture()
@@ -500,6 +579,8 @@ class Lead:
                          f'The request: "{r}"',
             "coder": f'Write {t}, as the architecture says. The request: "{r}"',
             "review": f'Test the page and fix what its test reports. The request: "{r}"',
+            "writer": f'Write {t}, the document, from the brief. The request: "{r}"',
+            "render": "",
             "change": f'In {t}: {r}' if self.plan.kind == "change" else
                       f'In {t}: {part.title[0].lower() + part.title[1:]}. The request: "{r}"',
         }[part.role] + (f"\n\nWhat the page test found:\n{part.detail}" if part.detail else "")
@@ -534,6 +615,8 @@ class Lead:
             "coder": ["BRIEF.md", "ARCHITECTURE.md"],
             "review": ["BRIEF.md"],
             "change": ["BRIEF.md"],
+            "writer": ["BRIEF.md"],
+            "render": [],
         }[part.role]
         for rel in reads:
             text = self._read(rel)

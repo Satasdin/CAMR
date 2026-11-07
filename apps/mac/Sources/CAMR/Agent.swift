@@ -181,7 +181,8 @@ extension ChatModel {
             turns[k].agent?.writing = ""
             turns[k].agent?.seconds = Date().timeIntervalSince(started)
             await refreshFiles(at: k)
-            if let page = await loadedPage("index.html") { PreviewCenter.shared.show(code: page.page, project: root) }
+            if await showDocument(root: root, at: k) {
+            } else if let page = await loadedPage("index.html") { PreviewCenter.shared.show(code: page.page, project: root) }
         } catch {
             turns[k].text = error.localizedDescription
             turns[k].failed = true
@@ -190,6 +191,22 @@ extension ChatModel {
         bump(k)
         weights.finish(nil)
         await refresh()
+    }
+
+    /// A document the agent made (a .docx with its print page): its PDF is made here and both are shown.
+    private func showDocument(root: String, at k: Int) async -> Bool {
+        let files = turns[k].agent?.files ?? []
+        guard let docx = files.first(where: { $0.hasSuffix(".docx") }) else { return false }
+        let base = String(docx.dropLast(5))
+        let folder = URL(fileURLWithPath: root)
+        var pdf: URL?
+        if files.contains(base + ".html"), let html = await readProjectFile(base + ".html") {
+            let out = folder.appendingPathComponent(base + ".pdf")
+            if await DocumentPDF.make(html: html, out: out) { pdf = out }
+        }
+        PreviewCenter.shared.show(pdf: pdf, docx: folder.appendingPathComponent(docx), project: root)
+        await refreshFiles(at: k)
+        return true
     }
 
     /// What a part's run waits for: a page test (answered here, by the app's own browser) or the person.

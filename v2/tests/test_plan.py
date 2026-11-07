@@ -361,3 +361,49 @@ def test_a_repeated_page_test_is_answered_not_run_and_never_counts_as_a_pass(des
     review = desk.run(lead.plan.parts[5].run)
     assert review.last_test()["ok"] is False
     assert all(not d.text.startswith(AGAIN) or n == "open_page" for n, _, d in review.history)
+
+
+DOC = "# Riverbank Physio prices\n\nOur prices.\n\n## Services\n\n| Service | Price |\n|---|---|\n| Massage | KES 3,000 |\n"
+
+
+def test_a_document_is_briefed_written_and_made_into_word_and_a_page_for_its_pdf(desk):
+    import zipfile
+
+    from camr_engine.agentic.plan import doc_name
+
+    assert doc_name("Make a PDF price list for Riverbank Physio") == "price-list"
+    assert doc_name("Write a cover letter as a Word document") == "cover-letter"
+    desk.brain.files["price-list.md"] = DOC
+    lead = build(desk, "Make a PDF price list for Riverbank Physio")
+    assert [(p.role, p.target) for p in lead.plan.parts] == [
+        ("research", "BRIEF.md"), ("writer", "price-list.md"), ("render", "price-list.docx")]
+    assert all(p.state == "done" for p in lead.plan.parts)
+    root = desk.workspace.root
+    with zipfile.ZipFile(root / "price-list.docx") as z:
+        body = z.read("word/document.xml").decode()
+    assert "KES 3,000" in body and "<w:tbl>" in body and 'w:val="Title"' in body
+    page = (root / "price-list.html").read_text()
+    assert "<title>Riverbank Physio prices</title>" in page and "@page" in page and "<table>" in page
+
+
+def test_a_document_with_made_up_facts_goes_back_to_the_writer_once(desk):
+    desk.brain.files["price-list.md"] = DOC + "\nCall 0700 000 000.\n"
+    desk.fact_check = lambda text: ["0700 000 000"] if "0700" in text else []
+    desk.configure(memory=True)
+    lead = build(desk, "Make a PDF price list for Riverbank Physio")
+    roles = [p.role for p in lead.plan.parts]
+    assert roles == ["research", "writer", "change", "render"]
+    fix = lead.plan.parts[2]
+    assert "0700 000 000" in fix.detail and fix.target == "price-list.md"
+    assert lead.plan.parts[-1].state == "done"  # rendered after the fix, saying what is still not told
+    assert any("still not told: 0700 000 000" in d["text"] for d in lead.plan.decisions)
+
+
+def test_a_request_for_a_document_goes_to_the_agent_and_a_question_does_not():
+    from camr_engine.assistant import wants_agent
+
+    for t in ("Make a PDF price list for Riverbank Physio", "Write a cover letter as a Word document for Amina",
+              "Prepare a proposal for the school", "Build a website for the shop"):
+        assert wants_agent(t), t
+    for t in ("What is a PDF?", "Write me a poem", "Summarise the report I gave you", "what is our phone number?"):
+        assert not wants_agent(t), t

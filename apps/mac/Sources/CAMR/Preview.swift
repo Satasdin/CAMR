@@ -30,6 +30,19 @@ final class PreviewCenter: ObservableObject {
 
     var hasScripts: Bool { code?.range(of: "<script", options: .caseInsensitive) != nil }
 
+    /// A document the agent made: its PDF (made here) and its Word file, shown in the PDF and Word tabs.
+    @Published var pdf: URL?
+    @Published var docx: URL?
+    @Published var docVersion = 0
+
+    func show(pdf: URL?, docx: URL?, project: String? = nil) {
+        self.pdf = pdf
+        self.docx = docx
+        self.project = project
+        docVersion += 1
+        tab = pdf != nil ? "pdf" : docx != nil ? "word" : tab
+    }
+
     func show(code: String, project: String? = nil) {
         if code != self.code { scripts = false }  // agreeing to run one page is not agreeing to run the next
         self.project = project
@@ -39,6 +52,8 @@ final class PreviewCenter: ObservableObject {
     }
 
     func close() {
+        pdf = nil
+        docx = nil
         code = nil
         project = nil
         files = []
@@ -67,14 +82,21 @@ struct PreviewDock: View {
     @ObservedObject var center: PreviewCenter
 
     var body: some View {
-        if let code = center.code {
+        if center.code != nil || center.pdf != nil || center.docx != nil {
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
                     Picker("", selection: $center.tab) {
-                        Text("Page").tag("page")
+                        if center.pdf != nil { Text("PDF").tag("pdf") }
+                        if center.docx != nil { Text("Word").tag("word") }
+                        if center.code != nil { Text("Page").tag("page") }
                         Text("Files \(center.files.count)").tag("files")
                     }
-                    .pickerStyle(.segmented).frame(width: 130).labelsHidden()
+                    .pickerStyle(.segmented).frame(width: center.pdf != nil ? 230 : 130).labelsHidden()
+                    if center.tab == "pdf" || center.tab == "word", let f = center.tab == "pdf" ? center.pdf : center.docx {
+                        Button { NSWorkspace.shared.open(f) } label: { Label("Open", systemImage: "arrow.up.forward.app") }
+                            .buttonStyle(.plain).font(Theme.mono(10)).foregroundStyle(Theme.dim)
+                            .help("Open \(f.lastPathComponent) in its own app")
+                    }
                     Spacer()
                     if center.tab == "page" {
                         Picker("", selection: $center.phone) {
@@ -98,7 +120,11 @@ struct PreviewDock: View {
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(Theme.panel)
-                if center.tab == "page" {
+                if center.tab == "pdf", let f = center.pdf {
+                    PDFPane(url: f, version: center.docVersion).frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if center.tab == "word", let f = center.docx {
+                    QuickLookPane(url: f, version: center.docVersion).frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if center.tab == "page", let code = center.code {
                     if center.hasScripts && !center.scripts {
                         Text("This page has scripts, which are off. Tick Scripts to run them.")
                             .font(Theme.mono(10)).foregroundStyle(Theme.model)
