@@ -18,7 +18,8 @@ from camr_engine.bench.haul.grade import grade
 from camr_engine.bench.haul.sample import askable, sample
 from camr_engine.bench.haul.script import load_events, load_probes
 
-CUTS = {"64K": 64_000, "256K": 256_000, "1M": 1_000_000, "2M": 2_000_000, "3M": 3_000_000, "4M": 4_000_000}
+CUTS = {"64K": 64_000, "256K": 256_000, "1M": 1_000_000, "2M": 2_000_000, "3M": 3_000_000, "4M": 4_000_000,
+        "8M": 8_000_000, "16M": 16_000_000}
 PER_FAMILY = 10
 SAMPLE_SEED = 0
 RIGHT = {"right", "right_abstain"}

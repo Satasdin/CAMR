@@ -32,6 +32,9 @@ struct AgentState {
     var madeUp: [String] = []  // still on the page, and not in memory
     var untested: String?  // its last test failed, or it changed after it
     var plan: [PlanPart] = []  // the lead's parts, in order
+    var traces: [StepTrace] = []  // each model step's words, for the reasoning raster
+    var readNext = false  // memory was laid on the desk: the next step read it
+    var decidedAt = Date.distantPast  // when the lead's latest decision came in
     var decisions: [(by: String, text: String)] = []
 }
 
@@ -146,12 +149,16 @@ extension ChatModel {
                         await handleWaiting(r, at: k, handled: &handled)
                     }
                     if let live = try? await engine.get("/api/code/live?id=\(rid)&from=\(liveNext)") {
+                        let role = turns[k].agent?.plan.first(where: { $0.state == "running" })?.role ?? "Agent"
                         for e in live.list("events") {
                             switch e.str("kind") {
-                            case "room": weights.roomEvent(e)
+                            case "room":
+                                weights.roomEvent(e)
+                                turns[k].agent?.readNext = true
                             case "token":
                                 weights.token(e)
                                 turns[k].agent?.writing += e.str("text") ?? ""
+                                turns[k].agent?.tick(e, role: role)
                             default: break
                             }
                         }
@@ -248,7 +255,9 @@ extension ChatModel {
                      state: p.str("state") ?? "todo", by: p.str("by") ?? "rule", seconds: p.num("seconds") ?? 0,
                      note: p.str("note") ?? "")
         }
-        turns[k].agent?.decisions = plan.list("decisions").map { ($0.str("by") ?? "rule", $0.str("text") ?? "") }
+        let decisions = plan.list("decisions").map { ($0.str("by") ?? "rule", $0.str("text") ?? "") }
+        if decisions.count != turns[k].agent?.decisions.count { turns[k].agent?.decidedAt = Date() }
+        turns[k].agent?.decisions = decisions
     }
 
     private func bump(_ k: Int) { turns[k].agentRev += 1 }
@@ -301,7 +310,10 @@ extension ChatModel {
                 turns[k].agent?.modelSteps = Int(t.num("step") ?? 0)
                 turns[k].agent?.lastRead = Int(t.num("prompt_tokens") ?? 0)
             case "call":
-                if let step = agentStep(t) { turns[k].agent?.steps.append(step) }
+                if let step = agentStep(t) {
+                    turns[k].agent?.steps.append(step)
+                    turns[k].agent?.ended(step.title, ok: step.ok)
+                }
             case "error":
                 turns[k].agent?.steps.append(AgentStep(icon: "exclamationmark.triangle", title: t.str("text") ?? "error", ok: false))
             default:
@@ -339,8 +351,14 @@ struct AgentCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if !agent.plan.isEmpty { PlanList(parts: agent.plan) }
-            ForEach(agent.steps) { s in row(s) }
+            if !agent.plan.isEmpty {
+                PlanFlow(parts: agent.plan, live: pending)
+                DecisionFlash(decision: agent.decisions.last, at: agent.decidedAt)
+            }
+            if !agent.traces.isEmpty { ReasoningRaster(traces: agent.traces, live: pending) }
+            if !agent.plan.isEmpty && !pending { PlanList(parts: agent.plan) }
+            // while it works, only its latest steps: the raster above shows the rest
+            ForEach(pending ? Array(agent.steps.suffix(4)) : agent.steps) { s in row(s) }
             if pending, !agent.writing.isEmpty {
                 Text(tail).font(Theme.mono(11)).foregroundStyle(Theme.dim).lineLimit(4)
                     .frame(maxWidth: .infinity, alignment: .leading)

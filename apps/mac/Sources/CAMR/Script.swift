@@ -58,6 +58,8 @@ enum Script {
                     await world.chat.newChat()
                 case "mode":
                     await world.chat.setMode(arg)
+                case "demo-agent":  // demo-agent: 12   (seconds of a made-up build, for checking the agent card)
+                    Task { await world.chat.demoAgent(seconds: Double(arg) ?? 12) }  // runs on while later lines take shots
                 case "shot":
                     if let dir = env["CAMR_SNAPSHOT_DIR"] {
                         snapshot(URL(fileURLWithPath: dir).appendingPathComponent("\(arg).png"))

@@ -24,7 +24,8 @@ from camr_engine.bench.haul.script import (DAYS, NOISE_MIX, Haul, _verify, askab
 from camr_engine.bench.haul.words import long_date
 from camr_engine.bench.haul.world import build_world
 
-CUTS = {"64K": 64_000, "256K": 256_000, "1M": 1_000_000, "2M": 2_000_000, "3M": 3_000_000, "4M": 4_000_000}
+CUTS = {"64K": 64_000, "256K": 256_000, "1M": 1_000_000, "2M": 2_000_000, "3M": 3_000_000, "4M": 4_000_000,
+        "8M": 8_000_000, "16M": 16_000_000}
 TARGET = 4_010_000  # a little past the 4M cut
 
 
