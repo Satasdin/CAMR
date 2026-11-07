@@ -830,3 +830,11 @@ the same desk without it (E-61's rule). Whatever the result, the seed-1 runs rep
 beside the plain model, and the harder set says whether it carries over to new wording. The practice worlds come
 from the same generator as the locked exam, so a gain there is partly practice on the exam's form; the harder set
 (new wording, new families) is the check on that.
+
+**E-64 result (8 Nov, 01:38): not adopted.** Trained 976 steps (12.2 min on the M5 Pro, loss 0.07 at the end). On
+the held-back practice world (seed 7, 2M, 165 questions) it answered 137 right against the plain model's 131: fact
+44 vs 40, two-hop 21 vs 18, never-told 20 vs 18, changed 30 vs 31, lookalike 22 vs 24. On the rule's own test, seed
+2, it lost: 256K 28/41 against 30/41, 1M 50/73 against 55/73, 7 fewer summed where the rule wanted 2 more. Its first
+word came 0.11–0.14 s later (the question is read in a second pass with the adapter on). The gain stays inside the
+worlds it practised on; it does not carry to a world it never saw, so it is not the desk. The later runs keep it as a
+labelled experiment only. Records: work/dev-records/2026-11-08/013318…, 013438…, 013611…, 013814….
