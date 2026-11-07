@@ -327,10 +327,13 @@ class Lead:
             self.plan.decide("rule", "The document says what nobody told: " + ", ".join(made_up[:8])
                              + ". It goes back to the writer once.")
             n = len(self.plan.parts)
+            many = len(made_up) >= 3  # too many to take out one edit at a time: written again from the brief
             self.plan.parts.insert(self.plan.parts.index(part), Part(
-                f"p{n + 1}", "change", f"Take out of {src} what nobody told", src, "rule", "the fact check found "
-                "facts that are not in memory", detail="Not told, so remove each (or the sentence it is in): "
-                + ", ".join(made_up[:12])))
+                f"p{n + 1}", "writer" if many else "change",
+                f"Write {src} again from the brief" if many else f"Take out of {src} what nobody told", src, "rule",
+                "the fact check found facts that are not in memory",
+                detail=("These are not in the brief or in what the person told, so none of them may appear: "
+                        if many else "Not told, so remove each (or the sentence it is in): ") + ", ".join(made_up[:12])))
             part.state = "todo"
             self._redo = True
             return
@@ -579,11 +582,12 @@ class Lead:
                          f'The request: "{r}"',
             "coder": f'Write {t}, as the architecture says. The request: "{r}"',
             "review": f'Test the page and fix what its test reports. The request: "{r}"',
-            "writer": f'Write {t}, the document, from the brief. The request: "{r}"',
+            "writer": f'Write {t}, the document, from the brief. The request: "{r}"' + (
+                "" if not part.detail else ". The last version made things up."),
             "render": "",
             "change": f'In {t}: {r}' if self.plan.kind == "change" else
                       f'In {t}: {part.title[0].lower() + part.title[1:]}. The request: "{r}"',
-        }[part.role] + (f"\n\nWhat the page test found:\n{part.detail}" if part.detail else "")
+        }[part.role] + (f"\n\nWhat the check found:\n{part.detail}" if part.detail else "")
 
     def _first(self, part: Part) -> str:
         t = part.target
@@ -591,6 +595,8 @@ class Lead:
             return f"Read {t} with read_file first, then make only this change with edit_file. Keep everything else."
         if part.role == "review":
             return ""
+        if part.role == "writer" and part.detail:
+            return f"Write {t} again now with write_file, whole, using only the facts in the brief."
         if t and t in self._files():
             return f"{t} exists already: read it with read_file, then fix it with edit_file or write it again whole."
         return f"Write {t} now with write_file, whole. Write no other file."

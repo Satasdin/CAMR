@@ -171,11 +171,13 @@ class Run:
         told_fn = getattr(tools, "told", None)
         if told_fn is None or not getattr(tools, "window", False) or self.ask_first is False:
             return
+        if self.ask_first:  # a plan's researcher: what the person told reaches the brief, whatever is being made
+            self.told_notes = told_fn(self.task)
         if not WEBSITE.search(getattr(tools, "task", "") or self.task) or (self.ask_first is None and not self.empty()):
             return
         from camr_engine.grounding import facts_in
 
-        self.told_notes = told_fn(self.task)
+        self.told_notes = self.told_notes or told_fn(self.task)
         have = {f.kind for f in facts_in("\n".join([self.task, *self.told_notes]))}
         for kinds, what in PAGE_NEEDS:
             if have & set(kinds) or self.cancel.is_set():

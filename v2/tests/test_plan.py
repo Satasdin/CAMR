@@ -407,3 +407,17 @@ def test_a_request_for_a_document_goes_to_the_agent_and_a_question_does_not():
         assert wants_agent(t), t
     for t in ("What is a PDF?", "Write me a poem", "Summarise the report I gave you", "what is our phone number?"):
         assert not wants_agent(t), t
+
+
+def test_a_documents_brief_gets_what_was_told_and_many_made_up_facts_mean_a_rewrite(desk):
+    desk.told = lambda request: ["Riverbank Physio: a first assessment costs KES 3,500."]
+    desk.brain.files["price-list.md"] = DOC + "\\nSessions $150, $120 and $250. Call (123) 456-7890.\\n"
+    desk.fact_check = lambda text: [x for x in ("$150", "$120", "$250", "(123) 456-7890") if x in text]
+    lead = build(desk, "Make a PDF price list for Riverbank Physio")
+    research = desk.run(lead.plan.parts[0].run)
+    assert research.told_notes == ["Riverbank Physio: a first assessment costs KES 3,500."]
+    assert "KES 3,500" in desk.brain.prompts[0].user
+    redo = lead.plan.parts[2]
+    assert (redo.role, redo.title) == ("writer", "Write price-list.md again from the brief")
+    task = desk.run(redo.runs[0]).task
+    assert "$150" in task and "none of them may appear" in task and "What the check found" in task
