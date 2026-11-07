@@ -182,6 +182,23 @@ struct RootView: View {
                     }
                     .buttonStyle(.plain).foregroundStyle(Theme.dim)
                     .help("Make a shelf of your own")
+                    Menu {
+                        let have = Set(chat.shelves.map(\.name))
+                        let missing = chat.curated.filter { !have.contains("curated-\($0.name)") }
+                        if !missing.isEmpty {
+                            Button("All \(missing.count) curated shelves") { Task { await chat.addCurated(missing.map(\.name)) } }
+                            Divider()
+                        }
+                        ForEach(chat.curated, id: \.name) { c in
+                            Button("\(c.label) · \(c.notes) rules") { Task { await chat.addCurated([c.name]) } }
+                                .disabled(have.contains("curated-\(c.name)"))
+                        }
+                    } label: {
+                        Label("Curated", systemImage: "books.vertical").font(Theme.mono(10))
+                    }
+                    .menuStyle(.borderlessButton).fixedSize().foregroundStyle(Theme.dim)
+                    .help("Shelves of rules and corrections for coding, design, writing and more, read only when called")
+                    .task { await chat.loadCurated() }
                 }
                 VStack(spacing: 1) {
                     shelfRow("auto", "Auto: file by meaning", nil)
@@ -276,6 +293,7 @@ struct RootView: View {
                 Text(title).font(Theme.ui(12, .semibold)).lineLimit(1)
                 Spacer(minLength: 4)
                 if let s = shelf {
+                    if s.called { Text("called").font(Theme.mono(9)).foregroundStyle(on ? Color.black.opacity(0.6) : Theme.faint) }
                     Text("\(s.moments)").font(Theme.mono(10)).foregroundStyle(on ? Color.black.opacity(0.6) : Theme.faint)
                 }
             }

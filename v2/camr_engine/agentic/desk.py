@@ -43,6 +43,12 @@ from camr_engine.agentic.workspace import Outside, Workspace, check_root, sha
 from camr_engine.shelves import SHELVES
 
 MAX_RUNS = 40  # runs kept in RAM (finished ones are in their thread's file too)
+MIN_WINDOW = 2048  # the smallest context window a step may be limited to
+MAX_LEADS = 12  # plans kept in RAM (each is in plans/ too)
+# what a plan's part may set on its run (camr_engine.agentic.plan), by option name: the run's attribute
+RUN_OPTS = {"target": "target", "first": "first", "must_write": "must_write", "page_tests": "page_tests_max",
+            "test_first": "test_first", "ask_first": "ask_first", "keep_request": "keep_request",
+            "told_notes": "told_notes", "keep": "keep_it", "notes_title": "notes_title"}
 MAX_THREADS = 200
 RECENT = 8
 FIXES = 8  # fixes told to the next run, per workspace
@@ -90,6 +96,7 @@ class Desk:
             except Outside:
                 self.workspace = None
         self.runs: dict[str, Run] = {}
+        self.leads: dict = {}  # plans, by id (camr_engine.agentic.plan.Lead)
         self.open: dict[tuple, Brain] = {}  # brains kept open between runs, by what they read
         self.used_tools: set[str] = set()
         self.pool = None  # one RAM budget for the hot rooms of every thread's memory
@@ -108,6 +115,7 @@ class Desk:
         return {"workspace": got.get("workspace"), "recent": list(got.get("recent") or [])[:RECENT],
                 "memory": bool(got.get("memory", True)), "persona": str(got.get("persona") or "coder"),
                 "skills": got.get("skills"),
+                "window_tokens": _window(got.get("window_tokens")),
                 "fixes": {str(k): [str(x) for x in v][-FIXES:] for k, v in fixes.items() if isinstance(v, list)}}
 
     def _save_settings(self) -> None:
@@ -117,8 +125,10 @@ class Desk:
         os.replace(tmp, self.root / "settings.json")
 
     def configure(self, *, memory: bool | None = None, persona: str | None = None,
-                  skills: str | None = None) -> dict:
+                  skills: str | None = None, window_tokens: int | None = None) -> dict:
         with self.lock:
+            if window_tokens is not None:  # 0 for the model's whole window
+                self.settings["window_tokens"] = _window(window_tokens)
             if memory is not None:
                 self.settings["memory"] = bool(memory)
             if persona is not None:
@@ -276,8 +286,9 @@ class Desk:
             self.open[key] = b
             return b
 
-    def start(self, thread: str, task: str, *, memory: bool | None = None, persona: str | None = None,
-              max_steps: int | None = None, window: bool = False, context: list[str] | None = None) -> Run:
+    def start(self, thread: str, task: str, *, memory: bool | None = None, persona: str | Persona | None = None,
+              max_steps: int | None = None, window: bool = False, context: list[str] | None = None,
+              request: str | None = None, opts: dict | None = None) -> Run:
         """Start a task in a thread, as ``persona`` (by default the one chosen in the rack, whatever the thread ran
         as before: the thread takes it on)."""
         why = self.can_run()
@@ -287,7 +298,7 @@ class Desk:
         if not task:
             raise ValueError("give the agent a task")
         t = self.thread(thread)
-        p = self.personas.get(persona or self.settings["persona"])
+        p = persona if isinstance(persona, Persona) else self.personas.get(persona or self.settings["persona"])
         memory = self.settings["memory"] if memory is None else bool(memory)
         with self.lock:
             if any(r.live and r.thread_id == thread for r in self.runs.values()):
@@ -299,7 +310,7 @@ class Desk:
                             fact_check=self.fact_check if memory else None,
                             told=self.told if memory else None)
             notes = [*(context or []), *notes]
-            tools.task = task
+            tools.task = request or task  # what the person asked: what told facts are looked up by
             t["count"] = int(t.get("count", len(t.get("runs", [])))) + 1  # runs ever started (the file keeps 20)
             rid = f"{thread}-{t['count']}"
             run = Run(rid, task, brain=brain, tools=tools, persona=p, gate=self.gate, model_lock=self.model_lock,
@@ -307,9 +318,16 @@ class Desk:
                       marks=self.marks, notes=notes, max_steps=max_steps or 12, measuring=self.measuring,
                       on_step=self._watch, shelves=self.shelf_index() if window and memory else "")
             run.thread_id = thread
+            run.window_tokens = self.window_tokens()
             if window:  # the band under the chat box sees a few words a second; measuring each one costs time
                 run.watch.layer_every = 8
                 run.keep_request = bool(memory)
+            for k, v in (opts or {}).items():  # a part of a plan (camr_engine.agentic.plan): its own settings
+                if k not in RUN_OPTS:
+                    raise ValueError(f"no run option {k}")
+                setattr(run, RUN_OPTS[k], v)
+            if opts and "keep_request" in opts:
+                run.keep_request = bool(opts["keep_request"]) and bool(memory)
             self.runs[rid] = run
             finished = [k for k, r in self.runs.items() if not r.live]
             for k in finished[:max(0, len(self.runs) - MAX_RUNS)]:
@@ -319,6 +337,11 @@ class Desk:
             self._write_thread(t)
         run.start()
         return run
+
+    def window_tokens(self) -> int | None:
+        """The tokens a step may read and write together, when limited: CAMR_WINDOW_TOKENS, else the setting."""
+        env = _window(os.environ.get("CAMR_WINDOW_TOKENS"))
+        return env or self.settings.get("window_tokens")
 
     # what the window's app gives the agent, when it is there: a shelf's notes, the shelves' names, and the fact check
     shelf_notes = None
@@ -445,6 +468,34 @@ class Desk:
                 return got
         return None
 
+    # -- plans: a request built part by part, each part by a specialist (camr_engine.agentic.plan)
+
+    def build(self, thread: str, request: str, *, memory: bool | None = None) -> "Lead":
+        """Plan a request in a thread and start building it. Busy while another plan or run is going in the thread."""
+        from camr_engine.agentic.plan import Lead
+
+        why = self.can_run()
+        if why:
+            raise Busy(why)
+        if not request.strip():
+            raise ValueError("say what to make")
+        self.thread(thread)
+        with self.lock:
+            if any(x.live and x.thread == thread for x in self.leads.values()) or any(
+                    r.live and r.thread_id == thread for r in self.runs.values()):
+                raise Busy("this thread is running already")
+            lead = Lead(self, thread, request, memory=memory)
+            self.leads[lead.id] = lead
+            for k in [k for k, x in self.leads.items() if not x.live][:max(0, len(self.leads) - MAX_LEADS)]:
+                del self.leads[k]
+        return lead.start()
+
+    def lead(self, lid: str) -> "Lead":
+        got = self.leads.get(lid)
+        if got is None:
+            raise KeyError(lid)
+        return got
+
     # -- the page's view
 
     def state(self) -> dict:
@@ -456,7 +507,7 @@ class Desk:
                 "skills": [s.show() for s in self.skills.all()], "skills_dir": str(self.skills.folder),
                 "servers": self.servers.show(), "threads": self.threads(), "live": [r.id for r in live],
                 "waiting": self.gate.waiting(), "can_run": self.can_run(), "used_tools": sorted(self.used_tools),
-                "fixes": list(self.fixes)}
+                "fixes": list(self.fixes), "window_tokens": self.window_tokens()}
 
     def _close_brains(self) -> None:
         for b in self.open.values():
@@ -477,6 +528,15 @@ class Desk:
             th.join(timeout=10)
         self._close_brains()
         self.servers.close()
+
+
+def _window(v) -> int | None:
+    """A context window limit: None for none, else at least MIN_WINDOW tokens."""
+    try:
+        n = int(v or 0)
+    except (TypeError, ValueError):
+        return None
+    return max(n, MIN_WINDOW) if n > 0 else None
 
 
 def _quote(text: str, limit: int = 160) -> str:

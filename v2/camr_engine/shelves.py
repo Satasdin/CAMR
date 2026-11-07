@@ -183,6 +183,43 @@ def remove(root: Path, name: str) -> str | None:
     return went
 
 
+CURATED = Path(__file__).resolve().parent / "curated"  # the shelves shipped with the engine: rules and corrections
+
+
+def curated() -> list[dict]:
+    """The curated shelves: {name, label, about, notes}, each note one RULE or CORRECTION line of its file."""
+    out = []
+    for f in sorted(CURATED.glob("*.md")):
+        text = f.read_text(errors="replace")
+        m = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.S)
+        meta = {}
+        for line in (m.group(1).splitlines() if m else []):
+            k, sep, v = line.partition(":")
+            if sep:
+                meta[k.strip()] = v.strip()
+        notes = [x.strip() for x in text[m.end() if m else 0:].splitlines() if x.startswith(("RULE ", "CORRECTION "))]
+        out.append({"name": meta.get("name", f.stem), "label": meta.get("label", f.stem.title()),
+                    "about": meta.get("about", ""), "notes": notes})
+    return out
+
+
+def add_curated(root: Path, name: str) -> tuple[Shelf, list[str]]:
+    """Put a curated shelf in the list (once), as a called shelf in a reach of its own: (the shelf, its notes)."""
+    got = next((c for c in curated() if c["name"] == name), None)
+    if got is None:
+        raise KeyError(name)
+    sname = f"curated-{name}"[:20]
+    if sname in BY_NAME:
+        return BY_NAME[sname], got["notes"]
+    label = got["label"]
+    if any(s.label.lower() == label.lower() for s in SHELVES):
+        label = f"{label} guide"[:MAX_LABEL]
+    shelf = Shelf(sname, label, f"project:{sname}", got["about"] or label, called=True)
+    _set([*SHELVES, shelf])
+    _save(root)
+    return shelf, got["notes"]
+
+
 def shelf_of(reach: str | None) -> Shelf | None:
     """The shelf a reach label holds (None for a reach that is not a shelf, as a session's own)."""
     return next((s for s in SHELVES if s.reach == reach), None)

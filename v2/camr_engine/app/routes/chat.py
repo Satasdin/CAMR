@@ -290,6 +290,31 @@ class Talk:
                     self._open()
         return {"changed": got, **self.state()}
 
+    def install_curated(self, names: list[str]) -> dict:
+        """Put curated shelves in memory: each a called shelf, read only when the agent calls it, its rules kept with
+        the "curated" tag so the fact check never counts them as told. A shelf already filled is left as it is."""
+        changed = self.change_shelves(lambda root: [shelf_list.add_curated(root, n)[0].name for n in names])
+        notes = {c["name"]: c["notes"] for c in shelf_list.curated()}
+        today = dt.date.today()
+        kept = {}
+        with self.lock:
+            session = self._open()
+
+            def fill():
+                for n in names:
+                    shelf = BY_NAME[f"curated-{n}"[:20]]
+                    m = session.memory(session._reach(shelf.reach))
+                    if m.rooms.moments:
+                        kept[shelf.name] = 0
+                        continue
+                    for text in notes[n]:
+                        m.remember(f"[{today.isoformat()}] {text}", 0, date=today, tags=["curated"])
+                    m.save()
+                    kept[shelf.name] = len(notes[n])
+
+            self.run(fill)
+        return {"installed": changed["changed"], "kept": kept, **self.state()}
+
     def close(self) -> None:
         with self.lock:
             if self.session is not None:
@@ -573,7 +598,9 @@ class Talk:
             kept = 0
             for i in np.argsort(-sims)[:TOLD_SCAN]:
                 moment = m.rooms.moments[int(i)]
-                if source_of(m, int(i)) in ("model", "web") or OLD_MODEL_NOTE.match(moment.text):
+                src = source_of(m, int(i))
+                # a curated shelf's rule is read when its shelf is called, never as a fact the person told
+                if src in ("model", "web") or (src == "curated" and only is None) or OLD_MODEL_NOTE.match(moment.text):
                     continue
                 scored.append((float(sims[i]), moment.text))
                 kept += 1
@@ -959,7 +986,8 @@ class Talk:
                 m = next((mem for rr, mem in session.memories.items() if rr.label == sh.reach), None)
             size = _size(m, None) if m is not None else {}
             shelves.append({"name": sh.name, "label": sh.label, "reach": sh.reach, "rooms": size.get("rooms", 0),
-                            "moments": size.get("moments", 0), "room_bytes": size.get("room_bytes", 0)})
+                            "moments": size.get("moments", 0), "room_bytes": size.get("room_bytes", 0),
+                            "called": sh.called})
         return {"ready": session is not None, "can": self.can(), "why": self.error, "measuring": _measuring(),
                 "shelf": self.shelf, "shelves": shelves,
                 "on": self.on, "session": self.name, "reads": list(self.reads), "writes": self.writes,
@@ -1177,6 +1205,22 @@ def register(routes: Routes) -> None:
             raise Refused(404, "no such shelf") from None
         except ValueError as e:
             raise Refused(400, str(e)) from None
+
+    @routes.get("/api/shelves/curated")
+    def shelf_curated(req: Request) -> dict:
+        return {"curated": [{k: c[k] for k in ("name", "label", "about")} | {"notes": len(c["notes"])}
+                            for c in shelf_list.curated()]}
+
+    @routes.post("/api/shelves/curated")
+    def shelf_curated_add(req: Request) -> dict:
+        names = req.body.get("names")
+        have = {c["name"] for c in shelf_list.curated()}
+        if not isinstance(names, list) or not names or not all(isinstance(n, str) and n in have for n in names):
+            raise Refused(400, f"names is a list of curated shelves: {', '.join(sorted(have))}")
+        t = talk(req.app)
+        if t is None:
+            raise Refused(409, "this app has no memory to keep shelves in")
+        return t.install_curated(list(dict.fromkeys(names)))
 
     @routes.post("/api/shelves/add")
     def shelf_add(req: Request) -> dict:

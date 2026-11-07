@@ -193,6 +193,27 @@ def register(routes: Routes) -> None:
                                   max_steps=req.int("max_steps", None, lo=1, hi=60), context=context)
         return run.snapshot()
 
+    @routes.post("/api/code/build")
+    @guard
+    def build_start(req: Request) -> dict:
+        """Plan a request, then build it part by part (camr_engine.agentic.plan)."""
+        memory = req.body.get("memory")
+        lead = desk(req.app).build(req.str("thread", limit=40), req.str("request", limit=4000),
+                                   memory=memory if isinstance(memory, bool) else None)
+        return lead.snapshot()
+
+    @routes.get("/api/code/build")
+    @guard
+    def build_get(req: Request) -> dict:
+        return desk(req.app).lead(req.str("id", limit=80)).snapshot()
+
+    @routes.post("/api/code/build/stop")
+    @guard
+    def build_stop(req: Request) -> dict:
+        lead = desk(req.app).lead(req.str("id", limit=80))
+        lead.stop()
+        return lead.snapshot()
+
     @routes.post("/api/code/answer")
     @guard
     def answer(req: Request) -> dict:
@@ -239,7 +260,8 @@ def register(routes: Routes) -> None:
         skills = req.body.get("skills")
         return desk(req.app).configure(memory=memory if isinstance(memory, bool) else None,
                                        persona=req.str("persona", limit=40) or None,
-                                       skills=skills if isinstance(skills, str) else None)
+                                       skills=skills if isinstance(skills, str) else None,
+                                       window_tokens=req.int("window_tokens", None, lo=0, hi=262_144))
 
     @routes.post("/api/code/persona")
     @guard

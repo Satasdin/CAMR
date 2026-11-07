@@ -333,8 +333,12 @@ class Toolbox:
         self.workspace.read(path, 1, 1, limit=100)  # inside the workspace, and there; else it raises Outside
         ask = self.gate.ask("browser", {"path": path}, owner=owner, label=label, cancel=cancel, wait_s=BROWSER_WAIT_S)
         ms = (time.perf_counter() - t) * 1000
+        from camr_engine.agentic.lint import page_problems
+
+        static = page_problems(self.workspace.root, path)  # seen in the files themselves, without running them
         if ask.decision != "answered":
-            return Done("open_page", args, False, "No browser reported on the page, so it was not tested.", ms)
+            return Done("open_page", args, False, "No browser reported on the page, so it was not tested." + (
+                " In its files:\n- " + "\n- ".join(static) if static else ""), ms)
         try:
             got = json.loads(ask.reply or "{}")
         except ValueError:
@@ -344,6 +348,7 @@ class Toolbox:
                           ("brokenImages", "images that did not load"), ("failed", "checks that failed")):
             if got.get(key):
                 problems.append(f"{what}: {json.dumps(got[key], ensure_ascii=False)[:600]}")
+        problems += static
         if got.get("runsOff"):
             problems.append("the page runs off the side of a phone screen")
         if got.get("hasScripts") and not got.get("scriptsRan"):

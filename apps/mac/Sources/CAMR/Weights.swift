@@ -298,6 +298,7 @@ struct ShelfInfo {
     let reach: String
     var notes: Int
     var moments = 0
+    var called = false  // a curated shelf: read only when the agent calls it
 }
 
 /// The weights view, for a projector: the memory's shelves on top (each tile a share of a shelf's rooms), what this

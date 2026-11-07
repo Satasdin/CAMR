@@ -31,6 +31,19 @@ struct AgentState {
     var waited = 0  // times it stopped for the person
     var madeUp: [String] = []  // still on the page, and not in memory
     var untested: String?  // its last test failed, or it changed after it
+    var plan: [PlanPart] = []  // the lead's parts, in order
+    var decisions: [(by: String, text: String)] = []
+}
+
+/// One part of the lead's plan: a specialist's piece of the build.
+struct PlanPart: Identifiable, Equatable {
+    let id: String
+    let role: String
+    let title: String
+    let state: String  // todo, running, done, failed, stopped
+    let by: String  // who decided it is needed: "rule" or "model"
+    let seconds: Double
+    let note: String
 }
 
 extension ChatModel {
@@ -79,8 +92,9 @@ extension ChatModel {
         PreviewCenter.shared.files = files
     }
 
-    /// A request to make files, in the one conversation: the agent works in a project folder of its own, each step a
-    /// line on its card, asking when it needs to, and its page opens beside the chat.
+    /// A request to make files, in the one conversation. The engine's lead plans it first (a brief, then the files),
+    /// then hands each part to a specialist: each part's run shows on the card under its role, asking when it needs to,
+    /// and the page opens beside the chat.
     func runAgent(_ task: String) async {
         turns.append(Turn(who: .you, text: task))
         var t = Turn(who: .camr, text: "", memory: memoryOn, pending: true, model: engine.model.name)
@@ -97,71 +111,71 @@ extension ChatModel {
             if agentThread == nil {
                 agentThread = try await engine.post("/api/code/thread", ["title": String(task.prefix(60))]).str("id")
             }
-            let earlier = turns[..<max(0, k - 1)].suffix(6).compactMap { x -> String? in
-                x.who == .you ? "The user said: \(x.text.prefix(600))" : nil
-            }
-            let r = try await engine.post("/api/code/run", [
-                "thread": agentThread ?? "", "task": task, "memory": mode != "off", "window": true, "max_steps": 30,
-                "context": Array(earlier)])
-            guard let id = r.str("id") else { throw Engine.Failure(message: "no run") }
-            agentRun = id
-            defer { agentRun = nil }
+            let b = try await engine.post("/api/code/build", ["thread": agentThread ?? "", "request": task,
+                                                              "memory": mode != "off"])
+            guard let lid = b.str("id") else { throw Engine.Failure(message: "no plan") }
+            agentLead = lid
+            defer { agentLead = nil; agentRun = nil }
+            var state = b.str("state") ?? ""
+            var following: String?
             var turnsSeen = 0
             var liveNext = 0
             var handled = Set<String>()
-            var state = r.str("state") ?? ""
-            while !["done", "stopped", "failed"].contains(state) {
-                let s = try await engine.get("/api/code/run?id=\(id)&turns=\(turnsSeen)")
+            var lastRun: String?
+            var lastPart = ""
+            while true {
+                let s = try await engine.get("/api/code/build?id=\(lid)")
                 state = s.str("state") ?? state
-                turnsSeen = Int(s.num("turns_total") ?? Double(turnsSeen))
-                takeAgent(s, at: k)
-                if let live = try? await engine.get("/api/code/live?id=\(id)&from=\(liveNext)") {
-                    for e in live.list("events") {
-                        switch e.str("kind") {
-                        case "room": weights.roomEvent(e)
-                        case "token":
-                            weights.token(e)
-                            turns[k].agent?.writing += e.str("text") ?? ""
-                        default: break
-                        }
-                    }
-                    liveNext = Int(live.num("next") ?? Double(liveNext))
+                takePlan(s, at: k)
+                if let part = turns[k].agent?.plan.first(where: { $0.state == "running" }), part.id != lastPart {
+                    lastPart = part.id
+                    turns[k].agent?.steps.append(AgentStep(icon: "person.crop.circle", title: "\(part.role): \(part.title)",
+                                                           detail: part.by == "model" ? "planned by the model" : "planned by a rule"))
                 }
-                var asks: [AgentAsk] = []
-                for w in s.list("waiting") {
-                    guard let wid = w.str("id"), let kind = w.str("kind") else { continue }
-                    if kind == "browser" {
-                        if handled.insert(wid).inserted { await testPage(w, id: wid, at: k) }
-                    } else if kind == "question" {
-                        let q = w.dict("what")?.str("question") ?? ""
-                        if handled.insert(wid).inserted { turns[k].agent?.waited += 1 }
-                        asks.append(AgentAsk(id: wid, kind: kind, text: q))
-                        if !scriptAnswers.isEmpty {
-                            let a = scriptAnswers.removeFirst().replacingOccurrences(of: "SKIP", with: "")
-                            await answer(wid, a)
-                            asks.removeLast()
+                if let rid = s.str("run"), rid != following {
+                    following = rid
+                    lastRun = rid
+                    agentRun = rid
+                    turnsSeen = 1  // its first turn is its task, which the plan already shows
+                    liveNext = 0
+                }
+                if let rid = following {
+                    if let r = try? await engine.get("/api/code/run?id=\(rid)&turns=\(turnsSeen)") {
+                        turnsSeen = Int(r.num("turns_total") ?? Double(turnsSeen))
+                        takeAgent(r, at: k)
+                        await handleWaiting(r, at: k, handled: &handled)
+                    }
+                    if let live = try? await engine.get("/api/code/live?id=\(rid)&from=\(liveNext)") {
+                        for e in live.list("events") {
+                            switch e.str("kind") {
+                            case "room": weights.roomEvent(e)
+                            case "token":
+                                weights.token(e)
+                                turns[k].agent?.writing += e.str("text") ?? ""
+                            default: break
+                            }
                         }
-                    } else {
-                        if handled.insert(wid).inserted { turns[k].agent?.waited += 1 }
-                        asks.append(AgentAsk(id: wid, kind: kind, text: ChatModel.exactly(kind, w.dict("what"))))
+                        liveNext = Int(live.num("next") ?? Double(liveNext))
                     }
                 }
-                turns[k].agent?.asks = asks
                 turns[k].agent?.state = state
                 turns[k].agent?.seconds = Date().timeIntervalSince(started)
                 bump(k)
-                if !["done", "stopped", "failed"].contains(state) { try await Task.sleep(nanoseconds: 300_000_000) }
+                if ["done", "stopped", "failed"].contains(state) { break }
+                try await Task.sleep(nanoseconds: 300_000_000)
             }
-            let end = try await engine.get("/api/code/run?id=\(id)&turns=\(turnsSeen)")
-            takeAgent(end, at: k)
-            turns[k].agent?.madeUp = (end["made_up"] as? [String]) ?? []
-            if (end["made"] as? Bool) == false { turns[k].failed = true }
-            if let last = end.dict("last_test"), (last["ok"] as? Bool) == false || (last["stale"] as? Bool) == true {
-                turns[k].agent?.untested = (last["stale"] as? Bool) == true ? "The page changed after its last test, so this version is untested."
-                    : (last.str("text") ?? "The page's last test found problems.")
+            if let rid = lastRun, let end = try? await engine.get("/api/code/run?id=\(rid)&turns=\(turnsSeen)") {
+                takeAgent(end, at: k)
+                turns[k].agent?.madeUp = (end["made_up"] as? [String]) ?? []
+                if let last = end.dict("last_test"), (last["ok"] as? Bool) == false || (last["stale"] as? Bool) == true {
+                    turns[k].agent?.untested = (last["stale"] as? Bool) == true ? "The page changed after its last test, so this version is untested."
+                        : ChatModel.problemsOnly(last.str("text") ?? "The page's last test found problems.")
+                }
             }
+            let end = try await engine.get("/api/code/build?id=\(lid)")
+            takePlan(end, at: k)
             turns[k].text = end.str("answer") ?? end.str("error") ?? ""
-            turns[k].failed = state == "failed"
+            turns[k].failed = state == "failed" || (end.str("answer") ?? "").hasPrefix("Nothing was made")
             turns[k].agent?.state = state
             turns[k].agent?.asks = []
             turns[k].agent?.writing = ""
@@ -176,6 +190,46 @@ extension ChatModel {
         bump(k)
         weights.finish(nil)
         await refresh()
+    }
+
+    /// What a part's run waits for: a page test (answered here, by the app's own browser) or the person.
+    private func handleWaiting(_ s: [String: Any], at k: Int, handled: inout Set<String>) async {
+        var asks: [AgentAsk] = []
+        for w in s.list("waiting") {
+            guard let wid = w.str("id"), let kind = w.str("kind") else { continue }
+            if kind == "browser" {
+                if handled.insert(wid).inserted { await testPage(w, id: wid, at: k) }
+            } else if kind == "question" {
+                let q = w.dict("what")?.str("question") ?? ""
+                if handled.insert(wid).inserted { turns[k].agent?.waited += 1 }
+                asks.append(AgentAsk(id: wid, kind: kind, text: q))
+                if !scriptAnswers.isEmpty {
+                    let a = scriptAnswers.removeFirst().replacingOccurrences(of: "SKIP", with: "")
+                    await answer(wid, a)
+                    asks.removeLast()
+                }
+            } else {
+                if handled.insert(wid).inserted { turns[k].agent?.waited += 1 }
+                asks.append(AgentAsk(id: wid, kind: kind, text: ChatModel.exactly(kind, w.dict("what"))))
+            }
+        }
+        turns[k].agent?.asks = asks
+    }
+
+    /// A test report without the page's source that follows it (the model reads that; the person does not need it).
+    static func problemsOnly(_ text: String) -> String {
+        let cut = text.components(separatedBy: "\n\nThe page as it is now").first ?? text
+        return cut.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func takePlan(_ s: [String: Any], at k: Int) {
+        guard let plan = s.dict("plan") else { return }
+        turns[k].agent?.plan = plan.list("parts").map { p in
+            PlanPart(id: p.str("id") ?? "", role: p.str("name") ?? "", title: p.str("title") ?? "",
+                     state: p.str("state") ?? "todo", by: p.str("by") ?? "rule", seconds: p.num("seconds") ?? 0,
+                     note: p.str("note") ?? "")
+        }
+        turns[k].agent?.decisions = plan.list("decisions").map { ($0.str("by") ?? "rule", $0.str("text") ?? "") }
     }
 
     private func bump(_ k: Int) { turns[k].agentRev += 1 }
@@ -249,7 +303,7 @@ extension ChatModel {
         case "read_file": return AgentStep(icon: "doc.text", title: "Read \(path)", ok: ok)
         case "list_files": return AgentStep(icon: "folder", title: "Looked at the folder", ok: ok)
         case "search": return AgentStep(icon: "magnifyingglass", title: "Searched for \(args.str("pattern") ?? "")", ok: ok)
-        case "open_page": return AgentStep(icon: "safari", title: "Tested \(path) in the browser", detail: text, ok: ok)
+        case "open_page": return AgentStep(icon: "safari", title: "Tested \(path) in the browser", detail: ChatModel.problemsOnly(text), ok: ok)
         case "ask_user": return AgentStep(icon: "questionmark.bubble", title: "Asked: \(args.str("question") ?? "")", detail: text, ok: ok)
         case "read_shelf":
             return AgentStep(icon: "books.vertical", title: "Called the \(args.str("shelf") ?? "") shelf", detail: args.str("question") ?? "", ok: ok, memory: true)
@@ -266,6 +320,7 @@ struct AgentCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            if !agent.plan.isEmpty { PlanList(parts: agent.plan) }
             ForEach(agent.steps) { s in row(s) }
             if pending, !agent.writing.isEmpty {
                 Text(tail).font(Theme.mono(11)).foregroundStyle(Theme.dim).lineLimit(4)
@@ -311,6 +366,50 @@ struct AgentCard: View {
                 Text(s.detail).font(Theme.mono(10)).foregroundStyle(s.ok ? Theme.faint : Theme.error.opacity(0.8))
                     .lineLimit(6).padding(.leading, 20)
             }
+        }
+    }
+}
+
+/// The lead's plan as a checklist: each part, the specialist doing it, and who decided it is needed. Amber is the
+/// model (it decided the part, or is writing it now); white is a rule written in the engine; red only a failure.
+struct PlanList: View {
+    let parts: [PlanPart]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("PLAN").font(Theme.mono(10, .semibold)).foregroundStyle(Theme.faint)
+            ForEach(parts) { p in
+                HStack(spacing: 8) {
+                    Image(systemName: icon(p.state)).font(.system(size: 11))
+                        .foregroundStyle(p.state == "failed" ? Theme.error : p.state == "running" ? Theme.model : p.state == "done" ? Theme.text : Theme.faint)
+                        .frame(width: 14)
+                    Text(p.role.uppercased()).font(Theme.mono(9, .semibold))
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Capsule().stroke(p.state == "running" ? Theme.model : Theme.line))
+                        .foregroundStyle(p.state == "running" ? Theme.model : Theme.dim)
+                    Text(p.title).font(Theme.mono(11)).foregroundStyle(p.state == "todo" ? Theme.dim : Theme.text)
+                    Spacer(minLength: 4)
+                    if p.seconds > 0 { Text(String(format: "%.0f s", p.seconds)).font(Theme.mono(10)).foregroundStyle(Theme.faint) }
+                    Text(p.by == "model" ? "model" : "rule").font(Theme.mono(9))
+                        .foregroundStyle(p.by == "model" ? Theme.model.opacity(0.8) : Theme.faint)
+                }
+                if !p.note.isEmpty {
+                    Text(p.note).font(Theme.mono(10)).foregroundStyle(p.state == "failed" ? Theme.error.opacity(0.8) : Theme.faint)
+                        .padding(.leading, 22)
+                }
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35)))
+    }
+
+    private func icon(_ state: String) -> String {
+        switch state {
+        case "done": return "checkmark.circle.fill"
+        case "running": return "circle.dotted"
+        case "failed": return "xmark.circle"
+        case "stopped": return "stop.circle"
+        default: return "circle"
         }
     }
 }

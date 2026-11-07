@@ -116,6 +116,7 @@ final class ChatModel: ObservableObject {
     var projectRoot: String?  // the folder the agent works in, for this conversation
     var agentThread: String?
     var agentRun: String?
+    var agentLead: String?  // the plan being built, when there is one
     var scriptAnswers: [String] = []  // a rehearsal's answers to the agent's questions, in order
     static weak var current: ChatModel?
 
@@ -139,7 +140,8 @@ final class ChatModel: ObservableObject {
         reach = reaches.first(where: { ($0["written"] as? Bool) == true })?.str("label") ?? ""
         shelves = st.list("shelves").map {
             ShelfInfo(name: $0.str("name") ?? "", label: $0.str("label") ?? "", reach: $0.str("reach") ?? "",
-                      notes: Int($0.num("rooms") ?? 0), moments: Int($0.num("moments") ?? 0))
+                      notes: Int($0.num("rooms") ?? 0), moments: Int($0.num("moments") ?? 0),
+                      called: ($0["called"] as? Bool) ?? false)
         }
         weights.shelves = shelves
         if let sh = st.str("shelf") { shelf = sh }
@@ -186,6 +188,22 @@ final class ChatModel: ObservableObject {
             await refresh()
         } catch {
             shelfNotice = error.localizedDescription
+        }
+    }
+
+    /// The curated shelves shipped with the engine: name, label, what it covers and how many rules it holds.
+    @Published var curated: [(name: String, label: String, about: String, notes: Int)] = []
+
+    func loadCurated() async {
+        guard curated.isEmpty, let got = try? await engine.get("/api/shelves/curated") else { return }
+        curated = got.list("curated").map { ($0.str("name") ?? "", $0.str("label") ?? "", $0.str("about") ?? "",
+                                             Int($0.num("notes") ?? 0)) }
+    }
+
+    func addCurated(_ names: [String]) async {
+        await changeShelves("/api/shelves/curated", ["names": names]) { _ in
+            names.count == 1 ? "Curated shelf added. The agent reads it only when it calls it; it never counts as something you told."
+                : "\(names.count) curated shelves added. The agent reads one only when it calls it; none counts as something you told."
         }
     }
 
@@ -350,6 +368,10 @@ final class ChatModel: ObservableObject {
 
     /// Stop the answer being written: the model ends at its next word.
     func stop() async {
+        if let lead = agentLead {
+            _ = try? await engine.post("/api/code/build/stop", ["id": lead])
+            return
+        }
         if let run = agentRun {
             _ = try? await engine.post("/api/code/stop", ["run": run])
             return

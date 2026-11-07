@@ -86,6 +86,11 @@ enum Script {
                     world.chat.draft = ""
                 case "shelf-add":
                     await world.chat.addShelf(arg)
+                case "shelf-curated":  // shelf-curated: coding, design   (or: all)
+                    await world.chat.loadCurated()
+                    let names = arg == "all" ? world.chat.curated.map(\.name)
+                        : arg.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                    await world.chat.addCurated(names)
                 case "shelf-remove":
                     await world.chat.removeShelf(arg)
                 case "shelf-empty":
