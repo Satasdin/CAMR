@@ -808,3 +808,25 @@ but maths: fact 4 to 8, changed 3 to 10, two-hop 1 to 6, code 5 to 8, lookalike 
 every contender before their footer. These runs shared the GPU with the seed-1 16M run's telling; first-word times
 here are for comparing desks with each other only. Next: the same desks on seed 3 (a world never tuned on), then
 the held-out runs.
+
+## E-64: a reading adapter, on for the question and the answer only (pre-registered, 7 Nov, before training)
+
+A LoRA adapter for the 4B (`camr_engine.adapter`, trained by `scripts/train_adapter.py`) that is switched off while
+memory is read (the header, the room's notes, the moments re-read as words) and on from the date line and the
+question to the last written word. The saved notes on the SSD stay the plain model's, so no memory is told again.
+Training reads each example the same way: the context with the adapter off, the question and the answer with it on,
+the loss on the answer only.
+
+Data: 976 examples from three new practice worlds (seeds 5, 6, 7) at 256K, 1M and 2M, families fact, changed,
+two-hop, lookalike and never-told; seed 7 at 2M (165 examples) is held back to check on. The context is the word
+finder's closest moments with the needed ones put in, so it learns reading, not finding. The targets are the
+generator's own answers; no model wrote them, and nothing from Claude. Never seed 1 (the locked exam), seed 3 (the
+finder's check world) or the harder set built on it. Maths, code and pages are not trained on; they are still
+asked, so any harm there shows.
+
+Rule, written before training: the adapter is adopted only if, on the seed-2 256K and 1M memories, the current desk
+(`finder=words`, 6 closest) with the adapter answers at least 2 more questions right, summed over both cuts, than
+the same desk without it (E-61's rule). Whatever the result, the seed-1 runs report it as a labelled experiment
+beside the plain model, and the harder set says whether it carries over to new wording. The practice worlds come
+from the same generator as the locked exam, so a gain there is partly practice on the exam's form; the harder set
+(new wording, new families) is the check on that.

@@ -508,6 +508,7 @@ class Engine(Contender):
                 "desk_tokens": self.settings.get("desk_tokens"), "desk_order": self.settings.get("desk_order", "date"),
                 "reread": self.settings.get("reread", "all"),
                 "finder": self.settings.get("finder", FINDER),
+                "adapter": self.settings.get("adapter"),
                 "kv_shape": None if shape is None else {"layers": shape.layers, "kv_heads": shape.kv_heads,
                                                         "head_dim": shape.head_dim, "rope_base": shape.rope_base,
                                                         "token_bytes": shape.token_bytes},
@@ -974,7 +975,8 @@ def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
 
 # Settings a run can give the engine's desk (``--desk``) or RAG (``--rag``), by their short names.
 DESK_KEYS = {"rooms": ("desk_rooms", int), "tokens": ("desk_tokens", int), "order": ("desk_order", str),
-             "closest": ("closest", int), "reread": ("reread", str), "finder": ("finder", str)}
+             "closest": ("closest", int), "reread": ("reread", str), "finder": ("finder", str),
+             "adapter": ("adapter", str)}
 RAG_KEYS = {"k": ("k", int), "budget": ("budget", int), "order": ("order", str), "finder": ("finder", str)}
 
 

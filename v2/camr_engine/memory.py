@@ -108,8 +108,11 @@ class Memory:
                  core: Core | bool = False, core_tokens: int = CORE_TOKENS, tiers: Tiers | None = None,
                  metrics: Meter | bool = False, bits: int = BITS, desk_rooms: int = DESK_ROOMS,
                  desk_tokens: int | None = None, desk_order: str = "date", reread: str = "all",
-                 finder: str = FINDER):
+                 finder: str = FINDER, adapter: str | None = None):
         self.reader, self.embedder, self.closest, self.allowance = reader, embedder, closest, allowance
+        self.adapter: dict | None = None  # a trained add-on for the question and answer (camr_engine.adapter)
+        if adapter:
+            self.use_adapter(adapter)
         if finder not in FINDERS:
             raise ValueError(f"finder is one of {FINDERS}, not {finder!r}")
         self.finder = finder
@@ -154,6 +157,37 @@ class Memory:
                                                    add_generation_prompt=True, enable_thinking=False, tokenize=False)
         head, rest = text.split(_SLOT)
         return self.reader.tok.encode(head), self.reader.tok.encode(rest)
+
+    def use_adapter(self, name: str | None) -> None:
+        """Answer with the adapter in ``name`` (on for the question and the answer only), or with none. The plain
+        model reads the memory either way, so the notes on the SSD stay the ones it wrote."""
+        if not name or name in ("off", "none"):
+            self.adapter = None
+            return
+        from camr_engine import adapter
+
+        model = self.reader.model
+        held = getattr(model, "_camr_adapter", None)
+        if held is None or held.get("name") != str(name):
+            if held is not None:
+                raise ValueError(f"the reader already holds adapter {held.get('name')!r}; load {name!r} in a new one")
+            model._camr_adapter = adapter.load(model, name)
+        self.adapter = model._camr_adapter
+
+    def _generate(self, said: list[int], todo: list[int], cache, max_tokens: int | None):
+        """Write the answer. With an adapter: the memory read as words goes in with it off, then the rest (the date
+        line and the question) and every written word with it on. The wait counts both."""
+        if self.adapter is None or not said or todo[:len(said)] != said:
+            return self.reader.generate(todo, cache=cache, max_tokens=max_tokens)
+        from camr_engine import adapter
+
+        t = time.perf_counter()
+        adapter.prefill(self.reader.model, said, cache)
+        spent = time.perf_counter() - t
+        with adapter.on(self.reader.model):
+            reply = self.reader.generate(todo[len(said):], cache=cache, max_tokens=max_tokens)
+        reply.ttft_s += spent
+        return reply
 
     def ids(self, text: str) -> list[int]:
         return self.reader.tok.encode(text + "\n")
@@ -340,11 +374,12 @@ class Memory:
         cache, todo, reused = rec.desk, ids, 0
         if kind == "agent":  # an agent's next step starts as its last did: what was read already is kept, not re-read
             cache, todo, reused = self._step_reuse(rec, ids)
+        said_now = said if kind != "agent" else []  # an agent's steps reuse their cache, so they read without it
         if self.log:
             with Looks(self.reader, self.notebook.p, spans, self.notebook.p + desk + len(ids), cache) as looks:
-                reply = self.reader.generate(todo, cache=cache, max_tokens=max_tokens)
+                reply = self._generate(said_now, todo, cache, max_tokens)
         else:
-            reply = self.reader.generate(todo, cache=cache, max_tokens=max_tokens)
+            reply = self._generate(said_now, todo, cache, max_tokens)
         reply.prompt_tokens = len(ids)  # what the step reads, whether it was read now or kept from the last step
         reply.reused_tokens = reused
         if kind == "agent":

@@ -95,8 +95,10 @@ def configure(engine: Engine, settings: dict) -> None:
     from camr_engine.memory import FINDER
 
     m.finder = settings.get("finder", FINDER)
+    m.use_adapter(settings.get("adapter"))  # off unless the variant names one (camr_engine.adapter)
     engine.settings = {**{k: v for k, v in engine.settings.items()
-                          if k not in ("desk_rooms", "desk_tokens", "desk_order", "closest", "reread", "finder")},
+                          if k not in ("desk_rooms", "desk_tokens", "desk_order", "closest", "reread", "finder",
+                                       "adapter")},
                        **settings}
 
 
