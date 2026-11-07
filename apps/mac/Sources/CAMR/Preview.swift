@@ -14,6 +14,12 @@ final class PreviewCenter: ObservableObject {
     @Published var scripts = false {  // a page's own scripts: off until the person turns them on, for this exact page
         didSet { if scripts != oldValue { loads += 1 } }
     }
+    /// The agent may run its own page's scripts when it tests the page (to press its buttons and see what changes).
+    /// Off unless the person turns it on; it stays as they set it, as it is about the agent, not one page.
+    @Published var agentScripts = UserDefaults.standard.bool(forKey: "camr.agentScripts") {
+        didSet { UserDefaults.standard.set(agentScripts, forKey: "camr.agentScripts") }
+    }
+    var agentScriptsThisRun = false  // set by a test script: for this launch only, never saved in the person's settings
     @Published var tab = "page"
     @Published var files: [String] = []
     @Published var openPath: String?
@@ -80,6 +86,10 @@ struct PreviewDock: View {
                             .toggleStyle(.checkbox).font(Theme.mono(10))
                             .foregroundStyle(center.scripts ? Theme.error : Theme.dim)
                             .help("Run this version of the page's scripts. They are off because a model wrote them, and they go off again when the page changes. With them on, the page is limited but not fully sealed off from the network.")
+                        Toggle("Agent tests", isOn: $center.agentScripts)
+                            .toggleStyle(.checkbox).font(Theme.mono(10))
+                            .foregroundStyle(center.agentScripts ? Theme.error : Theme.dim)
+                            .help("Let the agent run its page's scripts when it tests the page, so it can press the buttons and see whether anything changes. The page runs shut in, as with Scripts: limited, but not fully sealed off from the network.")
                         Button { center.loads += 1 } label: { Image(systemName: "arrow.clockwise") }
                             .buttonStyle(.plain).foregroundStyle(Theme.dim).help("Load the page again")
                     }

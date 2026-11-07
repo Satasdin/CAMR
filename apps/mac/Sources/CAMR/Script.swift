@@ -112,6 +112,8 @@ enum Script {
                     if let dir = env["CAMR_SNAPSHOT_DIR"] {
                         await PreviewCenter.shared.savePage(to: URL(fileURLWithPath: dir).appendingPathComponent("\(arg).png"))
                     }
+                case "agent-scripts":
+                    PreviewCenter.shared.agentScriptsThisRun = arg == "on"
                 case "preview-scripts":
                     PreviewCenter.shared.scripts = arg == "on"
                 case "preview-inspect":

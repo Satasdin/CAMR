@@ -257,7 +257,7 @@ extension ChatModel {
         let center = PreviewCenter.shared
         await refreshFiles(at: k)
         center.show(code: page.page, project: turns[k].agent?.project)
-        var got = await tester.test(html: page.page, scripts: center.scripts)
+        var got = await tester.test(html: page.page, scripts: center.scripts || center.agentScripts || center.agentScriptsThisRun)
         if !page.missing.isEmpty {
             got["errors"] = ((got["errors"] as? [String]) ?? []) + page.missing.map { "the page links to \($0), which does not exist" }
         }
