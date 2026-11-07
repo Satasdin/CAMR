@@ -8,6 +8,7 @@
 //   rocket.getObjectByName('flame').visible = true;   // the engine's flame, hidden until lift-off
 //
 // Everything made here is disposed with disposeAll(THREE, rocket) when the page is done with it.
+// For the detailed rocket from a model file, use loadRocket (below): same size, same 'flame', same group.
 
 export function makeRocket(THREE, { body = 0xf2f2f2, accent = 0xd8452b, glass = 0x6fc3ff, scale = 1 } = {}) {
   const group = new THREE.Group();
@@ -68,6 +69,44 @@ export function makeRocket(THREE, { body = 0xf2f2f2, accent = 0xd8452b, glass = 
   group.add(flame);
 
   group.scale.setScalar(scale);
+  return group;
+}
+
+// loadRocket: the detailed rocket (vendor/models/rocket/rocket.glb, a three-stage launcher with an escape tower,
+// plain white and black, no markings). It returns a group at once, holding makeRocket's rocket, and puts the model
+// in its place when the file has loaded, so the page can place, turn and lift the group straight away and is never
+// left without a rocket. Same size as makeRocket (about 4 units tall, base at y = 0), with a 'flame' child too.
+//
+//   import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+//   const rocket = loadRocket(THREE, GLTFLoader, { onLoad: render });   // render once more when the model is in
+//   scene.add(rocket);
+export function loadRocket(THREE, GLTFLoader, { url = 'vendor/models/rocket/rocket.glb', height = 4, onLoad } = {}) {
+  const group = new THREE.Group();
+  group.name = 'rocket';
+  const stand = makeRocket(THREE);
+  stand.name = 'stand-in';
+  group.add(stand);
+  new GLTFLoader().load(url, (gltf) => {
+    const model = gltf.scene;
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const s = height / size.y;
+    model.scale.setScalar(s);
+    const c = box.getCenter(new THREE.Vector3());
+    model.position.set(-c.x * s, -box.min.y * s, -c.z * s);   // centred, its base on y = 0
+    model.name = 'model';
+    const width = Math.max(size.x, size.z) * s;
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffa23a, transparent: true, opacity: 0.9 });
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(width * 0.32, height * 0.4, 24), flameMat);
+    flame.rotation.x = Math.PI;
+    flame.position.y = -height * 0.2;
+    flame.name = 'flame';
+    flame.visible = stand.getObjectByName('flame').visible;   // a lift-off already under way keeps its flame
+    group.remove(stand);
+    disposeAll(THREE, stand);
+    group.add(model, flame);
+    if (onLoad) onLoad(group);
+  }, undefined, () => {});   // no model: the stand-in stays
   return group;
 }
 

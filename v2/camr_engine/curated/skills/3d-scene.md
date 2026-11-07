@@ -10,7 +10,7 @@ the vendored files only:
 ```js
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { makeRocket, makePad, makeStars, disposeAll } from './vendor/camr-rocket.js';
+import { loadRocket, makePad, makeStars, disposeAll } from './vendor/camr-rocket.js';
 
 const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canvas = document.getElementById('scene');
@@ -25,7 +25,7 @@ const sun = new THREE.DirectionalLight(0xffffff, 2.2);
 sun.position.set(4, 8, 6);
 scene.add(sun);
 
-const rocket = makeRocket(THREE, { accent: 0xff6a3d });   // always there, no file needed
+const rocket = loadRocket(THREE, GLTFLoader, { onLoad: () => render() });   // the detailed rocket; never missing
 scene.add(rocket, makePad(THREE), makeStars(THREE));
 
 function render() { renderer.render(scene, camera); }
@@ -64,8 +64,11 @@ window.addEventListener('pagehide', () => {
 - The canvas fills the screen behind the text: in the CSS, `#scene { position: fixed; inset: 0; width: 100%;
   height: 100%; z-index: 1; pointer-events: none; }`, and the content above it with `position: relative; z-index: 2`.
 - Always light the scene (a hemisphere light and a directional light): MeshStandardMaterial is black without light.
-- `makeRocket(THREE)` is about 4 units tall with its base at y = 0; `rocket.getObjectByName('flame').visible = true`
-  shows its flame at lift-off.
+- `loadRocket(THREE, GLTFLoader)` is the detailed rocket (a three-stage launcher, white and black, no markings),
+  about 4 units tall and slim, its base at y = 0. It returns the group at once: move, turn and lift the group, never
+  its children (the model replaces a stand-in when it loads). `rocket.getObjectByName('flame').visible = true`
+  shows its flame at lift-off (look the flame up when you need it, not once at the start). `makeRocket(THREE)` is a
+  simpler rocket from shapes, for a cartoon look.
 - Models: `vendor/models/space-kit/` holds rocket_baseA, rocket_fuelA, rocket_sidesA, rocket_finsA, rocket_topA,
   platform_large and satelliteDish (.glb). Load with GLTFLoader and a relative path; never a URL.
 - Keep it light: one renderer, at most a few thousand stars, no shadows. The page must keep 50 frames a second.

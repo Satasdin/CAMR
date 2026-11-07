@@ -11,6 +11,7 @@ from the source except the choice of files.
 | three | `three/addons/loaders/GLTFLoader.js`, `three/addons/utils/BufferGeometryUtils.js`, `three/addons/utils/SkeletonUtils.js` (the loader's two imports) | same tarball, `examples/jsm/` | 0.187.0 | 119,861 + 39,153 + 11,535 B | MIT |
 | gsap | `gsap/gsap.min.js`, `gsap/ScrollTrigger.min.js` (UMD builds: `window.gsap`, `window.ScrollTrigger`) | npm `gsap` tarball (`npm pack gsap`), `dist/` | 3.15.1 | 73,357 + 44,683 B | GreenSock Standard "no charge" licence, https://gsap.com/standard-license (`gsap/LICENSE.md`) |
 | models | `models/space-kit/rocket_baseA.glb`, `rocket_fuelA.glb`, `rocket_sidesA.glb`, `rocket_finsA.glb`, `rocket_topA.glb` (a rocket in five stacking parts), `platform_large.glb` (a launch pad), `satelliteDish.glb` | Kenney "Space Kit" 2.0, https://kenney.nl/assets/space-kit (`kenney_space-kit.zip`, `Models/GLTF format/`) | 2.0 (27 Aug 2020) | 87,368 B for the seven | CC0 1.0 (`models/space-kit/License.txt`) |
+| rocket model | `models/rocket/rocket.glb` (a three-stage launcher with its escape tower), `models/rocket/SOURCE.md` | NASA 3D Resources "Saturn V" (https://science.nasa.gov/3d-resources/saturn-v/), its four textures (the "USA" lettering and flags) taken out by `v2/scripts/vendor_model.py` | 14 Apr 2025 | 831,500 B | NASA 3D Resources: free and without copyright; credit NASA/Michael D. Carbajal; no NASA insignia (`models/rocket/SOURCE.md`) |
 | rocket | `camr-rocket.js`: `makeRocket`, `makePad`, `makeStars`, `disposeAll` from three.js shapes (LatheGeometry body, cone, fins), so a page always has a rocket even without a model | written for CAMR | 1 | about 5 KB | MIT, as CAMR |
 
 Downloaded archives (SHA-256): `three-0.187.0.tgz` ff540832ded0cfe919764d24a3d88f3e2a05f23303f876423e4f893841e90728,
@@ -29,6 +30,6 @@ d5d7cdf2635ed5a43a9187deaf409b6f47484e402321128341d3c3698e9ef4d9.
 ```
 
 In `motion.js`: `import * as THREE from 'three';`, `import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';`,
-`import { makeRocket } from './vendor/camr-rocket.js';`, and `gsap` and `ScrollTrigger` as globals.
+`import { loadRocket } from './vendor/camr-rocket.js';` (then `loadRocket(THREE, GLTFLoader, { onLoad: render })`),, and `gsap` and `ScrollTrigger` as globals.
 
-Total on disk: about 2.4 MB, of which three.js is 2.3 MB.
+Total on disk: about 3.2 MB, of which three.js is 2.3 MB and the rocket model 0.8 MB.

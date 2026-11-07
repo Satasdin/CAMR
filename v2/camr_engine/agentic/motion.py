@@ -22,7 +22,7 @@ VENDOR = Path(__file__).resolve().parent / "vendor"
 KITS = {
     "three": ["three/three.module.js", "three/three.core.js", "three/LICENSE", "three/addons/loaders/GLTFLoader.js",
               "three/addons/utils/BufferGeometryUtils.js", "three/addons/utils/SkeletonUtils.js"],
-    "rocket": ["camr-rocket.js"],
+    "rocket": ["camr-rocket.js", "models/rocket/rocket.glb", "models/rocket/SOURCE.md"],
     "models": [f"models/space-kit/{m}.glb" for m in ("rocket_baseA", "rocket_fuelA", "rocket_sidesA", "rocket_finsA",
                                                       "rocket_topA", "platform_large", "satelliteDish")]
               + ["models/space-kit/License.txt"],
@@ -104,8 +104,10 @@ def catalog(kits: list[str]) -> str:
     """The vendored files a project has, one line each, for the architect and the motion part."""
     about = {"three": "three.js 0.187 as an ES module: import * as THREE from 'three' (through the import map); "
                       "GLTFLoader from 'three/addons/loaders/GLTFLoader.js'",
-             "rocket": "vendor/camr-rocket.js: makeRocket(THREE), makePad(THREE), makeStars(THREE), "
-                       "disposeAll(THREE, group): a rocket from shapes, no model file needed",
+             "rocket": "vendor/camr-rocket.js: loadRocket(THREE, GLTFLoader, {onLoad}) (the detailed rocket, "
+                       "vendor/models/rocket/rocket.glb: a three-stage launcher, white and black, no markings; it "
+                       "returns the group at once and puts the model in when it loads), makeRocket(THREE) (a simple "
+                       "rocket from shapes), makePad(THREE), makeStars(THREE), disposeAll(THREE, group)",
              "models": "vendor/models/space-kit/*.glb (CC0, Kenney): rocket_baseA, rocket_fuelA, rocket_sidesA, "
                        "rocket_finsA, rocket_topA, platform_large (a launch pad), satelliteDish",
              "gsap": "GSAP 3.15 and ScrollTrigger as globals: vendor/gsap/gsap.min.js, vendor/gsap/ScrollTrigger.min.js"}

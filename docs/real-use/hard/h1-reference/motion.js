@@ -2,7 +2,7 @@
 // the rocket stands on its pad, drawn once; nothing moves; every section is shown as it ends up.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { makeRocket, makePad, makeStars, disposeAll } from './vendor/camr-rocket.js';
+import { loadRocket, makePad, makeStars, disposeAll } from './vendor/camr-rocket.js';
 
 const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -38,7 +38,7 @@ scene.add(sun);
 
 const rig = new THREE.Group();  // the rocket and its pad, to the right of the text on a wide screen
 scene.add(rig);
-const rocket = makeRocket(THREE, { accent: 0xff6a3d });
+const rocket = loadRocket(THREE, GLTFLoader, { onLoad: () => { if (calm) render(); } });  // the detailed rocket
 const pad = makePad(THREE);
 const stars = makeStars(THREE, { count: 1200 });
 rig.add(rocket, pad);
