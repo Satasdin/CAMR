@@ -275,13 +275,22 @@ class Run:
         return not done.ok  # problems go back to the model; a clean page ends the run with the answer it gave
 
     def made_up_now(self) -> tuple[str, ...]:
-        """What the page's latest test found that memory does not hold, unless the page has changed since."""
+        """What the page's latest test found that memory does not hold. A later change does not clear it: only another
+        test can, which ``last_test`` says is still owed."""
         for name, _, done in reversed(self.history):
-            if done.wrote is not None:
-                return ()
             if name == "open_page":
                 return done.made_up
         return ()
+
+    def last_test(self) -> dict | None:
+        """How the page's latest test went, and whether the page has changed since (``stale``). None with no page."""
+        stale = False
+        for name, _, done in reversed(self.history):
+            if name == "open_page":
+                return {"ok": done.ok, "text": done.text[:800], "stale": stale}
+            if done.wrote is not None and done.wrote.path.lower().endswith((".html", ".htm", ".css", ".js")):
+                stale = True
+        return {"ok": False, "text": "The page was never tested.", "stale": True} if stale else None
 
     def _ask_about(self, step: int) -> bool:
         """An answer with made-up facts still on the page. A small model says it will ask, in words, and stops; so the
@@ -302,7 +311,8 @@ class Run:
         if said and self.brain.memory_on:
             try:
                 with self.model_lock:
-                    self.brain.keep(f"{self.label}: in place of {fact}, the user said: {said}", source="user")
+                    # only the person's own words are kept as theirs: never the value the model made up
+                    self.brain.keep(f"{self.label}: asked for the {_fact_kind(fact)}, the user said: {said}", source="user")
             except Exception as e:  # noqa: BLE001 (the answer still reaches the model)
                 self._turn({"kind": "error", "text": f"not kept in memory: {type(e).__name__}: {e}"[:300]})
         tell = (f"Replace {fact} on the page with {said}, using edit_file." if said else
@@ -495,8 +505,17 @@ class Run:
                     "trace": list(self.trace),
                     "term": self.term[start:], "term_next": self.term_dropped + len(self.term),
                     "term_cut": self.term_cut, "wrote": list(self.wrote), "kept": self.kept,
-                    "made_up": list(self.made_up_now()),
+                    "made_up": list(self.made_up_now()), "last_test": self.last_test(),
                     "waiting": self.gate.waiting(self.id)}
+
+
+def _fact_kind(fact: str) -> str:
+    """What sort of fact this is, in words, without repeating it."""
+    from camr_engine.grounding import facts_in
+
+    found = facts_in(fact)
+    names = {"money": "price", "phone": "phone number", "email": "e-mail address", "time": "time"}
+    return names.get(found[0].kind, "detail") if found else "detail"
 
 
 def _shorten(text: str, limit: int) -> str:

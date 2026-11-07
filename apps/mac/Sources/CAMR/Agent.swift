@@ -30,6 +30,7 @@ struct AgentState {
     var lastRead = 0  // tokens the model read for its latest step
     var waited = 0  // times it stopped for the person
     var madeUp: [String] = []  // still on the page, and not in memory
+    var untested: String?  // its last test failed, or it changed after it
 }
 
 extension ChatModel {
@@ -142,8 +143,7 @@ extension ChatModel {
                         }
                     } else {
                         if handled.insert(wid).inserted { turns[k].agent?.waited += 1 }
-                        let what = w.dict("what")
-                        asks.append(AgentAsk(id: wid, kind: kind, text: what?.str("command") ?? what?.str("tool") ?? kind))
+                        asks.append(AgentAsk(id: wid, kind: kind, text: ChatModel.exactly(kind, w.dict("what"))))
                     }
                 }
                 turns[k].agent?.asks = asks
@@ -155,6 +155,10 @@ extension ChatModel {
             let end = try await engine.get("/api/code/run?id=\(id)&turns=\(turnsSeen)")
             takeAgent(end, at: k)
             turns[k].agent?.madeUp = (end["made_up"] as? [String]) ?? []
+            if let last = end.dict("last_test"), (last["ok"] as? Bool) == false || (last["stale"] as? Bool) == true {
+                turns[k].agent?.untested = (last["stale"] as? Bool) == true ? "The page changed after its last test, so this version is untested."
+                    : (last.str("text") ?? "The page's last test found problems.")
+            }
             turns[k].text = end.str("answer") ?? end.str("error") ?? ""
             turns[k].failed = state == "failed"
             turns[k].agent?.state = state
@@ -174,6 +178,20 @@ extension ChatModel {
     }
 
     private func bump(_ k: Int) { turns[k].agentRev += 1 }
+
+    /// What will run, in full, as the person must see it to allow it. Empty for anything this window cannot show, which
+    /// is then only ever denied.
+    static func exactly(_ kind: String, _ what: [String: Any]?) -> String {
+        guard let what else { return "" }
+        if kind == "shell", let c = what.str("command") {
+            return c + "\n\nin " + (what.str("cwd") ?? "the project folder")
+        }
+        if kind == "mcp", let server = what.str("server"), let tool = what.str("tool") {
+            let args = what["arguments"].flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.prettyPrinted, .sortedKeys]) }
+            return "\(server) · \(tool)\n" + (args.map { String(decoding: $0, as: UTF8.self) } ?? "{}")
+        }
+        return ""
+    }
 
     private func testPage(_ w: [String: Any], id: String, at k: Int) async {
         let path = w.dict("what")?.str("path") ?? "index.html"
@@ -254,6 +272,10 @@ struct AgentCard: View {
                     .padding(8).background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.5)))
             }
             ForEach(agent.asks) { a in AskRow(ask: a) }
+            if let u = agent.untested, !pending {
+                Label(u, systemImage: "exclamationmark.triangle").font(Theme.mono(11, .semibold)).foregroundStyle(Theme.error)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if !agent.madeUp.isEmpty {
                 Label("Not finished. Still on the page and not in your memory: " + agent.madeUp.joined(separator: " · "),
                       systemImage: "exclamationmark.triangle")
@@ -307,10 +329,13 @@ struct AskRow: View {
                     Button("Leave it out") { send("") }.buttonStyle(.plain).foregroundStyle(Theme.dim).font(Theme.mono(11))
                 }
             } else {
-                Text("Run this command?").font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
+                Text(ask.kind == "shell" ? "Run this command?" : ask.kind == "mcp" ? "Let this tool run with these arguments?"
+                     : "The agent wants to do something this window cannot show.")
+                    .font(Theme.mono(11, .semibold)).foregroundStyle(Theme.model)
                 Text(ask.text).font(Theme.mono(12)).foregroundStyle(Theme.text).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack {
-                    Button("Allow") { decide(true) }.buttonStyle(Pill(color: Theme.model))
+                    if !ask.text.isEmpty { Button("Allow") { decide(true) }.buttonStyle(Pill(color: Theme.model)) }
                     Button("Deny") { decide(false) }.buttonStyle(.plain).foregroundStyle(Theme.dim).font(Theme.mono(11))
                 }
             }

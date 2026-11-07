@@ -315,6 +315,11 @@ class Toolbox:
                 problems.append(f"{what}: {json.dumps(got[key], ensure_ascii=False)[:600]}")
         if got.get("runsOff"):
             problems.append("the page runs off the side of a phone screen")
+        if got.get("hasScripts") and not got.get("scriptsRan"):
+            problems.append("its scripts did not run, as the person has not turned them on, so what they do is untested: "
+                            "say so in your answer")
+        if got.get("truncated"):
+            problems.append("the page is long, and only its first part was checked")
         text = str(got.get("text") or "")
         if not text.strip():
             problems.append("the page shows no text")

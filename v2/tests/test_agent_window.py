@@ -218,7 +218,8 @@ def test_a_made_up_fact_is_asked_about_kept_as_told_and_sent_back(box):
     names = [n for n, _, _ in run.history]
     assert names == ["write_file", "open_page", "ask_user", "write_file", "open_page"]
     assert "0733 222 111" in run.history[2][2].text and "Replace 999" in run.history[2][2].text
-    assert brain.kept == [("make the page: in place of 999, the user said: 0733 222 111", "user")]
+    assert brain.kept == [("make the page: asked for the detail, the user said: 0733 222 111", "user")]
+    assert "999" not in brain.kept[0][0]  # what the model made up never goes in as the person's words
     assert run.made_up_now() == () and run.state == "done"
 
 
@@ -231,3 +232,39 @@ def test_a_run_that_cannot_clear_a_made_up_fact_says_so(box):
     t.join()
     assert run.state == "done" and run.made_up_now() == ("999",)
     assert run.snapshot()["made_up"] == ["999"]
+
+
+def test_a_change_after_a_failed_test_does_not_clear_the_verdict(box):
+    tools, gate = box
+    tools.fact_check = lambda text: ["999"]
+    from camr_engine.agentic.tools import Done
+    from camr_engine.agentic.loop import Run
+    from camr_engine.agentic.personas import BUILT_IN
+
+    run = Run("r", "t", brain=_Brain([]), tools=tools, persona=BUILT_IN[0], gate=gate, keep=False)
+    run.history.append(("open_page", {}, Done("open_page", {}, False, "bad", 0.0, made_up=("999",))))
+    wrote = tools.workspace.write("index.html", "changed")
+    run.history.append(("write_file", {}, Done("write_file", {}, True, "made", 0.0, wrote=wrote)))
+    assert run.made_up_now() == ("999",)
+    assert run.last_test()["stale"] is True
+
+
+def test_a_page_never_tested_is_not_called_clean(box):
+    tools, gate = box
+    from camr_engine.agentic.tools import Done
+    from camr_engine.agentic.loop import Run
+    from camr_engine.agentic.personas import BUILT_IN
+
+    run = Run("r", "t", brain=_Brain([]), tools=tools, persona=BUILT_IN[0], gate=gate, keep=False)
+    assert run.last_test() is None
+    wrote = tools.workspace.write("index.html", "x")
+    run.history.append(("write_file", {}, Done("write_file", {}, True, "made", 0.0, wrote=wrote)))
+    assert run.last_test()["ok"] is False
+
+
+def test_scripts_that_did_not_run_are_reported_as_untested(box):
+    tools, gate = box
+    t = later(gate, "browser", lambda w: gate.answer(w["id"], json.dumps({"text": "x", "hasScripts": True, "scriptsRan": False})))
+    done = tools.run("open_page", {"path": "index.html"}, owner="r")
+    t.join()
+    assert "untested" in done.text

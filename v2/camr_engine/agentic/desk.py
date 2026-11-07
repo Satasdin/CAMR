@@ -408,7 +408,7 @@ class Desk:
                 except Exception:  # noqa: BLE001 (the fix is still told to the next run)
                     return
                 try:
-                    b.keep(note, to="project", source="user")
+                    b.keep(note, to="project")  # it quotes the agent's old text too, so it is not kept as the person's own words
                 except Exception:  # noqa: BLE001
                     pass
                 finally:

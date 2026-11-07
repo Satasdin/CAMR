@@ -11,7 +11,7 @@ final class PreviewCenter: ObservableObject {
     @Published var phone = false
     @Published var loads = 0
     @Published var problems: [String] = []
-    @Published var scripts = false {  // a page's own scripts: off until the person turns them on for this project
+    @Published var scripts = false {  // a page's own scripts: off until the person turns them on, for this exact page
         didSet { if scripts != oldValue { loads += 1 } }
     }
     @Published var tab = "page"
@@ -25,7 +25,7 @@ final class PreviewCenter: ObservableObject {
     var hasScripts: Bool { code?.range(of: "<script", options: .caseInsensitive) != nil }
 
     func show(code: String, project: String? = nil) {
-        if project == nil || project != self.project { scripts = false }
+        if code != self.code { scripts = false }  // agreeing to run one page is not agreeing to run the next
         self.project = project
         self.code = code
         problems = []
@@ -53,7 +53,7 @@ final class PreviewCenter: ObservableObject {
 
     func inspect() async -> String {
         guard let web else { return "{\"error\":\"no page open\"}" }
-        return (try? await web.evaluateJavaScript(PageTester.report) as? String) ?? "{}"
+        return (try? await web.evaluateJavaScript(PageTester.report, contentWorld: .defaultClient) as? String) ?? "{}"
     }
 }
 
@@ -79,7 +79,7 @@ struct PreviewDock: View {
                         Toggle("Scripts", isOn: $center.scripts)
                             .toggleStyle(.checkbox).font(Theme.mono(10))
                             .foregroundStyle(center.scripts ? Theme.error : Theme.dim)
-                            .help("Run this project's scripts, here and in the agent's own tests. They are off because a model wrote them. With them on, the page is limited but not fully sealed off from the network.")
+                            .help("Run this version of the page's scripts. They are off because a model wrote them, and they go off again when the page changes. With them on, the page is limited but not fully sealed off from the network.")
                         Button { center.loads += 1 } label: { Image(systemName: "arrow.clockwise") }
                             .buttonStyle(.plain).foregroundStyle(Theme.dim).help("Load the page again")
                     }
@@ -294,6 +294,8 @@ struct PageView: NSViewRepresentable {
 final class PageTester {
     static let report = """
     JSON.stringify({title: document.title, text: (document.body ? document.body.innerText.slice(0, 8000) : ''),
+      truncated: !!document.body && document.body.innerText.length > 8000,
+      hasScripts: document.scripts.length > 0,
       width: window.innerWidth, runsOff: document.documentElement.scrollWidth > window.innerWidth + 1,
       brokenImages: [...document.images].filter(i => i.complete && !i.naturalWidth).map(i => i.getAttribute('src')).slice(0, 8),
       deadLinks: [...document.querySelectorAll('a[href^="#"]')].filter(a => a.getAttribute('href').length > 1 && !document.getElementById(a.getAttribute('href').slice(1))).map(a => a.getAttribute('href')).slice(0, 8)})
@@ -314,7 +316,8 @@ final class PageTester {
         for _ in 0..<80 where !done { try? await Task.sleep(nanoseconds: 100_000_000) }
         try? await Task.sleep(nanoseconds: 800_000_000)  // the page's own start-up
         var out: [String: Any] = ["loaded": done, "scriptsRan": scripts]
-        if let s = try? await web.evaluateJavaScript(PageTester.report) as? String, let d = s.data(using: .utf8),
+        // in a world of its own, so a page's scripts cannot replace what the report uses to read the page
+        if let s = try? await web.evaluateJavaScript(PageTester.report, contentWorld: .defaultClient) as? String, let d = s.data(using: .utf8),
            let got = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
             out.merge(got) { a, _ in a }
         }
