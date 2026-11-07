@@ -6,8 +6,8 @@ from camr_engine.documents import parse, title_of, to_docx, to_html
 
 
 def test_markdown_becomes_blocks():
-    b = parse("# T\n\nA **b** para\nwrapped.\n\n- x\n- y\n\n1. one\n2. two\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---\n")
-    assert [x.kind for x in b] == ["h1", "p", "ul", "ol", "table", "break"]
+    b = parse("# T\n\nA **b** para\nwrapped.\n\n- x\n- y\n\n1. one\n2. two\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---\n\nEnd.\n")
+    assert [x.kind for x in b] == ["h1", "p", "ul", "ol", "table", "break", "p"]
     assert b[1].text == "A **b** para wrapped." and b[4].rows == [["a", "b"], ["1", "2"]] and title_of(b) == "T"
 
 
@@ -29,3 +29,9 @@ def test_the_word_file_is_valid_and_escaped(tmp_path):
         for name in z.namelist():
             if name.endswith(".xml") or name.endswith(".rels"):
                 xml.dom.minidom.parseString(z.read(name))  # every part is well-formed XML
+
+
+def test_colour_codes_empty_headings_and_trailing_breaks_are_left_out():
+    b = parse("# Price list\n\n## Prices\n\n- Massage: KES 3,000\n\n## Colors\n\n- Navy: #1b2a4a\n- Teal: #7cc4c0\n\n"
+              "Our colours are navy #1b2a4a.\n\n---\n")
+    assert [x.kind for x in b] == ["h1", "h2", "ul"] and b[2].items == ["Massage: KES 3,000"]

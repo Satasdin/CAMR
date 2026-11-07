@@ -83,7 +83,38 @@ def parse(md: str) -> list[Block]:
             para.append(s)
         i += 1
     flush()
-    return out
+    return clean(out)
+
+
+HEX = re.compile(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b")
+
+
+def clean(blocks: list[Block]) -> list[Block]:
+    """What a reader should not get, taken out by rule: colour codes (design data a small model copies from the brief
+    into the text), a heading left with nothing under it, and page breaks at the end."""
+    out: list[Block] = []
+    for b in blocks:
+        if b.kind in ("ul", "ol"):
+            items = [x for x in b.items if not HEX.search(x)]
+            if items:
+                out.append(Block(b.kind, items=items))
+        elif b.kind == "p" and HEX.search(b.text) and re.search(r"colou?rs?", b.text, re.I):
+            continue
+        else:
+            out.append(b)
+    while True:  # until nothing more goes: taking out one empty heading can leave another
+        while out and out[-1].kind == "break":
+            out.pop()
+        kept = []
+        for i, b in enumerate(out):
+            nxt = out[i + 1] if i + 1 < len(out) else None
+            if b.kind in ("h2", "h3") and (nxt is None or nxt.kind in ("h1", "h2", "break")
+                                          or (nxt.kind == "h3" and b.kind == "h3")):
+                continue  # a heading with nothing under it
+            kept.append(b)
+        if len(kept) == len(out):
+            return kept
+        out = kept
 
 
 def title_of(blocks: list[Block], fallback: str = "Document") -> str:

@@ -24,39 +24,58 @@ enum DocumentPDF {
         guard done else { return false }
         // WebKit's print loop ran away once (a 15.7 GB file): the page is cut into A4-shaped slices instead, each made
         // with WebKit's own PDF, at most MAX_PAGES of them, and the file is checked before it is kept
-        let pageH: CGFloat = 1123, pageW: CGFloat = 794  // A4 at 96 dpi
-        web.frame = NSRect(x: 0, y: 0, width: pageW, height: pageH)
-        // where each block ends (headings, paragraphs, list items, table rows), so no page cuts through one
+        // The page is drawn once as one tall PDF, then laid onto real A4 pages here, each page a slice of it cut
+        // between blocks (never through a line). WebKit's own print loop ran away once (a 15.7 GB file), so it is
+        // not used; at most MAX_PAGES pages and MAX_BYTES are written, and only when whole.
+        let pageW: CGFloat = 794  // the page's width in CSS pixels
+        let a4 = CGRect(x: 0, y: 0, width: 595.28, height: 841.89), margin: CGFloat = 42
+        let scale = (a4.width - 2 * margin) / pageW
+        let sliceH = (a4.height - 2 * margin) / scale  // CSS pixels of the page on one A4 page
+        web.frame = NSRect(x: 0, y: 0, width: pageW, height: 1123)
         let js = "JSON.stringify({h: document.documentElement.scrollHeight, ends: [...document.querySelectorAll('h1,h2,h3,p,li,tr,.page-break')].map(e => [Math.ceil(e.getBoundingClientRect().bottom + window.scrollY), e.classList.contains('page-break') ? 1 : 0])})"
-        var height = pageH
+        var height: CGFloat = 1123
         var ends: [(CGFloat, Bool)] = []
         if let s = try? await web.evaluateJavaScript(js, contentWorld: .defaultClient) as? String,
            let d = s.data(using: .utf8), let got = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
-            height = CGFloat((got["h"] as? Double) ?? Double(pageH))
+            height = CGFloat((got["h"] as? Double) ?? 1123)
             ends = ((got["ends"] as? [[Double]]) ?? []).map { (CGFloat($0[0]), $0.count > 1 && $0[1] == 1) }
         }
+        height = min(height, sliceH * CGFloat(MAX_PAGES))
         var cuts: [CGFloat] = [0]
         while let top = cuts.last, top + 1 < height, cuts.count <= MAX_PAGES {
-            let limit = top + pageH - 60  // a margin at the foot of each page
+            let limit = top + sliceH
+            if limit >= height, !ends.contains(where: { $0.1 && $0.0 > top + 1 && $0.0 < height - 1 }) {
+                cuts.append(height)  // the rest fits on this page
+                break
+            }
             let forced = ends.first { $0.1 && $0.0 > top + 1 && $0.0 <= limit }?.0
             let fit = ends.filter { $0.0 > top + 1 && $0.0 <= limit }.map(\.0).max()
-            cuts.append(forced ?? fit ?? min(limit, height))
+            cuts.append(min(forced ?? fit ?? limit, height))
         }
-        if cuts.last! < height { cuts.append(height) }
-        web.frame = NSRect(x: 0, y: 0, width: pageW, height: max(height, pageH))
-        let doc = PDFDocument()
+        web.frame = NSRect(x: 0, y: 0, width: pageW, height: height)
+        guard let tall = try? await web.pdf(configuration: WKPDFConfiguration()),
+              let provider = CGDataProvider(data: tall as CFData), let src = CGPDFDocument(provider)?.page(at: 1)
+        else { return false }
+        let srcH = src.getBoxRect(.mediaBox).height
+        let data = NSMutableData()
+        var box = a4
+        guard let consumer = CGDataConsumer(data: data as CFMutableData),
+              let ctx = CGContext(consumer: consumer, mediaBox: &box, nil) else { return false }
         for (a, b) in zip(cuts, cuts.dropFirst()).prefix(MAX_PAGES) {
-            let c = WKPDFConfiguration()
-            c.rect = CGRect(x: 0, y: a, width: pageW, height: b - a)
-            guard let data = try? await web.pdf(configuration: c), let one = PDFDocument(data: data),
-                  let page = one.page(at: 0) else { return false }
-            // every page A4-shaped at this width, the slice at its top below a small margin; printing scales it to A4
-            let h = page.bounds(for: .mediaBox).height
-            page.setBounds(CGRect(x: 0, y: h + 48 - pageH, width: pageW, height: pageH), for: .mediaBox)
-            doc.insert(page, at: doc.pageCount)
+            ctx.beginPDFPage(nil)
+            ctx.saveGState()
+            let shown = (b - a) * scale
+            ctx.clip(to: CGRect(x: margin, y: a4.height - margin - shown, width: a4.width - 2 * margin, height: shown))
+            // the slice's top (a pixels down the page, so srcH - a up from the PDF's bottom) at the page's top margin
+            ctx.translateBy(x: margin, y: a4.height - margin - (srcH - a) * scale)
+            ctx.scaleBy(x: scale, y: scale)
+            ctx.drawPDFPage(src)
+            ctx.restoreGState()
+            ctx.endPDFPage()
         }
-        guard let data = doc.dataRepresentation(), data.count < MAX_BYTES else { return false }
-        return (try? data.write(to: out, options: .atomic)) != nil
+        ctx.closePDF()
+        guard data.length < MAX_BYTES else { return false }
+        return data.write(to: out, atomically: true)
     }
 
 }
