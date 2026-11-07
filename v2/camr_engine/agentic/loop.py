@@ -171,9 +171,10 @@ class Run:
             args = {"question": f"What {what}? Leave it empty and I'll leave it off the page."}
             self._set("waiting")
             done = tools.run("ask_user", args, owner=self.id, label=self.label, cancel=self.cancel)
-            self.history.append(("ask_user", args, done))
             self._turn({"kind": "call", "step": 0, **done.show()})
             said = done.text.removeprefix("The user answered: ") if done.text.startswith("The user answered: ") else ""
+            if not said:  # a plain instruction: "the user did not answer" only leads a small model to give up
+                self.told_notes.append(f"Leave off the page what {what}: the user did not give it.")
             if said and self.brain.memory_on:
                 note = f"{self.label}: {what}: {said}"
                 self.told_notes.append(note)
