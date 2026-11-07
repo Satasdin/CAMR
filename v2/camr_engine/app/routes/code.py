@@ -73,7 +73,11 @@ def on_session_thread(app, make):
 def agent_brains(local, chosen):
     """The agent's model: the app's own (with CAMR memory) unless another is chosen, by CAMR_AGENT_MODEL or the
     desk's setting: "claude-..." (the side-by-side, metered and capped) or "ollama:<name>" (a model in Ollama, its
-    facts as text, as Ollama lets nothing reach the model's KV cache)."""
+    facts as text, as Ollama lets nothing reach the model's KV cache). None when the app has no model of its own (a
+    read-only fixture): then nothing runs."""
+    if local is None:
+        return None
+
     def make(spec):
         other = os.environ.get("CAMR_AGENT_MODEL") or chosen() or ""
         if other.startswith("claude-"):
