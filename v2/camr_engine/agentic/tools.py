@@ -17,6 +17,7 @@ right-to-left override, which can make text read differently from what runs) are
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 import unicodedata
@@ -36,6 +37,8 @@ OUTPUT_SHOWN = 20_000  # characters of a call's output kept for the page (its st
 DIFF_SHOWN = 200_000  # a written file bigger than this (before or after) is shown without its diff
 BROWSER_WAIT_S = 30.0  # for the app's browser to report on a page
 ANSWER_CHARS = 2000  # of the person's answer to a question
+PAGE_SHOWN = 8000  # a page this size or smaller is shown to the model along with its problems
+REMOVING = re.compile(r"\b(remove|delete|drop|get rid of|take (?:off|out)|replace|rewrite|start over)\b", re.I)
 WINDOW_TOOLS = ("ask_user", "open_page", "read_shelf")  # only with a person and a browser at the other end
 
 
@@ -179,9 +182,12 @@ class Toolbox:
     def __init__(self, workspace: Workspace | None, gate: Gate, *, skills: Skills | None = None,
                  servers: Servers | None = None, allows: Callable[[str], bool] = lambda name: True,
                  window: bool = False, shelf_notes: Callable[[str, str], list[str] | None] | None = None,
-                 fact_check: Callable[[str], list[str]] | None = None):
+                 fact_check: Callable[[str], list[str]] | None = None,
+                 told: Callable[[str], list[str]] | None = None):
         self.workspace, self.gate, self.skills, self.servers, self.allows = workspace, gate, skills, servers, allows
         self.window, self.shelf_notes, self.fact_check = window, shelf_notes, fact_check
+        self.task = ""  # what was asked, so that a removal that was asked for is not refused
+        self.told = told  # what the person told about a request: the notes it may rest on
 
     def specs(self) -> list[dict]:
         """The tool list for the chat template."""
@@ -266,6 +272,12 @@ class Toolbox:
             content = _arg(args, "content")
             if not isinstance(content, str):
                 raise Outside("write_file needs the file's whole text as content")
+            if self.window:
+                lost = self._would_lose(str(_arg(args, "path", "")), content)
+                if lost:
+                    return Done(name, args, False, f"Not written: this would remove {lost} from the page, and the task "
+                                "did not ask for that. Change only what was asked, with edit_file, and keep the rest.",
+                                (time.perf_counter() - t) * 1000)
             w = ws.write(str(_arg(args, "path", "")), content)
             lines = content.count("\n") + (0 if content.endswith("\n") or not content else 1)
             verb = "made" if w.before is None else "replaced"
@@ -280,6 +292,25 @@ class Toolbox:
         return Done(name, args, True, f"changed {w.path}: {old.count(chr(10)) + 1} lines replaced by "
                     f"{new.count(chr(10)) + 1}", (time.perf_counter() - t) * 1000, wrote=w, offset=offset,
                     content=new)
+
+    def _would_lose(self, path: str, content: str) -> str:
+        """What a whole-file rewrite would drop from a page that already works: scripts, buttons, form fields and
+        sections by id. Empty when nothing is lost, the file is new or not a page, or the task asks for a removal."""
+        if not path.lower().endswith((".html", ".htm")) or REMOVING.search(self.task or ""):
+            return ""
+        try:
+            old = (self.workspace.root / path).read_text(errors="ignore")
+        except OSError:
+            return ""
+
+        def parts(html: str) -> dict[str, int]:
+            low = html.lower()
+            return {"its scripts": low.count("<script"), "its buttons": low.count("<button"),
+                    "its form fields": low.count("<input") + low.count("<textarea") + low.count("<select")}
+
+        lost = [k for k, n in parts(old).items() if n and parts(content)[k] < n]
+        lost += [f"the {i} section" for i in re.findall(r'id=["\']([\w-]+)["\']', old) if i not in content]
+        return ", ".join(lost[:6])
 
     def _question(self, args, t, owner, label, cancel, on_wait) -> Done:
         question = " ".join(str(_arg(args, "question", "")).split())[:500]
@@ -327,9 +358,20 @@ class Toolbox:
         if made_up:
             problems.append("on the page but not in memory, so perhaps made up: " + ", ".join(made_up[:12])
                             + ". Remove them, or call ask_user")
+        missing = missing_from(text, self.told(self.task) if self.told is not None else [])
+        if missing:
+            problems.append("told to you, but not on the page: " + ", ".join(missing[:16]) + ". Add them")
         seen = f"The page loads, showing {len(text):,} characters of text."
-        return Done("open_page", args, not problems, seen + (" Problems:\n- " + "\n- ".join(problems) if problems else
-                    " No problems found."), ms, output=json.dumps(got, ensure_ascii=False)[:OUTPUT_SHOWN],
+        report = seen + (" Problems:\n- " + "\n- ".join(problems) if problems else " No problems found.")
+        fixable = [p for p in problems if "did not run" not in p and "first part" not in p]
+        if fixable:  # a small model cannot quote a file it has not got in front of it
+            try:
+                page = (self.workspace.root / path).read_text(errors="ignore")
+            except OSError:
+                page = ""
+            if len(page) <= PAGE_SHOWN:
+                report += f"\n\nThe page as it is now:\n{page}"
+        return Done("open_page", args, not fixable, report, ms, output=json.dumps(got, ensure_ascii=False)[:OUTPUT_SHOWN],
                     made_up=tuple(made_up))
 
     def _shelf(self, args, t) -> Done:
@@ -386,6 +428,22 @@ class Toolbox:
                         (time.perf_counter() - t) * 1000, ask=ask.show())
         got = link.call(ask.what["tool"], ask.what["arguments"])
         return Done(name, args, got["ok"], _clip(got["text"]), (time.perf_counter() - t) * 1000, ask=ask.show())
+
+
+def missing_from(page: str, notes: list[str]) -> list[str]:
+    """Facts in what the person told that a page does not show (prices, phones, e-mails, times, names)."""
+    from camr_engine.grounding import facts_in
+
+    shown = {(f.kind, f.key) for f in facts_in(page)}
+    low = " ".join(page.lower().split())
+    out = []
+    for note in notes:
+        for f in facts_in(note, names=True):
+            gone = f.key not in low if f.kind == "name" else (
+                f.kind in ("money", "phone", "email", "time") and (f.kind, f.key) not in shown)
+            if gone and f.text not in out:
+                out.append(f.text)
+    return out
 
 
 def short(args: dict, limit: int = 160) -> str:

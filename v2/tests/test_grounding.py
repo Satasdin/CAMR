@@ -32,7 +32,11 @@ def test_an_answer_is_checked_for_names_and_numbers_too():
     good = answer_check("Filter coffee costs KES 180 at Kahawa Corner.", [NOTES])
     assert good["invented"] == [] and good["grounded"] == good["checked"] >= 2
     bad = answer_check("The owner is Mary Wanjiku and there are 42 seats.", [NOTES])
-    assert set(bad["invented"]) == {"Mary Wanjiku", "42"}
+    assert bad["invented"] == ["Mary Wanjiku"]  # a plain number may be a right sum: not called made up
+
+
+def test_a_possessive_is_the_same_name():
+    assert answer_check("Kahawa Corner's coffee is KES 180.", [NOTES])["invented"] == []
 
 
 def test_nothing_checkable_passes():

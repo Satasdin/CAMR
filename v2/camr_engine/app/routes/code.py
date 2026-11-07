@@ -95,7 +95,11 @@ def desk(app) -> Desk:
             t = talk(app)
             return t.page_check(text) if t is not None else []
 
-        d.shelf_notes, d.fact_check = shelf_notes, fact_check
+        def told(request: str) -> list[str]:
+            t = talk(app)
+            return t.told_about(request) if t is not None else []
+
+        d.shelf_notes, d.fact_check, d.told = shelf_notes, fact_check, told
         d.shelf_index = lambda: "\n".join(f"- {s.name}: {s.about[:120]}" for s in SHELVES)
         return d
 

@@ -315,14 +315,32 @@ final class PageTester {
         guardian.open(html, in: web)
         for _ in 0..<80 where !done { try? await Task.sleep(nanoseconds: 100_000_000) }
         try? await Task.sleep(nanoseconds: 800_000_000)  // the page's own start-up
-        var out: [String: Any] = ["loaded": done, "scriptsRan": scripts]
+        // read from the source: with scripts off, a page has no script elements to count
+        var out: [String: Any] = ["loaded": done, "scriptsRan": scripts,
+                                  "hasScripts": html.range(of: "<script", options: .caseInsensitive) != nil]
         // in a world of its own, so a page's scripts cannot replace what the report uses to read the page
         if let s = try? await web.evaluateJavaScript(PageTester.report, contentWorld: .defaultClient) as? String, let d = s.data(using: .utf8),
            let got = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
             out.merge(got) { a, _ in a }
+            if scripts { out["failed"] = await clickEverything(web) }
         }
         out["errors"] = errors
         return out
+    }
+}
+
+extension PageTester {
+    /// With scripts allowed, it presses each button, as a person would, and notes any that changes nothing on the page.
+    private func clickEverything(_ web: WKWebView) async -> [String] {
+        let js = """
+        JSON.stringify([...document.querySelectorAll('button')].slice(0, 12).map(b => {
+          const before = document.body.innerText; b.click();
+          return {label: (b.innerText || b.id || 'a button').slice(0, 40), changed: document.body.innerText !== before};
+        }))
+        """
+        guard let s = try? await web.evaluateJavaScript(js, contentWorld: .defaultClient) as? String, let d = s.data(using: .utf8),
+              let rows = try? JSONSerialization.jsonObject(with: d) as? [[String: Any]] else { return [] }
+        return rows.filter { ($0["changed"] as? Bool) == false }.map { "pressing \"\($0.str("label") ?? "a button")\" changed nothing" }
     }
 }
 

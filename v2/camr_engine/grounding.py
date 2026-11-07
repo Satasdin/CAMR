@@ -91,9 +91,10 @@ def facts_in(text: str, *, names: bool = False, numbers: bool = False) -> list[F
             out.setdefault(("number", f.key), f)
     if names:
         for m in NAME.finditer(text):
-            if m.group(0).title() in COMMON_NAMES:
+            name = re.sub(r"['’]s?$", "", m.group(0))  # Kahawa Corner's is Kahawa Corner
+            if name.title() in COMMON_NAMES:
                 continue
-            f = Fact("name", m.group(0), m.group(0).lower())
+            f = Fact("name", name, name.lower())
             out.setdefault(("name", f.key), f)
     return list(out.values())
 
@@ -136,6 +137,7 @@ def invented(written: str, source: str, *, names: bool = False, numbers: bool = 
 def answer_check(answer: str, notes: list[str]) -> dict:
     """An answer from memory against the notes it read: {checked, grounded, invented: [text]}."""
     source = "\n".join(notes)
-    found = facts_in(answer, names=True, numbers=True)
-    bad = invented(answer, source, names=True, numbers=True)
+    # money, phones, times and names; not plain numbers, as a right sum is not in the notes and is not made up
+    found = facts_in(answer, names=True)
+    bad = invented(answer, source, names=True)
     return {"checked": len(found), "grounded": len(found) - len(bad), "invented": [f.text for f in bad]}

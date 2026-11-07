@@ -77,6 +77,16 @@ CODE_NO_NOTES = ("The user's memory holds no notes you can use for this. Do not 
 SEEN = (".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif", ".mp4", ".mov", ".m4v")  # read by the app's own OCR
 
 
+DECLINED = re.compile(r"\s*i (?:do not|don['’]t) know\b", re.I)
+
+
+def named_in_notes(text: str, session, talk_) -> bool:
+    """Whether a question names a person or thing found in the closest notes: if so, "I don't know" is the honest answer."""
+    from camr_engine.assistant import named_in
+
+    return named_in(text, talk_._told(session, text, 5))
+
+
 def _inert(x: str) -> str:
     """Text from a page or a note, so that no "<" or quote in it can close or fake the markers around it."""
     return x.replace("<", "‹").replace(">", "›").replace('"', "'")
@@ -479,6 +489,14 @@ class Talk:
             pipe = _pipe(mode, reply, retrieval_ms=0.0, memory_text=0, notes_tokens=0, notes_bytes=0, read_bytes=0,
                          source=None)
         thought, answer = split_thinking(reply.text)
+        if way == "memory" and mode != "off" and DECLINED.match(answer) and not named_in_notes(text, session, self):
+            # memory has nothing on this and the question names nothing in it: the model may simply know, or work it out
+            ids = chat_ids(reader, SYSTEM, turns, text, thinking=think)
+            reply = reader.generate(ids, max_tokens=most)
+            thought, answer = split_thinking(reply.text)
+            way = "general"
+            pipe = _pipe(mode, reply, retrieval_ms=0.0, memory_text=0, notes_tokens=0, notes_bytes=0, read_bytes=0, source=None)
+            out.update(wait_s=round(float(reply.ttft_s), 4))
         pipe.update(route=way, route_ms=route_ms)
         out["check"] = self._check(session, text, answer, way, grounds, mode, from_memory)
         out.update(intent="chat", route=way, reply=answer, thinking=thought, think=think, mode=mode, pipeline=pipe,
@@ -504,7 +522,7 @@ class Talk:
             found = [f for f in facts_in(answer) if f.kind in kinds]
             bad = [f.text for f in invented(answer, "\n".join(grounds)) if f.kind in kinds]
             return {"checked": len(found), "grounded": len(found) - len(bad), "invented": bad[:12]}
-        return answer_check(answer, self._told(session, text, CHECK_NOTES))
+        return answer_check(answer, [text, *self._told(session, text, CHECK_NOTES)])  # what the person just said counts
 
     def shelf_notes(self, name: str, question: str, k: int = 6) -> list[str] | None:
         """What a shelf holds about a question, for the agent's read_shelf: None for no such shelf."""
@@ -515,6 +533,18 @@ class Talk:
             session = self._open()
             return self.run(lambda: self._told(session, question, k, only=shelf.reach))
 
+    def told_about(self, request: str, k: int = CODE_NOTES) -> list[str]:
+        """What the person told that names something the request names: notes about another project are not its facts."""
+        from camr_engine.assistant import names
+
+        wanted = [n.lower() for n in names(request) if len(n) > 2]
+        with self.lock:
+            session = self._open()
+            notes = self.run(lambda: self._told(session, request, k * 2))
+        if wanted:
+            notes = [n for n in notes if any(w in n.lower() for w in wanted)]
+        return notes[:k]
+
     def page_check(self, text: str) -> list[str]:
         """Facts a person would read on a page (money, phone, e-mail, time) that memory does not hold."""
         from camr_engine.grounding import invented
@@ -522,7 +552,8 @@ class Talk:
         with self.lock:
             session = self._open()
             notes = self.run(lambda: self._told(session, text[:800], 40))
-        return [f.text for f in invented(text, "\n".join(notes)) if f.kind in ("money", "phone", "email", "time")]
+        return [f.text for f in invented(text, "\n".join(notes)) if f.kind in ("money", "phone", "email", "time")
+                and not (f.kind == "money" and f.key == "0")]  # a total before anything is added is not a claim
 
     def _told(self, session, text: str, k: int, only: str | None = None) -> list[str]:
         """The closest notes a fact can be backed by, closest first: what the user told and files they gave. Never what

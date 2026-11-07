@@ -137,7 +137,7 @@ extension ChatModel {
                         if handled.insert(wid).inserted { turns[k].agent?.waited += 1 }
                         asks.append(AgentAsk(id: wid, kind: kind, text: q))
                         if !scriptAnswers.isEmpty {
-                            let a = scriptAnswers.removeFirst()
+                            let a = scriptAnswers.removeFirst().replacingOccurrences(of: "SKIP", with: "")
                             await answer(wid, a)
                             asks.removeLast()
                         }
@@ -155,6 +155,7 @@ extension ChatModel {
             let end = try await engine.get("/api/code/run?id=\(id)&turns=\(turnsSeen)")
             takeAgent(end, at: k)
             turns[k].agent?.madeUp = (end["made_up"] as? [String]) ?? []
+            if (end["made"] as? Bool) == false { turns[k].failed = true }
             if let last = end.dict("last_test"), (last["ok"] as? Bool) == false || (last["stale"] as? Bool) == true {
                 turns[k].agent?.untested = (last["stale"] as? Bool) == true ? "The page changed after its last test, so this version is untested."
                     : (last.str("text") ?? "The page's last test found problems.")

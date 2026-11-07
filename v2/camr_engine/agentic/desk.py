@@ -296,8 +296,10 @@ class Desk:
             notes = self._take_fixes()
             tools = Toolbox(self.workspace, self.gate, skills=self.skills, servers=self.servers, allows=p.allows,
                             window=window, shelf_notes=self.shelf_notes if memory else None,
-                            fact_check=self.fact_check if memory else None)
+                            fact_check=self.fact_check if memory else None,
+                            told=self.told if memory else None)
             notes = [*(context or []), *notes]
+            tools.task = task
             t["count"] = int(t.get("count", len(t.get("runs", [])))) + 1  # runs ever started (the file keeps 20)
             rid = f"{thread}-{t['count']}"
             run = Run(rid, task, brain=brain, tools=tools, persona=p, gate=self.gate, model_lock=self.model_lock,
@@ -307,6 +309,7 @@ class Desk:
             run.thread_id = thread
             if window:  # the band under the chat box sees a few words a second; measuring each one costs time
                 run.watch.layer_every = 8
+                run.keep_request = bool(memory)
             self.runs[rid] = run
             finished = [k for k, r in self.runs.items() if not r.live]
             for k in finished[:max(0, len(self.runs) - MAX_RUNS)]:
@@ -320,6 +323,7 @@ class Desk:
     # what the window's app gives the agent, when it is there: a shelf's notes, the shelves' names, and the fact check
     shelf_notes = None
     fact_check = None
+    told = None
     shelf_index = staticmethod(lambda: "")
 
     def _watch(self, run: Run, turn: dict) -> None:
