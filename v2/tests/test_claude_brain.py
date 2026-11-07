@@ -36,3 +36,52 @@ def test_a_step_goes_through_the_metered_client_and_parses_the_same_way():
     assert max_tokens == 3000 + 8000 and "<tools>" in system
     assert [c.name for c in calls(t.text, known={"write_file"})] == ["write_file"]
     assert (t.prompt_tokens, t.gen_tokens) == (900, 40) and not b.memory_on
+
+
+def test_an_ollama_model_gets_the_same_words_with_thinking_off():
+    from camr_engine.agentic.ollama_brain import OllamaBrain
+
+    sent = []
+
+    def post(body):
+        sent.append(body)
+        return {"message": {"content": '<tool_call>\n{"name": "write_file", "arguments": {"path": "a.html"}}\n</tool_call>'},
+                "prompt_eval_count": 700, "eval_count": 30, "eval_duration": 1_000_000_000}
+
+    b = OllamaBrain("qwen3:4b", post=post)
+    t = b.think(Prompt("You build.", "Task: x", SPEC, ask="x", max_tokens=3000))
+    body = sent[0]
+    assert body["model"] == "qwen3:4b" and body["think"] is False and body["options"]["num_predict"] == 3000
+    assert body["messages"][0]["content"] == system_with_tools("You build.", SPEC)
+    assert [c.name for c in calls(t.text, known={"write_file"})] == ["write_file"]
+    assert (t.prompt_tokens, t.gen_tokens, t.decode_tps, b.label, b.memory_on) == (700, 30, 30.0, "ollama:qwen3:4b", False)
+
+
+def test_the_agents_model_is_chosen_and_checked(tmp_path):
+    from camr_engine.agentic.desk import Busy, Desk
+
+    d = Desk(tmp_path / "code", brains=lambda spec: None)
+    assert d.configure(agent_model="ollama:qwen3:4b")["agent_model"] == "ollama:qwen3:4b"
+    assert d.configure(agent_model="claude-sonnet-5-5")["agent_model"] == "claude-sonnet-5-5"
+    assert d.configure(agent_model="")["agent_model"] is None
+    import pytest
+
+    with pytest.raises(ValueError):
+        d.configure(agent_model="rm -rf /")
+    assert Desk(tmp_path / "code", brains=None).settings["agent_model"] is None
+
+
+def test_the_app_picks_the_agents_model(monkeypatch):
+    from camr_engine.agentic.claude_brain import ClaudeBrain
+    from camr_engine.agentic.ollama_brain import OllamaBrain
+    from camr_engine.app.routes.code import agent_brains
+
+    chosen = {"m": None}
+    make = agent_brains(lambda spec: "local", lambda: chosen["m"])
+    monkeypatch.delenv("CAMR_AGENT_MODEL", raising=False)
+    assert make({}) == "local"
+    chosen["m"] = "ollama:qwen3:1.7b"
+    assert isinstance(make({}), OllamaBrain)
+    monkeypatch.setattr("camr_engine.bench.claude.Claude.__init__", lambda self, *a, **k: None)
+    monkeypatch.setenv("CAMR_AGENT_MODEL", "claude-sonnet-5-5")
+    assert isinstance(make({}), ClaudeBrain)

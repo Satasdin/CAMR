@@ -116,6 +116,7 @@ class Desk:
                 "memory": bool(got.get("memory", True)), "persona": str(got.get("persona") or "coder"),
                 "skills": got.get("skills"),
                 "window_tokens": _window(got.get("window_tokens")),
+                "agent_model": _agent_model(got.get("agent_model")),
                 "fixes": {str(k): [str(x) for x in v][-FIXES:] for k, v in fixes.items() if isinstance(v, list)}}
 
     def _save_settings(self) -> None:
@@ -125,8 +126,19 @@ class Desk:
         os.replace(tmp, self.root / "settings.json")
 
     def configure(self, *, memory: bool | None = None, persona: str | None = None,
-                  skills: str | None = None, window_tokens: int | None = None) -> dict:
+                  skills: str | None = None, window_tokens: int | None = None,
+                  agent_model: str | None = None) -> dict:
         with self.lock:
+            if agent_model is not None:  # "" for the app's own model, with its memory
+                model = _agent_model(agent_model)
+                if model is None and agent_model.strip():
+                    raise ValueError("the agent's model is claude-... , ollama:<name>, or empty for the app's own")
+                if model != self.settings.get("agent_model"):
+                    if any(r.live for r in self.runs.values()) or any(x.live for x in self.leads.values()):
+                        raise Busy("wait for the agent to finish before changing its model")
+                    self.settings["agent_model"] = model
+                    self._close_brains()
+                    self.open.clear()
             if window_tokens is not None:  # 0 for the model's whole window
                 self.settings["window_tokens"] = _window(window_tokens)
             if memory is not None:
@@ -507,7 +519,8 @@ class Desk:
                 "skills": [s.show() for s in self.skills.all()], "skills_dir": str(self.skills.folder),
                 "servers": self.servers.show(), "threads": self.threads(), "live": [r.id for r in live],
                 "waiting": self.gate.waiting(), "can_run": self.can_run(), "used_tools": sorted(self.used_tools),
-                "fixes": list(self.fixes), "window_tokens": self.window_tokens()}
+                "fixes": list(self.fixes), "window_tokens": self.window_tokens(),
+                "agent_model": os.environ.get("CAMR_AGENT_MODEL") or self.settings.get("agent_model")}
 
     def _close_brains(self) -> None:
         for b in self.open.values():
@@ -528,6 +541,14 @@ class Desk:
             th.join(timeout=10)
         self._close_brains()
         self.servers.close()
+
+
+def _agent_model(v) -> str | None:
+    """Another model for the agent: "claude-<model>" or "ollama:<name>", else None (the app's own)."""
+    v = str(v or "").strip()
+    if re.fullmatch(r"claude-[a-z0-9-]{1,40}", v) or re.fullmatch(r"ollama:[A-Za-z0-9._:/-]{1,80}", v):
+        return v
+    return None
 
 
 def _window(v) -> int | None:

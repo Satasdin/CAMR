@@ -191,6 +191,28 @@ final class ChatModel: ObservableObject {
         }
     }
 
+    /// The model the agent builds with: nil for this app's own (with CAMR memory), else "ollama:<name>" or "claude-...".
+    @Published var agentModel: String?
+    @Published var ollamaModels: [String] = []
+
+    func loadAgentModels() async {
+        guard let got = try? await engine.get("/api/code/models") else { return }
+        ollamaModels = got.list("ollama").compactMap { $0.str("name") }
+        agentModel = got.str("chosen")
+    }
+
+    func setAgentModel(_ name: String?) async {
+        do {
+            let got = try await engine.post("/api/code/settings", ["agent_model": name ?? ""])
+            agentModel = got.str("agent_model")
+            shelfNotice = name == nil ? "The agent builds with this app's model and its memory."
+                : name!.hasPrefix("ollama:") ? "The agent builds with \(name!.dropFirst(7)) in Ollama. Ollama lets nothing reach the model's KV cache, so what you told reaches it as text."
+                : "The agent builds with \(name!) through the API, metered against the spending cap."
+        } catch {
+            shelfNotice = error.localizedDescription
+        }
+    }
+
     /// The curated shelves shipped with the engine: name, label, what it covers and how many rules it holds.
     @Published var curated: [(name: String, label: String, about: String, notes: Int)] = []
 

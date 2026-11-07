@@ -70,6 +70,25 @@ def on_session_thread(app, make):
     return made
 
 
+def agent_brains(local, chosen):
+    """The agent's model: the app's own (with CAMR memory) unless another is chosen, by CAMR_AGENT_MODEL or the
+    desk's setting: "claude-..." (the side-by-side, metered and capped) or "ollama:<name>" (a model in Ollama, its
+    facts as text, as Ollama lets nothing reach the model's KV cache)."""
+    def make(spec):
+        other = os.environ.get("CAMR_AGENT_MODEL") or chosen() or ""
+        if other.startswith("claude-"):
+            from camr_engine.agentic.claude_brain import ClaudeBrain
+
+            return ClaudeBrain(other)
+        if other.startswith("ollama:"):
+            from camr_engine.agentic.ollama_brain import OllamaBrain
+
+            return OllamaBrain(other.removeprefix("ollama:"))
+        return local(spec)
+
+    return make
+
+
 def desk(app) -> Desk:
     """The app's one Desk, made on first use. A workspace may neither hold nor sit inside its folder, the app's memory
     or the memory's reaches."""
@@ -82,11 +101,7 @@ def desk(app) -> Desk:
         root = getattr(app, "agentic_root", None) or base / "code"
         keep_out = [Path(memory.path), *(base / k for k in KINDS)] if memory is not None else []
         brains = getattr(app, "brain_factory", None) or on_session_thread(app, engine_brains(app))
-        other = os.environ.get("CAMR_AGENT_MODEL", "")
-        if other.startswith("claude-"):  # the side-by-side (T7): the same agent with Claude writing, metered and capped
-            from camr_engine.agentic.claude_brain import ClaudeBrain
-
-            brains = lambda spec: ClaudeBrain(other)  # noqa: E731
+        brains = agent_brains(brains, lambda: d.settings.get("agent_model"))
         d = Desk(Path(root), brains=brains, model_lock=getattr(app, "lock", None), measuring=active,
                  skills_dir=getattr(app, "skills_dir", None), keep_out=keep_out)
         from camr_engine.app.routes.chat import talk
@@ -268,7 +283,17 @@ def register(routes: Routes) -> None:
         return desk(req.app).configure(memory=memory if isinstance(memory, bool) else None,
                                        persona=req.str("persona", limit=40) or None,
                                        skills=skills if isinstance(skills, str) else None,
-                                       window_tokens=req.int("window_tokens", None, lo=0, hi=262_144))
+                                       window_tokens=req.int("window_tokens", None, lo=0, hi=262_144),
+                                       agent_model=req.body.get("agent_model") if isinstance(
+                                           req.body.get("agent_model"), str) else None)
+
+    @routes.get("/api/code/models")
+    @guard
+    def other_models(req: Request) -> dict:
+        """Models the agent can use besides the app's own: Ollama's, here."""
+        from camr_engine.agentic.ollama_brain import models
+
+        return {"ollama": models(), "chosen": desk(req.app).state().get("agent_model")}
 
     @routes.post("/api/code/persona")
     @guard

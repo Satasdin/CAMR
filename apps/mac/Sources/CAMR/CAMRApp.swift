@@ -161,6 +161,29 @@ struct RootView: View {
                 .menuStyle(.borderlessButton)
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
+                Menu {
+                    Button("This app's model, with CAMR memory") { Task { await chat.setAgentModel(nil) } }
+                    if !chat.ollamaModels.isEmpty {
+                        Section("In Ollama (no CAMR memory: facts as text)") {
+                            ForEach(chat.ollamaModels, id: \.self) { m in
+                                Button(m) { Task { await chat.setAgentModel("ollama:" + m) } }
+                            }
+                        }
+                    }
+                    Section("Side by side (API, paid)") {
+                        Button("Claude Sonnet 5.5") { Task { await chat.setAgentModel("claude-sonnet-5-5") } }
+                    }
+                } label: {
+                    HStack {
+                        Text("Builds with").font(Theme.mono(10)).foregroundStyle(Theme.faint)
+                        Spacer()
+                        Text(chat.agentModel.map { $0.hasPrefix("ollama:") ? String($0.dropFirst(7)) + " · Ollama" : $0 } ?? "this model + memory")
+                            .font(Theme.mono(10, .semibold)).foregroundStyle(chat.agentModel == nil ? Theme.memory : Theme.model)
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .padding(.horizontal, 10)
+                .task { await chat.loadAgentModels() }
                 HStack(spacing: 6) {
                     Text(engine.model.note).font(Theme.mono(10)).foregroundStyle(Theme.faint)
                     Spacer()

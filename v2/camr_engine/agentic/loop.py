@@ -187,9 +187,10 @@ class Run:
             said = done.text.removeprefix("The user answered: ") if done.text.startswith("The user answered: ") else ""
             if not said:  # a plain instruction: "the user did not answer" only leads a small model to give up
                 self.told_notes.append(f"Leave off the page what {what}: the user did not give it.")
-            if said and self.brain.memory_on:
+            if said:  # it reaches the model now, whatever its memory; it is kept in memory only when there is one
                 note = f"{self.label}: {what}: {said}"
                 self.told_notes.append(note)
+            if said and self.brain.memory_on:
                 try:
                     with self.model_lock:
                         self.brain.keep(note, source="user")

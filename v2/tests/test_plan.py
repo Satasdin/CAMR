@@ -284,3 +284,38 @@ def test_a_build_ends_with_a_report_written_from_its_records(desk):
     f = lead.facts()
     assert f["steps"] >= 6 and f["asks"] == [] and f["longest_alone_s"] == f["seconds"]
     assert "REPORT.md" not in lead.answer
+
+
+def test_the_researcher_asks_for_what_was_not_told_and_the_answers_reach_the_brief(tmp_path):
+    root = tmp_path / "site"
+    root.mkdir()
+    brain = TeamBrain()
+    d = Desk(tmp_path / "code", brains=lambda spec: brain)
+    d.set_workspace(str(root))
+    d.told = lambda request: ["Riverbank Physio: a first assessment costs KES 3,500. Colours navy #1b2a4a."]
+    thread = d.new_thread("t")["id"]
+    stop = threading.Event()
+
+    def person():
+        said = iter(["Monday to Saturday, 8am to 6pm", "0733 902 118"])
+        while not stop.is_set():
+            for w in d.gate.waiting():
+                if w["kind"] == "question":
+                    d.gate.answer(w["id"], next(said, ""))
+                elif w["kind"] == "browser":
+                    d.gate.answer(w["id"], json.dumps({"text": "Riverbank"}))
+            stop.wait(0.01)
+
+    t = threading.Thread(target=person)
+    t.start()
+    lead = d.build(thread, "Make a website for Riverbank Physio")
+    lead.thread_obj.join(20)
+    stop.set()
+    t.join()
+    research = d.run(lead.plan.parts[0].run)
+    asked = [x for x in research.turns if x.get("tool") == "ask_user"]
+    assert len(asked) == 2 and all(x["ok"] for x in asked)
+    first = brain.prompts[0].user
+    assert "Monday to Saturday, 8am to 6pm" in first and "0733 902 118" in first
+    assert any("0733 902 118" in n for n in lead.told)  # and every later part gets them too
+    assert len(lead.facts()["asks"]) == 2 and "You said: \"0733 902 118\"" in lead.report()

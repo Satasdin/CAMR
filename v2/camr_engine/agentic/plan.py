@@ -66,7 +66,7 @@ ROLES = {r.id: r for r in [
     Role("research", "Researcher", "research",
          "You are the researcher on a small team building what the user asked for. You write the brief the team "
          "builds from: what it is, what people must be able to do, every fact exactly as told, and what is not known.",
-         ("write_file", "read_file", "read_shelf"), 4),
+         ("write_file", "read_file", "read_shelf", "ask_user"), 4),
     Role("architect", "Architect", "architecture",
          "You are the architect on a small team. From the brief you decide the files and the structure, and write it "
          "down in ARCHITECTURE.md for the designer, the builder and the behaviour agent. You write no code.",
@@ -538,15 +538,16 @@ class Lead:
                         said = text.removeprefix("The user answered: ") if text.startswith("The user answered") else ""
                         asks.append({"at_s": at, "part": ROLES[part.role].name,
                                      "question": str((t.get("args") or {}).get("question", ""))[:300],
-                                     "answer": said[:300]})
+                                     "answer": said[:300], "asked": bool(t.get("ok")), "why": text[:200]})
                     elif t.get("kind") == "call" and t.get("tool") == "open_page":
                         report = str(t.get("text") or "").split("\n\nThe page as it is now")[0]
                         tests.append({"at_s": at, "part": ROLES[part.role].name, "ok": bool(t.get("ok")),
                                       "report": report[:1200]})
         end = (self.ended or time.time()) - self.started
-        return {"seconds": round(end, 1), "asks": asks, "tests": tests, "steps": len(steps),
-                "first_ask_s": asks[0]["at_s"] if asks else None,
-                "longest_alone_s": round(_longest_gap([a["at_s"] for a in asks], end), 1),
+        reached = [a for a in asks if a["asked"]]
+        return {"seconds": round(end, 1), "asks": asks, "stops": len(reached), "tests": tests, "steps": len(steps),
+                "first_ask_s": reached[0]["at_s"] if reached else None,
+                "longest_alone_s": round(_longest_gap([a["at_s"] for a in reached], end), 1),
                 "most_read": max((x["read"] for x in steps), default=0),
                 "read": sum(x["read"] for x in steps), "wrote": sum(x["wrote"] for x in steps),
                 "window": self.desk.window_tokens()}
@@ -555,12 +556,12 @@ class Lead:
         f = self.facts()
         mins = lambda s: f"{int(s // 60)} min {int(s % 60)} s" if s >= 60 else f"{s:.0f} s"  # noqa: E731
         lines = ["# Build report", "", f"Request: {self.request}", "",
-                 f"Model: {getattr(self.current, 'brain', None) and self.current.brain.label or self._model()}", "",
+                 f"Model: {self._model()}", "",
                  "## In short", "",
                  f"- It worked for {mins(f['seconds'])} in {f['steps']} model steps, and ended {self.state}.",
-                 (f"- It stopped for you {len(f['asks'])} time{'s' if len(f['asks']) != 1 else ''}; the first after "
+                 (f"- It stopped for you {f['stops']} time{'s' if f['stops'] != 1 else ''}; the first after "
                   f"{mins(f['first_ask_s'])}. Its longest stretch alone was {mins(f['longest_alone_s'])}."
-                  if f["asks"] else f"- It never stopped for you: {mins(f['seconds'])} alone."),
+                  if f["stops"] else f"- It never stopped for you: {mins(f['seconds'])} alone."),
                  f"- The most one step read was {f['most_read']:,} tokens"
                  + (f" (the window was limited to {f['window']:,})." if f["window"] else "."),
                  f"- In all it read {f['read']:,} tokens and wrote {f['wrote']:,}.",
@@ -571,7 +572,8 @@ class Lead:
                          f" | {mins(p.seconds)} | {p.tries} |")
         lines += ["", "## What it asked you", ""]
         lines += [f"- After {mins(a['at_s'])}, the {a['part'].lower()} asked: \"{a['question']}\" "
-                  + (f"You said: \"{a['answer']}\"." if a["answer"] else "You left it out.") for a in f["asks"]] or [
+                  + (f"You said: \"{a['answer']}\"." if a["answer"] else "You left it out." if a.get("asked", True)
+                     else f"It never reached you: {a['why']}") for a in f["asks"]] or [
             "- Nothing: every fact it needed was in memory or in the request."]
         lines += ["", "## Decisions", ""]
         lines += [f"- ({d['by']}) {d['text']}" for d in self.plan.decisions]
@@ -634,4 +636,4 @@ class Lead:
         return {"id": self.id, "thread": self.thread, "state": self.state, "answer": self.answer, "error": self.error,
                 "plan": self.plan.show(), "run": run.id if run is not None else None, "started": self.started,
                 "ended": self.ended, "elapsed_s": round((self.ended or time.time()) - self.started, 2),
-                "told": len(self.told)}
+                "told": len(self.told), "model": run.brain.label if run is not None else self._model()}

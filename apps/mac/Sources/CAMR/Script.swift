@@ -91,6 +91,8 @@ enum Script {
                     let names = arg == "all" ? world.chat.curated.map(\.name)
                         : arg.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
                     await world.chat.addCurated(names)
+                case "agent-model":  // agent-model: ollama:qwen3:4b   (or: claude-sonnet-5-5, or: local)
+                    await world.chat.setAgentModel(arg == "local" ? nil : arg)
                 case "shelf-remove":
                     await world.chat.removeShelf(arg)
                 case "shelf-empty":
