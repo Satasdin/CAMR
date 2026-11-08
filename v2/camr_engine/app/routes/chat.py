@@ -65,8 +65,11 @@ MODES = ("camr", "rag", "off")  # how a chat message reads memory
 # How the app's memories keep and read what they are told (DECISIONS E-65, E-66): moments kept as words, notes written
 # only for rooms questions keep coming to (woken when a session closes); found by words; an asleep room and each long
 # moment read as their best lines; the user's reply after an answer read too. On the locked 16M exam this read 665
-# tokens for a first word in 0.30 s, 51/73 right, against RAG's 1,118 tokens, 0.52 s and 47/73.
-APP_MEMORY = {"notes": "hot", "finder": "words", "closest": 6, "asleep_read": "lines", "read": "lines", "follow": 3}
+# tokens for a first word in 0.30 s, 51/73 right, against RAG's 1,118 tokens, 0.52 s and 47/73. A second search adds
+# 2 moments (E-68): on dev seeds 2/3 248/329 against 234 (most of it code, 18 -> 26 of 36) for 0.09 s more; on the
+# tricky set 118/236 against 116, no help for plain knowledge questions.
+APP_MEMORY = {"notes": "hot", "finder": "words", "closest": 6, "asleep_read": "lines", "read": "lines", "follow": 3,
+              "hop": 2}
 RAG_K = 8  # conventional RAG: the closest moments pasted in as text…
 RAG_TOKENS = 1024  # …up to this many tokens: what CAMR lays in front of the model, one room (at most ROOM_TOKENS,
 # 512, as notes) and its 4 closest moments as words (about 128 tokens each in the Long Haul), all as text

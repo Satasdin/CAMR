@@ -913,3 +913,27 @@ CAMR, 21 only RAG (p = 0.31); fast 8 and 14 (p = 0.29). By form (RAG / accurate 
 context: 131 ($1.19); it still declines 62, so for about a quarter of the questions the fact is not in what CAMR
 found. E-66's 51 against 47 does not carry to new questions: on facts never asked before CAMR and RAG are level, RAG
 slightly ahead. Finding, not reading, is what limits both; two-hop is the weakest family for every reader.
+
+## E-68 (8 Nov): a second search, its bridge picked by a small reranker; helps code, not new knowledge questions
+
+Research (the "memory tax", rerankers, IRCoT) suggested two steps: rerank the finder's candidates, and search a
+second time from what the first search found. The reranker is cross-encoder/ms-marco-MiniLM-L-6-v2 (22M weights,
+already in the local cache), run in MLX from its own safetensors (camr_engine/rerank.py; matches its model card,
+-4.31 against -4.32; 50 lines in 6 ms). On dev seeds 2/3 at 1M (269 questions with a told answer, finder only):
+the answer's moments in the first 8 for 209 by the finder; reranking the finder's best 16/32/64 lost answers
+(195/197/196: the web-search model is lost on maths rules, pages and two-hop); keeping the finder's first 6 and
+filling 2 places from a second search (the reranker picks the best line among those 6, its new words are searched,
+what that finds is scored against that line and the question) put them in for 217 (221 against 212 at 10 places).
+Step 1 as such is dropped; the reranker only picks the bridge. Setting ``hop`` for the engine and for RAG alike.
+
+Desks, 4B, dev seeds 2/3 at 1M, 30 per family (329 questions; work/dev-records/2026-11-08/2135…–2228…):
+RAG k=8 234 (0.42 s, 1,067 tokens); RAG k=6 + hop 2 241 (p = 0.31); CAMR accurate 245 (0.56 s); accurate + hop 244;
+accurate closest=8 239; CAMR fast 234 (0.26 s, 661 tokens); **CAMR fast + hop 248 (0.35 s, 820 tokens)**: against
+fast +26/-12 (p = 0.03), against RAG +35/-21 (p = 0.08), against accurate +26/-23 (p = 0.78) at 1.6x sooner. By family
+(RAG / fast / fast + hop): code 20/18/26 of 36, never 46/46/50, fact 55/54/56, two-hop 16/15/16 of 25.
+
+Confirmation registered before running (work/queue16.sh), the one chosen setting read once on the tricky set
+(records/bench/2026-11-08/223306…): 118/236 (0.38 s) against CAMR fast 116 (+13/-11, p = 0.84) and RAG 122
+(+12/-16, p = 0.57); two-hop 9 of 48 against 7 and 8. The gain is the code family, which the tricky set does not ask:
+on new knowledge questions the second search changes nothing, and RAG stays level or slightly ahead. The app's main
+job is code, so the app reads with hop=2 (chat.APP_MEMORY); without the cross-encoder's files nothing is added.

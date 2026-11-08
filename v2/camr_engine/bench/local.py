@@ -669,8 +669,9 @@ class Rag(Contender):
     def __init__(self, model: str, *, loader: Loader | None = None, reader=None, embedder=None,
                  dates: Callable[[int], dt.date] | None = None, day_numbers: bool = True, intro: str = INTRO,
                  k: int = RAG_K, budget: int = RAG_TOKENS, order: str = "date", finder: str = "dense",
-                 read: str = "moments", follow: int = 0):
+                 read: str = "moments", follow: int = 0, hop: int = 0):
         self.follow = follow  # the best moments looked at for the user's reply after an answer (finder.replies)
+        self.hop = hop  # moments a second search adds after the k closest (camr_engine.rerank.second_search)
         self.read = read  # "lines": a long moment pasted as its best lines (camr_engine.finder.cut), as the engine can
         if reader is None:
             parse(f"rag:{model}")
@@ -767,13 +768,19 @@ class Rag(Contender):
         else:
             ranked = np.argsort(-sims)
         picked, total, take = [], 0, self.k
+        if self.hop and self.finder == "words":  # a second search's moments come after the k closest
+            from camr_engine.rerank import second_search
+
+            first = [int(x) for x in ranked[:self.k]]
+            ranked = first + second_search(self._lines, question, first, sims, keep=self.hop)
+            take = len(ranked)
         if self.follow:  # the user's replies come after the k closest, inside the same budget
             from camr_engine.finder import replies
 
-            first = [int(x) for x in ranked[:self.k]]
+            first = [int(x) for x in ranked[:take]]
             more = [m for m in replies(lambda i: self.texts[i], ranked, top=self.follow, moments=len(self.texts))
                     if m not in first]
-            ranked, take = first + more, self.k + len(more)
+            ranked, take = first + more, take + len(more)
         for i in ranked[:take]:
             n = self.counts[int(i)]
             if total + n > self.budget:
@@ -835,6 +842,7 @@ class Rag(Contender):
     def describe(self) -> dict:
         return {"name": self.name, "kind": "rag", "model": self.model, "repo": self.repo, "embedder": EMBEDDER,
                 "k": self.k, "budget_tokens": self.budget, "order": self.order, "finder": self.finder,
+                "follow": self.follow, "hop": self.hop,
                 "retrieval": "the question embedded (as a query), cosine over every moment's vector, the k closest "
                              "taken closest first while they fit the budget",
                 "moment": "[YYYY-MM-DD, day N] text" if self.days.day_numbers else "[YYYY-MM-DD] text",
@@ -998,9 +1006,9 @@ def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
 DESK_KEYS = {"rooms": ("desk_rooms", int), "tokens": ("desk_tokens", int), "order": ("desk_order", str),
              "closest": ("closest", int), "reread": ("reread", str), "finder": ("finder", str),
              "adapter": ("adapter", str), "read": ("read", str), "asleep": ("asleep_read", str),
-             "notes": ("notes", str), "follow": ("follow", int), "latest": ("latest", int)}
+             "notes": ("notes", str), "follow": ("follow", int), "latest": ("latest", int), "hop": ("hop", int)}
 RAG_KEYS = {"k": ("k", int), "budget": ("budget", int), "order": ("order", str), "finder": ("finder", str),
-            "read": ("read", str), "follow": ("follow", int)}
+            "read": ("read", str), "follow": ("follow", int), "hop": ("hop", int)}
 
 
 def parse_settings(kind: str, text: str | None) -> dict:

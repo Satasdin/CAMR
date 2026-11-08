@@ -37,6 +37,7 @@ from camr_engine.core import CORE_TOKENS, Core
 from camr_engine.live import current
 from camr_engine.events import EventLog, Looks, used
 from camr_engine.finder import FINDERS, LineIndex
+from camr_engine.rerank import second_search
 from camr_engine.metrics import Meter, folder_bytes, measure
 from camr_engine.notes import GROUP, Notebook, pack, unpack
 from camr_engine.rooms import Rooms
@@ -112,7 +113,8 @@ class Memory:
                  metrics: Meter | bool = False, bits: int = BITS, desk_rooms: int = DESK_ROOMS,
                  desk_tokens: int | None = None, desk_order: str = "date", reread: str = "all",
                  finder: str = FINDER, adapter: str | None = None, read: str = "moments",
-                 asleep_read: str | None = None, notes: str = "all", follow: int = 0, latest: bool = False):
+                 asleep_read: str | None = None, notes: str = "all", follow: int = 0, latest: bool = False,
+                 hop: int = 0):
         self.reader, self.embedder, self.closest, self.allowance = reader, embedder, closest, allowance
         self.adapter: dict | None = None  # a trained add-on for the question and answer (camr_engine.adapter)
         if adapter:
@@ -132,6 +134,7 @@ class Memory:
         self.notes = notes
         self.follow = follow  # the best moments looked at for a user's reply to read with them (finder.replies)
         self.latest = bool(latest)  # the newest line naming what the best line names is read too (finder.newest)
+        self.hop = int(hop)  # moments a second search adds, from the reranker's best line (camr_engine.rerank)
         self._lines: LineIndex | None = None  # built from the moments' texts the first time words are asked
         if desk_rooms < 1 or desk_order not in DESK_ORDERS:
             raise ValueError(f"a desk holds at least one room, laid in one of {DESK_ORDERS}")
@@ -303,6 +306,8 @@ class Memory:
             order = np.argsort(-sims)
         room = self.rooms.rooms[self.rooms.moments[int(order[0])].room]
         closest = [int(m) for m in order[:self.closest]]
+        if self.hop and self.finder == "words" and closest:
+            closest += second_search(self.lines(), question, closest, sims, keep=self.hop)
         if self.follow:
             from camr_engine.finder import replies
 

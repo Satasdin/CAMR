@@ -63,7 +63,7 @@ class TalkApp:
         self.session_settings = {"room_tokens": 400, "join": 0.2}
         if not app_memory:
             self.session_settings |= {"notes": "all", "finder": memory.FINDER, "closest": memory.CLOSEST,
-                                      "asleep_read": "words", "read": "moments", "follow": 0}
+                                      "asleep_read": "words", "read": "moments", "follow": 0, "hop": 0}
         self.session_name = "s1"
         self.today = TODAY
         self.lock = threading.Lock()
@@ -118,6 +118,7 @@ def test_the_app_keeps_notes_as_a_hot_cache_and_a_closing_session_wakes_the_room
         assert call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})[1]["kept"]
         m = app.session.memory("session")
         assert m.notes == "hot" and m.finder == APP_MEMORY["finder"] and m.read == "lines" and m.follow == 3
+        assert m.hop == 2
         assert m.rooms.disk_bytes() == 0 and m.tiers.is_asleep(0)  # told as words: no notes written
         got = call("/api/chat", {"text": "Where does Amina live now?"})[1]
         assert got["intent"] == "ask" and got["reply"] == "ok"
