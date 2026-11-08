@@ -887,3 +887,29 @@ accurate (room as text, replies, newest); CAMR fast (room and moments as best li
 - By family (RAG / accurate / fast): changed 5/6/8, code 6/6/7, fact 9/9/9, lookalike 10/10/10, maths 5/7/5,
   never 7/8/7, page 0/0/0 (token limit), two-hop 5/5/5.
 Records: records/bench/2026-11-08/131041-longhaul-…, 170413-desk-rag-…, 170626-desk-engine-…, 170848-desk-engine-….
+
+## E-67: the app on the hot memory; PP/TG speeds; tricky questions (8 Nov)
+
+The app's chat sessions now keep notes as a hot cache and read the fast way (chat.APP_MEMORY: notes hot, finder
+words, closest 6, asleep room and long moments as their best lines, the user's reply followed). A closing session
+naps (reach.Session.nap): the asleep rooms its questions came to most, up to 8, are woken and their notes written
+inside the disk budget. Memories told before keep their notes; only new moments are kept as words.
+
+Speeds (scripts/pp_tg.py, records/speed/2026-11-08, idle Mac, 3 runs each, medians), the 4B from 1K to 32K tokens:
+MLX reads 2,643 to 1,275 tokens a second and writes 100 to 36; Ollama (same model, q4_K_M) reads 1,958 to 630 and
+writes 87 to 33: MLX reads 1.4 to 2.0 times and writes 1.1 to 1.2 times as fast (1.7B and 8B alike). The 4B's first
+word after a history read as saved 8-bit notes against the same history read as text: 3.4x sooner at 512 tokens,
+11.7x at 4K, 12.7x at 8K (3.63 s to 0.29 s), 7.9x at 16K; 16-bit notes at 16K only 1.5x (2.4 GB crowds 24 GB of RAM).
+The E-66 desks ran with the load average near 20 (reading 2,230 against 2,570 tokens a second idle): their times
+are slow for all three readers alike.
+
+Tricky questions (scripts/tricky.py; records/bench/2026-11-08/tricky-*): 59 facts of the seed-1 world the exam never
+asked (fact, changed, lookalike, never, two-hop), each asked plain, reworded (every word but the names changed),
+with a false premise (a wrong value of the same kind taken as fact) and buried in a chatty message; 236 questions,
+written by Claude Opus 5.5 ($0.37), graded by the world's rules. On the 16M hot memory:
+RAG 122 (0.41 s); CAMR accurate 115 (0.55 s); CAMR fast 116 (0.28 s, 665 tokens). Paired with RAG: accurate 14 only
+CAMR, 21 only RAG (p = 0.31); fast 8 and 14 (p = 0.29). By form (RAG / accurate / fast): plain 41/38/38, reworded
+33/33/32, premise 19/15/18, buried 29/29/28. Two-hop 8/3/7 of 48. Claude Sonnet 5.5 reading exactly CAMR accurate's
+context: 131 ($1.19); it still declines 62, so for about a quarter of the questions the fact is not in what CAMR
+found. E-66's 51 against 47 does not carry to new questions: on facts never asked before CAMR and RAG are level, RAG
+slightly ahead. Finding, not reading, is what limits both; two-hop is the weakest family for every reader.

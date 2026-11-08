@@ -36,6 +36,7 @@ from camr_engine.metrics import Meter, measure
 from camr_engine.swap import RAM_BYTES, Pool, Tiers
 
 KINDS = ("session", "project", "agent", "global")
+WAKE_PER_NAP = 8  # asleep rooms a closing session may wake (each is read once by the model to write its notes)
 ROOT = Path.home() / ".camr"
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
@@ -305,8 +306,24 @@ class Session:
         for m in self.memories.values():
             m.save()
 
+    def nap(self, most: int = WAKE_PER_NAP) -> dict[str, list[int]]:
+        """Wake, in each reach that keeps notes as a hot cache, the asleep rooms this session's questions came to most
+        (their notes written from their words, inside the disk budget), and save it. Returns the rooms woken."""
+        woke = {}
+        for r, m in self.memories.items():
+            if m.notes == "hot" and m.tiers is not None and m.tiers.wanted:
+                woke[r.label] = m.wake_wanted(most)
+                m.save()
+        return woke
+
     def close(self) -> None:
-        """Save every reach and let go of them (each closes when no other session here reads it)."""
+        """Nap (hot reaches), then save every reach and let go of them (each closes when no other session here reads
+        it). A failed nap never keeps a reach held."""
+        if self._held:
+            try:
+                self.nap()
+            except Exception:  # noqa: BLE001: the rooms stay asleep and are read as words; closing goes on
+                pass
         held, self._held = self._held, []
         for key in held:
             _release(key)

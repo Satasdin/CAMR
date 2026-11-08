@@ -51,12 +51,19 @@ def looks(monkeypatch):
 class TalkApp:
     """An app with a (fake) reader and embedder, so the chat opens a real reach.Session under ``root``."""
 
-    def __init__(self, root, reader=None):
+    def __init__(self, root, reader=None, *, app_memory: bool = False):
+        """``app_memory``: the app's own memory settings (chat.APP_MEMORY, notes as a hot cache). Off, every moment
+        is written as notes as it is told, so these tests see the notes machinery itself (rooms on the SSD, hot rooms,
+        the stage)."""
+        from camr_engine import memory
         from test_core import FakeEmbedder, FakeReader
 
         self.reader, self.embedder = reader or FakeReader(), FakeEmbedder()
         self.reach_root = root
         self.session_settings = {"room_tokens": 400, "join": 0.2}
+        if not app_memory:
+            self.session_settings |= {"notes": "all", "finder": memory.FINDER, "closest": memory.CLOSEST,
+                                      "asleep_read": "words", "read": "moments", "follow": 0}
         self.session_name = "s1"
         self.today = TODAY
         self.lock = threading.Lock()
@@ -97,6 +104,28 @@ def chat(tmp_path, looks, monkeypatch):
     httpd.shutdown()
     if getattr(app, "talk", None) is not None:
         app.talk.close()
+
+
+def test_the_app_keeps_notes_as_a_hot_cache_and_a_closing_session_wakes_the_room_asked_about(tmp_path, looks,
+                                                                                           monkeypatch):
+    pytest.importorskip("mlx")
+    from camr_engine.app.routes.chat import APP_MEMORY
+
+    monkeypatch.setenv("CAMR_MEASURING", str(tmp_path / "measuring.json"))
+    app = TalkApp(tmp_path / "camr", app_memory=True)
+    call, httpd = serve(app)
+    try:
+        assert call("/api/chat", {"text": "Amina moved to Nakuru.", "intent": "tell"})[1]["kept"]
+        m = app.session.memory("session")
+        assert m.notes == "hot" and m.finder == APP_MEMORY["finder"] and m.read == "lines" and m.follow == 3
+        assert m.rooms.disk_bytes() == 0 and m.tiers.is_asleep(0)  # told as words: no notes written
+        got = call("/api/chat", {"text": "Where does Amina live now?"})[1]
+        assert got["intent"] == "ask" and got["reply"] == "ok"
+        assert m.tiers.wanted == {0: 1}  # the question came to an asleep room
+        app.talk.close()  # a closing session naps: the room asked about is woken, its notes written from its words
+        assert not m.tiers.is_asleep(0) and m.rooms.disk_bytes() > 0 and not m.tiers.wanted
+    finally:
+        httpd.shutdown()
 
 
 def test_telling_keeps_a_moment_in_the_session_reach_and_asking_reads_the_best_reach(chat):

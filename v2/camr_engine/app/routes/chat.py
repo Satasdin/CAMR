@@ -62,6 +62,11 @@ TEXT_MAX = 4000  # characters in one message; a longer one is refused, never cut
 RETRY_S = 30.0  # after a failed open, a poll tries again at most this often
 JOBS = 30  # live jobs kept for GET /api/live
 MODES = ("camr", "rag", "off")  # how a chat message reads memory
+# How the app's memories keep and read what they are told (DECISIONS E-65, E-66): moments kept as words, notes written
+# only for rooms questions keep coming to (woken when a session closes); found by words; an asleep room and each long
+# moment read as their best lines; the user's reply after an answer read too. On the locked 16M exam this read 665
+# tokens for a first word in 0.30 s, 51/73 right, against RAG's 1,118 tokens, 0.52 s and 47/73.
+APP_MEMORY = {"notes": "hot", "finder": "words", "closest": 6, "asleep_read": "lines", "read": "lines", "follow": 3}
 RAG_K = 8  # conventional RAG: the closest moments pasted in as text…
 RAG_TOKENS = 1024  # …up to this many tokens: what CAMR lays in front of the model, one room (at most ROOM_TOKENS,
 # 512, as notes) and its 4 closest moments as words (about 128 tokens each in the Long Haul), all as text
@@ -146,7 +151,7 @@ class Talk:
 
         shelf_list.load(self.root)  # this memory's own shelves
         settings = {"vault": True, "core": True, "tiers": {"disk_bytes": disk_budget()}, "metrics": True,
-                    **(getattr(self.app, "session_settings", None) or {})}
+                    **APP_MEMORY, **(getattr(self.app, "session_settings", None) or {})}
         reads = list(self.reads)
         if self.shelf is not None:  # shelves on: every shelf is read too
             reads += [r for r in shelf_reaches() if r not in reads]
