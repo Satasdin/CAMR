@@ -228,6 +228,8 @@ final class ChatStore: ObservableObject {
                     took(e)
                 case "used":
                     usedUp(e)
+                case "near":
+                    nearBy(e)
                 case "prefill":
                     deskTokens = e["tokens"] as? Int ?? deskTokens
                     deskMemoryTokens = e["memory"] as? Int ?? deskMemoryTokens
@@ -312,6 +314,21 @@ final class ChatStore: ObservableObject {
         shelves[i].usedIDs = Set((e["used"] as? [Int]) ?? [])
         lastRun?.steps.append(("Used", "\(shelves[i].used) of \(taken)",
                                "drew at least a tenth of the model's attention"))
+    }
+
+    /// A "near" event: the closest memory of each other shelf, when nearly as close, read as words too.
+    private func nearBy(_ e: JSON) {
+        for item in e["items"] as? [JSON] ?? [] {
+            guard let reach = item["reach"] as? String, let mid = item["moment"] as? Int,
+                  let i = shelves.firstIndex(where: { $0.reach == reach }) else { continue }
+            shelves[i].takenIDs.insert(mid)
+            shelves[i].taken = max(shelves[i].taken, shelves[i].takenIDs.count)
+            if var last = messages.last, last.role == .camr, !last.used.contains(shelves[i].label) {
+                last.used.append(shelves[i].label)
+                messages[messages.count - 1] = last
+            }
+            lastRun?.steps.append(("Take", "1 from \(shelves[i].label)", "the closest memory on another shelf, read as words"))
+        }
     }
 
     /// A told message was kept: its shelf gets a new spine, and the reply says where it went.

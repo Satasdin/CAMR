@@ -494,7 +494,11 @@ class Talk:
             else:
                 # the closest moment of each other shelf, when nearly as close; the very closest (always the best
                 # shelf's own) is already read as words after the room, so it is not read twice
-                near = self._near(session, text)[1:]
+                where = self._near_where(session, text)[1:]
+                near = [t for _, t, _, _ in where]
+                live = current()
+                if live is not None and where:  # the other shelves read too, so the app can show what was taken
+                    live.add("near", items=[{"reach": r, "moment": int(i)} for _, _, r, i in where])
                 extra = 0
                 if near:  # a close second on another shelf is read too, as words: a near tie never hides the note
                     block = "\n\nAlso from memory:\n" + "\n".join(f"- {t[:700]}" for t in near)
@@ -719,6 +723,10 @@ class Talk:
 
     def _near(self, session, text: str, spread: float = 0.12, most: int = 3) -> list[str]:
         """The closest moment of each memory the session reads, kept when within ``spread`` of the best of them."""
+        return [t for _, t, _, _ in self._near_where(session, text, spread, most)]
+
+    def _near_where(self, session, text: str, spread: float = 0.12, most: int = 3) -> list[tuple]:
+        """``_near`` with where each moment is: (closeness, text, reach label, moment index)."""
         import numpy as np
 
         vec = np.asarray(session.embedder.encode_one(text, is_query=True), dtype=np.float32)
@@ -728,9 +736,9 @@ class Talk:
             if v.size and m.rooms.moments:
                 sims = v @ vec
                 i = int(np.argmax(sims))
-                best.append((float(sims[i]), m.rooms.moments[i].text))
+                best.append((float(sims[i]), m.rooms.moments[i].text, m.reach, i))
         best.sort(key=lambda x: -x[0])
-        return [t for s_, t in best[:most] if best and s_ >= best[0][0] - spread]
+        return [b for b in best[:most] if best and b[0] >= best[0][0] - spread]
 
     def _learn(self, session, question: str, answer: str, today: dt.date, day: int, source: dict | None,
                shelf: str | None) -> dict | None:
