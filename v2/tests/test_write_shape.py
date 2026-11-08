@@ -53,3 +53,9 @@ def test_every_kind_of_page_is_a_website():
         assert WEBSITE.search(asked), asked
     for asked in ("a one-page report on sales", "turn the page of this notebook", "write a sorting function"):
         assert not WEBSITE.search(asked), asked
+
+
+def test_editing_a_file_that_is_not_there_says_to_write_it_whole(tmp_path):
+    box = Toolbox(Workspace(tmp_path, []), Gate())
+    done = box.run("edit_file", {"path": "motion.js", "old_text": "a", "new_text": "b"}, owner="m")
+    assert not done.ok and "make it with write_file" in done.text and not (tmp_path / "motion.js").exists()

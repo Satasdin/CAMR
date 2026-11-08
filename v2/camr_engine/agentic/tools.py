@@ -376,6 +376,14 @@ class Toolbox:
         old, new = _arg(args, "old_text"), _arg(args, "new_text")
         if not isinstance(old, str) or not isinstance(new, str):
             raise Outside("edit_file needs old_text and new_text")
+        try:
+            missing = not ws.path(str(_arg(args, "path", ""))).is_file()
+        except Exception:  # noqa: BLE001 (outside the workspace: edit says why)
+            missing = False
+        if missing:  # a small model edited motion.js twelve times before it existed, told only that it did not
+            return Done(name, args, False, f"there is no file {_arg(args, 'path', '')} yet: make it with write_file, "
+                        "the whole file as content. edit_file only changes a file that is already there.",
+                        (time.perf_counter() - t) * 1000)
         w = ws.edit(str(_arg(args, "path", "")), old, new)
         at = w.before.find(old)
         if at >= 0:
