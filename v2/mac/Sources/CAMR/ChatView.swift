@@ -34,7 +34,7 @@ struct ChatView: View {
         // a link in an answer may come from a web page the model read: only http(s), and only in CAMR's own private
         // browser, never another app, a file or a custom scheme
         .environment(\.openURL, OpenURLAction { url in
-            guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return .discarded }
+            guard Links.allowed(url, sources: chat.messages.compactMap(\.sourceURL)) else { return .discarded }
             open(url)
             return .handled
         })
@@ -200,5 +200,24 @@ struct ThinkingRing: View {
             }
         }
         .accessibilityLabel("Thinking")
+    }
+}
+
+/// Which links in an answer may open. An answer's text can carry links from a page the model read, so a link opens
+/// only on the same site as a page CAMR itself read for the chat (its "Read first" source), only over http(s), and
+/// never to this Mac or the local network. Anything else does nothing.
+enum Links {
+    static func allowed(_ url: URL, sources: [URL]) -> Bool {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              let host = url.host?.lowercased(), !isLocal(host) else { return false }
+        return sources.contains { $0.host?.lowercased() == host }
+    }
+
+    static func isLocal(_ host: String) -> Bool {
+        if host == "localhost" || host.hasSuffix(".local") || host.hasSuffix(".localhost") || host == "::1" { return true }
+        let parts = host.split(separator: ".").compactMap { Int($0) }
+        guard parts.count == 4 else { return false }
+        return parts[0] == 127 || parts[0] == 10 || parts[0] == 0 || (parts[0] == 169 && parts[1] == 254)
+            || (parts[0] == 192 && parts[1] == 168) || (parts[0] == 172 && (16...31).contains(parts[1]))
     }
 }

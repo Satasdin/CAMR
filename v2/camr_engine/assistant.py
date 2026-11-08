@@ -106,8 +106,9 @@ _STATES = re.compile(r"\b(my|i|i'm|i've|i'll|we|we're|our|us|me|is|are|was|were|
                      r"went|goes|rose|fell|dropped|runs?|uses?|now|moved)\b", re.I)
 
 
-_RESEARCH = re.compile(r"\b(search (the web|online|the internet)|look (it )?up (online|on the web|on wikipedia)|"
-                       r"(on|from) (the web|wikipedia|the internet)|what does wikipedia say)\b", re.I)
+_RESEARCH = re.compile(r"^\s*(please\s+)?(search (the web|online|the internet)( for)?\b|"
+                       r"look (it )?up\b.{0,80}\b(online|on the web|on wikipedia)\s*[.!]?\s*$|what does wikipedia say\b)",
+                       re.I)
 _PERSONAL = re.compile(r"\b(my|me|mine|our|ours|us|i|i'm|i've|we)\b", re.I)
 
 
@@ -116,7 +117,7 @@ def wants_research(text: str) -> bool:
     "look up Mount Kenya on Wikipedia"), and never for a message about the person ("my", "me", "our"), so nothing
     private leaves the Mac by guesswork. Then a page is read and its source shown with the answer."""
     t = text.strip()
-    return bool(_RESEARCH.search(t)) and not _PERSONAL.search(t)
+    return bool(_RESEARCH.match(t)) and not _PERSONAL.search(t)
 
 
 def wants_tell(text: str) -> bool:

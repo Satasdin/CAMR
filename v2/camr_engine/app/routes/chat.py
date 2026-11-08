@@ -388,7 +388,8 @@ class Talk:
         if intent == "auto":  # the Mac app's chat: a statement is kept on a shelf, anything else is answered
             from camr_engine.assistant import wants_research, wants_tell
 
-            intent = "research" if wants_research(text) else ("tell" if wants_tell(text) else "chat")
+            # a statement is kept on this Mac, never sent out; only a plain request to search goes online
+            intent = "tell" if wants_tell(text) else ("research" if wants_research(text) else "chat")
         if intent not in INTENTS:
             raise Refused(400, f"intent is one of {', '.join(INTENTS)}")
         if memory is not None and memory not in MODES:

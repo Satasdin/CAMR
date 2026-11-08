@@ -22,3 +22,4 @@ def test_a_look_up_reads_the_web_first():
     # nothing about the person goes online by guesswork, and plain "look up" stays on the Mac
     assert not wants_research("search the web for my sister's new address")
     assert not wants_research("look up Kevin's extension") and not wants_research("research matatu fares")
+    assert not wants_research("A friend saw on the web that Kevin is leaving")  # only a request, at the start
