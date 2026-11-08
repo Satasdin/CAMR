@@ -871,3 +871,19 @@ lines + replies + newest 230. CAMR's best against RAG, paired: 26 right only for
 not yet a proven gain). Lines + replies: 19 and 19, the same accuracy at 0.26 s against 0.41 s. Pages fail for every
 setup (answers reach the 1,200-token limit before the footer); left as it is, the limit is the test's.
 Records: work/dev-records/2026-11-08/1112…–1158… (per_family 30).
+
+## E-66: the locked seed-1 16M exam, told the hot way (8 Nov)
+
+Asked once, with the three readers written down before the run (work/queue13.sh): RAG words k=8 budget=1536; CAMR
+accurate (room as text, replies, newest); CAMR fast (room and moments as best lines, replies). Disk budget 1 GB.
+
+- Size: 40.8 GB of room files on the old 16M memory; 0.84 GB on the new one (1.2 GB folder, nothing woken: no
+  question was asked while telling). Peak RAM 6.5 GB against 6.0.
+- Telling: 1,157 tokens a second against 473 on the old 8M to 16M stretch; all 16M in 3 h 50 min.
+- Right of 73: RAG 47 (first word 0.52 s, 1,118 tokens); CAMR accurate 51 (0.64 s, 1,429 tokens); CAMR fast 51
+  (0.30 s, 665 tokens). The old memory's CAMR had 44 and RAG 46 on these questions.
+- Paired with RAG: accurate 10 right only for CAMR, 6 only for RAG (p = 0.45); fast 6 and 2 (p = 0.29). Both
+  claims of "more right" are unproven at 73 questions; "no fewer right, faster" holds for the fast reader.
+- By family (RAG / accurate / fast): changed 5/6/8, code 6/6/7, fact 9/9/9, lookalike 10/10/10, maths 5/7/5,
+  never 7/8/7, page 0/0/0 (token limit), two-hop 5/5/5.
+Records: records/bench/2026-11-08/131041-longhaul-…, 170413-desk-rag-…, 170626-desk-engine-…, 170848-desk-engine-….
