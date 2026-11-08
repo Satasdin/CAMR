@@ -96,6 +96,29 @@ _CODE = re.compile(r"\b(code|function|script|class|method|program|regex|sql|snip
 _ASKS = re.compile(r"\b(write|build|make|create|code|implement|generate|fix|refactor|show me|give me|draft)\b", re.I)
 
 
+_KEEP = re.compile(r"^\s*(remember|note that|note:|fyi|keep in mind|for the record|just so you know)\b", re.I)
+_REQUEST = re.compile(r"^\s*(please\s+)?(help|write|plan|make|create|explain|tell me|show|find|give|list|summari[sz]e|"
+                      r"draft|translate|fix|build|can you|could you|would you|let'?s|compare|check|search|look up|"
+                      r"research|suggest|recommend|teach|quiz|describe|draw|calculate|work out|sort|organi[sz]e)\b",
+                      re.I)
+_STATES = re.compile(r"\b(my|i|i'm|i've|i'll|we|we're|our|us|me|is|are|was|were|moved|changed|lives?|works?|costs?|"
+                     r"starts?|ends?|due|born|called|named|prefers?|likes?|hates?|must|always|never|should|needs? to|has to)\b", re.I)
+
+
+def wants_tell(text: str) -> bool:
+    """Whether a chat message tells CAMR something to keep ("My sister Amina moved to Nakuru last week", "Remember
+    that rent is 28,000 from March") rather than asking for something ("Help me plan Thursday", "What's the
+    capital of Kenya?"). A told message is kept on a shelf and acknowledged; anything else is answered."""
+    t = text.strip()
+    if not t or t.endswith("?") or _QUESTION.match(t) or wants_code(t):
+        return False
+    if _KEEP.match(t):
+        return True
+    if _REQUEST.match(t) or _CHANGE.match(t):
+        return False
+    return bool(_STATES.search(t))
+
+
 def wants_code(question: str) -> bool:
     """Whether a message asks for code to be written ("write a python function…", "build a one-page site in
     html+css"): such a request is the model's own work, answered in full in the chat."""

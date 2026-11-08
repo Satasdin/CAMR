@@ -121,8 +121,17 @@ struct MessageRow: View {
                         .foregroundStyle(message.error ? Channel.fault : .primary)
                         .lineSpacing(3)
                 }
-                if !message.used.isEmpty || !message.note.isEmpty {
+                if !message.used.isEmpty || !message.note.isEmpty || !message.keptOn.isEmpty {
                     HStack(spacing: 6) {
+                        if !message.keptOn.isEmpty {
+                            HStack(spacing: 5) {
+                                Circle().fill(Channel.ssd).frame(width: 6, height: 6)
+                                Text("Kept on \(message.keptOn)")
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Capsule().fill(Color.white.opacity(0.07)))
+                        }
                         ForEach(message.used, id: \.self) { s in
                             HStack(spacing: 5) {
                                 Circle().fill(Channel.ram).frame(width: 6, height: 6)

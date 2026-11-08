@@ -30,11 +30,12 @@ struct ShelfRow: View {
     let shelf: Shelf
 
     private var state: (String, Color) {
+        if shelf.kept { return ("1 new memory", Channel.ssd) }
         if shelf.waking { return ("waking · taking \(shelf.taken)", Channel.ssd) }
-        if shelf.used > 0 { return ("\(shelf.used) used", Channel.used) }
+        if shelf.used > 0 { return ("\(shelf.used) of \(shelf.taken) used", Channel.used) }
         if shelf.taken > 0 { return ("\(shelf.taken) taken", Channel.ram) }
         if shelf.memories == 0 { return ("empty", .secondary) }
-        return ("\(shelf.memories) memories", .secondary)
+        return (shelf.memories == 1 ? "1 memory" : "\(shelf.memories) memories", .secondary)
     }
 
     var body: some View {
@@ -46,8 +47,9 @@ struct ShelfRow: View {
             }
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(0..<shelf.spineCount, id: \.self) { i in
-                    Spine(height: spineHeight(i), kind: kind(i))
+                    Spine(height: spineHeight(i), kind: kind(i)).frame(width: 6)
                 }
+                Spacer(minLength: 0)
             }
             .frame(height: 30, alignment: .bottom)
             .overlay(alignment: .bottom) {
@@ -65,10 +67,10 @@ struct ShelfRow: View {
 
     /// Which spines are taken: spread along the shelf, not bunched at the start.
     private func kind(_ i: Int) -> Spine.Kind {
-        if shelf.memories == 0 { return .empty }
+        if shelf.kept && i == shelf.spineCount - 1 { return .waking }
         let n = shelf.spineCount
-        let taken = Set((0..<min(shelf.taken, n)).map { ($0 * 7 + 5) % n })
-        if taken.contains(i) { return shelf.used > 0 && i == taken.min() ? .used : .taken }
+        let taken = Array(Set((0..<min(shelf.taken, n)).map { ($0 * 7 + 5) % n })).sorted()
+        if let k = taken.firstIndex(of: i) { return k < shelf.used ? .used : .taken }
         return shelf.waking ? .waking : .rest
     }
 }
@@ -85,7 +87,6 @@ struct Spine: View {
                 .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [2, 1.5]))
                 .foregroundStyle(kind == .empty ? Color.white.opacity(0.28) : .clear))
             .frame(height: height)
-            .frame(maxWidth: .infinity)
             .shadow(color: glow, radius: 3)
             .offset(y: kind == .taken || kind == .used ? -7 : 0)
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: kind)

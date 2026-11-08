@@ -62,13 +62,26 @@ struct MainView: View {
                                 .help(showMemory.value ? "Hide what CAMR takes from memory" : "Show what CAMR takes from memory")
                         }
                     }
+            case .memory:
+                MemoryView(chat: chat)
+            case .today:
+                TodayView(chat: chat) { place.value = $0 }
+            case .agents:
+                AgentsView(engine: engine)
+            case .models:
+                ModelsView(engine: engine)
+            case .connections:
+                ConnectionsView(engine: engine)
             case .browser:
                 BrowserView()
             case let other:
                 ComingNext(place: other)
             }
         }
-        .task { await chat.refresh() }
+        .task {
+            await chat.refresh()
+            if !Script.steps.isEmpty { await Script.run(chat: chat, place: place) }
+        }
     }
 }
 

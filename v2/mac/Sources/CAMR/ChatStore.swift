@@ -15,6 +15,7 @@ struct Message: Identifiable, Equatable {
     var pending = false
     var note = ""      // e.g. "first word 0.35 s"
     var used: [String] = []  // shelves this answer took from
+    var keptOn = ""          // the shelf a told message was kept on
     var error = false
 }
 
@@ -32,12 +33,25 @@ struct Shelf: Identifiable, Equatable {
     var taken = 0
     var used = 0
     var takenAt: Date?
+    var kept = false      // a memory was just put on this shelf
 
-    var spineCount: Int { max(6, min(Shelf.shown, memories)) }
+    var spineCount: Int { min(Shelf.shown, memories) }
+}
+
+/// One answer's trip through memory, for the Memory view: what was asked, and each step with its measured time.
+struct Run: Equatable {
+    var question = ""
+    var at = Date()
+    var steps: [(name: String, value: String, detail: String)] = []
+    var deskTokens = 0
+    var memoryTokens = 0
+
+    static func == (a: Run, b: Run) -> Bool { a.question == b.question && a.at == b.at && a.steps.count == b.steps.count }
 }
 
 @MainActor
 final class ChatStore: ObservableObject {
+    @Published var lastRun: Run?
     @Published var messages: [Message] = []
     @Published var shelves: [Shelf] = []
     @Published var busy = false
@@ -52,7 +66,12 @@ final class ChatStore: ObservableObject {
 
     init(engine: Engine) { self.engine = engine }
 
+    private var sorting = false
+
     func refresh() async {
+        if !sorting {  // what you tell CAMR is sorted onto the shelf it belongs to (Personal, Projects, …)
+            sorting = (try? await engine.post("/api/chat/settings", ["shelf": "auto"])) != nil
+        }
         guard let s = try? await engine.get("/api/chat/state") else { return }
         if let model = s["model"] as? JSON, let w = model["window"] as? Int { window = w }
         // what this chat has been told lives in its own reach ("session:…"); the named shelves after it
@@ -69,7 +88,7 @@ final class ChatStore: ObservableObject {
             var sh = Shelf(id: name, label: j["label"] as? String ?? name, reach: j["reach"] as? String ?? "",
                            memories: j["moments"] as? Int ?? 0, rooms: j["rooms"] as? Int ?? 0,
                            asleep: (j["moments"] as? Int ?? 0) == 0)
-            if let o = old[name] { sh.taken = o.taken; sh.used = o.used; sh.waking = o.waking; sh.takenAt = o.takenAt }
+            if let o = old[name] { sh.taken = o.taken; sh.used = o.used; sh.waking = o.waking; sh.takenAt = o.takenAt; sh.kept = o.kept }
             return sh
         }
     }
@@ -89,10 +108,11 @@ final class ChatStore: ObservableObject {
         messages.append(Message(role: .camr, text: "", pending: true))
         busy = true
         status = "Looking through your memory…"
+        lastRun = Run(question: text)
         clearDesk()
         Task {
             do {
-                let r = try await engine.post("/api/chat/message", ["text": text, "intent": "chat", "layers": false])
+                let r = try await engine.post("/api/chat/message", ["text": text, "intent": "auto", "layers": false])
                 guard let id = r["id"] as? String else { throw EngineError.badReply }
                 job = id
                 await follow(id)
@@ -110,7 +130,7 @@ final class ChatStore: ObservableObject {
     private func clearDesk() {
         deskTokens = 0
         deskMemoryTokens = 0
-        for i in shelves.indices { shelves[i].taken = 0; shelves[i].used = 0; shelves[i].waking = false }
+        for i in shelves.indices { shelves[i].taken = 0; shelves[i].used = 0; shelves[i].waking = false; shelves[i].kept = false }
     }
 
     private func follow(_ id: String) async {
@@ -126,12 +146,22 @@ final class ChatStore: ObservableObject {
                 switch e["kind"] as? String {
                 case "room":
                     took(e)
+                case "used":
+                    usedUp(e)
                 case "prefill":
                     deskTokens = e["tokens"] as? Int ?? deskTokens
                     deskMemoryTokens = e["memory"] as? Int ?? deskMemoryTokens
+                    lastRun?.deskTokens = deskTokens
+                    lastRun?.memoryTokens = deskMemoryTokens
+                    lastRun?.steps.append(("Lay the desk", "\(deskTokens.formatted()) tokens",
+                                           "\(deskMemoryTokens.formatted()) of them from memory; only what's needed, not whole shelves"))
                     status = "Reading what it took…"
                 case "token":
-                    if firstWord == nil { firstWord = Date().timeIntervalSince(started) }
+                    if firstWord == nil {
+                        firstWord = Date().timeIntervalSince(started)
+                        lastRun?.steps.append(("Answer", String(format: "first word %.2f s", firstWord ?? 0),
+                                               "the model starts writing"))
+                    }
                     status = ""
                     if var last = messages.last, last.role == .camr {
                         last.text += e["text"] as? String ?? ""
@@ -139,6 +169,7 @@ final class ChatStore: ObservableObject {
                     }
                 case "done":
                     if let err = e["error"] as? String { finish(error: err); return }
+                    if e["intent"] as? String == "tell" { kept(e) }
                     let reply = e["reply"] as? String
                     let note = firstWord.map { String(format: "first word %.2f s", $0) } ?? ""
                     finish(reply: reply, note: note)
@@ -164,10 +195,45 @@ final class ChatStore: ObservableObject {
         shelves[i].taken = max(1, closest)
         shelves[i].takenAt = Date()
         let ms = (e["ms"] as? JSON)?.values.compactMap { $0 as? Double }.reduce(0, +)
+        let parts = e["ms"] as? JSON ?? [:]
+        let choose = parts["choose"] as? Double ?? 0
+        lastRun?.steps.append(("Find", String(format: "%.0f ms", choose), "every memory searched, line by line"))
+        if asleep {
+            lastRun?.steps.append(("Wake", String(format: "%.0f ms", parts["fetch"] as? Double ?? 0),
+                                   "\(shelves[i].label) was asleep: read back from the SSD"))
+        }
+        let bytes = e["bytes"] as? Int ?? 0
+        lastRun?.steps.append(("Take", "\(max(1, closest)) from \(shelves[i].label)",
+                               bytes > 0 ? String(format: "%.1f MB of room read", Double(bytes) / 1e6) : "lifted onto the desk"))
         let when = ms.map { String(format: " · %.0f ms", $0) } ?? ""
         status = asleep ? "Waking your \(shelves[i].label) shelf\(when)…" : "Taking \(max(1, closest)) from \(shelves[i].label)\(when)…"
         if var last = messages.last, last.role == .camr, !last.used.contains(shelves[i].label) {
             last.used.append(shelves[i].label)
+            messages[messages.count - 1] = last
+        }
+    }
+
+    /// A "used" event: of what was taken from a shelf, what the answer actually drew on. The shelf is awake now.
+    private func usedUp(_ e: JSON) {
+        let reach = e["reach"] as? String ?? ""
+        guard let i = shelves.firstIndex(where: { $0.reach == reach }) else { return }
+        let taken = (e["closest"] as? [Any])?.count ?? shelves[i].taken
+        shelves[i].waking = false
+        shelves[i].taken = max(shelves[i].taken, taken)
+        shelves[i].used = (e["used"] as? [Any])?.count ?? 0
+        lastRun?.steps.append(("Used", "\(shelves[i].used) of \(taken)",
+                               "drew at least a tenth of the model's attention"))
+    }
+
+    /// A told message was kept: its shelf gets a new spine, and the reply says where it went.
+    private func kept(_ e: JSON) {
+        let reach = e["reach"] as? String ?? ""
+        guard e["kept"] as? Bool == true, let i = shelves.firstIndex(where: { $0.reach == reach }) else { return }
+        shelves[i].kept = true
+        shelves[i].memories += 1
+        lastRun?.steps.append(("Keep", "on \(shelves[i].label)", "a new memory, sorted onto the shelf it belongs to"))
+        if var last = messages.last, last.role == .camr {
+            last.keptOn = shelves[i].label
             messages[messages.count - 1] = last
         }
     }

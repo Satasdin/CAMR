@@ -490,6 +490,9 @@ class Memory:
                            looks=[[round(float(x), 4) for x in row] for row in per_word],
                            wait_s=round(reply.ttft_s, 4), seconds={k: round(v, 4) for k, v in rec.seconds.items()},
                            **{**self._more(rec), **extra})
+        if live is not None:  # which of what was taken the answer actually drew on (events.USED of its attention)
+            live.add("used", reach=self.reach, closest=[int(m) for m in rec.closest],
+                     used=[int(n) for n in (use or [])], measured=use is not None)
         if self.vault is not None and use:
             self.use(use, today, day)
         if self.meter is not None or record:
