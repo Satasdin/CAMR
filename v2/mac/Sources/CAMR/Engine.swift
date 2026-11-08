@@ -46,7 +46,7 @@ final class Engine: ObservableObject {
 
     /// Where the engine lives: CAMR_ENGINE_DIR, else the copy mac/build.sh installs in Application Support (outside
     /// the folders macOS protects, so starting it never stops on a privacy question).
-    static var engineDir: URL {
+    nonisolated static var engineDir: URL {
         if let dir = ProcessInfo.processInfo.environment["CAMR_ENGINE_DIR"] { return URL(fileURLWithPath: dir) }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("CAMR/engine")
@@ -54,7 +54,7 @@ final class Engine: ObservableObject {
 
     /// The memory this app keeps. CAMR_MEMORY_DIR overrides it; by default the Mac app keeps its own folder, apart
     /// from the older app's memories.
-    static var memoryDir: URL {
+    nonisolated static var memoryDir: URL {
         if let dir = ProcessInfo.processInfo.environment["CAMR_MEMORY_DIR"] { return URL(fileURLWithPath: dir) }
         return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".camr/mac")
     }

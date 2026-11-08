@@ -11,3 +11,11 @@ def test_a_statement_is_kept_and_a_request_is_answered():
                   "Write a python function that adds two numbers", "Can you summarise my week",
                   "Draft a reply to Kevin", "Explain counting sort", "hello"]:
         assert not wants_tell(asked), asked
+
+
+def test_a_look_up_reads_the_web_first():
+    from camr_engine.assistant import wants_research
+
+    assert wants_research("Look up the long rains in Kenya") and wants_research("research matatu fares in Nairobi")
+    assert wants_research("search the web for Mount Kenya clear months")
+    assert not wants_research("Where does my sister live?") and not wants_research("My sister researches bees")

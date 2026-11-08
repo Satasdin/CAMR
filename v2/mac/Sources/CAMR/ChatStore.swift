@@ -16,6 +16,9 @@ struct Message: Identifiable, Equatable {
     var note = ""      // e.g. "first word 0.35 s"
     var used: [String] = []  // shelves this answer took from
     var keptOn = ""          // the shelf a told message was kept on
+    var image: URL?          // a photo you added
+    var sourceTitle = ""     // a web page the answer read first
+    var sourceURL: URL?
     var error = false
 }
 
@@ -52,6 +55,7 @@ struct Run: Equatable {
 @MainActor
 final class ChatStore: ObservableObject {
     @Published var lastRun: Run?
+    @Published var chats: [(id: String, title: String)] = []
     @Published var messages: [Message] = []
     @Published var shelves: [Shelf] = []
     @Published var busy = false
@@ -93,6 +97,38 @@ final class ChatStore: ObservableObject {
         }
     }
 
+    /// A chat's title as a person would name it: "(attached 1794-matatu.jpg)" becomes "Photo: matatu".
+    static func cleanTitle(_ raw: String) -> String {
+        var t = raw.trimmingCharacters(in: .whitespaces)
+        if t.hasPrefix("(attached") {
+            t = t.replacingOccurrences(of: "(attached", with: "").trimmingCharacters(in: CharacterSet(charactersIn: " )"))
+            t = t.replacingOccurrences(of: #"^\d+-"#, with: "", options: .regularExpression)
+            t = "Photo: " + ((t as NSString).deletingPathExtension)
+        }
+        return t.isEmpty ? "Untitled chat" : t
+    }
+
+    func loadChats() async {
+        guard let r = try? await engine.get("/api/chats") else { return }
+        chats = (r["chats"] as? [JSON] ?? []).compactMap { c in
+            guard let id = c["id"] as? String else { return nil }
+            return (id, ChatStore.cleanTitle(c["title"] as? String ?? ""))
+        }
+    }
+
+    /// Go back to a saved conversation: its turns come back into the chat and the model reads them again.
+    func open(_ id: String) async {
+        guard !busy, let r = try? await engine.post("/api/chats/open", ["id": id]) else { return }
+        messages = (r["turns"] as? [JSON] ?? []).compactMap { t in
+            let who = t["who"] as? String
+            let text = (t["text"] as? String) ?? (t["reply"] as? String) ?? ""
+            guard !text.isEmpty else { return nil }
+            return Message(role: who == "you" ? .you : .camr, text: text)
+        }
+        title = chats.first { $0.id == id }?.title ?? "Chat"
+        clearDesk()
+    }
+
     func newChat() async {
         _ = try? await engine.post("/api/chat/new")
         messages = []
@@ -116,6 +152,48 @@ final class ChatStore: ObservableObject {
                 guard let id = r["id"] as? String else { throw EngineError.badReply }
                 job = id
                 await follow(id)
+            } catch {
+                finish(error: error.localizedDescription)
+            }
+        }
+    }
+
+    /// Add a file to memory: copied into CAMR's inbox, an image read on this Mac, then sorted onto a shelf.
+    func attach(_ url: URL) {
+        guard !busy else { return }
+        let isImage = Attach.isImage(url)
+        if messages.isEmpty { title = url.deletingPathExtension().lastPathComponent }
+        var mine = Message(role: .you, text: "Added \(url.lastPathComponent)")
+        if isImage { mine.image = url }
+        messages.append(mine)
+        messages.append(Message(role: .camr, text: "", pending: true))
+        busy = true
+        status = isImage ? "Reading the photo on this Mac…" : "Reading the file…"
+        clearDesk()
+        Task {
+            do {
+                let copy = try Attach.intoInbox(url)
+                var body: JSON = ["path": copy.path, "shelf": "auto"]
+                if isImage {
+                    let given = await Task.detached { Attach.read(image: copy) }.value
+                    body["read"] = given
+                }
+                status = "Putting it on a shelf…"
+                let r = try await engine.post("/api/chat/attach", body)
+                let n = r["moments"] as? Int ?? 0
+                let reach = r["reach"] as? String ?? ""
+                let label = shelves.first { $0.reach == reach }?.label ?? (r["shelf"] as? String ?? "a shelf")
+                if let i = shelves.firstIndex(where: { $0.reach == reach }) { shelves[i].kept = true }
+                if var last = messages.last, last.role == .camr {
+                    last.text = n == 0 ? "I couldn't find anything to keep in \(url.lastPathComponent)."
+                        : "Kept \(n) \(n == 1 ? "piece" : "pieces") from \(url.lastPathComponent)."
+                    last.keptOn = n > 0 ? label : ""
+                    last.pending = false
+                    messages[messages.count - 1] = last
+                }
+                busy = false
+                status = ""
+                await refresh()
             } catch {
                 finish(error: error.localizedDescription)
             }
@@ -170,6 +248,11 @@ final class ChatStore: ObservableObject {
                 case "done":
                     if let err = e["error"] as? String { finish(error: err); return }
                     if e["intent"] as? String == "tell" { kept(e) }
+                    if let src = e["source"] as? JSON, let u = src["url"] as? String, var last = messages.last, last.role == .camr {
+                        last.sourceTitle = src["title"] as? String ?? u
+                        last.sourceURL = URL(string: u)
+                        messages[messages.count - 1] = last
+                    }
                     let reply = e["reply"] as? String
                     let note = firstWord.map { String(format: "first word %.2f s", $0) } ?? ""
                     finish(reply: reply, note: note)
@@ -252,6 +335,6 @@ final class ChatStore: ObservableObject {
         }
         last.note = note
         messages[messages.count - 1] = last
-        Task { await refresh() }
+        Task { await refresh(); await loadChats() }
     }
 }

@@ -38,6 +38,7 @@ struct MainView: View {
     @StateObject private var chat: ChatStore
     @StateObject private var place = Box<Place?>(.chat)
     @StateObject private var showMemory = Box(true)
+    @StateObject private var browser = BrowserModel()
 
     init(engine: Engine) {
         self.engine = engine
@@ -51,7 +52,10 @@ struct MainView: View {
         } detail: {
             switch place.value ?? .chat {
             case .chat:
-                ChatView(chat: chat)
+                ChatView(chat: chat) { url in
+                    browser.go(url.absoluteString)
+                    place.value = .browser
+                }
                     .inspector(isPresented: $showMemory.value) {
                         MemoryPanel(chat: chat)
                             .inspectorColumnWidth(min: 280, ideal: 320, max: 420)
@@ -73,13 +77,14 @@ struct MainView: View {
             case .connections:
                 ConnectionsView(engine: engine)
             case .browser:
-                BrowserView()
+                BrowserView(model: browser)
             case let other:
                 ComingNext(place: other)
             }
         }
         .task {
             await chat.refresh()
+            await chat.loadChats()
             if !Script.steps.isEmpty { await Script.run(chat: chat, place: place) }
         }
     }
@@ -94,6 +99,19 @@ struct Sidebar: View {
         List(selection: $place) {
             ForEach([Place.chat, .today, .memory, .agents, .browser, .models, .connections], id: \.self) { p in
                 Label(p.title, systemImage: p.symbol).tag(p)
+            }
+            if !chat.chats.isEmpty {
+                Section("Recent chats") {
+                    ForEach(chat.chats.prefix(6), id: \.id) { c in
+                        Button {
+                            place = .chat
+                            Task { await chat.open(c.id) }
+                        } label: {
+                            Label(c.title, systemImage: "text.bubble").lineLimit(1)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
             Section("Shelves") {
                 ForEach(chat.shelves) { s in

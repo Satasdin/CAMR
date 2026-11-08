@@ -105,6 +105,16 @@ _STATES = re.compile(r"\b(my|i|i'm|i've|i'll|we|we're|our|us|me|is|are|was|were|
                      r"starts?|ends?|due|born|called|named|prefers?|likes?|hates?|must|always|never|should|needs? to|has to)\b", re.I)
 
 
+_RESEARCH = re.compile(r"^\s*(please\s+)?(look up|research|search (the web|online|the internet)( for)?|find out( about)?|"
+                       r"what does wikipedia say)\b", re.I)
+
+
+def wants_research(text: str) -> bool:
+    """Whether a message asks CAMR to read the web first ("look up the rainy seasons in Kenya", "research matatu
+    fares"): then a page is read and its source shown with the answer."""
+    return bool(_RESEARCH.match(text.strip()))
+
+
 def wants_tell(text: str) -> bool:
     """Whether a chat message tells CAMR something to keep ("My sister Amina moved to Nakuru last week", "Remember
     that rent is 28,000 from March") rather than asking for something ("Help me plan Thursday", "What's the

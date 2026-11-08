@@ -386,9 +386,9 @@ class Talk:
             return {"reply": "", "intent": None}
         intent = intent or ("ask" if text.endswith("?") else "tell")
         if intent == "auto":  # the Mac app's chat: a statement is kept on a shelf, anything else is answered
-            from camr_engine.assistant import wants_tell
+            from camr_engine.assistant import wants_research, wants_tell
 
-            intent = "tell" if wants_tell(text) else "chat"
+            intent = "research" if wants_research(text) else ("tell" if wants_tell(text) else "chat")
         if intent not in INTENTS:
             raise Refused(400, f"intent is one of {', '.join(INTENTS)}")
         if memory is not None and memory not in MODES:

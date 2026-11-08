@@ -71,7 +71,7 @@ struct WebView: NSViewRepresentable {
 }
 
 struct BrowserView: View {
-    @StateObject private var model = BrowserModel()
+    @ObservedObject var model: BrowserModel
     @StateObject private var typed = Box("")
 
     var body: some View {

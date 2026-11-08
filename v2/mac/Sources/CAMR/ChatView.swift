@@ -5,6 +5,7 @@ import SwiftUI
 
 struct ChatView: View {
     @ObservedObject var chat: ChatStore
+    var open: (URL) -> Void = { _ in }
     @StateObject private var draft = Box("")
     @FocusState private var focused: Bool
 
@@ -15,7 +16,7 @@ struct ChatView: View {
                     LazyVStack(alignment: .leading, spacing: 18) {
                         if chat.messages.isEmpty { welcome }
                         ForEach(chat.messages) { m in
-                            MessageRow(message: m, status: m.pending ? chat.status : "")
+                            MessageRow(message: m, status: m.pending ? chat.status : "", open: open)
                                 .id(m.id)
                         }
                     }
@@ -52,7 +53,7 @@ struct ChatView: View {
 
     private var composer: some View {
         HStack(spacing: 6) {
-            Button {} label: { Image(systemName: "plus") }
+            Button { if let url = Attach.pick() { chat.attach(url) } } label: { Image(systemName: "plus") }
                 .buttonStyle(.borderless)
                 .frame(width: 28, height: 28)
                 .background(Circle().fill(Color.white.opacity(0.1)))
@@ -96,17 +97,24 @@ struct ChatView: View {
 struct MessageRow: View {
     let message: Message
     let status: String
+    var open: (URL) -> Void = { _ in }
 
     var body: some View {
         switch message.role {
         case .you:
             HStack {
                 Spacer(minLength: 80)
-                Text(message.text)
-                    .textSelection(.enabled)
-                    .padding(.horizontal, 14).padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 18).fill(Color.accentColor))
-                    .foregroundStyle(.white)
+                VStack(alignment: .trailing, spacing: 6) {
+                    if let url = message.image, let img = NSImage(contentsOf: url) {
+                        Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
+                            .frame(width: 260, height: 180).clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    Text(message.text)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, 14).padding(.vertical, 9)
+                        .background(RoundedRectangle(cornerRadius: 18).fill(Color.accentColor))
+                        .foregroundStyle(.white)
+                }
             }
         case .camr:
             VStack(alignment: .leading, spacing: 8) {
@@ -116,10 +124,20 @@ struct MessageRow: View {
                         Text(status.isEmpty ? "Thinking…" : status).foregroundStyle(.secondary)
                     }
                 } else {
-                    Text(message.text)
+                    Text(rendered(message.text))
                         .textSelection(.enabled)
                         .foregroundStyle(message.error ? Channel.fault : .primary)
                         .lineSpacing(3)
+                }
+                if let url = message.sourceURL {
+                    Button { open(url) } label: {
+                        Label("Read first: \(message.sourceTitle)", systemImage: "globe")
+                            .font(.caption)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Capsule().fill(Color.white.opacity(0.07)))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open in CAMR's browser")
                 }
                 if !message.used.isEmpty || !message.note.isEmpty || !message.keptOn.isEmpty {
                     HStack(spacing: 6) {
@@ -149,6 +167,12 @@ struct MessageRow: View {
             }
         }
     }
+}
+
+/// An answer's Markdown (bold, italics, code, links) drawn as such, its lines and lists kept as written.
+func rendered(_ text: String) -> AttributedString {
+    (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+        ?? AttributedString(text)
 }
 
 /// Eight dots in a ring, lit in turn: the model is working.

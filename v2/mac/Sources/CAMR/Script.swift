@@ -5,7 +5,7 @@
 //                 {"snap":"chat"},{"go":"memory"},{"wait":1.5},{"snap":"memory"},{"quit":true}]'
 //   CAMR_SNAPSHOT_DIR=/some/folder   (PNG files, one per "snap")
 //
-// Steps: size [w,h] · go <place> · ask <text> · wait <seconds | "answer" | "ready"> · snap <name> · quit.
+// Steps: size [w,h] · go <place> · ask <text> · attach <file path> · wait <seconds | "answer" | "ready"> · snap <name> · quit.
 
 import AppKit
 import SwiftUI
@@ -27,6 +27,7 @@ enum Script {
             }
             if let p = step["go"] as? String { place.value = Place(named: p) }
             if let text = step["ask"] as? String { chat.send(text) }
+            if let path = step["attach"] as? String { chat.attach(URL(fileURLWithPath: path)) }
             if let wait = step["wait"] {
                 if let s = wait as? Double { try? await Task.sleep(nanoseconds: UInt64(s * 1e9)) }
                 if wait as? String == "answer" {
