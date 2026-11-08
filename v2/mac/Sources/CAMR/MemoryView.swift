@@ -73,7 +73,7 @@ struct MemoryView: View {
 
     private func color(_ step: String) -> Color {
         switch step {
-        case "Wake", "Keep": return Channel.ssd
+        case "Wake", "Keep", "Read asleep": return Channel.ssd
         case "Take", "Lay the desk": return Channel.ram
         case "Answer", "Used": return Channel.used
         default: return .white
@@ -118,6 +118,11 @@ struct BigShelf: View {
 
     private func kind(_ i: Int) -> Spine.Kind {
         if shelf.kept && i == shelf.spineCount - 1 { return .waking }
+        if !shelf.takenIDs.isEmpty {  // the engine named them: light exactly those
+            if shelf.usedIDs.contains(i) { return .used }
+            if shelf.takenIDs.contains(i) { return .taken }
+            return shelf.waking ? .waking : .rest
+        }
         let n = shelf.spineCount
         let taken = Array(Set((0..<min(shelf.taken, n)).map { ($0 * 7 + 5) % n })).sorted()
         if let k = taken.firstIndex(of: i) { return k < shelf.used ? .used : .taken }

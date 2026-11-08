@@ -31,6 +31,13 @@ struct ChatView: View {
             }
             composer
         }
+        // a link in an answer may come from a web page the model read: only http(s), and only in CAMR's own private
+        // browser, never another app, a file or a custom scheme
+        .environment(\.openURL, OpenURLAction { url in
+            guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return .discarded }
+            open(url)
+            return .handled
+        })
         .navigationTitle(chat.title)
         .navigationSubtitle(chat.busy ? "answering…" : "")
         .toolbar {

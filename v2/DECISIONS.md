@@ -949,3 +949,22 @@ a macro whose plugin ships only with Xcode, so view state lives in small Observa
 the Desktop folder stalls on macOS's privacy prompt before Python opens its first file, so mac/build.sh installs the
 engine in ~/Library/Application Support/CAMR/engine (camr_engine copied, its environment an APFS clone). Checked: the
 installed engine answered "where does my sister live, and when is her birthday?" right, first word 0.31 s.
+
+## E-70 (9 Nov, overnight): the Mac app covers chat, memory and the workflows; told facts are kept and sorted
+
+- **Chat keeps what you tell it.** A message is a statement (kept on a shelf, "Noted on the Personal shelf.") or a
+  request (answered) by assistant.wants_tell; the app sends intent "auto". Shelves are sorted by the engine's Sorter
+  ("auto"); the app adds Writing and Study shelves in the demo. Sorting is still imperfect (rent and fares went to
+  Projects, algorithms notes to Research): the Sorter needs tuning, a follow-up.
+- **What the model used is shown.** memory.answer emits a live "used" event (the taken moments and the ones that drew
+  at least events.USED of the attention); the app lights exactly those spines green, the taken ones amber.
+- **Screens built and checked with the app's own snapshots (CAMR_SCRIPT):** Chat with the memory panel, Memory (all
+  shelves, the last answer's steps with measured times), Today, Models (fit verdicts from /api/models), Agents (a model
+  per helper, start/wait against 90% of free memory), Connections (MCP via the engine's existing routes), the browser,
+  photos and files into memory (images read on the Mac with Vision, copied to CAMR's inbox first), recent chats,
+  Markdown answers, an app icon.
+- **Look-ups go online only when asked in words** ("search the web for…", "…on Wikipedia") and never for a message
+  about the person (security review); links in answers open only http(s), only in CAMR's private browser.
+- **Demo memory:** scripts/demo_life.py tells one consistent life (31 facts, some changing) to a fresh engine. Checked:
+  "What's my rent now?" → KSh 28,000 (the newer value); Kevin's extension → "now 214"; sister → Nakuru, 14 March.
+  Limit seen: a broad question ("plan my week") reads one room, so facts on another shelf are missed.

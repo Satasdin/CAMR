@@ -96,23 +96,27 @@ _CODE = re.compile(r"\b(code|function|script|class|method|program|regex|sql|snip
 _ASKS = re.compile(r"\b(write|build|make|create|code|implement|generate|fix|refactor|show me|give me|draft)\b", re.I)
 
 
-_KEEP = re.compile(r"^\s*(remember|note that|note:|fyi|keep in mind|for the record|just so you know)\b", re.I)
+_KEEP = re.compile(r"^\s*(remember|note that|note:|fyi|keep in mind|for the record|just so you know|update\s*[:,\-])", re.I)
 _REQUEST = re.compile(r"^\s*(please\s+)?(help|write|plan|make|create|explain|tell me|show|find|give|list|summari[sz]e|"
                       r"draft|translate|fix|build|can you|could you|would you|let'?s|compare|check|search|look up|"
                       r"research|suggest|recommend|teach|quiz|describe|draw|calculate|work out|sort|organi[sz]e)\b",
                       re.I)
 _STATES = re.compile(r"\b(my|i|i'm|i've|i'll|we|we're|our|us|me|is|are|was|were|moved|changed|lives?|works?|costs?|"
-                     r"starts?|ends?|due|born|called|named|prefers?|likes?|hates?|must|always|never|should|needs? to|has to)\b", re.I)
+                     r"starts?|ends?|due|born|called|named|prefers?|likes?|hates?|must|always|never|should|needs? to|has to|"
+                     r"went|goes|rose|fell|dropped|runs?|uses?|now|moved)\b", re.I)
 
 
-_RESEARCH = re.compile(r"^\s*(please\s+)?(look up|research|search (the web|online|the internet)( for)?|find out( about)?|"
-                       r"what does wikipedia say)\b", re.I)
+_RESEARCH = re.compile(r"\b(search (the web|online|the internet)|look (it )?up (online|on the web|on wikipedia)|"
+                       r"(on|from) (the web|wikipedia|the internet)|what does wikipedia say)\b", re.I)
+_PERSONAL = re.compile(r"\b(my|me|mine|our|ours|us|i|i'm|i've|we)\b", re.I)
 
 
 def wants_research(text: str) -> bool:
-    """Whether a message asks CAMR to read the web first ("look up the rainy seasons in Kenya", "research matatu
-    fares"): then a page is read and its source shown with the answer."""
-    return bool(_RESEARCH.match(text.strip()))
+    """Whether a message asks CAMR to read the web first: only when it says so ("search the web for the long rains",
+    "look up Mount Kenya on Wikipedia"), and never for a message about the person ("my", "me", "our"), so nothing
+    private leaves the Mac by guesswork. Then a page is read and its source shown with the answer."""
+    t = text.strip()
+    return bool(_RESEARCH.search(t)) and not _PERSONAL.search(t)
 
 
 def wants_tell(text: str) -> bool:

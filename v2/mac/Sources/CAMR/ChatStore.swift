@@ -37,6 +37,8 @@ struct Shelf: Identifiable, Equatable {
     var used = 0
     var takenAt: Date?
     var kept = false      // a memory was just put on this shelf
+    var takenIDs: Set<Int> = []  // exactly which memories (by place on the shelf), once the engine says
+    var usedIDs: Set<Int> = []
 
     var spineCount: Int { min(Shelf.shown, memories) }
 }
@@ -208,7 +210,7 @@ final class ChatStore: ObservableObject {
     private func clearDesk() {
         deskTokens = 0
         deskMemoryTokens = 0
-        for i in shelves.indices { shelves[i].taken = 0; shelves[i].used = 0; shelves[i].waking = false; shelves[i].kept = false }
+        for i in shelves.indices { shelves[i].taken = 0; shelves[i].used = 0; shelves[i].waking = false; shelves[i].kept = false; shelves[i].takenIDs = []; shelves[i].usedIDs = [] }
     }
 
     private func follow(_ id: String) async {
@@ -282,8 +284,10 @@ final class ChatStore: ObservableObject {
         let choose = parts["choose"] as? Double ?? 0
         lastRun?.steps.append(("Find", String(format: "%.0f ms", choose), "every memory searched, line by line"))
         if asleep {
-            lastRun?.steps.append(("Wake", String(format: "%.0f ms", parts["fetch"] as? Double ?? 0),
-                                   "\(shelves[i].label) was asleep: read back from the SSD"))
+            let fetch = parts["fetch"] as? Double ?? 0
+            lastRun?.steps.append(fetch > 0.5
+                ? ("Wake", String(format: "%.0f ms", fetch), "\(shelves[i].label) was asleep: its notes read back from the SSD")
+                : ("Read asleep", "as words", "\(shelves[i].label) is asleep: its memories read as words, nothing loaded"))
         }
         let bytes = e["bytes"] as? Int ?? 0
         lastRun?.steps.append(("Take", "\(max(1, closest)) from \(shelves[i].label)",
@@ -304,6 +308,8 @@ final class ChatStore: ObservableObject {
         shelves[i].waking = false
         shelves[i].taken = max(shelves[i].taken, taken)
         shelves[i].used = (e["used"] as? [Any])?.count ?? 0
+        shelves[i].takenIDs = Set((e["closest"] as? [Int]) ?? [])
+        shelves[i].usedIDs = Set((e["used"] as? [Int]) ?? [])
         lastRun?.steps.append(("Used", "\(shelves[i].used) of \(taken)",
                                "drew at least a tenth of the model's attention"))
     }

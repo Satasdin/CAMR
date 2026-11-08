@@ -58,9 +58,9 @@ DEFAULTS = (
           ("The paper reports that retrieval beats long context on the benchmark.",
            "Our experiment measured accuracy at 1M tokens.", "Read the related work on KV cache reuse.")),
     Shelf("personal", "Personal", "project:personal", "Personal life: family, friends, birthdays, health, home, "
-          "travel, money of one's own, plans and errands.",
+          "travel, money of one's own (rent, bills, fares, shopping), the gym, plans and errands.",
           ("My sister's birthday is next week.", "Dentist appointment on Friday, then pick up the kids.",
-           "Book the flight home for the holidays.")),
+           "Book the flight home for the holidays.", "My rent is due on the 28th.")),
 )
 SHELVES: list[Shelf] = list(DEFAULTS)  # the shelves now, changed in place, so every importer sees the same list
 BY_NAME: dict[str, Shelf] = {s.name: s for s in SHELVES}
