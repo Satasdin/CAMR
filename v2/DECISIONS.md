@@ -937,3 +937,15 @@ Confirmation registered before running (work/queue16.sh), the one chosen setting
 (+12/-16, p = 0.57); two-hop 9 of 48 against 7 and 8. The gain is the code family, which the tricky set does not ask:
 on new knowledge questions the second search changes nothing, and RAG stays level or slightly ahead. The app's main
 job is code, so the app reads with hop=2 (chat.APP_MEMORY); without the cross-encoder's files nothing is added.
+
+## E-69 (9 Nov): CAMR for Mac, a native app over the engine
+
+The app is rebuilt as a native Mac app (v2/mac, SwiftUI, built with the command-line tools by mac/build.sh); the
+older web screens will be removed once it covers them. It starts the engine itself (python -m camr_engine.app with
+CAMR_TOKEN, --live, the 4B: the 1.7B was unreliable) and talks to it over 127.0.0.1 with the launch token. Opens on
+Chat; the inspector shows each shelf as a row of spines that lift amber when the answer takes from it; the sidebar
+holds the places and the shelves; a built-in browser (WKWebView) works. Two findings: this SDK's SwiftUI `@State` is
+a macro whose plugin ships only with Xcode, so view state lives in small ObservableObjects; and an app started from
+the Desktop folder stalls on macOS's privacy prompt before Python opens its first file, so mac/build.sh installs the
+engine in ~/Library/Application Support/CAMR/engine (camr_engine copied, its environment an APFS clone). Checked: the
+installed engine answered "where does my sister live, and when is her birthday?" right, first word 0.31 s.
