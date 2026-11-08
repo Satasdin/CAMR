@@ -1,6 +1,6 @@
 ---
 name: motion-starter
-description: A complete, tested motion.js for a 3D scroll page (rocket turning and lifting off, depth layers, reveals, a live countdown, a calm version): copy it whole, then change only the lines marked CHANGE
+description: A complete, tested motion.js for a rocket's 3D scroll page (rocket turning and lifting off, depth layers, reveals, a live countdown, a calm version): copy it whole, then change only the lines marked CHANGE
 ---
 # motion.js: start from this file
 
@@ -151,3 +151,7 @@ window.addEventListener('pagehide', () => {
 - Wrong: `gsap.from(..., { opacity: 0 })` that also runs when reduced motion is on: the text stays invisible.
   Right: every gsap call inside `if (!calm)`, as above.
 - Wrong: a URL from the internet for three.js, GSAP or a model. Right: only the files in `vendor/`.
+- Wrong: the headline twice (once in the hero, once more in another box). Right: one `<h1>`.
+- Wrong: panels in the middle of the screen, over the rocket. Right: panels on the left (`margin-right: auto;
+  margin-left: 0`), the rocket on the right, as here.
+- Wrong: the brief's own request as the headline. Right: the company's line, as told.

@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 
 from camr_engine.agentic import motion as moving
 from camr_engine.agentic.loop import WEBSITE
+ROCKET = re.compile(r"\b(rockets?|lift-?offs?|lifts? off|launch vehicles?)\b", re.I)
 
 if TYPE_CHECKING:
     from camr_engine.agentic.desk import Desk
@@ -836,6 +837,11 @@ class Lead:
         t = (part.target or "").lower()
         return t.endswith((".html", ".htm")) if part.role == "builder" else t.endswith(".css")
 
+    def _starter(self, base: str) -> str:
+        """Which starter a 3D brief gets: the rocket's for a rocket, else the model made of parts. A rocket's page,
+        given to a satellite's brief, was copied with its rocket, its countdown and its launch date."""
+        return base if ROCKET.search(self.request) else f"{base}-parts"
+
     def _motion_context(self, part: Part) -> list[str]:
         """For a brief that asks for motion: the vendored files to the architect, the exact loading HTML to the
         builder, and the methods (skill cards) to the motion part."""
@@ -847,8 +853,9 @@ class Lead:
         if part.role in ("builder", "design") and "three" in kits and self._starter_wanted(part):
             from camr_engine.agentic.skills import Skills
 
-            try:  # the page and stylesheet that passed every check with motion-starter's motion.js
-                starter = [f"The method for page-starter:\n{Skills(SKILLS).load('page-starter')}"]
+            name = self._starter("page-starter")
+            try:  # the page and stylesheet that passed every check with the matching motion starter's motion.js
+                starter = [f"The method for {name}:\n{Skills(SKILLS).load(name)}"]
             except KeyError:
                 starter = []
         else:
@@ -868,9 +875,10 @@ class Lead:
             # a 3D page starts from a whole tested file (motion-starter), which even a small model can copy and
             # adjust; without 3D, the layers card when the brief asks for depth
             depth = ["layers"] if moving.LAYERS.search(self.request) else []
-            cards = (["motion-starter"] if "three" in kits else depth)
-            if "three" in kits and not (SKILLS / "motion-starter.md").exists():
-                cards = ["3d-scene"] + depth  # a folder of cards from before the starter (CAMR_SKILLS)
+            starter = self._starter("motion-starter")
+            cards = ([starter] if "three" in kits else depth)
+            if "three" in kits and not (SKILLS / f"{starter}.md").exists():
+                cards = ["3d-scene"] + depth  # a folder of cards from before the starters (CAMR_SKILLS)
             out = ["The vendored files in vendor/ (use these, never a network address):\n" + moving.catalog(kits)]
             for name in cards:
                 try:

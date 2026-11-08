@@ -1,6 +1,6 @@
 ---
 name: page-starter
-description: A complete, tested index.html and style.css for a 3D scroll page (canvas behind, depth layers, a hero with a live countdown, sections on panels beside the 3D model): copy them, then put in the brief's words
+description: A complete, tested index.html and style.css for a rocket's 3D scroll page (canvas behind, depth layers, a hero with a live countdown, sections on panels beside the 3D model): copy them, then put in the brief's words
 ---
 # index.html and style.css: start from these files
 
@@ -180,3 +180,7 @@ h1 { font-size: clamp(2.4rem, 7vw, 4.5rem); line-height: 1.05; margin: 0.4rem 0;
 - Wrong: a countdown written as fixed text ("126 days"). Right: the `cd-...` spans, which motion.js fills every second.
 - Wrong: sections on the same side as the 3D model without a background. Right: the panels as above.
 - Wrong: links to sections that do not exist. Right: every `href="#..."` names a section id on the page.
+- Wrong: the headline twice (once in the hero, once more in another box). Right: one `<h1>`.
+- Wrong: panels in the middle of the screen, over the rocket. Right: panels on the left (`margin-right: auto;
+  margin-left: 0`), the rocket on the right, as here.
+- Wrong: the brief's own request as the headline. Right: the company's line, as told.

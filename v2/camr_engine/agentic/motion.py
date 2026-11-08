@@ -23,6 +23,7 @@ KITS = {
     "three": ["three/three.module.js", "three/three.core.js", "three/LICENSE", "three/addons/loaders/GLTFLoader.js",
               "three/addons/utils/BufferGeometryUtils.js", "three/addons/utils/SkeletonUtils.js"],
     "rocket": ["camr-rocket.js", "models/rocket/rocket.glb", "models/rocket/SOURCE.md"],
+    "parts": ["camr-parts.js"],
     "models": [f"models/space-kit/{m}.glb" for m in ("rocket_baseA", "rocket_fuelA", "rocket_sidesA", "rocket_finsA",
                                                       "rocket_topA", "platform_large", "satelliteDish")]
               + ["models/space-kit/License.txt"],
@@ -67,8 +68,9 @@ def wants(request: str, page: str = "") -> set[str]:
 
 
 def kits_for(request: str) -> list[str]:
-    """The vendored kits a motion brief gets: GSAP always; three.js, the rocket and the models for a 3D one."""
-    return (["three", "rocket", "models"] if THREE_D.search(request or "") else []) + ["gsap"]
+    """The vendored kits a motion brief gets: GSAP always; three.js, the rocket, the parts model and the models for a
+    3D one."""
+    return (["three", "rocket", "parts", "models"] if THREE_D.search(request or "") else []) + ["gsap"]
 
 
 def install(ws, kits: list[str]) -> list[str]:
@@ -109,6 +111,10 @@ def catalog(kits: list[str]) -> str:
                        "returns the group at once and puts the model in when it loads: use this one for a rocket), "
                        "makePad(THREE), makeStars(THREE), disposeAll(THREE, group); makeRocket(THREE) is a cartoon "
                        "rocket from shapes, only for a cartoon look",
+             "parts": "vendor/camr-parts.js: makeParts(THREE, ['part one', 'part two', ...]) (a model made of the "
+                      "named parts, the first on top; parts named wing, panel, solar or array are side panels; use "
+                      "this for an exploded view or any product made of parts), explodeParts(model, t) (t 0: "
+                      "together, 1: apart), and makeStars and disposeAll as in camr-rocket.js",
              "models": "vendor/models/space-kit/*.glb (CC0, Kenney): rocket_baseA, rocket_fuelA, rocket_sidesA, "
                        "rocket_finsA, rocket_topA, platform_large (a launch pad), satelliteDish",
              "gsap": "GSAP 3.15 and ScrollTrigger as globals: vendor/gsap/gsap.min.js, vendor/gsap/ScrollTrigger.min.js"}

@@ -32,7 +32,7 @@ REPO = Path(__file__).resolve().parents[2]
 def test_the_kits_are_copied_into_vendor_byte_for_byte_and_only_once(tmp_path):
     ws = Workspace(tmp_path, [])
     copied = motion.install(ws, motion.kits_for(ROCKET))
-    for rel in ["VENDOR.md", *[f for k in ("three", "rocket", "models", "gsap") for f in motion.KITS[k]]]:
+    for rel in ["VENDOR.md", *[f for k in ("three", "rocket", "parts", "models", "gsap") for f in motion.KITS[k]]]:
         assert (tmp_path / "vendor" / rel).read_bytes() == (motion.VENDOR / rel).read_bytes(), rel
     assert "vendor/three/three.module.js" in copied and "vendor/models/space-kit/platform_large.glb" in copied
     assert motion.install(ws, motion.kits_for(ROCKET)) == []  # already there: nothing copied again
@@ -41,7 +41,7 @@ def test_the_kits_are_copied_into_vendor_byte_for_byte_and_only_once(tmp_path):
 
 def test_a_motion_brief_without_3d_gets_gsap_only():
     assert motion.kits_for("A pricing page with physics-like motion and a calm mode") == ["gsap"]
-    assert motion.kits_for(ROCKET) == ["three", "rocket", "models", "gsap"]
+    assert motion.kits_for(ROCKET) == ["three", "rocket", "parts", "models", "gsap"]
 
 
 def test_copying_in_keeps_to_the_workspace(tmp_path):
@@ -163,13 +163,42 @@ def test_a_brief_that_asks_for_motion_gets_a_motion_part_and_the_vendored_files(
     assert "Vendor files" in text and "camr-rocket.js" in text  # the architect is told what is vendored
 
 
+SATELLITE = ("A product page for a small satellite: a 3D model that comes apart into an exploded view in layers as you "
+             "scroll and comes back together, a parallax depth of panels around it, and a calm version when reduced "
+             "motion is on.")
+
+
+def test_a_3d_brief_that_is_not_a_rocket_gets_the_parts_starter_and_nothing_of_the_rocket(desk):
+    lead = build(desk, SATELLITE)
+    assert lead.plan.kind == "website" and "motion" in [p.role for p in lead.plan.parts]
+    text = "\n".join(p.system + "\n" + p.user for p in desk.brain.prompts)
+    assert "The method for motion-starter-parts" in text and "makeParts(THREE" in text
+    assert "The method for page-starter-parts" in text
+    # the rocket's starter (its countdown, its launch date, its company) never reaches a satellite's parts
+    assert "The method for motion-starter:" not in text and "The method for page-starter:" not in text
+    assert 'id="cd-secs"' not in text and "2027-03-14" not in text and "Halcyon Launch" not in text
+    assert (desk.workspace.root / "vendor/camr-parts.js").is_file()
+
+
+def test_the_parts_starter_cards_hold_the_tested_reference_page():
+    from camr_engine.agentic import plan
+
+    ref = REPO / "docs/real-use/hard/h3-reference"
+    page = (plan.SKILLS / "page-starter-parts.md").read_text()
+    assert (ref / "index.html").read_text().strip() in page and (ref / "style.css").read_text().strip() in page
+    code = (plan.SKILLS / "motion-starter-parts.md").read_text()
+    stripped = "\n".join(line.split("  // CHANGE")[0] for line in code.splitlines()
+                         if not line.strip().startswith("// CHANGE"))
+    assert (ref / "motion.js").read_text().strip() in stripped
+
+
 def test_a_folder_of_cards_from_before_the_starter_gives_the_old_cards(desk, tmp_path, monkeypatch):
     from camr_engine.agentic import plan
 
     old = tmp_path / "skills"
     old.mkdir()
     for f in plan.SKILLS.glob("*.md"):
-        if f.stem not in ("motion-starter", "page-starter"):
+        if not f.stem.startswith(("motion-starter", "page-starter")):
             (old / f.name).write_text(f.read_text())
     monkeypatch.setattr(plan, "SKILLS", old)
     build(desk, ROCKET)
@@ -347,6 +376,8 @@ def test_the_reference_page_passes_every_rule_and_the_broken_one_fails_the_right
     hard = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(hard)
     good = hard.check("H1", REPO / "docs/real-use/hard/h1-reference", "ref")["check"]["motion"]["rules"]
+    assert all(r["ok"] for r in good), [r["text"] for r in good if not r["ok"]]
+    good = hard.check("H3", REPO / "docs/real-use/hard/h3-reference", "ref")["check"]["motion"]["rules"]
     assert all(r["ok"] for r in good), [r["text"] for r in good if not r["ok"]]
     bad = hard.check("H1", REPO / "docs/real-use/hard/h1-broken", "bad")["check"]["motion"]["rules"]
     assert {r["rule"] for r in bad if not r["ok"]} == {"canvas", "console", "reduced"}
