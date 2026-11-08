@@ -13,8 +13,11 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # run as a script from v2: camr_engine is beside it
 
 from camr_engine.bench.local import Engine, LONGHAUL_INTRO, Loader
 from camr_engine.bench.longhaul import CUTS, line
