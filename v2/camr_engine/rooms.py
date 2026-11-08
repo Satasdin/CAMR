@@ -129,19 +129,26 @@ class Rooms:
                 return room.rid
         return None
 
-    def add(self, text: str, day: int, vec: np.ndarray, notes: bytes, rid: int | None) -> Moment:
+    def add(self, text: str, day: int, vec: np.ndarray, notes: bytes | None, rid: int | None, *,
+            tokens: int | None = None) -> Moment:
         """Append a moment's notes to room ``rid`` (from ``place``), or to a new room when it is None. ``notes`` are
-        packed at that room's bits (``bits_of(rid)``)."""
-        tokens = len(notes) // self.token_size(rid)
+        packed at that room's bits (``bits_of(rid)``). With ``notes`` None the moment joins as words only (``tokens``
+        long): nothing is written, and the room's file, if it ever has one, is written whole when it wakes."""
+        if notes is None:
+            if tokens is None:
+                raise ValueError("a moment kept as words says how many tokens it is")
+        else:
+            tokens = len(notes) // self.token_size(rid)
         if rid is None:
             rid = len(self.rooms)
             self.rooms.append(Room(rid, bits=self.bits))
         room = self.rooms[rid]
-        fd = _open(self.file(rid), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-        try:
-            os.write(fd, notes)
-        finally:
-            os.close(fd)
+        if notes is not None:
+            fd = _open(self.file(rid), os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+            try:
+                os.write(fd, notes)
+            finally:
+                os.close(fd)
         m = Moment(len(self.moments), rid, day, text, room.tokens, tokens)
         room.members.append(m.mid)
         room.tokens += tokens

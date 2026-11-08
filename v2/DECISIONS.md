@@ -838,3 +838,36 @@ the held-back practice world (seed 7, 2M, 165 questions) it answered 137 right a
 word came 0.11–0.14 s later (the question is read in a second pass with the adapter on). The gain stays inside the
 worlds it practised on; it does not carry to a world it never saw, so it is not the desk. The later runs keep it as a
 labelled experiment only. Records: work/dev-records/2026-11-08/013318…, 013438…, 013611…, 013814….
+
+## E-65: notes as a hot cache, and reading less (8 Nov)
+
+Why: on the locked 16M desks every question's room was asleep, so the 38 GB of saved notes were used by none of the
+73 answers. CAMR read the asleep room and its 6 closest moments as text (1,331 tokens, first word 0.58 s, 44/73)
+against RAG with the same finder (1,118 tokens, 0.47 s, 46/73). Notes for the 4B are 147,456 bytes a token at 16
+bits; notes for all 16M tokens would be about 1.2 TB, so a 37 GB budget keeps the newest ~4% of rooms awake. The
+first word waits on reading (about 2,460 tokens a second), so speed is how much text is read.
+
+What changed (all opt-in, defaults unchanged; measured on seeds 2 and 3 only):
+- `notes="hot"` (memory.NOTES): a moment is kept as words in an asleep room, so telling costs an embedding; a
+  question to an asleep room counts it as wanted, and a nap wakes the most wanted rooms inside the disk budget.
+  Seed 2 to 1M: 79 MB and 207 s against 37 GB and 1,189 s.
+- `asleep_read` words | lines | skip: an asleep room read whole, as its best lines (finder.room_lines), or not.
+- `read=lines`: a long moment read as its 4 best lines (finder.cut); a moment holding code is read whole.
+- `follow=3` (finder.replies): when one of the 3 best moments is the user's question with an answer after it, the
+  user's next message is read too (a method taught as a correction shares few words with the next question of its
+  kind). Maths gold in the closest 6: 10 to 19 of 30 (seed 2), 11 to 16 (seed 3).
+- `latest=1` (finder.newest): the newest later line naming what the best line names, holding a value, is read
+  too. All of a changed question's versions in view: 18 to 23 of 30 (seed 2), 18 to 20 (seed 3).
+- The finder ranks only what callers read and sorts partially (16M: 40 ms to 17 ms); the same order except that
+  equal best lines now resolve to the earliest (the old full sort chose among them arbitrarily).
+
+Tried and dropped: a sleep step pairing lines about the same thing for the model to judge (about 25,000 pairs at
+1M for about 55% of the real updates: too dear for what it found); a second look on the bridge words alone (two-hop
+gold in view 9 to 10 and 7 to 8: two-hop misses are reading, not finding).
+
+Deciding run, 30 questions per family, seeds 2 and 3 at 1M on the hot memories (329 questions):
+RAG 234 (0.41 s); CAMR room as text 235; + replies 237; + newest 245 (0.54 s); lines + replies 234 (0.26 s);
+lines + replies + newest 230. CAMR's best against RAG, paired: 26 right only for CAMR, 15 only for RAG (p = 0.12,
+not yet a proven gain). Lines + replies: 19 and 19, the same accuracy at 0.26 s against 0.41 s. Pages fail for every
+setup (answers reach the 1,200-token limit before the footer); left as it is, the limit is the test's.
+Records: work/dev-records/2026-11-08/1112…–1158… (per_family 30).

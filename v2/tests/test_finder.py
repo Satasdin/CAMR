@@ -74,3 +74,29 @@ def test_a_page_request_looks_for_the_design_system():
                               "[2025-10-02, day 10] User: The catering menu has twelve dishes."])
     top = [int(m) for m in ix.order("Build the catering page.")[:2]]
     assert 5 in top
+
+
+def test_the_fast_rankings_match_a_full_stable_sort():
+    import numpy as np
+
+    from camr_engine.finder import ranks, sparse_ranks, top
+
+    rng = np.random.default_rng(1)
+    for _ in range(50):
+        x = rng.integers(0, 4, size=200).astype(np.float32) * (rng.random(200) < 0.3)  # mostly zero, many ties
+        assert (sparse_ranks(x) == ranks(x)).all()
+        full = np.argsort(-x, kind="stable")
+        for n in (1, 5, 37, 200, 250):
+            assert (top(x, n) == full[:n]).all()
+
+
+def test_asking_for_the_head_gives_the_head_of_the_whole_order():
+    import numpy as np
+
+    from camr_engine.finder import LineIndex
+
+    texts = [f"[2025-10-0{i % 9 + 1}, day {i}] User: order {i % 7} of salt from supplier {i % 5}." for i in range(300)]
+    ix = LineIndex(texts)
+    dense = np.random.default_rng(2).random(300).astype(np.float32)
+    for q in ("Who supplies salt?", "order 3", "supplier 4 salt"):
+        assert (ix.order(q, dense, head=40) == ix.order(q, dense)[:40]).all()

@@ -57,6 +57,9 @@ REREADS = ("all", "off_desk")  # the closest moments re-read as words: all of th
 ALLOWANCE_BYTES = 256 * 2**20
 STEP_REUSE_MIN = 256  # tokens an agent step must share with the step before for its read to be reused
 FINDER = "words"  # how the closest moments are found: "words" (lines' words + embeddings, E-63) or "dense"
+READS = ("moments", "lines")  # the closest moments read whole, or a long one as its best lines (finder.cut)
+NOTES = ("all", "hot")  # every moment written as notes when kept, or notes only for rooms woken because they are used
+ASLEEP_READS = ("words", "lines", "skip")  # an asleep room on the desk: its moments read as words, or not read at all
 BITS = 8  # new rooms' notes on the SSD: 8 bits held the Long Haul's answers (DECISIONS.md, E-54)
 _OWN = object()  # "this memory's own core", as against a core (or None) a session passes in
 
@@ -108,7 +111,8 @@ class Memory:
                  core: Core | bool = False, core_tokens: int = CORE_TOKENS, tiers: Tiers | None = None,
                  metrics: Meter | bool = False, bits: int = BITS, desk_rooms: int = DESK_ROOMS,
                  desk_tokens: int | None = None, desk_order: str = "date", reread: str = "all",
-                 finder: str = FINDER, adapter: str | None = None):
+                 finder: str = FINDER, adapter: str | None = None, read: str = "moments",
+                 asleep_read: str | None = None, notes: str = "all", follow: int = 0, latest: bool = False):
         self.reader, self.embedder, self.closest, self.allowance = reader, embedder, closest, allowance
         self.adapter: dict | None = None  # a trained add-on for the question and answer (camr_engine.adapter)
         if adapter:
@@ -116,6 +120,18 @@ class Memory:
         if finder not in FINDERS:
             raise ValueError(f"finder is one of {FINDERS}, not {finder!r}")
         self.finder = finder
+        if asleep_read is None:  # a memory that keeps notes only for used rooms reads its asleep rooms through lines
+            asleep_read = "skip" if notes == "hot" else "words"
+        if read not in READS or asleep_read not in ASLEEP_READS:
+            raise ValueError(f"read is one of {READS} and asleep_read one of {ASLEEP_READS}")
+        self.read, self.asleep_read = read, asleep_read
+        if notes not in NOTES:
+            raise ValueError(f"notes is one of {NOTES}, not {notes!r}")
+        if notes == "hot" and tiers is None:
+            raise ValueError("notes='hot' keeps rooms asleep until they are used: it needs tiers")
+        self.notes = notes
+        self.follow = follow  # the best moments looked at for a user's reply to read with them (finder.replies)
+        self.latest = bool(latest)  # the newest line naming what the best line names is read too (finder.newest)
         self._lines: LineIndex | None = None  # built from the moments' texts the first time words are asked
         if desk_rooms < 1 or desk_order not in DESK_ORDERS:
             raise ValueError(f"a desk holds at least one room, laid in one of {DESK_ORDERS}")
@@ -202,6 +218,8 @@ class Memory:
         ids = self.ids(text)
         vec = self.embedder.encode_one(text)
         rid = self.rooms.place(vec, len(ids))
+        if self.notes == "hot" and (rid is None or self.tiers.is_asleep(rid)):
+            return self._remember_words(text, day, ids, vec, rid, date, tags, pinned)
         if self.tiers is None:
             after = None if rid is None else self._array(self.rooms.fetch([rid])[rid], rid)
         else:
@@ -228,6 +246,49 @@ class Memory:
                            **more)
         return m
 
+    def _remember_words(self, text, day, ids, vec, rid, date, tags, pinned):
+        """notes='hot': keep a moment as words in an asleep room (a new room is born asleep). No notes are written;
+        the room is written whole as notes only when it wakes (``wake_wanted``), so telling costs an embedding."""
+        m = self.rooms.add(text, day, vec, None, rid, tokens=len(ids))
+        self.tiers.sleeping.add(m.room)
+        if self._lines is not None:
+            self._lines.add(text)
+        note = self._note(m, date, tags, pinned) if self.vault is not None else None
+        if note is not None:
+            self.vault.update(note.id, asleep=True)
+        if self.log:
+            self.log.write("remember", moment=m.mid, room=m.room, day=day, tokens=m.tokens, new_room=rid is None,
+                           asleep=True, **({"note": note.id} if note is not None else {}))
+        return m
+
+    def want(self, rid: int | None) -> None:
+        """A question's room was asleep: count it, so the next nap can wake the rooms questions keep coming to."""
+        if rid is not None and self.tiers is not None:
+            self.tiers.wanted[rid] = self.tiers.wanted.get(rid, 0) + 1
+
+    def wake_wanted(self, most: int | None = None) -> list[int]:
+        """Wake the asleep rooms questions came to most (their notes written from their words), most wanted first,
+        while they fit the disk budget; then hold the budget, weakest and least recently used asleep first. Returns
+        the rooms woken."""
+        t = self.tiers
+        if t is None or not t.wanted:
+            return []
+        budget = t.disk_budget if t.disk_budget is not None else 10**18
+        room = budget - t.disk_bytes()
+        woke = []
+        for rid, _ in sorted(t.wanted.items(), key=lambda kv: (-kv[1], kv[0])):
+            if most is not None and len(woke) >= most:
+                break
+            if not t.is_asleep(rid) or self.rooms.room_bytes(rid) > room:
+                continue
+            t.wake_room(rid)
+            t.touch(rid)
+            room -= self.rooms.room_bytes(rid)
+            woke.append(rid)
+        for rid in woke:
+            t.wanted.pop(rid, None)
+        return woke
+
     def choose(self, question: str, *, vec: np.ndarray | None = None) -> Recall:
         """The room holding the moment closest to the question, and the closest moments overall. ``vec`` is the
         question already embedded (a session asking several memories embeds it once)."""
@@ -237,11 +298,21 @@ class Memory:
         q = self.embedder.encode_one(question, is_query=True) if vec is None else vec
         sims = self.rooms.vectors @ q
         if self.finder == "words":
-            order = self.lines().order(question, sims)
+            order = self.lines().order(question, sims, head=max(SCAN, self.closest, self.follow))  # all it reads
         else:
             order = np.argsort(-sims)
         room = self.rooms.rooms[self.rooms.moments[int(order[0])].room]
-        closest = sorted(int(m) for m in order[:self.closest])
+        closest = [int(m) for m in order[:self.closest]]
+        if self.follow:
+            from camr_engine.finder import replies
+
+            closest += [m for m in replies(lambda i: self.rooms.moments[i].text, order, top=self.follow,
+                                           moments=len(self.rooms.moments)) if m not in closest]
+        if self.latest:
+            from camr_engine.finder import newest
+
+            closest += [m for m in newest(self.lines(), question, order) if m not in closest]
+        closest = sorted(closest)
         more = self._more_rooms(order, room.rid) if self.desk_rooms > 1 else []
         return Recall(room.rid, closest, room.tokens, self.rooms.room_bytes(room.rid),
                       seconds={"choose": time.perf_counter() - t}, score=float(sims[int(order[0])]), reach=self.reach,
@@ -346,11 +417,24 @@ class Memory:
             live.add("room", reach=self.reach, room=rec.room, rooms=len(self.rooms.rooms), score=rec.score,
                      tier=rec.tier, tokens=rec.tokens, bytes=rec.bytes, read_bytes=rec.read_bytes,
                      asleep=rec.asleep, closest=len(rec.closest), core=rec.core, ms=rec.ms)
-        lead = self.room_words(rec.room) if rec.asleep else []  # an asleep room is read as words
+        # an asleep room is read as words, unless asleep_read is "skip": then only the closest moments are read
+        if rec.asleep:
+            self.want(rec.room)
+        lead = self.room_words(rec.room) if rec.asleep and self.asleep_read == "words" else []
+        lead_room: dict[int, list[int]] = {}  # asleep_read "lines": the room's best lines, moment by moment
+        if rec.asleep and self.asleep_read == "lines" and rec.room is not None:
+            from camr_engine.finder import room_lines
+
+            members = self.rooms.rooms[rec.room].members
+            got = room_lines(self.lines(), question, {m: self.rooms.moments[m].text for m in members}, members,
+                             skip=rec.closest)
+            lead_room = {m: self.ids(t) for m, t in got.items()}
+            lead = [i for m in sorted(lead_room) for i in lead_room[m]]
         if self.reread == "off_desk":  # a moment already on the desk as notes is not read again as words
             on = set(rec.laid)
             rec.closest = [m for m in rec.closest if self.rooms.moments[m].room not in on]
-        said = lead + self.words(rec.closest)
+        read = self.read_as(question, rec.closest)  # each closest moment as it is read: whole, or its best lines
+        said = lead + [i for m in rec.closest for i in read[m]]
         ids = said + rest
         rec.words = len(said) + int(extra.pop("memory_words", 0) or 0)  # and any the caller put in ``then``
         c = rec.core
@@ -359,12 +443,16 @@ class Memory:
             spans += [(m, at + self.rooms.moments[m].start, self.rooms.moments[m].tokens)
                       for m in self.rooms.rooms[rid].members]
             at += self.rooms.rooms[rid].tokens
-        if lead:  # an asleep room, read as words just after the desk
+        if lead_room:  # an asleep room's best lines, read just after the desk
+            for m in sorted(lead_room):
+                spans.append((m, at, len(lead_room[m])))
+                at += len(lead_room[m])
+        elif lead:  # an asleep room, read as words just after the desk
             spans += [(m, at + self.rooms.moments[m].start, self.rooms.moments[m].tokens)
                       for m in self.rooms.rooms[rec.room].members]
             at += len(lead)
         for m in rec.closest:  # re-read as words, after the room
-            n = len(self.ids(self.rooms.moments[m].text))
+            n = len(read[m])
             spans.append((m, at, n))
             at += n
         desk = c + rec.notes  # tokens on the desk already read, after the header
@@ -431,6 +519,15 @@ class Memory:
 
         Reader.rewind(cache, start + n)
         return cache, ids[n:], n
+
+    def read_as(self, question: str, moments: list[int]) -> dict[int, list[int]]:
+        """Each of ``moments`` as token ids the way this memory reads it for ``question`` (``read``)."""
+        texts = {m: self.rooms.moments[m].text for m in moments}
+        if self.read == "lines" and moments:
+            from camr_engine.finder import cut
+
+            texts = cut(self.lines(), question, texts, moments)
+        return {m: self.ids(texts[m]) for m in moments}
 
     def words(self, moments: list[int]) -> list[int]:
         return [i for m in moments for i in self.ids(self.rooms.moments[m].text)]

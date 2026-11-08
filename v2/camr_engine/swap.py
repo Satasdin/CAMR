@@ -111,6 +111,7 @@ class Tiers:
         self.disk_budget, self.wake = disk_bytes, wake
         self.sleeping: set[int] = set()
         self.used: dict[int, int] = {}  # room -> the tick it was last read or written
+        self.wanted: dict[int, int] = {}  # asleep room -> questions that came to it since it was last woken
         self.tick = 0
         self.hits: Counter = Counter()
         self.rooms: Rooms | None = None
@@ -132,6 +133,7 @@ class Tiers:
                 saved = json.loads(state.read_text())
                 self.tick = int(saved.get("tick", 0))
                 self.used = {int(k): int(v) for k, v in saved.get("used", {}).items()}
+                self.wanted = {int(k): int(v) for k, v in saved.get("wanted", {}).items()}
             except (ValueError, OSError):
                 pass
         return self
@@ -293,7 +295,7 @@ class Tiers:
             return
         path = self.rooms.path / STATE
         tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"tick": self.tick, "used": self.used}))
+        tmp.write_text(json.dumps({"tick": self.tick, "used": self.used, "wanted": self.wanted}))
         os.replace(tmp, path)
 
     # -- inside

@@ -30,17 +30,21 @@ def main() -> int:
     ap.add_argument("--model", default="qwen3-4b")
     ap.add_argument("--cuts", nargs="+", default=["256K", "1M"])
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--notes", choices=("all", "hot"), default="all",
+                    help="'hot': moments kept as words, notes only for rooms questions wake (memory.NOTES)")
+    ap.add_argument("--disk-gb", type=float, help="the disk budget for awake room files, in GB (default: the bench's)")
     a = ap.parse_args()
     seed = json.loads((a.dir / "manifest.json").read_text())["seed"]
     if seed == 1:
         raise SystemExit("seed 1 is held out: development memories come from another seed")
     events = load_events(a.dir)
     a.out.mkdir(parents=True, exist_ok=True)
-    e = Engine(a.model, loader=Loader(), intro=LONGHAUL_INTRO)
+    kw = {"notes": a.notes} | ({"disk_bytes": int(a.disk_gb * 10**9)} if a.disk_gb is not None else {})
+    e = Engine(a.model, loader=Loader(), intro=LONGHAUL_INTRO, **kw)
     work = a.out / "ingest.nosync"
     e.open(work)
     told, t0 = 0, time.perf_counter()
-    log = {"seed": seed, "model": a.model, "cuts": {}}
+    log = {"seed": seed, "model": a.model, "notes": a.notes, "disk_gb": a.disk_gb, "cuts": {}}
     try:
         for name in a.cuts:
             limit = CUTS[name]

@@ -395,11 +395,13 @@ class Engine(Contender):
         """Fade the vault up to ``day``, hold the disk budget with the new strengths, and save."""
         t = time.perf_counter()
         changed, slept = self.memory.fade(day)
+        woke = self.memory.wake_wanted() if self.memory.notes == "hot" else []
         self.memory.save()
         self.naps["count"] += 1
         self.naps["seconds"] = round(self.naps["seconds"] + time.perf_counter() - t, 3)
         self.naps["faded_notes"] += changed
         self.naps["slept_rooms"] += len(slept)
+        self.naps["woken_rooms"] = self.naps.get("woken_rooms", 0) + len(woke)
         self._napped, self._dirty = day, False
 
     @contextmanager
@@ -413,7 +415,7 @@ class Engine(Contender):
         tiers, log = m.tiers, m.log
         hits = Counter(tiers.hits)
         kept = None if self.learn else (dict(tiers.used), tiers.tick, OrderedDict(tiers.pool.hot),
-                                        dict(tiers.pool.sizes))
+                                        dict(tiers.pool.sizes), dict(tiers.wanted))
         if not self.watch:
             m.log = None
         elif not self.learn:
@@ -427,6 +429,7 @@ class Engine(Contender):
             if kept is not None:
                 tiers.used, tiers.tick = kept[0], kept[1]
                 tiers.pool.hot, tiers.pool.sizes = kept[2], kept[3]
+                tiers.wanted = kept[4]
                 tiers.pool.fit()
 
     def ask(self, question: str, *, max_tokens: int, family: str | None = None) -> Answer:
@@ -665,7 +668,10 @@ class Rag(Contender):
 
     def __init__(self, model: str, *, loader: Loader | None = None, reader=None, embedder=None,
                  dates: Callable[[int], dt.date] | None = None, day_numbers: bool = True, intro: str = INTRO,
-                 k: int = RAG_K, budget: int = RAG_TOKENS, order: str = "date", finder: str = "dense"):
+                 k: int = RAG_K, budget: int = RAG_TOKENS, order: str = "date", finder: str = "dense",
+                 read: str = "moments", follow: int = 0):
+        self.follow = follow  # the best moments looked at for the user's reply after an answer (finder.replies)
+        self.read = read  # "lines": a long moment pasted as its best lines (camr_engine.finder.cut), as the engine can
         if reader is None:
             parse(f"rag:{model}")
         self.finder = finder  # "words": the engine's word finder (camr_engine.finder), so RAG gets the same search
@@ -757,11 +763,18 @@ class Rag(Contender):
 
             if getattr(self, "_lines", None) is None or self._lines.moments != len(self.texts):
                 self._lines = LineIndex(self.texts)
-            ranked = self._lines.order(question, sims)
+            ranked = self._lines.order(question, sims, head=max(64, self.k))
         else:
             ranked = np.argsort(-sims)
-        picked, total = [], 0
-        for i in ranked[:self.k]:
+        picked, total, take = [], 0, self.k
+        if self.follow:  # the user's replies come after the k closest, inside the same budget
+            from camr_engine.finder import replies
+
+            first = [int(x) for x in ranked[:self.k]]
+            more = [m for m in replies(lambda i: self.texts[i], ranked, top=self.follow, moments=len(self.texts))
+                    if m not in first]
+            ranked, take = first + more, self.k + len(more)
+        for i in ranked[:take]:
             n = self.counts[int(i)]
             if total + n > self.budget:
                 continue  # past the budget: a shorter one further down may still fit
@@ -780,7 +793,15 @@ class Rag(Contender):
         peak_reset()
         t = time.perf_counter()  # the wait counts the search, as the engine's counts its choosing
         picked, scores = self.pick(question)
-        words = [i for m in picked for i in self.ids(self.texts[m])]
+        if self.read == "lines" and picked:
+            from camr_engine.finder import LineIndex, cut
+
+            if getattr(self, "_lines", None) is None or self._lines.moments != len(self.texts):
+                self._lines = LineIndex(self.texts)
+            got = cut(self._lines, question, self.texts, picked)
+            words = [i for m in picked for i in self.ids(got[m])]
+        else:
+            words = [i for m in picked for i in self.ids(self.texts[m])]
         retrieval = time.perf_counter() - t
         head, rest = self.prompt(self.days.now(), question, hint(family))
         ids = words + rest
@@ -976,8 +997,10 @@ def make(spec: str, loader: Loader | None = None, **kw) -> Contender:
 # Settings a run can give the engine's desk (``--desk``) or RAG (``--rag``), by their short names.
 DESK_KEYS = {"rooms": ("desk_rooms", int), "tokens": ("desk_tokens", int), "order": ("desk_order", str),
              "closest": ("closest", int), "reread": ("reread", str), "finder": ("finder", str),
-             "adapter": ("adapter", str)}
-RAG_KEYS = {"k": ("k", int), "budget": ("budget", int), "order": ("order", str), "finder": ("finder", str)}
+             "adapter": ("adapter", str), "read": ("read", str), "asleep": ("asleep_read", str),
+             "notes": ("notes", str), "follow": ("follow", int), "latest": ("latest", int)}
+RAG_KEYS = {"k": ("k", int), "budget": ("budget", int), "order": ("order", str), "finder": ("finder", str),
+            "read": ("read", str), "follow": ("follow", int)}
 
 
 def parse_settings(kind: str, text: str | None) -> dict:

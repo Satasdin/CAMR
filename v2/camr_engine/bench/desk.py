@@ -95,10 +95,14 @@ def configure(engine: Engine, settings: dict) -> None:
     from camr_engine.memory import FINDER
 
     m.finder = settings.get("finder", FINDER)
+    m.read = settings.get("read", "moments")
+    m.follow = settings.get("follow", 0)
+    m.latest = bool(settings.get("latest", 0))
+    m.asleep_read = settings.get("asleep_read", "skip" if m.notes == "hot" else "words")
     m.use_adapter(settings.get("adapter"))  # off unless the variant names one (camr_engine.adapter)
     engine.settings = {**{k: v for k, v in engine.settings.items()
                           if k not in ("desk_rooms", "desk_tokens", "desk_order", "closest", "reread", "finder",
-                                       "adapter")},
+                                       "adapter", "read", "asleep_read", "follow", "latest")},
                        **settings}
 
 
