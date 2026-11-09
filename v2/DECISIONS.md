@@ -993,3 +993,10 @@ the `Box` workaround is gone. The composer is glass and the conversation scrolls
 the system's; content sits on black. Self-drawn snapshots (`CAMR_SNAPSHOT_DIR`) cannot paint glass, so the look is checked
 with a real capture of the window.
 
+
+## E-73 (9 Nov): Today is gone; loaders that follow the engine
+
+Today is removed; the app is Chat, Memory, Agents, Browser, Models and Connections. Each wait now has the loader from the
+approved board, driven by the engine's own events (`Stage` in ChatStore): finding, waking (only when a room's notes are
+really read back; an asleep room read as words says "from the SSD"), reading, a scan line over a photo, amber cells for a
+model loading. They move only while that work runs and hold still under Reduce Motion.

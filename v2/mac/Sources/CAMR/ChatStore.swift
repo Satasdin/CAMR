@@ -62,6 +62,7 @@ final class ChatStore: ObservableObject {
     @Published var shelves: [Shelf] = []
     @Published var busy = false
     @Published var status = ""          // "Waking your Meetings shelf…"
+    @Published var stage = Stage.idle   // where the answer has got to, which picks its loader
     @Published var deskTokens = 0
     @Published var deskMemoryTokens = 0
     @Published var window = 32768
@@ -145,7 +146,8 @@ final class ChatStore: ObservableObject {
         messages.append(Message(role: .you, text: text))
         messages.append(Message(role: .camr, text: "", pending: true))
         busy = true
-        status = "Looking through your memory…"
+        status = "Finding what you mean…"
+        stage = .finding
         lastRun = Run(question: text)
         clearDesk()
         Task {
@@ -171,6 +173,7 @@ final class ChatStore: ObservableObject {
         messages.append(Message(role: .camr, text: "", pending: true))
         busy = true
         status = isImage ? "Reading the photo on this Mac…" : "Reading the file…"
+        stage = isImage ? .photo : .filing
         clearDesk()
         Task {
             do {
@@ -181,6 +184,7 @@ final class ChatStore: ObservableObject {
                     body["read"] = given
                 }
                 status = "Putting it on a shelf…"
+                stage = .filing
                 let r = try await engine.post("/api/chat/attach", body)
                 let n = r["moments"] as? Int ?? 0
                 let reach = r["reach"] as? String ?? ""
@@ -195,6 +199,7 @@ final class ChatStore: ObservableObject {
                 }
                 busy = false
                 status = ""
+                stage = .idle
                 await refresh()
             } catch {
                 finish(error: error.localizedDescription)
@@ -238,6 +243,7 @@ final class ChatStore: ObservableObject {
                     lastRun?.steps.append(("Lay the desk", "\(deskTokens.formatted()) tokens",
                                            "\(deskMemoryTokens.formatted()) of them from memory; only what's needed, not whole shelves"))
                     status = "Reading what it took…"
+                    stage = .reading
                 case "token":
                     if firstWord == nil {
                         firstWord = Date().timeIntervalSince(started)
@@ -245,6 +251,7 @@ final class ChatStore: ObservableObject {
                                                "the model starts writing"))
                     }
                     status = ""
+                    stage = .writing
                     if var last = messages.last, last.role == .camr {
                         last.text += e["text"] as? String ?? ""
                         messages[messages.count - 1] = last
@@ -295,7 +302,10 @@ final class ChatStore: ObservableObject {
         lastRun?.steps.append(("Take", "\(max(1, closest)) from \(shelves[i].label)",
                                bytes > 0 ? String(format: "%.1f MB of room read", Double(bytes) / 1e6) : "lifted onto the desk"))
         let when = ms.map { String(format: " · %.0f ms", $0) } ?? ""
-        status = asleep ? "Waking your \(shelves[i].label) shelf\(when)…" : "Taking \(max(1, closest)) from \(shelves[i].label)\(when)…"
+        let woke = asleep && (parts["fetch"] as? Double ?? 0) > 0.5  // an asleep room is usually read as words: no waking
+        stage = woke ? .waking : .taking
+        status = woke ? "Waking your \(shelves[i].label) shelf\(when)…"
+            : "Taking \(max(1, closest)) from \(shelves[i].label)\(when)…"
         if var last = messages.last, last.role == .camr, !last.used.contains(shelves[i].label) {
             last.used.append(shelves[i].label)
             messages[messages.count - 1] = last
@@ -347,6 +357,7 @@ final class ChatStore: ObservableObject {
     private func finish(reply: String? = nil, note: String = "", error: String? = nil) {
         busy = false
         status = ""
+        stage = .idle
         job = nil
         guard var last = messages.last, last.role == .camr else { return }
         last.pending = false

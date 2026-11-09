@@ -18,6 +18,7 @@ struct MemoryPanel: View {
                 VStack(alignment: .leading, spacing: 16) {
                     ForEach(chat.shelves) { s in ShelfRow(shelf: s) }
                 }
+                .overlay { Sweep(at: chat.lastRun?.at) }
             }
             Spacer(minLength: 0)
             Desk(total: chat.deskTokens, memory: chat.deskMemoryTokens, window: chat.window)
@@ -31,7 +32,7 @@ struct ShelfRow: View {
 
     private var state: (String, Color) {
         if shelf.kept { return ("1 new memory", Channel.ssd) }
-        if shelf.waking { return ("waking · taking \(shelf.taken)", Channel.ssd) }
+        if shelf.waking { return ("from the SSD · taking \(shelf.taken)", Channel.ssd) }
         if shelf.used > 0 { return ("\(shelf.used) of \(shelf.taken) used", Channel.used) }
         if shelf.taken > 0 { return ("\(shelf.taken) taken", Channel.ram) }
         if shelf.memories == 0 { return ("empty", .secondary) }
@@ -44,13 +45,17 @@ struct ShelfRow: View {
                 Text(shelf.label).font(.callout.weight(.semibold))
                 Spacer()
                 Text(state.0).font(.caption).foregroundStyle(state.1)
+                    .contentTransition(.numericText())
+                    .animation(.easeOut(duration: 0.2), value: state.0)
             }
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(0..<shelf.spineCount, id: \.self) { i in
                     Spine(height: spineHeight(i), kind: kind(i)).frame(width: 6)
+                        .transition(.scale(scale: 0.1, anchor: .bottom).combined(with: .opacity))
                 }
                 Spacer(minLength: 0)
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: shelf.spineCount)
             .frame(height: 30, alignment: .bottom)
             .overlay(alignment: .bottom) {
                 Rectangle().fill(shelf.taken > 0 ? Channel.ssd.opacity(0.6) : Color.white.opacity(0.22)).frame(height: 1.5)

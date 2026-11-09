@@ -24,7 +24,7 @@ answer records its speed, retrieval time and SSD bandwidth (`camr_engine/metrics
 
 CAMR for Mac is a native SwiftUI app (`mac/`), built with the command-line tools by `sh mac/build.sh --open`. It starts
 the engine itself and talks to it over a local API that only it holds the token for. It opens on Chat, with Memory,
-Today, Agents, Models, Connections and a built-in Browser beside it.
+Agents, Models, Connections and a built-in Browser beside it.
 
 ## Pairing with Ollama
 

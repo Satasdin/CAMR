@@ -8,6 +8,7 @@ struct ChatView: View {
     var open: (URL) -> Void = { _ in }
     @State private var draft = ""
     @FocusState private var focused: Bool
+    @Environment(\.accessibilityReduceMotion) private var still
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,10 +17,14 @@ struct ChatView: View {
                     LazyVStack(alignment: .leading, spacing: 18) {
                         if chat.messages.isEmpty { welcome }
                         ForEach(chat.messages) { m in
-                            MessageRow(message: m, status: m.pending ? chat.status : "", open: open)
+                            MessageRow(message: m, status: m.pending ? chat.status : "", stage: chat.stage,
+                                       scanning: chat.stage == .photo && m.id == chat.messages.dropLast().last?.id,
+                                       open: open)
                                 .id(m.id)
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 10)), removal: .opacity))
                         }
                     }
+                    .animation(still ? nil : .spring(response: 0.34, dampingFraction: 0.86), value: chat.messages.count)
                     .frame(maxWidth: 680)
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 28)
@@ -81,6 +86,7 @@ struct ChatView: View {
                             .buttonStyle(.glass)
                             .buttonBorderShape(.circle)
                             .help("Stop the answer")
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
                     } else {
                         Button(action: send) { Image(systemName: "arrow.up").fontWeight(.bold).frame(width: 20, height: 20) }
                             .buttonStyle(.glassProminent)
@@ -88,8 +94,10 @@ struct ChatView: View {
                             .keyboardShortcut(.return, modifiers: .command)
                             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
                             .help("Send")
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
                 }
+                .animation(.snappy(duration: 0.2), value: chat.busy)
                 .padding(.horizontal, 6).padding(.vertical, 4)
                 .glassEffect(.regular, in: .rect(cornerRadius: 20))
             }
@@ -108,6 +116,8 @@ struct ChatView: View {
 struct MessageRow: View {
     let message: Message
     let status: String
+    var stage = Stage.idle
+    var scanning = false
     var open: (URL) -> Void = { _ in }
 
     var body: some View {
@@ -118,7 +128,9 @@ struct MessageRow: View {
                 VStack(alignment: .trailing, spacing: 6) {
                     if let url = message.image, let img = NSImage(contentsOf: url) {
                         Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
-                            .frame(width: 260, height: 180).clipShape(RoundedRectangle(cornerRadius: 14))
+                            .frame(width: 260, height: 180)
+                            .overlay { if scanning { ScanLine() } }
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     Text(message.text)
                         .textSelection(.enabled)
@@ -130,8 +142,10 @@ struct MessageRow: View {
         case .camr:
             VStack(alignment: .leading, spacing: 8) {
                 if message.pending && message.text.isEmpty {
-                    HStack(spacing: 10) {
-                        ThinkingRing().frame(width: 20, height: 20)
+                    HStack(spacing: 12) {
+                        StageLoader(stage: stage)
+                            .frame(width: 124, height: 26, alignment: .leading)  // the words stay put as loaders change
+                            .animation(.easeOut(duration: 0.15), value: stage)
                         Text(status.isEmpty ? "Thinking…" : status).foregroundStyle(.secondary)
                     }
                 } else {
@@ -184,27 +198,6 @@ struct MessageRow: View {
 func rendered(_ text: String) -> AttributedString {
     (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
         ?? AttributedString(text)
-}
-
-/// Eight dots in a ring, lit in turn: the model is working.
-struct ThinkingRing: View {
-    var body: some View {
-        TimelineView(.animation) { t in
-            Canvas { ctx, size in
-                let phase = t.date.timeIntervalSinceReferenceDate / 0.15
-                let r = min(size.width, size.height) / 2 - 2
-                for i in 0..<8 {
-                    let a = Double(i) / 8 * 2 * .pi - .pi / 2
-                    let p = CGPoint(x: size.width / 2 + r * cos(a), y: size.height / 2 + r * sin(a))
-                    let age = (phase - Double(i)).truncatingRemainder(dividingBy: 8)
-                    let glow = max(0, 1 - (age < 0 ? age + 8 : age) / 4)
-                    ctx.fill(Path(ellipseIn: CGRect(x: p.x - 2, y: p.y - 2, width: 4, height: 4)),
-                             with: .color(Channel.used.opacity(0.18 + 0.82 * glow)))
-                }
-            }
-        }
-        .accessibilityLabel("Thinking")
-    }
 }
 
 /// Which links in an answer may open. An answer's text can carry links from a page the model read, so a link opens

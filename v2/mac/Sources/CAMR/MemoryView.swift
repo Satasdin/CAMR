@@ -94,9 +94,11 @@ struct BigShelf: View {
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(0..<shelf.spineCount, id: \.self) { i in
                     Spine(height: height(i), kind: kind(i)).frame(width: 9)
+                        .transition(.scale(scale: 0.1, anchor: .bottom).combined(with: .opacity))
                 }
                 Spacer(minLength: 0)
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: shelf.spineCount)
             .frame(height: 50, alignment: .bottom)
             .overlay(alignment: .bottom) {
                 Rectangle().fill(shelf.taken > 0 ? Channel.ssd.opacity(0.7) : Color.white.opacity(0.2)).frame(height: 2)
@@ -105,7 +107,7 @@ struct BigShelf: View {
     }
 
     private var note: String {
-        if shelf.waking { return "asleep → waking" }
+        if shelf.waking { return "read from the SSD" }
         if shelf.memories == 0 { return "empty" }
         return shelf.memories == 1 ? "1 memory" : "\(shelf.memories) memories"
     }
@@ -133,9 +135,11 @@ struct BigShelf: View {
 /// The search, drawn as a line that crosses every shelf once when a new question arrives.
 struct Sweep: View {
     let at: Date?
+    @State private var running = false
+    @Environment(\.accessibilityReduceMotion) private var still
 
     var body: some View {
-        TimelineView(.animation) { t in
+        TimelineView(.animation(paused: !running)) { t in
             GeometryReader { g in
                 let age = at.map { t.date.timeIntervalSince($0) } ?? 99
                 if age < 0.9 {
@@ -148,6 +152,14 @@ struct Sweep: View {
             }
         }
         .allowsHitTesting(false)
+        .onChange(of: at) { _, _ in  // it runs only for its one pass
+            guard !still else { return }
+            running = true
+            Task {
+                try? await Task.sleep(nanoseconds: 950_000_000)
+                running = false
+            }
+        }
     }
 }
 

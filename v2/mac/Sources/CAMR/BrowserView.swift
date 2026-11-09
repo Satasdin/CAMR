@@ -11,13 +11,19 @@ final class BrowserModel: ObservableObject {
     @Published var canGoBack = false
     @Published var canGoForward = false
     @Published var loading = false
+    @Published var progress = 0.0
     let web: WKWebView
+    private var watching: NSKeyValueObservation?
 
     init() {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         web = WKWebView(frame: .zero, configuration: config)
         web.allowsBackForwardNavigationGestures = true
+        watching = web.observe(\.estimatedProgress) { [weak self] view, _ in
+            let done = view.estimatedProgress
+            Task { @MainActor in self?.progress = done }
+        }
     }
 
     func go(_ text: String) {
@@ -76,6 +82,16 @@ struct BrowserView: View {
 
     var body: some View {
         WebView(model: model)
+            .overlay(alignment: .top) {  // how much of the page has arrived
+                if model.loading {
+                    GeometryReader { g in
+                        Rectangle().fill(Color.white.opacity(0.85)).frame(width: g.size.width * model.progress, height: 2)
+                            .animation(.easeOut(duration: 0.2), value: model.progress)
+                    }
+                    .frame(height: 2)
+                    .transition(.opacity)
+                }
+            }
             .navigationTitle(model.title.isEmpty ? "Browser" : model.title)
             .toolbar {
                 ToolbarItemGroup(placement: .navigation) {

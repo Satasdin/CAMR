@@ -168,6 +168,7 @@ struct ModelRow: View {
                 Text(detail).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            if busy { ModelCells().transition(.opacity) }
             Text(speed).font(.caption).foregroundStyle(.secondary).monospacedDigit()
             verdictChip
             Button(row.loaded ? "In use" : "Use") { use() }

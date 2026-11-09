@@ -3,13 +3,12 @@
 import SwiftUI
 
 enum Place: Hashable {
-    case chat, today, memory, agents, browser, models, connections
+    case chat, memory, agents, browser, models, connections
     case shelf(String)
 
     var title: String {
         switch self {
         case .chat: return "Chat"
-        case .today: return "Today"
         case .memory: return "Memory"
         case .agents: return "Agents"
         case .browser: return "Browser"
@@ -22,7 +21,6 @@ enum Place: Hashable {
     var symbol: String {
         switch self {
         case .chat: return "bubble.left"
-        case .today: return "sun.max"
         case .memory: return "books.vertical"
         case .agents: return "person.2"
         case .browser: return "globe"
@@ -50,7 +48,7 @@ struct MainView: View {
             Sidebar(place: $place, chat: chat, model: engine.model)
                 .navigationSplitViewColumnWidth(min: 210, ideal: 236, max: 300)
         } detail: {
-            switch place ?? .chat {
+            Group { switch place ?? .chat {
             case .chat:
                 ChatView(chat: chat) { url in
                     browser.go(url.absoluteString)
@@ -68,8 +66,6 @@ struct MainView: View {
                     }
             case .memory:
                 MemoryView(chat: chat)
-            case .today:
-                TodayView(chat: chat) { place = $0 }
             case .agents:
                 AgentsView(engine: engine)
             case .models:
@@ -80,7 +76,9 @@ struct MainView: View {
                 BrowserView(model: browser)
             case let other:
                 ComingNext(place: other)
-            }
+            } }
+            .transition(.opacity)
+            .animation(.easeOut(duration: 0.16), value: place)
         }
         .task {
             await chat.refresh()
@@ -97,7 +95,7 @@ struct Sidebar: View {
 
     var body: some View {
         List(selection: $place) {
-            ForEach([Place.chat, .today, .memory, .agents, .browser, .models, .connections], id: \.self) { p in
+            ForEach([Place.chat, .memory, .agents, .browser, .models, .connections], id: \.self) { p in
                 Label(p.title, systemImage: p.symbol).tag(p)
             }
             if !chat.chats.isEmpty {
@@ -150,6 +148,7 @@ struct MiniShelf: View {
                     .frame(width: 6, height: 4)
             }
         }
+        .animation(.easeOut(duration: 0.25), value: shelf.used)
     }
 }
 

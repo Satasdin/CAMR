@@ -8,7 +8,7 @@
 // These pictures are for layout and content only: an app drawing itself cannot paint Liquid Glass, so the sidebar and
 // inspector come out wrong. To judge the look, capture the real window: screencapture -x -o -l<window number> out.png.
 //
-// Steps: size [w,h] · go <place> · ask <text> · attach <file path> · wait <seconds | "answer" | "ready"> · snap <name> · quit.
+// Steps: size [w,h] · go <place> · ask <text> · attach <file path> · wait <seconds | "answer" | "ready"> · snap <name> · now <name> · quit.
 
 import AppKit
 import SwiftUI
@@ -42,6 +42,7 @@ enum Script {
                 try? await Task.sleep(nanoseconds: 300_000_000)
                 snap(dir.appendingPathComponent("\(name).png"))
             }
+            if let name = step["now"] as? String { snap(dir.appendingPathComponent("\(name).png")) }  // no settling: a loader mid-run
             if step["quit"] as? Bool == true { NSApp.terminate(nil) }
         }
     }
@@ -61,7 +62,6 @@ extension Place {
     init?(named: String) {
         switch named {
         case "chat": self = .chat
-        case "today": self = .today
         case "memory": self = .memory
         case "agents": self = .agents
         case "browser": self = .browser

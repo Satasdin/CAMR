@@ -94,7 +94,7 @@ struct HelperCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                BreathingRing(on: helper.status == "running", color: helper.waiting ? Channel.ram : Channel.used)
+                BreathingRing(on: helper.status == "running" || helper.waiting, color: helper.waiting ? Channel.ram : Channel.used)
                     .frame(width: 22, height: 22)
                 Text(helper.job).font(.title3.weight(.semibold))
                 Spacer()
