@@ -1000,3 +1000,21 @@ Today is removed; the app is Chat, Memory, Agents, Browser, Models and Connectio
 approved board, driven by the engine's own events (`Stage` in ChatStore): finding, waking (only when a room's notes are
 really read back; an asleep room read as words says "from the SSD"), reading, a scan line over a photo, amber cells for a
 model loading. They move only while that work runs and hold still under Reduce Motion.
+
+## E-74 (9 Nov): seven benchmarks for the thesis's research questions (written before any question was asked)
+
+One fresh world, seed 4 (never used to tune anything), told once to 16M tokens with the app's settings: notes hot, finder
+words, 6 closest, asleep rooms and long moments as best lines, replies followed, second search on. They run from a frozen
+copy of the engine (commit in each record's environment). Every run happens once and every result is reported.
+
+| | Question | Run | Expected before running |
+|---|---|---|---|
+| A | RQ3 | 73 questions at 64K, 256K, 1M, 2M, 4M, 8M, 16M: first word, finding time, peak RAM, disk | First word within 20% from 256K to 16M; peak RAM up by under 1 GB |
+| B | RQ3 | 2 hours telling and asking from the 4M memory | Last quarter's median first word within 15% of the first's; no RAM creep |
+| C | RQ4 | 1M, 4M, 16M, up to 50 per family (two-hop 40, look-alike 30, code 20, page 3 are all there are); 4B alone, with CAMR, with RAG; Sonnet reading CAMR's context; Sonnet alone at 1M and 4M on the 73 of A. At most $9 | CAMR above the 4B alone on knowledge families (fact, changed, look-alike, never), by more than on reasoning families (two-hop, maths, code, page). CAMR and RAG not separable. |
+| D | RQ5 | 4M, 30 per family: 0, 1, 2, 4, 6, 8, 12, 16 closest memories | Right answers level off between 4 and 8 while first word keeps rising |
+| E | RQ5 | 4M, 30 per family, the app's settings with one change each: no room, no second search, no replies, whole moments, dense finder, newest value added, adapter added; readers 1.7B and 8B on their own memories; notes against words at 256K | No direction claimed; each change against the app's settings, paired |
+| F | RQ2 | About 620 scripted messages (facts, changes, repeats, requests), then 200 questions, on six shelves and on one | Kept 95%, changes caught 70%, right shelf 85%; six shelves within 5 points of one |
+| G | RQ4 | Writing, study, errands, code, photos: 30 rule-graded tasks each, memory on and off | Memory on above off in every workflow |
+
+Limits: synthetic data from one author, one 24 GB Mac. F and G's values come from one seeded generator; G's photos are rendered text read by Vision. Smoke tests on 9 Nov asked a few questions at 64K only and changed nothing above.
