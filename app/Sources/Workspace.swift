@@ -254,7 +254,8 @@ final class Workspace {
         tags = await engine.tags()
         stats = try? await engine.stats()
         let sim = self.sim
-        await Task.detached { sim.load(newMap) }.value
+        let linkedNames = Set(linked.map(\.name))
+        await Task.detached { sim.load(newMap, linked: linkedNames) }.value
         simVersion += 1
     }
 

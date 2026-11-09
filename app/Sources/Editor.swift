@@ -286,6 +286,7 @@ final class Styler {
         guard range.length > 0 || string.length == 0, NSMaxRange(range) <= string.length else { return }
         guard markdown else { return styleCode(storage, in: range, string) }
 
+        let reading = activeLine == nil
         // A fence can open before the range, so the state is worked out from the top of the file.
         var inFence = false
         var inFrontMatter = string.hasPrefix("---\n")
@@ -298,12 +299,16 @@ final class Styler {
             let inRange = NSIntersectionRange(line, range).length > 0
             let isActive = activeLine.map { NSIntersectionRange($0, line).length > 0 || $0.location == line.location } ?? false
             if inFrontMatter {
-                if inRange { apply(storage, line, font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), colour: Theme.inkFaintNS, paragraph(12, after: 0)) }
+                if inRange {
+                    if reading { vanish(storage, line) } else { apply(storage, line, font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), colour: Theme.inkFaintNS, paragraph(12, after: 0)) }
+                }
                 if !isFirst, trimmed == "---" { inFrontMatter = false }
             } else if trimmed.hasPrefix("```") {
                 if inRange {
-                    apply(storage, line, font: mono, colour: Theme.inkFaintNS, paragraph(13.5, after: 0))
-                    storage.addAttribute(.backgroundColor, value: Theme.wellNS, range: line)
+                    if reading { vanish(storage, line) } else {
+                        apply(storage, line, font: mono, colour: Theme.inkFaintNS, paragraph(13.5, after: 0))
+                        storage.addAttribute(.backgroundColor, value: Theme.wellNS, range: line)
+                    }
                 }
                 inFence.toggle()
             } else if inFence {
@@ -318,6 +323,13 @@ final class Styler {
             isFirst = false
             if location > NSMaxRange(range), !inRange, !inFence, !inFrontMatter { break }
         }
+    }
+
+    /// Reading view keeps the words of the page and hides the machinery around them. The properties are in the side panel.
+    private func vanish(_ storage: NSTextStorage, _ range: NSRange) {
+        let style = NSMutableParagraphStyle()
+        style.maximumLineHeight = 0.1
+        storage.setAttributes([.font: NSFont.systemFont(ofSize: 0.01), .foregroundColor: NSColor.clear, .paragraphStyle: style], range: range)
     }
 
     private func apply(_ storage: NSTextStorage, _ range: NSRange, font: NSFont, colour: NSColor, _ style: NSParagraphStyle) {

@@ -41,7 +41,7 @@ final class GraphSim: @unchecked Sendable {
     }
 
     /// Takes in a new map. Things already placed stay where they are.
-    func load(_ map: ProjectMap) {
+    func load(_ map: ProjectMap, linked: Set<String> = []) {
         lock.lock()
         defer { lock.unlock() }
         var old: [String: (CGFloat, CGFloat)] = [:]
@@ -52,7 +52,12 @@ final class GraphSim: @unchecked Sendable {
             degree[link.from, default: 0] += 1
             degree[link.to, default: 0] += 1
         }
-        func top(_ path: String) -> String { path.contains("/") ? String(path.split(separator: "/")[0]) : "" }
+        /// Notes group by top folder. A linked project goes one or two levels deeper, or it would be a single colour.
+        func top(_ path: String) -> String {
+            let folders = path.split(separator: "/").dropLast().map(String.init)
+            guard let first = folders.first else { return "" }
+            return linked.contains(first) ? folders.prefix(3).joined(separator: "/") : first
+        }
         var sizes: [String: Int] = [:]
         for file in map.files { sizes[top(file.path), default: 0] += 1 }
         let order = sizes.keys.sorted { (sizes[$0]!, $1) > (sizes[$1]!, $0) }
@@ -135,7 +140,11 @@ final class GraphSim: @unchecked Sendable {
                             dy = CGFloat(j % 5) - 2 + 0.5
                             d2 = dx * dx + dy * dy
                         }
-                        let push = 900 / d2
+                        // Fades to nothing at the edge of the search, or the stars line up along the grid.
+                        let d = sqrt(d2)
+                        guard d < cell else { continue }
+                        let fade = (1 - d / cell) * (1 - d / cell)
+                        let push = 1500 / d2 * fade
                         fx[i] += dx * push; fy[i] += dy * push
                         fx[j] -= dx * push; fy[j] -= dy * push
                     }
@@ -148,7 +157,8 @@ final class GraphSim: @unchecked Sendable {
             let dx = x[edge.b] - x[edge.a]
             let dy = y[edge.b] - y[edge.a]
             let d = max(1, sqrt(dx * dx + dy * dy))
-            let pull = (d - 46) / d * 0.035
+            // A link across folders pulls gently, or every folder collapses into one ball.
+            let pull = (d - 46) / d * (nodes[edge.a].group == nodes[edge.b].group ? 0.035 : 0.006)
             fx[edge.a] += dx * pull; fy[edge.a] += dy * pull
             fx[edge.b] -= dx * pull; fy[edge.b] -= dy * pull
         }
@@ -164,8 +174,29 @@ final class GraphSim: @unchecked Sendable {
         }
         for i in 0..<count {
             let g = nodes[i].group
-            fx[i] += (sumX[g] / total[g] - x[i]) * 0.018 - x[i] * 0.0035
-            fy[i] += (sumY[g] / total[g] - y[i]) * 0.018 - y[i] * 0.0035
+            fx[i] += (sumX[g] / total[g] - x[i]) * 0.03 - x[i] * 0.0035
+            fy[i] += (sumY[g] / total[g] - y[i]) * 0.03 - y[i] * 0.0035
+        }
+
+        // Whole folders keep their distance from each other, so the sky has clusters rather than one ball.
+        let groups = groupNames.indices.filter { total[$0] > 0 }
+        var awayX = [CGFloat](repeating: 0, count: groupNames.count)
+        var awayY = awayX
+        for (place, a) in groups.enumerated() {
+            for b in groups[(place + 1)...] {
+                let dx = sumX[a] / total[a] - sumX[b] / total[b]
+                let dy = sumY[a] / total[a] - sumY[b] / total[b]
+                let d = max(1, sqrt(dx * dx + dy * dy))
+                let wanted = 24 * (sqrt(total[a]) + sqrt(total[b])) + 110
+                guard d < wanted else { continue }
+                let shove = (wanted - d) / d * 0.16
+                awayX[a] += dx * shove; awayY[a] += dy * shove
+                awayX[b] -= dx * shove; awayY[b] -= dy * shove
+            }
+        }
+        for i in 0..<count {
+            fx[i] += awayX[nodes[i].group]
+            fy[i] += awayY[nodes[i].group]
         }
 
         for i in 0..<count where i != pinned {
@@ -208,7 +239,8 @@ final class GraphSim: @unchecked Sendable {
         }
         return out.compactMap { group, value in
             guard groupNames.indices.contains(group), !groupNames[group].isEmpty else { return nil }
-            return (groupNames[group], value.x / CGFloat(value.n), value.y / CGFloat(value.n), value.top, value.n, group)
+            let parts = groupNames[group].split(separator: "/")
+            return (parts.count > 1 ? parts.dropFirst().joined(separator: "/") : groupNames[group], value.x / CGFloat(value.n), value.y / CGFloat(value.n), value.top, value.n, group)
         }
     }
 }
@@ -451,7 +483,7 @@ struct GraphCanvas: View {
             if halos {
                 let halo = radius * (isLit ? 7 : 4)
                 glow.fill(Path(ellipseIn: CGRect(x: spot.x - halo, y: spot.y - halo, width: halo * 2, height: halo * 2)),
-                          with: .radialGradient(Gradient(colors: [colour.opacity(0.5 * strength), colour.opacity(0.1 * strength), .clear]), center: spot, startRadius: 0, endRadius: halo))
+                          with: .radialGradient(Gradient(colors: [colour.opacity(0.42 * strength), colour.opacity(0.07 * strength), .clear]), center: spot, startRadius: 0, endRadius: halo))
             }
             glow.fill(Path(ellipseIn: CGRect(x: spot.x - radius, y: spot.y - radius, width: radius * 2, height: radius * 2)), with: .color(colour.opacity(0.95 * strength)))
             let heart = radius * 0.42
