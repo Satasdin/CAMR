@@ -69,9 +69,9 @@ final class ConnectionsStore: ObservableObject {
 struct ConnectionsView: View {
     @ObservedObject var engine: Engine
     @StateObject private var store = ConnectionsStore()
-    @StateObject private var name = Box("")
-    @StateObject private var command = Box("")
-    @StateObject private var adding = Box(false)
+    @State private var name = ""
+    @State private var command = ""
+    @State private var adding = false
 
     var body: some View {
         ScrollView {
@@ -118,19 +118,19 @@ struct ConnectionsView: View {
 
                 section("Add your own") {
                     VStack(alignment: .leading, spacing: 10) {
-                        TextField("Name, e.g. calendar", text: $name.value).textFieldStyle(.roundedBorder)
+                        TextField("Name, e.g. calendar", text: $name).textFieldStyle(.roundedBorder)
                         TextField("Command that starts it, e.g. npx -y @modelcontextprotocol/server-filesystem ~/Documents",
-                                  text: $command.value).textFieldStyle(.roundedBorder)
+                                  text: $command).textFieldStyle(.roundedBorder)
                         HStack {
                             Text("It runs on this Mac only when you connect it.").font(.caption).foregroundStyle(.secondary)
                             Spacer()
                             Button("Add connection") {
                                 Task {
-                                    await store.act(engine, "/api/code/mcp/add", ["name": name.value, "command": command.value], busy: "add")
-                                    if store.message.isEmpty { name.value = ""; command.value = "" }
+                                    await store.act(engine, "/api/code/mcp/add", ["name": name, "command": command], busy: "add")
+                                    if store.message.isEmpty { name = ""; command = "" }
                                 }
                             }
-                            .disabled(name.value.isEmpty || command.value.isEmpty)
+                            .disabled(name.isEmpty || command.isEmpty)
                         }
                     }
                     .padding(14)

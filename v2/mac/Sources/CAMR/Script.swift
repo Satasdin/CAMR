@@ -5,6 +5,9 @@
 //                 {"snap":"chat"},{"go":"memory"},{"wait":1.5},{"snap":"memory"},{"quit":true}]'
 //   CAMR_SNAPSHOT_DIR=/some/folder   (PNG files, one per "snap")
 //
+// These pictures are for layout and content only: an app drawing itself cannot paint Liquid Glass, so the sidebar and
+// inspector come out wrong. To judge the look, capture the real window: screencapture -x -o -l<window number> out.png.
+//
 // Steps: size [w,h] · go <place> · ask <text> · attach <file path> · wait <seconds | "answer" | "ready"> · snap <name> · quit.
 
 import AppKit
@@ -18,14 +21,14 @@ enum Script {
         return list
     }
 
-    static func run(chat: ChatStore, place: Box<Place?>) async {
+    static func run(chat: ChatStore, place: Binding<Place?>) async {
         let dir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["CAMR_SNAPSHOT_DIR"] ?? NSTemporaryDirectory())
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         for step in steps {
             if let size = step["size"] as? [Double], size.count == 2, let w = window() {
                 w.setFrame(NSRect(x: 60, y: 60, width: size[0], height: size[1]), display: true)
             }
-            if let p = step["go"] as? String { place.value = Place(named: p) }
+            if let p = step["go"] as? String { place.wrappedValue = Place(named: p) }
             if let text = step["ask"] as? String { chat.send(text) }
             if let path = step["attach"] as? String { chat.attach(URL(fileURLWithPath: path)) }
             if let wait = step["wait"] {

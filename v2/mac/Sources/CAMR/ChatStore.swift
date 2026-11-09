@@ -141,7 +141,7 @@ final class ChatStore: ObservableObject {
     func send(_ raw: String) {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !busy else { return }
-        if messages.isEmpty { title = String(text.prefix(48)) }
+        if messages.isEmpty { title = text }  // the toolbar shortens it to fit, with an ellipsis
         messages.append(Message(role: .you, text: text))
         messages.append(Message(role: .camr, text: "", pending: true))
         busy = true

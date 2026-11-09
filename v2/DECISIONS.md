@@ -985,3 +985,11 @@ so it says the sorter is much better, not that it is 93% right on anyone's life.
 The website (`app/static`, `app/vendor-src`, `docs/screens`, the page and `/static/` serving, `--open`) and the old
 `/Applications/CAMR.app`, which only wrapped it, are removed: CAMR for Mac (E-69) replaces them. The engine's API routes
 stay, including those no Mac screen calls yet (bench, learn, notebook, sim): they hold features the app may still take up.
+
+## E-72 (9 Nov): CAMR for Mac builds against Xcode's SDK and uses Liquid Glass
+
+Xcode is installed, so the app targets macOS 26 and later (it needs the Liquid Glass APIs), SwiftUI's `@State` works and
+the `Box` workaround is gone. The composer is glass and the conversation scrolls under it; the sidebar and inspector are
+the system's; content sits on black. Self-drawn snapshots (`CAMR_SNAPSHOT_DIR`) cannot paint glass, so the look is checked
+with a real capture of the window.
+

@@ -36,8 +36,8 @@ enum Place: Hashable {
 struct MainView: View {
     @ObservedObject var engine: Engine
     @StateObject private var chat: ChatStore
-    @StateObject private var place = Box<Place?>(.chat)
-    @StateObject private var showMemory = Box(true)
+    @State private var place: Place? = .chat
+    @State private var showMemory = true
     @StateObject private var browser = BrowserModel()
 
     init(engine: Engine) {
@@ -47,29 +47,29 @@ struct MainView: View {
 
     var body: some View {
         NavigationSplitView {
-            Sidebar(place: $place.value, chat: chat, model: engine.model)
+            Sidebar(place: $place, chat: chat, model: engine.model)
                 .navigationSplitViewColumnWidth(min: 210, ideal: 236, max: 300)
         } detail: {
-            switch place.value ?? .chat {
+            switch place ?? .chat {
             case .chat:
                 ChatView(chat: chat) { url in
                     browser.go(url.absoluteString)
-                    place.value = .browser
+                    place = .browser
                 }
-                    .inspector(isPresented: $showMemory.value) {
+                    .inspector(isPresented: $showMemory) {
                         MemoryPanel(chat: chat)
                             .inspectorColumnWidth(min: 280, ideal: 320, max: 420)
                     }
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
-                            Button { showMemory.value.toggle() } label: { Label("Memory", systemImage: "sidebar.right") }
-                                .help(showMemory.value ? "Hide what CAMR takes from memory" : "Show what CAMR takes from memory")
+                            Button { showMemory.toggle() } label: { Label("Memory", systemImage: "sidebar.right") }
+                                .help(showMemory ? "Hide what CAMR takes from memory" : "Show what CAMR takes from memory")
                         }
                     }
             case .memory:
                 MemoryView(chat: chat)
             case .today:
-                TodayView(chat: chat) { place.value = $0 }
+                TodayView(chat: chat) { place = $0 }
             case .agents:
                 AgentsView(engine: engine)
             case .models:
@@ -85,7 +85,7 @@ struct MainView: View {
         .task {
             await chat.refresh()
             await chat.loadChats()
-            if !Script.steps.isEmpty { await Script.run(chat: chat, place: place) }
+            if !Script.steps.isEmpty { await Script.run(chat: chat, place: $place) }
         }
     }
 }

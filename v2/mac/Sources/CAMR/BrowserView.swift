@@ -72,7 +72,7 @@ struct WebView: NSViewRepresentable {
 
 struct BrowserView: View {
     @ObservedObject var model: BrowserModel
-    @StateObject private var typed = Box("")
+    @State private var typed = ""
 
     var body: some View {
         WebView(model: model)
@@ -85,10 +85,10 @@ struct BrowserView: View {
                         .disabled(!model.canGoForward).help("Forward")
                 }
                 ToolbarItem(placement: .principal) {
-                    TextField("Search or enter an address", text: $typed.value)
+                    TextField("Search or enter an address", text: $typed)
                         .textFieldStyle(.roundedBorder)
                         .frame(minWidth: 320, idealWidth: 520)
-                        .onSubmit { model.go(typed.value) }
+                        .onSubmit { model.go(typed) }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button { if model.loading { model.web.stopLoading() } else { model.web.reload() } } label: {
@@ -98,9 +98,9 @@ struct BrowserView: View {
                 }
             }
             .onAppear {
-                typed.value = model.address
+                typed = model.address
                 if model.web.url == nil { model.go(model.address) }
             }
-            .onChange(of: model.address) { _, a in typed.value = a }
+            .onChange(of: model.address) { _, a in typed = a }
     }
 }

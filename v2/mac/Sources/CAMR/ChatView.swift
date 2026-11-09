@@ -6,7 +6,7 @@ import SwiftUI
 struct ChatView: View {
     @ObservedObject var chat: ChatStore
     var open: (URL) -> Void = { _ in }
-    @StateObject private var draft = Box("")
+    @State private var draft = ""
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -25,11 +25,12 @@ struct ChatView: View {
                     .padding(.horizontal, 28)
                     .padding(.vertical, 20)
                 }
+                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .safeAreaInset(edge: .bottom, spacing: 0) { composer }  // the conversation slides under the glass
                 .onChange(of: chat.messages) { _, list in
                     if let last = list.last { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) } }
                 }
             }
-            composer
         }
         // a link in an answer may come from a web page the model read: only http(s), and only in CAMR's own private
         // browser, never another app, a file or a custom scheme
@@ -59,45 +60,48 @@ struct ChatView: View {
     }
 
     private var composer: some View {
-        HStack(spacing: 6) {
-            Button { if let url = Attach.pick() { chat.attach(url) } } label: { Image(systemName: "plus") }
-                .buttonStyle(.borderless)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(Color.white.opacity(0.1)))
+        GlassEffectContainer(spacing: 8) {
+            HStack(alignment: .bottom, spacing: 8) {
+                Button { if let url = Attach.pick() { chat.attach(url) } } label: {
+                    Image(systemName: "plus").frame(width: 22, height: 22)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
                 .help("Add a photo or a file")
-            TextField("Message CAMR", text: $draft.value, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...6)
-                .focused($focused)
-                .onSubmit(send)
-                .padding(.vertical, 6)
-            if chat.busy {
-                Button(action: chat.stop) { Image(systemName: "stop.fill") }
-                    .buttonStyle(.borderless)
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(Color.white.opacity(0.15)))
-                    .help("Stop the answer")
-            } else {
-                Button(action: send) { Image(systemName: "arrow.up").fontWeight(.bold) }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.white)
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(draft.value.isEmpty ? Color.white.opacity(0.15) : Color.accentColor))
-                    .keyboardShortcut(.return, modifiers: .command)
-                    .disabled(draft.value.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .help("Send")
+                HStack(alignment: .bottom, spacing: 6) {
+                    TextField("Message CAMR", text: $draft, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .lineLimit(1...6)
+                        .focused($focused)
+                        .onSubmit(send)
+                        .padding(.vertical, 6)
+                        .padding(.leading, 8)
+                    if chat.busy {
+                        Button(action: chat.stop) { Image(systemName: "stop.fill").frame(width: 20, height: 20) }
+                            .buttonStyle(.glass)
+                            .buttonBorderShape(.circle)
+                            .help("Stop the answer")
+                    } else {
+                        Button(action: send) { Image(systemName: "arrow.up").fontWeight(.bold).frame(width: 20, height: 20) }
+                            .buttonStyle(.glassProminent)
+                            .buttonBorderShape(.circle)
+                            .keyboardShortcut(.return, modifiers: .command)
+                            .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .help("Send")
+                    }
+                }
+                .padding(.horizontal, 6).padding(.vertical, 4)
+                .glassEffect(.regular, in: .rect(cornerRadius: 20))
             }
         }
-        .padding(.horizontal, 8).padding(.vertical, 5)
-        .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.07)))
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.white.opacity(0.1)))
         .frame(maxWidth: 680)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 28).padding(.bottom, 16).padding(.top, 6)
     }
 
     private func send() {
-        chat.send(draft.value)
-        draft.value = ""
+        chat.send(draft)
+        draft = ""
     }
 }
 

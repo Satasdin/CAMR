@@ -22,6 +22,7 @@ struct CAMRApp: App {
             RootView()
                 .environmentObject(engine)
                 .preferredColorScheme(.dark)
+                .containerBackground(Color.black, for: .window)
                 .frame(minWidth: 1100, minHeight: 700)
                 .onAppear { engine.start() }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
@@ -85,11 +86,4 @@ struct LoadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-}
-
-/// View state held in an object, not `@State`: this SDK's `@State` is a macro whose plugin ships only with Xcode,
-/// and CAMR builds with the command-line tools alone.
-final class Box<T>: ObservableObject {
-    @Published var value: T
-    init(_ value: T) { self.value = value }
 }
