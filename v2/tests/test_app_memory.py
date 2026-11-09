@@ -1,7 +1,6 @@
 """The Memory screen's data: every reach's events and metrics merged into one feed the page polls, the stage's
 snapshot (moments, rooms, layout, vault notes, the core and the hot shelf), and one room, moment or note for a sheet;
-the same for a recorded memory, which is never written. Then the stage's static files: no colour outside tokens.css,
-nothing loaded from beyond this Mac. No model is loaded (the fakes from test_core and test_app_chat)."""
+the same for a recorded memory, which is never written. No model is loaded (the fakes from test_core and test_app_chat)."""
 
 from __future__ import annotations
 
@@ -11,10 +10,8 @@ import re
 import numpy as np
 import pytest
 
-from camr_engine.app.server import STATIC
 from camr_engine.events import EventLog
 
-STAGE = STATIC / "stage"
 
 
 @pytest.fixture
@@ -171,22 +168,6 @@ def test_a_recorded_memory_is_shown_whole_and_never_written(recorded):
     finally:
         httpd.shutdown()
     assert sorted((p.name, p.stat().st_mtime_ns) for p in recorded.rglob("*")) == before
-
-
-def test_the_stage_files_keep_the_house_rules():
-    colour = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(")
-    files = [*STAGE.glob("*.js"), *STAGE.glob("*.css"), STATIC / "screens" / "chat.js", STATIC / "screens" / "memory.js"]
-    assert {p.name for p in files} >= {"stage.js", "feed.js", "chat.js", "memory.js", "stage.css"}
-    for path in files:
-        text = re.sub(r"url\(#[^)]+\)", "", path.read_text())
-        assert not colour.search(text), (path.name, colour.search(text).group(0))
-        assert "http://" not in text and "https://" not in text, path.name
-        for imp in re.findall(r'from "([^"]+)"', text) + re.findall(r'import\("([^"]+)"', text):
-            assert imp.startswith("/static/"), (path.name, imp)
-        assert "new EventSource" not in text, path.name  # it cannot send the token header
-    for name in ("chat", "memory"):
-        text = (STATIC / "screens" / f"{name}.js").read_text()
-        assert re.search(r"export (async )?function mount\(el, api\)", text) and "/static/stage/" in text
 
 
 def test_a_note_named_as_obsidian_allows_opens_and_a_path_never_does(recorded):

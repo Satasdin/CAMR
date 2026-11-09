@@ -64,6 +64,5 @@ cat <<EOF
   camr doctor                      what is installed and what is listening
   camr serve --backend ollama      an OpenAI-compatible endpoint with memory, at http://127.0.0.1:11436/v1
   camr ollama                      memory for the ollama CLI: OLLAMA_HOST=127.0.0.1:11435 ollama run qwen3:1.7b
-  camr app --open                  the app, at http://127.0.0.1:8765
 
 EOF

@@ -1,10 +1,11 @@
-"""python -m camr_engine.app [--memory DIR] [--port N] [--open] [--check] [--fixture DIR] [--model REPO] [--live]
+"""python -m camr_engine.app [--memory DIR] [--port N] [--check] [--fixture DIR] [--model REPO] [--live]
 
-  --open     open the app in the browser once it is listening
-  --fixture  serve a recorded memory folder read-only, with no model loaded (the top strip says FIXTURE)
+The engine behind CAMR for Mac (mac/build.sh --open builds and opens the app, which starts this itself).
+
+  --fixture  serve a recorded memory folder read-only, with no model loaded (its state says fixture)
   --model    the memory's reader (a Hugging Face repo already downloaded); a memory folder keeps one model's notes
   --live     print each layer's weights as they load (camr_engine.live), one CAMR-LIVE line each, for the Mac app
-  --check   a health check instead of the app: downloads the models if needed, teaches CAMR two facts in a
+  --check   a health check instead of the engine: downloads the models if needed, teaches CAMR two facts in a
             throwaway memory, asks about one, and prints PASS or FAIL with the time to the first word
 """
 
@@ -14,9 +15,7 @@ import argparse
 import os
 import shutil
 import tempfile
-import threading
 import time
-import webbrowser
 from pathlib import Path
 
 
@@ -81,7 +80,6 @@ def main() -> None:
     ap = argparse.ArgumentParser(prog="python -m camr_engine.app")
     ap.add_argument("--memory", type=Path, default=Path.home() / ".camr" / "default")
     ap.add_argument("--port", type=int, default=8765)
-    ap.add_argument("--open", action="store_true", help="open the app in the browser")
     ap.add_argument("--check", action="store_true", help="run the health check and exit")
     ap.add_argument("--fixture", type=Path, help="serve this recorded memory folder read-only, loading no model")
     ap.add_argument("--model", help="the memory's reader, a Hugging Face repo (default: CAMR's own)")
@@ -91,8 +89,6 @@ def main() -> None:
         from camr_engine.app.fixture import Fixture
         from camr_engine.app.server import serve
 
-        if a.open:
-            threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{a.port}")).start()
         return serve(Fixture(a.fixture), a.port)
     models_ready(a.model)
     if a.check:
@@ -102,8 +98,6 @@ def main() -> None:
 
     with reporting(Live("load", echo=stdout_line) if a.live else None):
         app = App(a.memory, a.model)
-    if a.open:
-        threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{a.port}")).start()
     serve(app, a.port)
 
 

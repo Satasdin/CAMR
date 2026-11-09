@@ -2,6 +2,7 @@
 
 import json
 
+import numpy as np
 import pytest
 
 from camr_engine import shelves
@@ -122,3 +123,82 @@ def test_a_curated_note_is_never_counted_as_told():
             return type("N", (), {"tags": ["curated"]})()
 
     assert source_of(type("M", (), {"vault": Vault()})(), 0) == "curated"
+
+
+class Says:
+    """A reader that gives one fixed reply, or fails."""
+
+    def __init__(self, reply):
+        self.reply, self.prompts = reply, []
+
+    def chat_ids(self, system, user):
+        self.prompts.append((system, user))
+        return [1]
+
+    def generate(self, ids, max_tokens=None):
+        from types import SimpleNamespace
+
+        from camr_engine.live import current
+
+        self.watched = current()
+        if isinstance(self.reply, Exception):
+            raise self.reply
+        return SimpleNamespace(text=self.reply)
+
+
+class Closest:
+    """An embedder that says every text is closest to the Coding shelf."""
+
+    def encode_one(self, text):
+        return np.array([1.0, 0.0]) if "code" in text else np.array([0.0, 1.0])
+
+
+def sorter():
+    return shelves.Sorter(Closest())
+
+
+@pytest.mark.parametrize("reply", ["Personal", "personal", " Personal.", "**Personal**", "Personal shelf"])
+def test_the_reader_chooses_the_shelf_however_it_writes_the_name(reply):
+    s = sorter()
+    assert s.sort("My rent is KSh 25,000.", Says(reply)).name == "personal" and s.asked
+
+
+@pytest.mark.parametrize("reply", ["", "I would say the kitchen", "ok", RuntimeError("no model")])
+def test_without_a_shelf_name_from_the_reader_the_embedder_chooses(reply):
+    s = sorter()
+    want = s.sort("anything")  # the embedder's own choice
+    assert s.sort("anything", Says(reply)) == want and not s.asked
+
+
+def test_a_longer_shelf_name_is_read_before_a_shorter_one_it_starts_with(tmp_path):
+    shelves.add(tmp_path, "Car")
+    shelves.add(tmp_path, "Car parts")
+    assert sorter().sort("A new clutch", Says("Car parts")).name == "car-parts"
+
+
+def test_a_called_shelf_is_never_offered_or_taken(tmp_path):
+    called = shelves.Shelf("guide", "Guide", "project:guide", "curated rules", called=True)
+    shelves._set([*shelves.DEFAULTS, called])
+    reader = Says("Guide")
+    s = sorter()
+    got = s.sort("Anything at all", reader)
+    assert got.name != "guide" and not s.asked and "Guide" not in reader.prompts[0][0]
+
+
+def test_the_note_is_cut_and_what_the_reader_writes_is_not_shown_as_the_answer():
+    from camr_engine.live import Live, reporting
+
+    reader = Says("Coding")
+    with reporting(Live("test")):
+        sorter().sort("x" * 5000, reader)
+    assert reader.watched is None and len(reader.prompts[0][1]) <= shelves.PICK_CHARS + len("Note: ")
+
+
+def test_a_memory_made_earlier_reads_the_four_shelves_as_described_now(tmp_path):
+    (tmp_path / "shelves.json").write_text(json.dumps([
+        {"name": "projects", "label": "Work", "reach": "global", "about": "rent and so on", "like": ["the rent"]},
+        {"name": "garden", "label": "Garden", "reach": "project:garden", "about": "my garden", "like": ["roses"]}]))
+    got = {s.name: s for s in shelves.load(tmp_path)}
+    assert got["projects"].label == "Work" and got["projects"].about == shelves.DEFAULTS[0].about
+    assert "the rent" not in got["projects"].like
+    assert got["garden"].about == "my garden" and got["garden"].like == ("roses",)

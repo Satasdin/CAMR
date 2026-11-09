@@ -437,7 +437,7 @@ def test_shelves_keep_kinds_of_work_apart_and_a_question_reads_them_all(chat, tm
     assert st["shelf"] == "auto" and [s["name"] for s in st["shelves"]] == ["projects", "coding", "research",
                                                                               "personal"]
     assert "project:coding" in [r.label for r in app.session.reaches]
-    told = call("/api/chat", {"text": "Fixed the bugs in the tests: split_bill errors on floats.",
+    told = call("/api/chat", {"text": "Fixed the code bugs in the tests: split_bill errors on floats.",
                               "intent": "tell"})[1]
     assert told["shelf"] == "coding" and told["sorted"] and told["reach"] == "project:coding"
     told = call("/api/chat", {"text": "My family plans: birthdays and travel home.", "intent": "tell"})[1]

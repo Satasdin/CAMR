@@ -1,11 +1,9 @@
-"""CAMR's app: talk to it, give it errands, look inside while it works, and see what models fit this Mac.
+"""The engine behind CAMR for Mac (v2/mac): the app starts it and talks to its JSON API.
 
-    python -m camr_engine.app                      # http://127.0.0.1:8765, memory in ~/.camr/default
+    CAMR_TOKEN=<secret> python -m camr_engine.app --port 8765      # memory in ~/.camr/default
 
-One page (``static/index.html``) with five screens: Models, Chat, Code, Memory and Bench. The shell
-(``static/shell.js``) draws the top strip and switches screens; each screen is a module in ``static/screens/`` and
-keeps its server routes in ``routes/<screen>.py``. Everything runs on this Mac; the server listens on 127.0.0.1 only
-and serves nothing but its own page, its static files and its API.
+Routes live in ``routes/``, one module per part of the app. Everything runs on this Mac; the server listens on
+127.0.0.1 only, serves nothing but its API, and answers only a caller that holds the launch token.
 """
 
 from __future__ import annotations
@@ -21,14 +19,9 @@ from pathlib import Path
 
 from camr_engine.app.web import Refused, Request, Routes
 
-STATIC = Path(__file__).parent / "static"
 START = dt.date(2026, 1, 5)  # day 0 of the scripted lives; chat moments count days from here too
 MAX_BODY = 1 << 20  # a request body larger than 1 MB is refused
-CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
-       "font-src 'self'; connect-src 'self'; worker-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'")
-TYPES = {".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
-         ".css": "text/css; charset=utf-8", ".woff2": "font/woff2", ".svg": "image/svg+xml",
-         ".json": "application/json", ".png": "image/png"}
+CSP = "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"  # the answers are JSON: nothing in one may run
 
 
 class App:
@@ -50,7 +43,7 @@ class App:
         self.models.adopt(self.reader)
 
     def paths(self) -> dict[str, Path | None]:
-        """The logs the page follows: the memory's events and its metrics."""
+        """The logs the app follows: the memory's events and its metrics."""
         log = self.memory.log
         return {"events": log.path if log else None, "metrics": self.memory.path / "metrics.jsonl",
                 "memory": self.memory.path}
@@ -171,35 +164,16 @@ def shown(events: list[dict], moments: list[dict], rooms: list[dict], layout) ->
     return {"moments": moments, "rooms": rooms, "layout": layout, "answers": out[-400:]}
 
 
-def static_file(rel: str, root: Path = STATIC) -> Path | None:
-    """The file under ``root`` that ``/static/<rel>`` names, or None for anything else: a path that leaves the
-    folder (``..``, a symlink out, an absolute path), a hidden file, or a type the app does not serve."""
-    rel = urllib.parse.unquote(rel)
-    if not rel or "\0" in rel or "\\" in rel or rel.startswith("/"):
-        return None
-    parts = rel.split("/")
-    if any(p in ("", ".", "..") or p.startswith(".") for p in parts):
-        return None
-    base = root.resolve()
-    path = (base / rel).resolve()
-    if not path.is_relative_to(base) or not path.is_file() or path.suffix.lower() not in TYPES:
-        return None
-    return path
-
-
-def make_server(app, port: int, *, routes: Routes | None = None, static: Path = STATIC
-                ) -> tuple[ThreadingHTTPServer, str]:
+def make_server(app, port: int, *, routes: Routes | None = None) -> tuple[ThreadingHTTPServer, str]:
     """The server (not yet serving) and its launch token."""
     from camr_engine.app.routes import collect
 
-    # Only this page may talk to the server: other websites the user visits can reach 127.0.0.1 too. Requests must
-    # name this host (stops DNS rebinding), must not come from another origin, POSTs must be JSON, and every API
-    # call carries a secret made at launch that only the served page knows.
+    # Only the app that started this engine may talk to it: websites the user visits can reach 127.0.0.1 too. Requests
+    # must name this host (stops DNS rebinding), must not come from another origin, POSTs must be JSON, and every API
+    # call carries a secret made at launch.
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     origins = {f"http://{h}" for h in hosts}
-    given = os.environ.get("CAMR_TOKEN")  # the Mac app makes its own and passes it
-    token = given or secrets.token_urlsafe(24)
-    shown = "" if given else token  # then the page never carries it: any local process could fetch the page
+    token = os.environ.get("CAMR_TOKEN") or secrets.token_urlsafe(24)  # the Mac app makes its own and passes it
     routes = routes if routes is not None else collect()
     app.route_errors = dict(routes.errors)
 
@@ -259,7 +233,7 @@ def make_server(app, port: int, *, routes: Routes | None = None, static: Path = 
                 return self._json(fn(Request(app, method, path, query, body)))
             except Refused as e:
                 return self._json({"error": e.why}, e.code)
-            except Exception as e:  # report it to the page instead of dropping the connection
+            except Exception as e:  # report it to the app instead of dropping the connection
                 return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
 
         def do_GET(self) -> None:
@@ -267,14 +241,6 @@ def make_server(app, port: int, *, routes: Routes | None = None, static: Path = 
             path = url.path
             if not self._allowed(api=path.startswith("/api/"), post=False):
                 return self._json({"error": "forbidden"}, 403)
-            if path in ("/", "/index.html"):
-                page = (static / "index.html").read_text().replace("__CAMR_TOKEN__", shown)
-                return self._send(200, page.encode(), "text/html; charset=utf-8")
-            if path.startswith("/static/"):
-                f = static_file(path[len("/static/"):], static)
-                if f is None:
-                    return self._json({"error": "not found"}, 404)
-                return self._send(200, f.read_bytes(), TYPES[f.suffix.lower()], "no-cache")
             if path.startswith("/api/"):
                 query = {k: v[-1] for k, v in urllib.parse.parse_qs(url.query, keep_blank_values=True).items()}
                 return self._route("GET", path, query, {})
@@ -306,7 +272,9 @@ def make_server(app, port: int, *, routes: Routes | None = None, static: Path = 
 def serve(app, port: int) -> None:
     httpd, _ = make_server(app, port)
     where = getattr(getattr(getattr(app, "memory", None), "rooms", None), "path", None) or getattr(app, "folder", "—")
-    print(f"CAMR is listening on http://127.0.0.1:{port}  (memory: {where})", flush=True)
+    print(f"CAMR's engine is listening on 127.0.0.1:{port}  (memory: {where})", flush=True)
+    if not os.environ.get("CAMR_TOKEN"):
+        print("Started without CAMR_TOKEN, so nothing can call it: CAMR for Mac sets one (see mac/build.sh).", flush=True)
     if os.environ.get("CAMR_TOKEN"):  # the Mac app sends its token only once its own engine has said this
         print(f"CAMR-PORT {httpd.server_address[1]}", flush=True)
         _follow_parent(httpd)

@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from camr_engine.app.routes import bench
-from camr_engine.app.server import STATIC, make_server
+from camr_engine.app.server import make_server
 from camr_engine.app.web import Refused
 
 PNG_1X1 = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
@@ -617,32 +617,3 @@ def test_the_real_records_read_without_a_failure():
 
 
 # -- the screen
-
-
-def test_the_screen_keeps_the_contract_and_calls_only_routes_that_exist():
-    from camr_engine.app.routes import collect
-
-    text = (STATIC / "screens" / "bench.js").read_text()
-    assert re.search(r"export function mount\(el, api\)", text)
-    for word in ("show()", "hide()", "key(e, { typing })"):
-        assert word in text, word
-    paths = {p for _, p in collect().table}
-    called = set(re.findall(r'api\.(?:get|post)\("(/api/[^"]+)"', text))
-    assert called == {"/api/bench", "/api/bench/record", "/api/bench/webdev", "/api/bench/shot"} and called <= paths
-    assert not re.search(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(", text)
-    assert "localStorage" in text and "try {" in text  # a private window never breaks it
-    for tab in ("Past the window", "How far it grows", "Which reach", "Sleep", "The gap"):
-        assert tab in text, tab
-    assert "Swarms" not in text  # the Swarm screen is gone, and its tab with it
-    # the matrix redraws when a cut is picked: it reads the pick's value, so it is subscribed to it
-    matrix = text[text.index("function Matrix()"):text.index("// -- the yardstick")]
-    assert "matrixCut(cutPick.value)" in matrix and "cutPick.peek()" not in matrix
-    # the screen shoots on its own only when the board says so; a click says it was asked; a 409 wait is no fault
-    shoot_next = text[text.index("async function shootNext()"):text.index("const isWait")]
-    assert "!d.shoot?.auto" in shoot_next and "shoot(want, false)" in shoot_next
-    assert "shoot(page, true)" in text and "asked });" in text
-    assert re.search(r"isWait = \(e\) => e\?\.status === 409 && /is measuring\|being shot\|\^waiting/", text)
-    node = shutil.which("node")
-    if node:
-        run = subprocess.run([node, "--check", str(STATIC / "screens" / "bench.js")], capture_output=True, text=True)
-        assert run.returncode == 0, run.stderr

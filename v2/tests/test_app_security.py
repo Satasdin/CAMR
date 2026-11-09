@@ -1,21 +1,18 @@
-"""The app's server talks only to its own page: the right host, JSON from its own origin, and the launch secret.
-Static files come only from the static folder, and every response carries the strict content security policy.
+"""The engine talks only to the app that started it: the right host, JSON from its own origin, and the launch secret.
+It serves nothing but its API, and every response carries the strict content security policy.
 No model is loaded: a stand-in app answers."""
 
 from __future__ import annotations
 
 import http.client
 import json
-import os
-import re
 import socket
 import threading
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from camr_engine.app.server import CSP, STATIC, make_server, static_file
+from camr_engine.app.server import CSP, make_server
 from camr_engine.app.web import Refused, Routes
 
 
@@ -49,17 +46,10 @@ def call(port, method, path, headers=None, body=None):
     return r.status, r.read().decode(errors="replace"), dict(r.getheaders())
 
 
-def page_token(port) -> str:
-    _, page, _ = call(port, "GET", "/", {"Host": f"127.0.0.1:{port}"})
-    return re.search(r'<meta name="camr-token" content="([^"]+)"', page).group(1)
-
-
-def test_only_the_served_page_can_use_the_api():
-    port, _, httpd = start()
+def test_only_the_holder_of_the_launch_token_can_use_the_api():
+    port, token, httpd = start()
     host = {"Host": f"127.0.0.1:{port}"}
-    status, page, _ = call(port, "GET", "/", host)
-    token = re.search(r'<meta name="camr-token" content="([^"]+)"', page).group(1)
-    assert status == 200 and len(token) > 20
+    assert len(token) > 20
     ok = {**host, "X-CAMR-Token": token}
     assert call(port, "GET", "/api/state", ok)[0] == 200
     assert call(port, "GET", "/api/state", host)[0] == 403                                  # no secret
@@ -72,15 +62,13 @@ def test_only_the_served_page_can_use_the_api():
     httpd.shutdown()
 
 
-def test_the_token_is_new_each_launch_and_never_in_a_script():
+def test_the_token_is_new_each_launch_and_never_given_out():
     a, ta, ha = start()
     b, tb, hb = start()
-    assert page_token(a) == ta and page_token(b) == tb and ta != tb
-    _, page, _ = call(a, "GET", "/", {"Host": f"127.0.0.1:{a}"})
-    assert "__CAMR_TOKEN__" not in page
-    scripts = re.findall(r"<script\b[^>]*>(.*?)</script>", page, re.S)
-    assert scripts and all(not s.strip() for s in scripts)  # no inline script: script-src 'self' holds
-    assert ta not in (STATIC / "shell.js").read_text()
+    assert ta != tb
+    for path in ["/", "/index.html", "/api/state"]:
+        status, body, _ = call(a, "GET", path, {"Host": f"127.0.0.1:{a}"})
+        assert status in (403, 404) and ta not in body, path
     # a token from another launch is refused
     assert call(a, "GET", "/api/state", {"Host": f"127.0.0.1:{a}", "X-CAMR-Token": tb})[0] == 403
     ha.shutdown()
@@ -90,58 +78,32 @@ def test_the_token_is_new_each_launch_and_never_in_a_script():
 def test_every_response_carries_the_strict_policy():
     port, token, httpd = start()
     host = {"Host": f"127.0.0.1:{port}"}
-    for path, headers in [("/", host), ("/static/shell.js", host), ("/api/state", {**host, "X-CAMR-Token": token}),
+    for path, headers in [("/", host), ("/api/state", {**host, "X-CAMR-Token": token}),
                           ("/api/nothing", {**host, "X-CAMR-Token": token})]:
         _, _, h = call(port, "GET", path, headers)
         assert h["Content-Security-Policy"] == CSP
         assert h["X-Content-Type-Options"] == "nosniff"
         assert h["Cross-Origin-Resource-Policy"] == "same-origin"
-    assert "script-src 'self';" in CSP and "unsafe-eval" not in CSP and "frame-ancestors 'none'" in CSP
-    assert "connect-src 'self'" in CSP  # the page itself can never call Hugging Face or anything else
+    assert "default-src 'none'" in CSP and "frame-ancestors 'none'" in CSP
     httpd.shutdown()
 
 
-def test_static_files_come_only_from_the_static_folder():
+def test_nothing_but_the_api_is_served():
     port, _, httpd = start()
     host = {"Host": f"127.0.0.1:{port}"}
-    status, body, h = call(port, "GET", "/static/shell.js", host)
-    assert status == 200 and h["Content-Type"].startswith("text/javascript") and "mount" in body
-    assert call(port, "GET", "/static/tokens.css", host)[2]["Content-Type"].startswith("text/css")
-    font = "/static/vendor/@fontsource-variable/geist@5.3.0/files/geist-latin-wght-normal.woff2"
-    assert call(port, "GET", font, host)[2]["Content-Type"] == "font/woff2"
-    for bad in ["/static/../server.py", "/static/%2e%2e/server.py", "/static/vendor/../../server.py",
-                "/static/..%2fserver.py", "/static//etc/passwd", "/static/%2fetc%2fpasswd", "/static/",
-                "/static/index.html",            # the page is served only at /, with its token
-                "/static/screens/README.md",     # not a type the app serves
-                "/static/vendor/uplot@1.6.32/LICENSE", "/static/.DS_Store", "/static/a%00.js",
-                "/static/nothing.js", "/server.py", "/etc/passwd"]:
-        status, _, _ = call(port, "GET", bad, host)
-        assert status == 404, bad
+    for bad in ["/", "/index.html", "/static/shell.js", "/static/../server.py", "/static/%2e%2e/server.py",
+                "/server.py", "/etc/passwd"]:
+        assert call(port, "GET", bad, host)[0] == 404, bad
     httpd.shutdown()
 
 
-def test_the_host_and_origin_checks_hold_for_static_files_too():
+def test_the_host_and_origin_checks_hold_outside_the_api_too():
     port, _, httpd = start()
     host = {"Host": f"127.0.0.1:{port}"}
-    assert call(port, "GET", "/static/shell.js", {"Host": f"evil.example:{port}"})[0] == 403
-    assert call(port, "GET", "/static/shell.js", {"Host": "127.0.0.1:1"})[0] == 403
-    assert call(port, "GET", "/static/shell.js", {**host, "Origin": "https://evil.example"})[0] == 403
     assert call(port, "GET", "/", {"Host": f"evil.example:{port}"})[0] == 403
-    assert call(port, "GET", "/static/shell.js", {"Host": f"localhost:{port}"})[0] == 200
+    assert call(port, "GET", "/", {"Host": "127.0.0.1:1"})[0] == 403
+    assert call(port, "GET", "/", {**host, "Origin": "https://evil.example"})[0] == 403
     httpd.shutdown()
-
-
-def test_a_symlink_out_of_the_static_folder_is_refused(tmp_path):
-    static = tmp_path / "static"
-    static.mkdir()
-    (static / "ok.js").write_text("export const ok = 1;")
-    secret = tmp_path / "secret.js"
-    secret.write_text("export const key = 'not for the page';")
-    os.symlink(secret, static / "leak.js")
-    assert static_file("ok.js", static) == (static / "ok.js").resolve()
-    assert static_file("leak.js", static) is None
-    assert static_file("../secret.js", static) is None
-    assert static_file(str(secret), static) is None
 
 
 def test_api_requests_from_other_sites_and_bad_bodies_are_refused():
@@ -201,16 +163,14 @@ def test_every_route_module_loads(tmp_path):
     for p in ["/api/state", "/api/sys", "/api/events", "/api/metrics", "/api/brain", "/api/chat", "/api/errand",
               "/api/models", "/api/models/search", "/api/models/load", "/api/sim/state", "/api/quiz"]:
         assert p in paths, p
-    assert Path(STATIC / "index.html").read_text().count("__CAMR_TOKEN__") == 1
 
 
-def test_an_engine_started_by_the_mac_app_never_puts_its_token_in_the_page(monkeypatch):
+def test_an_engine_started_by_the_mac_app_uses_the_token_it_was_given(monkeypatch):
     monkeypatch.setenv("CAMR_TOKEN", "made-by-the-mac-app")
     port, token, httpd = start()
     host = {"Host": f"127.0.0.1:{port}"}
     try:
-        status, page, _ = call(port, "GET", "/", host)
-        assert token == "made-by-the-mac-app" and status == 200 and token not in page
+        assert token == "made-by-the-mac-app"
         assert call(port, "GET", "/api/state", {**host, "X-CAMR-Token": token})[0] == 200
         assert call(port, "GET", "/api/state", host)[0] in (401, 403)
     finally:

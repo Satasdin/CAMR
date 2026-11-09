@@ -2,7 +2,7 @@
 
     camr serve [--backend ollama|lmstudio|mlx] [--port 11436]   an OpenAI-compatible endpoint with memory
     camr ollama [--port 11435]                                   memory for the ollama CLI (OLLAMA_HOST)
-    camr app [--open] [--fixture DIR]                            the app, at http://127.0.0.1:8765
+    camr app [--fixture DIR]                                     the engine behind CAMR for Mac
     camr doctor                                                  what is installed and what is listening
     camr bench                                                   where the benchmarks and their records are
     camr version

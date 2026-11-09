@@ -22,15 +22,9 @@ answer records its speed, retrieval time and SSD bandwidth (`camr_engine/metrics
 
 ## The app
 
-`python -m camr_engine.app --open` serves one local page with five screens. Screenshots are in [docs/screens](docs/screens).
-
-| Screen | What it does |
-|---|---|
-| Models | what fits this Mac, from measured speeds; Hugging Face search and download; MLX and Ollama models side by side |
-| Chat | memory on or off per session, a reach picker, and the stage: SSD → RAM → desk as each answer is made |
-| Code | a coding agent on a local model: personas, tools, MCP servers, skills, and a shell that asks first |
-| Memory | every room drawn as a tensor tile, the bus, the RAM ruler and the vault; any answer replayed |
-| Bench | every benchmark record, live, against Claude alone |
+CAMR for Mac is a native SwiftUI app (`mac/`), built with the command-line tools by `sh mac/build.sh --open`. It starts
+the engine itself and talks to it over a local API that only it holds the token for. It opens on Chat, with Memory,
+Today, Agents, Models, Connections and a built-in Browser beside it.
 
 ## Pairing with Ollama
 
@@ -77,7 +71,7 @@ from are in [docs/site](docs/site).
 sh scripts/install.sh
 ```
 
-After that, `.venv/bin/python -m camr_engine.app --open` starts it again.
+After that, `open mac/build/CAMR.app` starts it again.
 
 # History: CAMR v2 before the rethink (2–3 November 2026)
 

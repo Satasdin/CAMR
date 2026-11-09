@@ -21,7 +21,7 @@ The script:
 2. installs `uv`, the Python installer, if it is missing;
 3. sets up Python 3.12 in `.venv` and installs the engine into it;
 4. runs a health check, which downloads the two models the first time;
-5. starts the app and opens it in the browser.
+5. builds CAMR for Mac and opens it.
 
 The two models are Qwen3-1.7B (4-bit), which reads and answers, and Qwen3-Embedding-0.6B, which finds the room a
 question is about. They live in the Hugging Face cache, `~/.cache/huggingface`.
@@ -39,17 +39,15 @@ Each check is kept as a record under `records/health/`.
 The install script starts it the first time. After that:
 
 ```sh
-.venv/bin/python -m camr_engine.app --open
+open mac/build/CAMR.app
 ```
 
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--memory DIR` | `~/.camr/default` | the memory folder; it reopens where it left off |
-| `--port N` | `8765` | the port; the app is at `http://127.0.0.1:N` |
-| `--open` | off | open the app in the browser once it is listening |
+| `--port N` | `8765` | the engine's port (the app picks a free one itself) |
 | `--check` | off | run the health check instead of the app, then exit |
 
-Leave the Terminal window open while you use it. Press Ctrl+C there to stop it.
 
 The app is one local page. What each screen does is in the [user guide](../USER_GUIDE.md).
 
@@ -73,7 +71,6 @@ the same browser cannot reach your memory.
 | `CAMR needs an Apple-silicon Mac` | This Mac cannot run it: MLX needs M1 or later. |
 | The health check says FAIL | Run `.venv/bin/python -m camr_engine.app --check` again. If it keeps failing, delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
 | The page shows "forbidden" | Reload it. The page gets a fresh key each time the app starts. |
-| Port 8765 is busy | Start it on another port: `.venv/bin/python -m camr_engine.app --open --port 8790`. |
 
 ## For developers
 

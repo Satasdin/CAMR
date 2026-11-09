@@ -751,9 +751,7 @@ class Talk:
                     f"user said. Asked: {question}\nThe web page says: {answer[:800]}")
         target = shelf or self.shelf
         if target == "auto":
-            if self.sorter is None:
-                self.sorter = Sorter(session.embedder)
-            target = self.sorter.sort(question).name
+            target = self._sorted(session, question).name
             if target in ("coding", "projects") and not _about_work(question):
                 target = "research"  # general knowledge the model answered goes on Research
         reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
@@ -790,13 +788,11 @@ class Talk:
             def read():
                 target = shelf or self.shelf
                 if target == "auto":
-                    if self.sorter is None:
-                        self.sorter = Sorter(session.embedder)
                     if seen:
                         head = " ".join(str(g.get("text") or "") for g in given)[:1500]
                     else:
                         head = f.read_text(errors="ignore")[:1500] if kind != ".pdf" else f.name
-                    target = self.sorter.sort(f"{f.stem} {head}").name
+                    target = self._sorted(session, f"{f.stem} {head}").name
                 reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
                 m = session.memory(reach)
                 if kind == ".pdf" or seen:  # the app read images, frames and scanned pages; a PDF's text here
@@ -820,14 +816,18 @@ class Talk:
         self._keep({"who": "camr", "reply": f"Read {f.name}: {out['moments']} pieces kept.", **out, "at": _now()})
         return out
 
+    def _sorted(self, session, text: str):
+        """The shelf "Auto" puts ``text`` on (the reader of the moment chooses, so a change of model needs no resort)."""
+        if self.sorter is None:
+            self.sorter = Sorter(session.embedder)
+        return self.sorter.sort(text, session.reader)
+
     def _tell(self, session, text: str, today: dt.date, day: int, shelf: str | None = None) -> dict:
         if not session.on:
             return {"intent": "tell", "on": False, "reply": "Memory is off, so nothing was kept.", "kept": False}
         target, sorted_ = shelf or self.shelf, None
         if target == "auto":
-            if self.sorter is None:
-                self.sorter = Sorter(session.embedder)
-            sorted_ = self.sorter.sort(text)
+            sorted_ = self._sorted(session, text)
             target = sorted_.name
         reach = session._reach(BY_NAME[target].reach) if target in BY_NAME else session.home
         on = shelf_of(reach.label)

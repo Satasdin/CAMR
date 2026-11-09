@@ -968,3 +968,20 @@ installed engine answered "where does my sister live, and when is her birthday?"
 - **Demo memory:** scripts/demo_life.py tells one consistent life (31 facts, some changing) to a fresh engine. Checked:
   "What's my rent now?" → KSh 28,000 (the newer value); Kevin's extension → "now 214"; sister → Nakuru, 14 March.
   Limit seen: a broad question ("plan my week") reads one room, so facts on another shelf are missed.
+
+## E-71 (9 Nov): "Auto" asks the reader which shelf; the old web app is gone
+
+The shelf sorter compared a statement's embedding with each shelf's description. On hand-labelled statements
+(`scripts/sort_check.py`) that was right 27 times in 52 on the tuning set: the embedder measures what a sentence sounds
+like, not what it is about, so "My rent is KSh 25,000" landed on Projects. Picking the nearest example instead of the
+mean reached 29. Asking the loaded reader to name the shelf reached 45, and 46 to 49 with clearer shelf descriptions, at
+0.15 s a note. The reader now chooses; only a shelf's exact name is accepted, and the embedder chooses if the reader
+gives anything else. The four starting shelves always read as described now, also in memories made earlier.
+
+Held back and scored once after tuning stopped (records/sorting/): 56 of 60 on six shelves (embedder alone: 36) and
+12 of 12 on a list with three shelves the user made, one of them only a name. It is 60 sentences written by one person,
+so it says the sorter is much better, not that it is 93% right on anyone's life.
+
+The website (`app/static`, `app/vendor-src`, `docs/screens`, the page and `/static/` serving, `--open`) and the old
+`/Applications/CAMR.app`, which only wrapped it, are removed: CAMR for Mac (E-69) replaces them. The engine's API routes
+stay, including those no Mac screen calls yet (bench, learn, notebook, sim): they hold features the app may still take up.

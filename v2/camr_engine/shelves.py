@@ -3,8 +3,9 @@ personal life apart and still answers from any of them.
 
 Each shelf is a reach of its own (camr_engine.reach), so it has its own folder, notes and vault. The Projects shelf
 is the global reach, which every session reads. A question reads every shelf, and the closest note wins, as a session
-always chooses. A moment goes on the shelf it is told to go on, or ``Sorter`` puts it on the shelf whose description
-it is closest to (the embedder's own measure, the one recall uses), so "Auto" files it by meaning.
+always chooses. A moment goes on the shelf it is told to go on, or ``Sorter`` asks the loaded reader which shelf it
+belongs on, so "Auto" files it by what it is about (the embedder's closeness is only the fallback: on hand-labelled
+statements it was right 27 times in 52 where the reader was right 49, see E-71 and scripts/sort_check.py).
 
 The shelves are the user's: the four below are only where a new memory starts. ``add``, ``rename``, ``empty`` and
 ``remove`` change them, and ``shelves.json`` beside the reaches keeps the list. Emptying or removing a shelf moves its
@@ -45,20 +46,21 @@ class Shelf:
 
 
 DEFAULTS = (
-    Shelf("projects", "Projects", "global", "A project's running history: clients, suppliers, staff, prices, orders, "
-          "deliveries, branches, rent, decisions, meetings and who said what.",
+    Shelf("projects", "Projects", "global", "Work and jobs: colleagues and their details, clients, suppliers, staff, "
+          "prices, orders, deliveries, the projects you are building, deadlines, decisions, meetings, and what you "
+          "promised people at work.",
           ("The supplier raised the minimum order from next week.", "Wanjiru approved the new menu prices.",
-           "The branch landlord wants the rent by the 28th.")),
-    Shelf("coding", "Coding", "project:coding", "Software work: code, functions, classes, bugs, errors, tests, files, "
-          "commands, libraries, APIs, refactors and fixes.",
+           "I told the client the report would be ready by Friday.")),
+    Shelf("coding", "Coding", "project:coding", "Software and systems: code, functions, classes, bugs, errors, tests, "
+          "files, commands, libraries, APIs, refactors, fixes, servers, ports, and how a site or program must behave.",
           ("The unit test fails because of a float rounding bug in the function.",
            "Refactor the parser into a class and add a regression test.", "pip install failed with an import error.")),
-    Shelf("research", "Research", "project:research", "Research and study: papers, findings, experiments, results, "
-          "benchmarks, sources, citations, methods and reading notes.",
+    Shelf("research", "Research", "project:research", "Research: papers, findings, experiments, results, benchmarks, "
+          "data, sources, citations, methods and reading notes.",
           ("The paper reports that retrieval beats long context on the benchmark.",
            "Our experiment measured accuracy at 1M tokens.", "Read the related work on KV cache reuse.")),
-    Shelf("personal", "Personal", "project:personal", "Personal life: family, friends, birthdays, health, home, "
-          "travel, money of one's own (rent, bills, fares, shopping), the gym, plans and errands.",
+    Shelf("personal", "Personal", "project:personal", "Personal life: family, friends, birthdays, health, home, rent, "
+          "bills, fares, shopping, the gym, travel, plans and errands.",
           ("My sister's birthday is next week.", "Dentist appointment on Friday, then pick up the kids.",
            "Book the flight home for the holidays.", "My rent is due on the 28th.")),
 )
@@ -93,11 +95,18 @@ def load(root: Path) -> list[Shelf]:
     """The shelves of the memory at ``root``: its own list, or the four it starts with."""
     try:
         rows = json.loads(_file(root).read_text())
-        _set(Shelf(r["name"], r["label"], r["reach"], r.get("about", ""), tuple(r.get("like", ())),
-                   bool(r.get("called"))) for r in rows)
+        _set(_row(r) for r in rows)
     except (OSError, ValueError, KeyError, TypeError):
         _set(DEFAULTS)
     return list(SHELVES)
+
+
+def _row(r: dict) -> Shelf:
+    """One saved shelf. The four shelves CAMR starts with always read as CAMR describes them now (the description is
+    not the user's: only the label can be changed), so a memory made earlier sorts as well as a new one."""
+    base = next((s for s in DEFAULTS if s.name == r["name"] and s.reach == r["reach"]), None)
+    return Shelf(r["name"], r["label"], r["reach"], base.about if base else r.get("about", ""),
+                 base.like if base else tuple(r.get("like", ())), bool(r.get("called")))
 
 
 def _save(root: Path) -> None:
@@ -229,8 +238,18 @@ def reaches() -> list[str]:
     return [s.reach for s in SHELVES]
 
 
+PICK = "You file one note onto one shelf. Shelves:\n{shelves}\nReply with only the shelf's name."
+PICK_CHARS = 800  # of a note, as the reader sees it: the start of a long file says what it is
+PICK_TOKENS = 12  # enough for the longest shelf name
+
+
+def _plain(text: str) -> str:
+    return re.sub(r"[^\w ]+", "", text.casefold()).strip()
+
+
 class Sorter:
-    """Which shelf a moment belongs on: the shelf whose description is closest to it by the embedder."""
+    """Which shelf a moment belongs on: the one the reader names, or without a usable answer from it, the shelf whose
+    description is closest by the embedder."""
 
     def __init__(self, embedder, shelves: Iterable[Shelf] = SHELVES):
         self.shelves = [s for s in shelves if not s.called] or list(shelves)
@@ -240,14 +259,36 @@ class Sorter:
             rows.append(v / (np.linalg.norm(v) or 1.0))
         self.vecs = np.stack(rows)
         self.embedder = embedder
+        self.asked = False  # whether the last sort was the reader's choice
 
     def scores(self, text: str) -> dict[str, float]:
         v = np.asarray(self.embedder.encode_one(text), dtype=np.float32)
         return {s.name: float(v @ w) for s, w in zip(self.shelves, self.vecs)}
 
-    def sort(self, text: str) -> Shelf:
-        got = self.scores(text)
-        best = max(got, key=got.get)
+    def ask(self, text: str, reader) -> Shelf | None:
+        """The shelf the reader names for ``text``, or None. Whatever the note says, only a shelf's name is accepted,
+        and the reading is not reported to whoever is watching: the answer shown is the one that follows."""
+        from camr_engine.live import reporting
+
+        listing = "\n".join(f"- {s.label}: {s.about}" for s in self.shelves)
+        try:
+            with reporting(None):
+                said = reader.generate(reader.chat_ids(PICK.format(shelves=listing), f"Note: {text[:PICK_CHARS]}"),
+                                       max_tokens=PICK_TOKENS).text
+        except Exception:  # noqa: BLE001 (a reader that cannot answer leaves the choice to the embedder)
+            return None
+        said = _plain(said)
+        named = [(_plain(s.label), s) for s in self.shelves]
+        named = sorted(((k, s) for k, s in named if k), key=lambda x: -len(x[0]))  # "Car parts" before "Car"
+        return next((s for k, s in named if said == k), None) or next((s for k, s in named if said.startswith(k)), None)
+
+    def sort(self, text: str, reader=None) -> Shelf:
+        got = self.ask(text, reader) if reader is not None else None
+        self.asked = got is not None
+        if got is not None:
+            return got
+        near = self.scores(text)
+        best = max(near, key=near.get)
         return next(s for s in self.shelves if s.name == best)
 
 

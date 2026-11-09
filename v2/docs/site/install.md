@@ -42,7 +42,7 @@ The npm package `camr-memory` installs the engine with the same `install.sh` the
 | --- | --- |
 | `camr serve [--backend ollama\|lmstudio\|mlx] [--port 11436]` | the OpenAI-compatible endpoint with memory |
 | `camr ollama [--port 11435]` | the [Ollama pairing](ollama.md), for the `ollama` CLI |
-| `camr app [--open]` | the app, at http://127.0.0.1:8765 |
+| `camr app` | the engine behind CAMR for Mac |
 | `camr doctor` | what is installed and what is listening; loads no model |
 | `camr bench` | where the benchmarks and their records are |
 | `camr version` | the engine's version |

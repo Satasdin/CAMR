@@ -18,14 +18,13 @@ Open Terminal in the downloaded folder and run:
 sh scripts/install.sh
 ```
 
-It checks the Mac, sets up Python, installs CAMR, downloads the models, runs a health check, and opens CAMR in
-the browser at http://127.0.0.1:8765. The health check should end with `PASS: CAMR remembered and answered.`
-Leave the Terminal window open while you use CAMR; press Ctrl+C there to stop it.
+It checks the Mac, sets up Python, installs CAMR, downloads the models, runs a health check, and opens CAMR
+for Mac. The health check should end with `PASS: CAMR remembered and answered.`
 
 To start it again later:
 
 ```sh
-.venv/bin/python -m camr_engine.app --open
+open mac/build/CAMR.app
 ```
 
 ## The four tabs
@@ -66,7 +65,6 @@ questions** or **Give it 100 errands**. Each takes under a minute.
 | `CAMR needs an Apple-silicon Mac` | This Mac can't run it; MLX needs M1 or later. |
 | The health check says FAIL | Run it again with `.venv/bin/python -m camr_engine.app --check`. If it keeps failing, the model download may be incomplete: delete `~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit` and rerun the installer. |
 | The page shows "forbidden" | Reload it. The page gets a fresh key each time CAMR starts. |
-| Port 8765 is busy | Start it on another port: `.venv/bin/python -m camr_engine.app --open --port 8790`. |
 
 ## For assessors: reproducing the measurements
 
