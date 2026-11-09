@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Burrow Directions</title>
+<style>
+  :root { color-scheme: dark; --bg:#000; --line:#2a2a2d; --dim:#8e8e93; --text:#f5f5f7; --love:#30d158; --maybe:#ffd60a; --no:#ff453a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+  header { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:16px; padding:10px 20px; background:rgba(0,0,0,.82); backdrop-filter:blur(20px); border-bottom:1px solid var(--line); }
+  header b { font-weight:600; }
+  header button { margin-left:auto; }
+  button { font:inherit; color:var(--text); background:#1c1c1e; border:1px solid var(--line); border-radius:6px; padding:4px 12px; cursor:pointer; }
+  section { max-width:1400px; margin:0 auto; padding:36px 20px 8px; }
+  .top { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:14px; }
+  h2 { margin:0; font-size:34px; font-weight:600; letter-spacing:-.02em; }
+  .line { color:var(--dim); font-size:15px; margin:4px 0 0; }
+  .picks { margin-left:auto; display:flex; gap:6px; }
+  .picks button[aria-pressed=true][data-c=love] { background:var(--love); color:#000; border-color:var(--love); }
+  .picks button[aria-pressed=true][data-c=maybe] { background:var(--maybe); color:#000; border-color:var(--maybe); }
+  .picks button[aria-pressed=true][data-c=no] { background:var(--no); color:#000; border-color:var(--no); }
+  figure { margin:0; position:relative; background:#0b0b0c; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  figure img { display:block; width:100%; height:100%; object-fit:cover; background:#000; }
+  figcaption { position:absolute; left:0; right:0; bottom:0; padding:8px 12px; background:rgba(0,0,0,.8); font-size:13px; }
+  figcaption span { color:#c7c7cc; }
+  .hero { aspect-ratio:21/9; }
+  .strip { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin-top:12px; }
+  .strip figure { aspect-ratio:4/3; }
+  footer { height:56px; }
+  @media (max-width:820px) { .strip { grid-template-columns:repeat(2, minmax(0,1fr)); } .hero { aspect-ratio:16/10; } .picks { margin-left:0; } h2 { font-size:28px; } }
+</style>
+</head>
+<body>
+<header><b>Burrow directions</b><button id="copy">Copy my picks</button></header>
+<main id="page"></main>
+<footer></footer>
+<script>
+const KEY = "burrow-direction-picks";
+const DIRECTIONS = [
+  { id: "night-sky", name: "Night Sky", line: "Opens on the Map. Your project is a star cluster on black.",
+    hero: ["https://raw.githubusercontent.com/0slow0/black-hole-graph/HEAD/screenshots/quasar.webp", "Home", "the whole project, glowing"],
+    strip: [
+      ["https://raw.githubusercontent.com/nachiket273/obsidian-event-horizon/main/screenshot.png", "Zoomed in", "files and notes by name"],
+      ["https://images.squarespace-cdn.com/content/v1/601893b4956c027691388862/1612292301115-DD3O8DYTGHM1AYS5A5C1/opte-2010.png", "Colour", "each cluster has its own"],
+      ["https://gource.io/images/gource-git.jpg", "History", "the project growing over time"],
+      ["https://developer.apple.com/xcode/images/h-xcc27-instruments-light_2x.png", "Bottom strip", "what the model is reading, live"],
+    ] },
+  { id: "reading-room", name: "Reading Room", line: "Opens on your notes. A calm page, with the Map beside it.",
+    hero: ["https://bear.app/images/home/hero_mac@2x.jpg", "Home", "notes first, warm and quiet"],
+    strip: [
+      ["https://static.ia.net/writer/iaw-alice-focus-desktop-smaller-vuga7w.webp", "Writing", "nothing but the sentence"],
+      ["https://raw.githubusercontent.com/irolyuk/chillight-graph/HEAD/assets/theme-golden-lights.png", "Map", "small, gold, in the side panel"],
+      ["https://www.devontechnologies.com/media/pages/apps/devonthink/37b39d765e-1750434435/chat-dark.jpg", "Ask", "chat with your archive"],
+      ["https://notebook.google/_/static/branding/v6/dark_mode/how-it-works-desktop.png", "Sources", "every answer shows what it used"],
+    ] },
+  { id: "trail", name: "Trail", line: "Opens on Ask. Every answer shows the path it took through your code.",
+    hero: ["https://images.zed.dev/blog/fastest-ai-code-editor/blog-1-post-format.webp", "Home", "one long thread with the model"],
+    strip: [
+      ["https://github.com/CoatiSoftware/Sourcetrail/raw/master/docs/readme/user_interface.png", "The trail", "one thing and its neighbours"],
+      ["https://images.zed.dev/blog/fastest-ai-code-editor/blog-review.webp", "Proposed change", "accept or reject each part"],
+      ["https://framerusercontent.com/images/fjpgoCvMGiPwgiXCzURKu4BNaBc.jpg?scale-down-to=2048&width=3024&height=1964", "Compare", "before and after, side by side"],
+      ["https://www.conductor.build/conductor-app-hero-dark.webp", "Sidebar", "one row per project"],
+    ] },
+];
+const CHOICES = ["love", "maybe", "no"];
+let picks = {};
+try { picks = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+
+function figure([src, title, note], cls) {
+  const f = document.createElement("figure");
+  if (cls) f.className = cls;
+  const i = document.createElement("img");
+  i.src = src; i.alt = title + ": " + note; i.referrerPolicy = "no-referrer";
+  const c = document.createElement("figcaption");
+  const b = document.createElement("b"); b.textContent = title;
+  const s = document.createElement("span"); s.textContent = "  " + note;
+  c.append(b, s); f.append(i, c);
+  return f;
+}
+
+const page = document.getElementById("page");
+for (const d of DIRECTIONS) {
+  const sec = document.createElement("section");
+  const top = document.createElement("div"); top.className = "top";
+  const words = document.createElement("div");
+  const h = document.createElement("h2"); h.textContent = d.name;
+  const p = document.createElement("p"); p.className = "line"; p.textContent = d.line;
+  words.append(h, p);
+  const row = document.createElement("div"); row.className = "picks"; row.dataset.id = d.id;
+  for (const ch of CHOICES) {
+    const b = document.createElement("button");
+    b.textContent = ch; b.dataset.c = ch;
+    b.addEventListener("click", () => {
+      if (picks[d.id] === ch) delete picks[d.id]; else picks[d.id] = ch;
+      try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch (e) {}
+      paint();
+    });
+    row.append(b);
+  }
+  top.append(words, row);
+  const strip = document.createElement("div"); strip.className = "strip";
+  d.strip.forEach(item => strip.append(figure(item)));
+  sec.append(top, figure(d.hero, "hero"), strip);
+  page.append(sec);
+}
+
+function paint() {
+  document.querySelectorAll(".picks").forEach(row => {
+    row.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c === picks[row.dataset.id])));
+  });
+}
+paint();
+
+document.getElementById("copy").addEventListener("click", async e => {
+  const text = JSON.stringify(picks, null, 2);
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; }
+  catch (err) {
+    const t = document.createElement("textarea");
+    t.value = text; document.body.append(t); t.select();
+    try { ok = document.execCommand("copy"); } catch (x) {}
+    t.remove();
+  }
+  e.target.textContent = ok ? "Copied" : "Copy failed";
+  setTimeout(() => { e.target.textContent = "Copy my picks"; }, 1500);
+});
+</script>
+</body>
+</html>

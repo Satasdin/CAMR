@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Burrow Reference Board</title>
+<style>
+  :root { color-scheme: dark; --bg:#000; --line:#2a2a2d; --dim:#8e8e93; --text:#f5f5f7; --love:#30d158; --maybe:#ffd60a; --no:#ff453a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+  header { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:16px; padding:10px 20px; background:rgba(0,0,0,.82); backdrop-filter:blur(20px); border-bottom:1px solid var(--line); }
+  header b { font-size:13px; font-weight:600; }
+  #tally { margin-left:auto; color:var(--dim); font-variant-numeric:tabular-nums; }
+  #tally i { font-style:normal; margin-left:12px; }
+  #tally .l { color:var(--love); } #tally .m { color:var(--maybe); } #tally .n { color:var(--no); }
+  button { font:inherit; color:var(--text); background:#1c1c1e; border:1px solid var(--line); border-radius:6px; padding:4px 12px; cursor:pointer; }
+  h2 { margin:28px 20px 12px; font-size:22px; font-weight:600; letter-spacing:-.01em; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,540px),1fr)); gap:16px; padding:0 20px; }
+  .card { background:#0b0b0c; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .card[data-pick=love] { border-color:var(--love); }
+  .card[data-pick=maybe] { border-color:var(--maybe); }
+  .card[data-pick=no] { border-color:var(--no); opacity:.45; }
+  .card img { display:block; width:100%; aspect-ratio:16/10; object-fit:contain; background:#000; }
+  .row { display:flex; align-items:center; gap:8px; padding:9px 12px; }
+  .name { font-weight:600; min-width:0; }
+  .row a { color:var(--dim); text-decoration:none; font-size:12px; white-space:nowrap; }
+  .row a:hover { color:var(--text); }
+  .picks { margin-left:auto; display:flex; gap:6px; flex:none; }
+  .picks button[aria-pressed=true][data-c=love] { background:var(--love); color:#000; border-color:var(--love); }
+  .picks button[aria-pressed=true][data-c=maybe] { background:var(--maybe); color:#000; border-color:var(--maybe); }
+  .picks button[aria-pressed=true][data-c=no] { background:var(--no); color:#000; border-color:var(--no); }
+  footer { height:48px; }
+  @media (max-width:560px) { .row { flex-wrap:wrap; } .picks { margin-left:0; width:100%; } .picks button { flex:1; } }
+</style>
+</head>
+<body>
+<header>
+  <b>Burrow references</b>
+  <span id="tally"></span>
+  <button id="copy">Copy my picks</button>
+</header>
+<main id="board"></main>
+<footer></footer>
+<script>
+const KEY = "burrow-board-picks";
+const GROUPS = [
+  ["window", "Whole Mac window"],
+  ["map", "Map"],
+  ["ask", "Ask"]
+];
+const CARDS = [
+  // Whole Mac window
+  ["w-nova", "window", "Quiet Workshop (Nova)", "https://nova.app/images/en/hero-14.avif", "https://nova.app/"],
+  ["w-tower", "window", "Dark History Rail (Tower)", "https://www.git-tower.com/assets/product-media/mac/hero/hero_screenshot_dark.avif", "https://www.git-tower.com/mac"],
+  ["w-xcode", "window", "Apple's Own Workbench (Xcode)", "https://developer.apple.com/xcode/images/h-xcc27-hero-light_2x.png", "https://developer.apple.com/xcode/"],
+  ["w-instruments", "window", "Instrument Strips (Xcode Instruments)", "https://developer.apple.com/xcode/images/h-xcc27-instruments-light_2x.png", "https://developer.apple.com/xcode/"],
+  ["w-devon-md", "window", "Note Beside Source (DEVONthink)", "https://www.devontechnologies.com/media/pages/apps/devonthink/6f39938fe3-1743674867/markdown-dark.jpg", "https://www.devontechnologies.com/apps/devonthink"],
+  ["w-kaleido", "window", "Side by Side (Kaleidoscope)", "https://framerusercontent.com/images/fjpgoCvMGiPwgiXCzURKu4BNaBc.jpg?scale-down-to=2048&width=3024&height=1964", "https://kaleidoscope.app/"],
+  ["w-proxyman", "window", "Inspector Everywhere (Proxyman)", "https://assets.proxyman.com/assets/images/home-2026/dashboard-demo-poster.webp", "https://proxyman.com/"],
+  ["w-obsidian", "window", "Vault in Deep Space (Obsidian, Event Horizon)", "https://raw.githubusercontent.com/nachiket273/obsidian-event-horizon/main/screenshot.png", "https://community.obsidian.md/themes/event-horizon"],
+  ["w-bear", "window", "Warm Notes (Bear)", "https://bear.app/images/home/hero_mac@2x.jpg", "https://bear.app/"],
+  ["w-ia", "window", "Nothing but the Sentence (iA Writer)", "https://static.ia.net/writer/iaw-alice-focus-desktop-smaller-vuga7w.webp", "https://ia.net/writer"],
+  ["w-retcon", "window", "History as a Stack (Retcon)", "https://retcon.app/images/screenshot-conflicting-dark.png", "https://retcon.app/"],
+
+  // Map
+  ["m-quasar", "map", "Black Hole Graph: Quasar (Obsidian)", "https://raw.githubusercontent.com/0slow0/black-hole-graph/HEAD/screenshots/quasar.webp", "https://community.obsidian.md/plugins/black-hole-graph"],
+  ["m-golden", "map", "Golden Lights (Obsidian, Chillight)", "https://raw.githubusercontent.com/irolyuk/chillight-graph/HEAD/assets/theme-golden-lights.png", "https://community.obsidian.md/plugins/chillight-graph"],
+  ["m-sourcetrail", "map", "One Symbol, Its Neighbours (Sourcetrail)", "https://github.com/CoatiSoftware/Sourcetrail/raw/master/docs/readme/user_interface.png", "https://github.com/CoatiSoftware/Sourcetrail"],
+  ["m-gephi-two", "map", "Two Clusters (Gephi)", "https://gephi.org/_astro/visualizations.ByK4jqS7_2oSXdd.webp", "https://gephi.org/"],
+  ["m-cosmo", "map", "Million Points, GPU (Cosmograph)", "https://cosmograph.app/_next/static/media/main-page-screen.47dae50f.png", "https://cosmograph.app/"],
+  ["m-opte-2010", "map", "The Internet, 2010 (Opte)", "https://images.squarespace-cdn.com/content/v1/601893b4956c027691388862/1612292301115-DD3O8DYTGHM1AYS5A5C1/opte-2010.png", "https://www.opte.org/the-internet"],
+  ["m-nsfnet", "map", "Traffic Lit Up, 1991 (NSFNET)", "https://upload.wikimedia.org/wikipedia/commons/4/41/NSFNET-traffic-visualization-1991.jpg", "https://commons.wikimedia.org/wiki/File:NSFNET-traffic-visualization-1991.jpg"],
+  ["m-gource-git", "map", "Files as Leaves (Gource, Git)", "https://gource.io/images/gource-git.jpg", "https://gource.io/"],
+  ["m-connectome", "map", "Colour Means Direction (Connectome)", "https://upload.wikimedia.org/wikipedia/commons/b/b3/Connectome.jpg", "https://commons.wikimedia.org/wiki/File:Connectome.jpg"],
+  ["m-flywire", "map", "Fly Brain, Traced (FlyWire)", "https://flywire.ai/assets/bgd5.png", "https://flywire.ai/"],
+  ["m-flywire-2", "map", "Fly Brain, Lit Cells (FlyWire)", "https://flywire.ai/assets/bgd4.png", "https://flywire.ai/"],
+  ["m-koblin", "map", "Paths as Light (Flight Patterns, Aaron Koblin)", "https://www.aaronkoblin.com/wp-content/uploads/2015/08/hero-image3.jpg", "https://www.aaronkoblin.com/project/flight-patterns/"],
+  ["m-bloom", "map", "Rule-Based Styling (Neo4j Bloom)", "https://dist.neo4j.com/wp-content/uploads/20211210124244/Rule-based-Styling-4-1-2048x1314.png", "https://neo4j.com/blog/graph-visualization/introducing-neo4j-bloom-2-0-the-fastest-path-to-graph-data-visualization/"],
+  ["m-dribbble", "map", "Dark System Graph (Dribbble)", "https://cdn.dribbble.com/userupload/32733429/file/original-ef4e0655813b4768889301efb5a82896.png?format=webp&resize=1600x1200&vertical=center", "https://dribbble.com/shots/16157087-Knowledge-Graph-UI-for-the-Dark-System"],
+
+  // Ask
+  ["a-zed-post", "ask", "Agent Thread (Zed)", "https://images.zed.dev/blog/fastest-ai-code-editor/blog-1-post-format.webp", "https://zed.dev/blog/fastest-ai-code-editor"],
+  ["a-zed-review", "ask", "Review the Changes (Zed)", "https://images.zed.dev/blog/fastest-ai-code-editor/blog-review.webp", "https://zed.dev/blog/fastest-ai-code-editor"],
+  ["a-xcode-claude", "ask", "Agent in Xcode (Claude Agent)", "https://www.apple.com/newsroom/images/2026/02/xcode-26-point-3-unlocks-the-power-of-agentic-coding/article/Apple-Xcode-agentic-coding-with-Anthropic-Claude-Agent_big.jpg.medium_2x.jpg", "https://www.apple.com/newsroom/2026/02/xcode-26-point-3-unlocks-the-power-of-agentic-coding/"],
+  ["a-conductor", "ask", "Parallel Workspaces (Conductor)", "https://www.conductor.build/conductor-app-hero-dark.webp", "https://www.conductor.build/"],
+  ["a-cursor-origin", "ask", "Agent Window (Cursor)", "https://cursor.com/marketing-static/_next/image?url=https%3A%2F%2Fptht05hbb1ssoooe.public.blob.vercel-storage.com%2Fassets%2Fchangelog%2Forigin-apps-QQ9ZPw6HtXmhbhtleevXGQ5xw1ncs1.png&w=1920&q=70", "https://cursor.com/changelog"],
+  ["a-ollama", "ask", "Plain Local Chat (Ollama)", "https://files.ollama.com/ollama-app-screenshot.png", "https://ollama.com/blog/new-app"],
+  ["a-devon-chat", "ask", "Chat With Your Archive (DEVONthink)", "https://www.devontechnologies.com/media/pages/apps/devonthink/37b39d765e-1750434435/chat-dark.jpg", "https://www.devontechnologies.com/apps/devonthink"],
+  ["a-proxyman-mcp", "ask", "Agent Reads the Tool (Proxyman MCP)", "https://proxyman.com/assets/images/home-2026/proxyman-mcp-ai-agent-demo-poster.webp", "https://proxyman.com/"],
+  ["a-notebook", "ask", "Answers With Sources (NotebookLM)", "https://notebook.google/_/static/branding/v6/dark_mode/how-it-works-desktop.png", "https://notebook.google/"],
+  ["a-claude-2", "ask", "Coding Agent, Second View (Claude Code)", "https://assets.claude.com/454390de9d9ccefb6082b7c2440c7547c1ec3964.webp", "https://claude.com/product/claude-code"],
+];
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch (e) {}
+}
+
+const picks = load();
+const board = document.getElementById("board");
+const CHOICES = ["love", "maybe", "no"];
+
+function host(url) { return new URL(url).hostname.replace(/^www\./, ""); }
+
+for (const [gid, title] of GROUPS) {
+  const h = document.createElement("h2");
+  h.textContent = title;
+  const grid = document.createElement("div");
+  grid.className = "grid";
+  for (const [id, group, name, img, src] of CARDS) {
+    if (group !== gid) continue;
+    const c = document.createElement("article");
+    c.className = "card";
+    c.dataset.id = id;
+    const i = document.createElement("img");
+    i.src = img; i.alt = name; i.loading = "eager"; i.referrerPolicy = "no-referrer";
+    const r = document.createElement("div");
+    r.className = "row";
+    const n = document.createElement("span");
+    n.className = "name"; n.textContent = name;
+    const a = document.createElement("a");
+    a.href = src; a.target = "_blank"; a.rel = "noreferrer"; a.textContent = host(src);
+    const p = document.createElement("div");
+    p.className = "picks";
+    for (const ch of CHOICES) {
+      const b = document.createElement("button");
+      b.textContent = ch; b.dataset.c = ch;
+      b.addEventListener("click", () => {
+        if (picks[id] === ch) delete picks[id]; else picks[id] = ch;
+        save(); paint();
+      });
+      p.append(b);
+    }
+    r.append(n, a, p);
+    c.append(i, r);
+    grid.append(c);
+  }
+  board.append(h, grid);
+}
+
+function paint() {
+  const n = { love: 0, maybe: 0, no: 0 };
+  document.querySelectorAll(".card").forEach(c => {
+    const v = picks[c.dataset.id];
+    if (v) { c.dataset.pick = v; n[v]++; } else { delete c.dataset.pick; }
+    c.querySelectorAll(".picks button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c === v)));
+  });
+  document.getElementById("tally").innerHTML =
+    `${n.love + n.maybe + n.no} of ${CARDS.length}<i class="l">${n.love} love</i><i class="m">${n.maybe} maybe</i><i class="n">${n.no} no</i>`;
+}
+paint();
+
+document.getElementById("copy").addEventListener("click", async e => {
+  const text = JSON.stringify(picks, null, 2);
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; }
+  catch (err) {
+    const t = document.createElement("textarea");
+    t.value = text; document.body.append(t); t.select();
+    try { ok = document.execCommand("copy"); } catch (x) {}
+    t.remove();
+  }
+  e.target.textContent = ok ? "Copied" : "Copy failed";
+  setTimeout(() => { e.target.textContent = "Copy my picks"; }, 1500);
+});
+</script>
+</body>
+</html>

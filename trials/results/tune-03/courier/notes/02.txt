@@ -1,0 +1,8 @@
+decision: build_timeline always returns events oldest first because the mobile app reverses the list internally and cannot be updated to support different orders due to legacy app versions staying on drivers' phones for up to a year.  
+file: courier/tracking/timeline.py  
+
+rejected: returning events newest first was proposed because it matches the driver app's current behavior, but rejected due to older app versions not supporting reversed lists and causing upside-down delivery displays.  
+file: courier/tracking/timeline.py  
+
+rejected: adding a query parameter to control event order was proposed to allow ordering flexibility, but rejected because legacy app versions would not send the parameter and would continue to display events incorrectly.  
+file: courier/api/handlers.py

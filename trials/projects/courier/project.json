@@ -1,0 +1,20 @@
+{
+  "name": "courier",
+  "split": "tune",
+  "sessions": [
+    { "id": "01", "kind": "change", "category": "setup" },
+    { "id": "02", "kind": "change", "category": "setup" },
+    { "id": "03", "kind": "change", "category": "plain" },
+    { "id": "04", "kind": "change", "category": "depends" },
+    { "id": "05", "kind": "change", "category": "depends" },
+    {
+      "id": "06",
+      "kind": "ask",
+      "category": "unknown",
+      "must_contain": ["(?i)(don.t know|do not know|no record|not recorded|doesn.t say|does not say|can.t tell|cannot tell|isn.t stated|not stated|not documented|no information)"],
+      "must_not": ["(?i)\\b(because of|due to|in order to|to comply|safety|regulation|insurance|lifting|vehicle|handling limit)\\b"],
+      "reference_answer": "I don't know. MAX_WEIGHT_KG is set to 30 in courier/config.py, but nothing I was shown says why.",
+      "wrong_answer": "The 30 kg cap exists because of vehicle load rules."
+    }
+  ]
+}
