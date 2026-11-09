@@ -1,0 +1,7 @@
+decision: Do not retry a charge after a gateway timeout. The gateway does not enforce uniqueness of invoice references, so retries could result in duplicate charges. One charge call per checkout attempt is sufficient, and timed-out charges are handled by human review.
+
+file: courier/billing/checkout.py
+
+rejected: Automatic retry of a charge after a gateway timeout. Retries could lead to duplicate charges due to lack of reference uniqueness enforcement in the gateway, and customer 4411 was charged three times for one invoice as a result.
+
+file: courier/billing/checkout.py
