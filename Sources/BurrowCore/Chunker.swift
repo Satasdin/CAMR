@@ -11,6 +11,8 @@ struct Chunk: Equatable {
 enum Chunker {
     static let aim = 45
     static let most = 80
+    /// Matches what one excerpt can show. Prose can have very long lines, and anything past this would never be read.
+    static let mostCharacters = 3_000
 
     private static let declaration = try! NSRegularExpression(
         pattern: #"^(?:export\s+|public\s+|private\s+|internal\s+|open\s+|final\s+|static\s+|async\s+|pub\s+|@\w+)*\s*(?:def|class|func|function|struct|enum|protocol|interface|trait|impl|extension|actor|fn|type)\b"#)
@@ -39,7 +41,22 @@ enum Chunker {
 
     /// The line to stop before. Every line lands in exactly one chunk.
     private static func cut(_ lines: [String], from start: Int) -> Int {
-        let limit = min(start + most, lines.count)
+        let lineLimit = min(start + most, lines.count)
+        var limit = start + 1
+        var size = lines[start].count + 1
+        while limit < lineLimit, size + lines[limit].count + 1 <= mostCharacters {
+            size += lines[limit].count + 1
+            limit += 1
+        }
+        if limit < lineLimit {
+            // Out of room before out of lines: end at the last blank line, so a paragraph stays whole.
+            var index = limit
+            while index > start + 1 {
+                if lines[index - 1].trimmingCharacters(in: .whitespaces).isEmpty { return index }
+                index -= 1
+            }
+            return limit
+        }
         if limit == lines.count && limit - start <= aim { return limit }
         let earliest = min(start + aim, limit)
         var blank: Int?

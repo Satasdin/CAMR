@@ -122,16 +122,25 @@ extension Vault {
         for ranking in [try wordRanks(question, limit: reach), try meaningRanks(vector, limit: reach)] {
             for (rank, id) in ranking.enumerated() { score[id, default: 0] += 1.0 / Double(60 + rank + 1) }
         }
+        let asked = Asked(question)
+        var fileOf: [Int: (path: String, isNote: Bool)] = [:]
+        for row in try database.rows("SELECT c.id, f.path, f.is_note FROM chunks c JOIN files f ON f.id = c.file_id") {
+            fileOf[row[0].int!] = (row[1].text!, row[2].int == 1)
+        }
+        for id in Array(score.keys) { score[id]! *= asked.weight(of: fileOf[id]?.path ?? "") }
+
         // Someone who types an exact name means that name, so those chunks go ahead of the merged ranking.
         var seen = Set<Int>()
         let merged = score.keys.sorted { (score[$0]!, $1) > (score[$1]!, $0) }
-        let ordered = (try exactRanks(question, limit: scope == nil ? 6 : 60) + merged).filter { seen.insert($0).inserted }
+        let front = scope == nil ? 6 : 60
+        // The file or folder a question named may have missed both rankings, so its chunks are looked up directly.
+        let named = asked.names.isEmpty ? [] : fileOf.keys.filter { asked.names(fileOf[$0]!.path) && Self.inside(scope, fileOf[$0]!.path) }
+            .sorted { (score[$0] ?? 0, $1) > (score[$1] ?? 0, $0) }
+        let ordered = (try exactRanks(question, limit: front) + named.prefix(front) + merged).filter { seen.insert($0).inserted }
         var hits: [Hit] = []
         for id in ordered where hits.count < limit {
-            guard let row = try database.rows("""
-                SELECT f.path, f.is_note FROM chunks c JOIN files f ON f.id = c.file_id WHERE c.id = ?
-                """, [.int(Int64(id))]).first, Self.inside(scope, row[0].text!) else { continue }
-            hits.append(Hit(chunk: id, path: row[0].text!, isNote: row[1].int == 1))
+            guard let file = fileOf[id], Self.inside(scope, file.path) else { continue }
+            hits.append(Hit(chunk: id, path: file.path, isNote: file.isNote))
         }
         return hits
     }
@@ -188,6 +197,7 @@ extension Vault {
         var visited = Set(entries)
         var frontier = entries
         let wordMatches = try wordScores(question)
+        let asked = Asked(question)
         for hop in 1...max(1, budget.hops) where !frontier.isEmpty {
             var candidates: [(score: Double, path: String, neighbour: Vault.Neighbour, from: String)] = []
             for source in frontier {
@@ -199,7 +209,7 @@ extension Vault {
                     case .imports: score += neighbour.forward ? 1 : 0.5
                     case .uses: score += neighbour.forward ? 0.75 : 0.25
                     }
-                    candidates.append((score, neighbour.path, neighbour, source))
+                    candidates.append((score * asked.weight(of: neighbour.path), neighbour.path, neighbour, source))
                 }
             }
             candidates.sort { ($0.score, $1.path, $1.from) > ($1.score, $0.path, $0.from) }

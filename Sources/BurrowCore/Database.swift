@@ -26,6 +26,16 @@ enum Value: Equatable {
 final class Database {
     private var handle: OpaquePointer?
     private var prepared: [String: OpaquePointer] = [:]
+    /// An async call on `Vault` does not stay on its caller's actor, so one connection can be reached from several
+    /// threads at once. Recursive so that a transaction can hold it while its own statements take it again.
+    private let lock = NSRecursiveLock()
+
+    /// Runs `work` with the connection to itself.
+    func locked<T>(_ work: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try work()
+    }
 
     init(path: String) throws {
         guard sqlite3_open(path, &handle) == SQLITE_OK else {
@@ -44,6 +54,8 @@ final class Database {
     private var lastError: String { String(cString: sqlite3_errmsg(handle)) }
 
     func execute(_ sql: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
         guard sqlite3_exec(handle, sql, nil, nil, nil) == SQLITE_OK else {
             throw DatabaseError(description: "\(lastError) in: \(sql.prefix(120))")
         }
@@ -74,6 +86,8 @@ final class Database {
     }
 
     func run(_ sql: String, _ arguments: [Value] = []) throws {
+        lock.lock()
+        defer { lock.unlock() }
         let statement = try statement(sql, arguments)
         defer { sqlite3_reset(statement) }
         let code = sqlite3_step(statement)
@@ -83,6 +97,8 @@ final class Database {
     }
 
     func rows(_ sql: String, _ arguments: [Value] = []) throws -> [[Value]] {
+        lock.lock()
+        defer { lock.unlock() }
         let statement = try statement(sql, arguments)
         defer { sqlite3_reset(statement) }
         var out: [[Value]] = []
@@ -112,6 +128,8 @@ final class Database {
     var lastInsertedRow: Int { Int(sqlite3_last_insert_rowid(handle)) }
 
     func transaction(_ work: () throws -> Void) throws {
+        lock.lock()
+        defer { lock.unlock() }
         try execute("BEGIN IMMEDIATE")
         do {
             try work()

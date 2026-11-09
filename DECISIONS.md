@@ -89,3 +89,9 @@ Each entry says what was decided and why, so every choice can be defended. Newes
 **D-43. The graph is a live simulation that settles before it is first shown.** Links pull together, near things push apart and folders gather. It opens calm rather than exploding outwards, and it only moves again when something is dragged.
 
 **D-44. Claude Code through Ollama is not a supported way to use Burrow's small models.** On one task, `qwen3:8b` with a 32,768-word context either answered without using Burrow, or searched and then repeated edits until it timed out. `burrow chat` is the local route, and Claude Code is for cloud models. This is one task on one project.
+
+**D-45. Tests and the output of past runs rank below the code they are about.** They repeat its words, so on Burrow's own repository a test file came first on 6 of 13 questions about code, and run summaries pushed the code out entirely on one. Their search score is multiplied by 0.7 and 0.4, unless the question asks for tests or results or names the file or folder. They are demoted and never removed. Markdown is never demoted, because a person wrote it. Checked on 16 hand-written questions on this repository: right file first went from 6 to 10, in the first four files from 13 to 15. This is a tuning check and not a result.
+
+**D-46. A piece of a file also has a limit in characters.** Pieces were measured only in lines, so prose with long lines became 8,431 characters while an excerpt shows 3,000, and the rest could never be read. Pieces now stop at 3,000 characters on a blank line. An index built before this rebuilds itself the next time it is refreshed.
+
+**D-47. One lock guards each database connection.** An async call on `Vault` leaves its caller's actor, so the app could ask a question on the same connection as a rebuild. A stress test crashed 5 times in 5 before the lock and passed 8 times in 8 after it. A transaction holds the lock until it ends.

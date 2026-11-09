@@ -33,6 +33,9 @@ public final class Vault {
     public var notesFolder: URL { everything ? root.appendingPathComponent("Memory") : store.appendingPathComponent("notes") }
     let database: Database
 
+    /// Raised when files must be cut into pieces differently, so an existing index rebuilds itself.
+    private static let indexVersion = 2
+
     private static let schema = """
     CREATE TABLE IF NOT EXISTS files(id INTEGER PRIMARY KEY, path TEXT UNIQUE NOT NULL, is_note INTEGER NOT NULL, cluster TEXT NOT NULL, hash TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS chunks(id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE, start_line INTEGER NOT NULL, end_line INTEGER NOT NULL, body TEXT NOT NULL);
@@ -88,17 +91,19 @@ public final class Vault {
 
         var known: [String: String] = [:]
         for row in try database.rows("SELECT path, hash FROM files") { known[row[0].text!] = row[1].text! }
+        let outOfDate = try database.rows("PRAGMA user_version").first?[0].int != Self.indexVersion
 
         try database.transaction {
             for path in known.keys where found[path] == nil {
                 try remove(path)
                 report.filesRemoved += 1
             }
-            for path in found.keys.sorted() where known[path] != found[path]!.hash {
+            for path in found.keys.sorted() where outOfDate || known[path] != found[path]!.hash {
                 if known[path] != nil { try remove(path) }
                 try insert(found[path]!, isNote: notes.contains(path))
                 report.filesChanged += 1
             }
+            if outOfDate { try database.execute("PRAGMA user_version = \(Self.indexVersion)") }
             let texts = found.mapValues(\.text)
             let links = LinkFinder.links(files: texts, notes: notes)
             try database.run("DELETE FROM links")
@@ -108,7 +113,7 @@ public final class Vault {
             }
             report.links = links.count
         }
-        vectorCache = nil
+        database.locked { vectorCache = nil }
         if let embedder { report.embedded = try await embedMissing(embedder, onProgress: onProgress) }
         report.chunks = try count("chunks")
         return report
@@ -153,7 +158,7 @@ public final class Vault {
             start += batch.count
             onProgress?("embedded \(done) of \(missing.count)")
         }
-        vectorCache = nil
+        database.locked { vectorCache = nil }
         return done
     }
 
@@ -167,15 +172,17 @@ public final class Vault {
     }
 
     func loadVectors() throws -> (ids: [Int], vectors: [[Float]]) {
-        if let vectorCache { return vectorCache }
-        var ids: [Int] = []
-        var vectors: [[Float]] = []
-        for row in try database.rows("SELECT chunk_id, vector FROM vectors ORDER BY chunk_id") {
-            ids.append(row[0].int!)
-            vectors.append(Self.unpack(row[1].blob!))
+        try database.locked {
+            if let vectorCache { return vectorCache }
+            var ids: [Int] = []
+            var vectors: [[Float]] = []
+            for row in try database.rows("SELECT chunk_id, vector FROM vectors ORDER BY chunk_id") {
+                ids.append(row[0].int!)
+                vectors.append(Self.unpack(row[1].blob!))
+            }
+            vectorCache = (ids, vectors)
+            return (ids, vectors)
         }
-        vectorCache = (ids, vectors)
-        return (ids, vectors)
     }
 
     // MARK: Notes
