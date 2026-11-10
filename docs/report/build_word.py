@@ -353,8 +353,9 @@ class Writer:
     def figure(self, path, caption, width):
         source = HERE / path
         with Image.open(source) as im: w, h = im.size
-        width = min(float(width), TEXT_WIDTH)
-        if width * h / w > MAX_FIGURE_HEIGHT: width = MAX_FIGURE_HEIGHT * w / h
+        width = min(float(width), getattr(self, "text_width", TEXT_WIDTH))
+        tallest = getattr(self, "max_height", MAX_FIGURE_HEIGHT)
+        if width * h / w > tallest: width = tallest * w / h
         holder = self.document.add_paragraph(style="Body Text")
         holder.alignment = WD_ALIGN_PARAGRAPH.CENTER
         holder.paragraph_format.keep_with_next = True
@@ -362,6 +363,19 @@ class Writer:
         holder.paragraph_format.line_spacing = 1.0
         holder.add_run().add_picture(str(source), width=Inches(width))
         self.caption(caption)
+
+    def landscape(self):
+        # Everything after this line goes on landscape pages (a new section), with the wider text area for figures.
+        from docx.enum.section import WD_SECTION, WD_ORIENT
+        before = self.document.sections[-1]
+        made = self.document.add_section(WD_SECTION.NEW_PAGE)
+        made.orientation = WD_ORIENT.LANDSCAPE
+        made.page_width, made.page_height = before.page_height, before.page_width
+        self.text_width = (made.page_width - made.left_margin - made.right_margin) / 914400
+        self.max_height = (made.page_height - made.top_margin - made.bottom_margin) / 914400 - 1.7
+        # keep counting pages from the portrait part instead of restarting at 1
+        numbering = made._sectPr.find(qn("w:pgNumType"))
+        if numbering is not None and numbering.get(qn("w:start")) is not None: del numbering.attrib[qn("w:start")]
 
     def table(self, caption, rows, widths):
         self.caption(caption, keep_next=True)
@@ -441,6 +455,8 @@ class Writer:
             if not line: i += 1
             elif line.startswith("#"):
                 level = len(line) - len(line.lstrip("#")); self.heading(level, line[level:].strip()); i += 1
+            elif line.startswith("!landscape"):
+                self.landscape(); i += 1
             elif line.startswith("!fig"):
                 path, caption, width = [part.strip() for part in line[4:].split("|")]
                 self.figure(path, caption, width); i += 1
