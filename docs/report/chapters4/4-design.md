@@ -63,7 +63,7 @@ Table 4.4 lists the interface and integration requirements. They describe how a 
 | IR-02 | If the Ollama service cannot embed a question, the search shall continue on words alone. If it cannot answer, the failure shall be reported and no answer shown. | Must | iii | TC-21 |
 | IR-03 | The MCP server shall exchange JSON-RPC messages over standard input and output, and shall offer its tools only after the client has initialised the session. | Should | iii | TC-11 |
 | IR-04 | The vault shall stay a folder that Obsidian can open: plain Markdown with links written between double square brackets. | Should | iii | TC-22 |
-| IR-05 | The system shall be offered from a public landing page, with the terminal version installed by one command and the desktop application downloaded by one click, both from the project's published releases. | Should | Sprint II | [PENDING: test once the page is live] |
+| IR-05 | The system shall be offered from a public landing page, with the terminal version installed by one command and the desktop application downloaded by one click, both from the project's published releases. | Should | Sprint II | TC-23 |
 
 ## 4.3 System Analysis Diagrams
 
@@ -183,4 +183,4 @@ The deployment diagram shows where each part runs and how a person obtains the s
 
 The application, the command-line tool, the vault, the index, and the local models are on the person's own computer, and the engine reaches the local model service only on the loopback address. Neither of the two outside connections is made by the engine. One is an MCP client that the person chooses to connect, and the other is the evaluation harness calling the cloud model.
 
-A person reaches the system through a landing page hosted on GitHub Pages. The page offers two downloads, both served from the project's GitHub Releases. The terminal version is installed by one curl command that fetches the program and places it on the person's path. The desktop application is a single button that downloads the current release. Because each download comes from a tagged release, a person receives the same version that the repository records. The download happens once and carries no content from the vault, so after installation the engine works offline.
+A person reaches the system through a landing page hosted on GitHub Pages. The page offers two downloads, both served from the project's GitHub Releases. The terminal version is installed by one curl command that fetches the program, verifies its checksum, and places it on the person's path. The desktop application is a single button that downloads the current release. Because each download comes from a tagged release, a person receives the same version that the repository records. The download happens once and carries no content from the vault, so after installation the engine works offline.

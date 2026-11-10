@@ -6,7 +6,7 @@ This chapter presents how the design of Chapter 4 was implemented, tested, and e
 
 ## 5.2 Implementation Environment
 
-Burrow is meant for a consumer computer that can run a local model service. It was developed and tested on one laptop of that kind, and it has not yet been published for public download. The models ran in Ollama on the same machine, and the cloud model was called only by the evaluation harness.
+Burrow is meant for a consumer computer that can run a local model service. It was developed and tested on one laptop of that kind, and it is published for download from a public landing page. The models ran in Ollama on the same machine, and the cloud model was called only by the evaluation harness.
 
 ### 5.2.1 Hardware and Deployment Environment
 
@@ -43,7 +43,7 @@ The key for the cloud service was read from a private file outside the repositor
 
 ### 5.2.3 Deployment and Reproducibility
 
-The system is currently installed from source, and Section 4.4.5 gives the planned release path. A person needs the Swift toolchain and Ollama, and pulls the two models with ollama pull gemma4:12b and ollama pull qwen3-embedding:0.6b. The command swift build -c release builds the command-line tool, and app/build.sh builds the desktop application. The command burrow index builds the index of a vault, and burrow fit measures the model once. A first question through burrow ask verifies that the installation works. The evaluation is repeated by following trials/gap/README.md in the repository. Everything runs locally except the two cloud set-ups, which need a paid key for the Claude service. No dataset in the study is restricted.
+The release path of Section 4.4.5 is live. The landing page at https://satasdin.github.io/CAMR offers the desktop application and the one-command install from the release burrow-v1.0.0, for Apple silicon and macOS 14 or later. The application is not signed with Apple, so on first open after a browser download macOS requires the person to choose Open Anyway; installing it with the command avoids this step. The system can also be built from source. A person needs the Swift toolchain and Ollama, and pulls the two models with ollama pull gemma4:12b and ollama pull qwen3-embedding:0.6b. The command swift build -c release builds the command-line tool, and app/build.sh builds the desktop application. The command burrow index builds the index of a vault, and burrow fit measures the model once. A first question through burrow ask verifies that the installation works. The evaluation is repeated by following trials/gap/README.md in the repository. Everything runs locally except the two cloud set-ups, which need a paid key for the Claude service. No dataset in the study is restricted.
 
 ## 5.3 Dataset Description
 
@@ -226,7 +226,7 @@ Claude passed all 42 checks in every set-up. Gemma alone passed 41. With the bri
 
 ### 5.6.1 Test Strategy and Acceptance Criteria
 
-Testing was done at three levels. Unit tests checked each type of the library alone. Integration tests ran the whole loop from a question to a kept note with a scripted model, so that a result does not depend on what a real model happens to say. System test cases then verified each requirement of Chapter 4, by automated test, by running the frozen program, by using the desktop app, or by inspection where the requirement concerns how the system is built. The tests include normal cases, wrong input, and failures of the model service. The acceptance criterion was that every automated test passes on the frozen source and that every requirement of Chapter 4 has a test case whose observed result equals its expected result. IR-05 is excluded because the release path of Section 4.4.5 is not yet live. No person other than the developer has used the app, so no user acceptance test is claimed.
+Testing was done at three levels. Unit tests checked each type of the library alone. Integration tests ran the whole loop from a question to a kept note with a scripted model, so that a result does not depend on what a real model happens to say. System test cases then verified each requirement of Chapter 4, by automated test, by running the frozen program, by using the desktop app, or by inspection where the requirement concerns how the system is built. The tests include normal cases, wrong input, and failures of the model service. The acceptance criterion was that every automated test passes on the frozen source and that every requirement of Chapter 4 has a test case whose observed result equals its expected result. No person other than the developer has used the app, so no user acceptance test is claimed.
 
 The engine has 212 automated tests, and all of them passed on the frozen source. The full record is saved in the repository as unit-tests-evaluation-2.log.
 
@@ -259,6 +259,7 @@ Table 5.10 gives the test cases, with the requirement each one verifies.
 | TC-20 | DR-04 | The key-checking scripts; the location of the questions | Keys found in the source text and absent from their questions; questions outside the vault | As expected; key-checking script | Pass |
 | TC-21 | IR-02 | Ollama unreachable during a search and during an answer | Search continues on words; the failure is reported | As expected; test log | Pass |
 | TC-22 | IR-04 | A vault with links in double square brackets and Obsidian's own settings folder | The links join the notes; the settings are left out | As expected; test log. Not opened in Obsidian itself | Pass on format |
+| TC-23 | IR-05 | The published install command run into an empty folder with the application option; the landing page and its download link fetched | Program and application installed, checksums pass, the program indexes a vault; page and link return successfully | As expected. The browser download on a second computer was not tried | Pass on one machine |
 
 Five defects were recorded. Two affected the runs and were corrected and retested. The first cloud run was stopped after 35 questions because the harness cut answers at 600 tokens, and the limit was raised to 4,000. A budget sweep was stopped because it had begun while another run was using the machine. Both were restarted from the first question, and the partial runs are kept in the repository. Three are known gaps that remain in the frozen code and were left unfixed, so that the engine measured is the engine described. They are stated with the other limitations in Section 5.9.6.
 
@@ -288,7 +289,7 @@ The second research question asked how the engine can be designed in terms of it
 
 ### 5.9.3 Objective iii: The Development of the Engine
 
-The third research question asked how the engine can be developed on a consumer laptop with no dedicated graphics hardware, using an embedded database. The output is the engine of Section 5.4, in Swift with an embedded SQLite index, and the criterion was the acceptance criterion of Section 5.6.1. All 212 automated tests passed on the frozen source and all 22 test cases met their expected results, three of them within a stated limit (TC-14, TC-17, and TC-22). A lookup that followed links took a median of 0.18 seconds on an index of 11,710 pieces. The objective was met on the one laptop tested.
+The third research question asked how the engine can be developed on a consumer laptop with no dedicated graphics hardware, using an embedded database. The output is the engine of Section 5.4, in Swift with an embedded SQLite index, and the criterion was the acceptance criterion of Section 5.6.1. All 212 automated tests passed on the frozen source and all 23 test cases met their expected results, four of them within a stated limit (TC-14, TC-17, TC-22, and TC-23). A lookup that followed links took a median of 0.18 seconds on an index of 11,710 pieces. The objective was met on the one laptop tested.
 
 ### 5.9.4 Objective iv: The Fraction of the Gap Closed and Its Cost
 
@@ -313,7 +314,7 @@ Table 5.11 summarises the five objectives.
 | No. | Objective, in short | Evidence | Observed result |
 | i | Investigate the capability gap and existing memory techniques | Chapter 2 | No measurement of gap closing on a device by task type was found |
 | ii | Design the memory engine | Chapter 4 | Write policy, retrieval policy and token budget designed; ranking by recency and importance not built |
-| iii | Develop the engine on a consumer laptop | Sections 5.4, 5.6 | Swift with an embedded SQLite index; 212 automated tests and 22 test cases passed |
+| iii | Develop the engine on a consumer laptop | Sections 5.4, 5.6 | Swift with an embedded SQLite index; 212 automated tests and 23 test cases passed |
 | iv | Measure the fraction of the gap closed, by task type, with cost | Section 5.5.3 | 9 to 102 of 120 on knowledge, 47 to 48 of 50 on reasoning, with a median of about 9 seconds and 6,100 tokens for a knowledge answer |
 | v | Determine the token budget | Section 5.5.5 | Gain per token highest at 4,000 characters among budgets that delivered excerpts; accuracy rose up to the largest budget tested |
 
