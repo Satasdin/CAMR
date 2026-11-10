@@ -110,7 +110,7 @@ def wire_keep():
     # The conversation so far.
     s.rect(158, 46, 442, 24, "The person's words, where a decision was stated", size=7)
     s.rect(158, 80, 442, 36, "Answer, with its decision line and the files it used", size=7.2)
-    s.text(166, 132, "Seconds taken, on this Mac     Keep as Note", ha="left", size=7)
+    s.text(166, 132, "Seconds taken, on this device     Keep as Note", ha="left", size=7)
     s.rect(372, 122, 160, 20, "What Should Burrow Remember?", size=7, line=1.6)
     # The proposed notes.
     s.rect(158, 152, 442, 118)

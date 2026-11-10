@@ -288,7 +288,7 @@ def engine_steps():
 def architecture():
     s = Sheet("architecture", 626, 470)
     s.text(8, 12, "Surfaces", ha="left", size=SMALL, style="italic")
-    tops = [(8, "Burrow.app\nMac app"), (132, "burrow\ncommand line"), (256, "BurrowChat\nterminal chat"), (380, "BurrowTUI\nterminal view"), (504, "BurrowMCP\nMCP server")]
+    tops = [(8, "Burrow.app\ndesktop app"), (132, "burrow\ncommand line"), (256, "BurrowChat\nterminal chat"), (380, "BurrowTUI\nterminal view"), (504, "BurrowMCP\nMCP server")]
     for x, words in tops:
         component(s, x, 22, 114, 46, words)
     component(s, 256, 110, 362, 40, "BurrowTools: eight vault tools, defined once")
@@ -459,7 +459,7 @@ def schema():
 
 def deployment():
     s = Sheet("deployment", 626, 440)
-    node(s, 8, 24, 452, 404, "«device» MacBook Pro, Apple silicon, macOS")
+    node(s, 8, 24, 452, 404, "«device» The person's computer")
     s.rect(24, 72, 130, 44, "«artifact»\nBurrow.app", z=3)
     s.rect(166, 72, 130, 44, "«artifact»\nburrow (command line,\nterminal chat, MCP server)", z=3, size=7.0)
     s.rect(330, 72, 118, 44, "«process»\nMCP client, for\nexample Claude Code", z=3, size=7.0)
@@ -470,7 +470,7 @@ def deployment():
     s.rect(50, 192, 104, 50, "Vault folder\nnotes, skills,\nlinked code", z=3, size=7.3)
     s.rect(160, 192, 100, 50, ".burrow\nindex.sqlite\nvectors.bin", z=3, size=7.3)
     s.rect(24, 318, 272, 84, z=2)
-    s.text(32, 330, "«service» Ollama, 127.0.0.1:11434", ha="left")
+    s.text(32, 330, "«service» Local model service, 127.0.0.1", ha="left")
     s.rect(34, 342, 122, 50, "local chat model", z=3, size=7.3)
     s.rect(166, 342, 120, 50, "embedding model", z=3, size=7.3)
     s.line([(99, 116), (99, 168)], "open", dashed=True)
@@ -481,10 +481,14 @@ def deployment():
     s.rect(330, 200, 118, 50, "«artifact»\nevaluation harness\n(Python)", z=3, size=7.2)
     s.line([(330, 225), (312, 225), (312, 108), (296, 108)], "open", dashed=True)
     s.line([(389, 250), (389, 360), (296, 360)], "open")
+    node(s, 480, 24, 130, 136, "«cloud» GitHub")
+    s.rect(490, 52, 110, 44, "Pages\nlanding page", z=3, size=7.3)
+    s.rect(490, 106, 110, 44, "Releases\nprogram and app", z=3, size=7.3)
+    s.line([(490, 128), (460, 128)], "open")
+    s.text(404, 146, "HTTPS download,\nonce", size=SMALL)
     node(s, 496, 190, 112, 70, "«cloud»")
-    s.text(552, 232, "Cloud model\nevaluation only", size=7.3)
+    s.text(552, 232, "Cloud model, HTTPS\nevaluation only", size=7.3)
     s.line([(448, 225), (496, 225)], "open")
-    s.text(478, 216, "HTTPS", size=SMALL)
     s.save()
 
 
@@ -522,7 +526,7 @@ def wire_main():
     s.text(166, 265, "Used", ha="left", weight="bold", size=7.2)
     s.text(166, 281, "file name, lines read, link mark when reached through a link; each row opens its file", ha="left", size=7)
     s.text(166, 295, "file name, lines read", ha="left", size=7)
-    s.text(166, 320, "Seconds taken, on this Mac     Keep as Note     What Should Burrow Remember?", ha="left", size=7)
+    s.text(166, 320, "Seconds taken, on this device     Keep as Note     What Should Burrow Remember?", ha="left", size=7)
     s.rect(158, 332, 442, 26)
     s.text(166, 345, "Proposed note:  kind, one sentence", ha="left", size=7)
     s.rect(548, 336, 44, 18, "Keep", size=7.2)

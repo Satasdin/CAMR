@@ -34,7 +34,7 @@ Every question in every set-up logged the model used, the tokens read and writte
 
 The system was developed by incremental prototyping, in small working stages, each of which was checked before the next was begun. Iterative and incremental development grows a system in small steps in which the result of each step informs the next (Larman & Basili, 2003), and design science asks for the same cycle of building and evaluating (Hevner et al., 2004). This approach suited the study for two reasons. First, the requirements changed: the Sprint II review of 5 November 2026 asked for something a person can see and use, and an incremental plan could take that in without losing the work already done. Second, the engine is a chain of separable steps, so its parts could be built in turn and switched off when it was evaluated. The system was analysed and designed with OOAD, because the memory is naturally a set of objects that hold their own data and behaviour, and Chapter 4 therefore presents use case, sequence, activity, and class diagrams drawn in the Unified Modeling Language.
 
-Development proceeded in the five increments shown in Figure 3.1. The first increment built a memory engine and an evaluation harness in Python under the working name CAMR, from the approved proposal, and ended at the Sprint II review. The second increment rebuilt the memory in Swift as Burrow, with a vault of plain Markdown files, a rebuildable SQLite index, retrieval by words and by meaning, and a walk over the links between files. The third increment added the surfaces through which a person and other tools use the memory: a native Mac application, a terminal chat, and a Model Context Protocol server. The fourth increment froze the retrieval and tested it on 101 real bug fixes from public repositories and on three held-back synthetic projects worked by simulated developer agents; memory did not measurably help the small model write working code, which showed that finding the right text was not enough. The fifth increment built the engine around the model, namely the Decide, Fit, Check, and Learn steps and the skills, wrote the evaluation harness of Section 3.5, froze the program, and ran the evaluation.
+Development proceeded in the five increments shown in Figure 3.1. The first increment built a memory engine and an evaluation harness in Python under the working name CAMR, from the approved proposal, and ended at the Sprint II review. The second increment rebuilt the memory in Swift as Burrow, with a vault of plain Markdown files, a rebuildable SQLite index, retrieval by words and by meaning, and a walk over the links between files. The third increment added the surfaces through which a person and other tools use the memory: a native desktop application, a terminal chat, and a Model Context Protocol server. The fourth increment froze the retrieval and tested it on 101 real bug fixes from public repositories and on three held-back synthetic projects worked by simulated developer agents; memory did not measurably help the small model write working code, which showed that finding the right text was not enough. The fifth increment built the engine around the model, namely the Decide, Fit, Check, and Learn steps and the skills, wrote the evaluation harness of Section 3.5, froze the program, and ran the evaluation.
 
 !fig figures/related/fig3-1-incremental.png | Figure 3.1: Incremental development approach for the Burrow engine, drawn by the author. | 6.2
 
@@ -80,7 +80,7 @@ This section describes the tools that were used to build the engine and the harn
 
 ### 3.6.1 Swift
 
-The engine, the command-line tool, the terminal chat, the protocol server, and the Mac application were written in Swift, the native language of the target platform, so that the engine runs as one compiled program with no interpreter.
+The engine, the command-line tool, the terminal chat, the protocol server, and the desktop application were written in Swift, the native language of the target platform, so that the engine runs as one compiled program with no interpreter.
 
 ### 3.6.2 SQLite with FTS5
 
@@ -118,9 +118,9 @@ The study produced the following deliverables, each described in its own subsect
 
 A Swift package that implements the vault, the index, and the five steps described in Section 3.5.1, with a command-line tool named burrow, running entirely on the target consumer laptop.
 
-### 3.7.2 The Mac Application, Terminal Chat, and Protocol Server
+### 3.7.2 The Desktop Application, Terminal Chat, and Protocol Server
 
-A native Mac application in which a person writes notes, follows their links, and asks questions of the vault, a terminal chat, and a Model Context Protocol server that gives outside models and tools the same memory.
+A native desktop application in which a person writes notes, follows their links, and asks questions of the vault, a terminal chat, and a Model Context Protocol server that gives outside models and tools the same memory.
 
 ### 3.7.3 The Evaluation Harness
 

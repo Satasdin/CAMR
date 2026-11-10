@@ -6,7 +6,7 @@ This chapter presents the analysis and design of Burrow, the memory engine of th
 
 ## 4.2 System Requirements
 
-The system requirements identified for this project are presented in the following subsections. They were worked backwards from the specific objectives in Section 1.3 and from the Sprint II review of 5 November 2026. Each requirement has an identifier, a priority, the objective it serves, and the test case of Section 5.6 that verifies it. A requirement is marked Must when an objective depends on it and Should when it was added to strengthen the engine. No limit on response time was set in advance, because no measurement existed to justify one. Appendix 4 traces each requirement to its objective, its component, and its test.
+The system requirements identified for this project are presented in the following subsections. They were worked backwards from the specific objectives in Section 1.3 and from the Sprint II review of 5 November 2026. Each requirement has an identifier, a priority, the objective it serves, and the test case of Section 5.6 that verifies it. A requirement is marked Must when an objective depends on it and Should when it was added to strengthen the engine. No limit on response time was set in advance, because no measurement existed to justify one.
 
 ### 4.2.1 Functional Requirements
 
@@ -63,6 +63,7 @@ Table 4.4 lists the interface and integration requirements. They describe how a 
 | IR-02 | If the Ollama service cannot embed a question, the search shall continue on words alone. If it cannot answer, the failure shall be reported and no answer shown. | Must | iii | TC-21 |
 | IR-03 | The MCP server shall exchange JSON-RPC messages over standard input and output, and shall offer its tools only after the client has initialised the session. | Should | iii | TC-11 |
 | IR-04 | The vault shall stay a folder that Obsidian can open: plain Markdown with links written between double square brackets. | Should | iii | TC-22 |
+| IR-05 | The system shall be offered from a public landing page, with the terminal version installed by one command and the desktop application downloaded by one click, both from the project's published releases. | Should | Sprint II | [PENDING: test once the page is live] |
 
 ## 4.3 System Analysis Diagrams
 
@@ -156,7 +157,7 @@ A file is cut into pieces stored as chunks, and a piece has at most one vector, 
 
 ### 4.4.4 Wireframes
 
-The wireframes planned where the engine's decisions would be shown to the person, which addresses IR-01 and the Sprint II request for something a person can see and use. Figure 4.9 is the main window of the Mac application with the Ask panel open.
+The wireframes planned where the engine's decisions would be shown to the person, which addresses IR-01 and the Sprint II request for something a person can see and use. Figure 4.9 is the main window of the desktop application with the Ask panel open.
 
 !fig figures/v2/wire_main.png | Figure 4.9: Wireframe of the main window with the Ask panel | 6.0
 
@@ -176,8 +177,10 @@ The line under each question is the engine's decision, and the /keep command off
 
 ### 4.4.5 Deployment Diagram
 
-The deployment diagram shows where each part runs. It was chosen because it allows the privacy requirement NFR-01 to be inspected. Figure 4.13 shows the laptop and the two connections that leave it.
+The deployment diagram shows where each part runs and how a person obtains the system. It was chosen because it allows the privacy requirement NFR-01 to be inspected, and because it shows the distribution path of IR-05. Figure 4.13 shows the person's computer, the two connections that can leave it during use, and the place the software is downloaded from.
 
 !fig figures/v2/deployment.png | Figure 4.13: Deployment diagram of Burrow | 6.0
 
-The application, the command-line tool, the vault, the index, and both local models are on one laptop, and the engine reaches Ollama only on the loopback address. Neither of the two outside connections is made by the engine. One is an MCP client that the person chooses to connect, and the other is the evaluation harness calling the cloud model.
+The application, the command-line tool, the vault, the index, and the local models are on the person's own computer, and the engine reaches the local model service only on the loopback address. Neither of the two outside connections is made by the engine. One is an MCP client that the person chooses to connect, and the other is the evaluation harness calling the cloud model.
+
+A person reaches the system through a landing page hosted on GitHub Pages. The page offers two downloads, both served from the project's GitHub Releases. The terminal version is installed by one curl command that fetches the program and places it on the person's path. The desktop application is a single button that downloads the current release. Because each download comes from a tagged release, a person receives the same version that the repository records. The download happens once and carries no content from the vault, so after installation the engine works offline.

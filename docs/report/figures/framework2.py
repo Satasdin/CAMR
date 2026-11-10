@@ -90,7 +90,7 @@ def pill(x, y, words, colour):
 
 # Title
 text(W / 2, 34, "Burrow: a memory engine beside a frozen on-device model", f(60, AB), anchor="m")
-text(W / 2, 112, "The vault, the index, the engine and the model all run on the person's own laptop", f(40, AI), fill=SOFT, anchor="m")
+text(W / 2, 112, "The vault, the index, the engine and the model all run on the person's own device", f(40, AI), fill=SOFT, anchor="m")
 
 # INPUT
 pill(60, 190, "1  INPUT", BLUE)
@@ -134,8 +134,8 @@ for a, b in zip(rows, rows[1:]):
 box((1500, 1140, 2200, 1700), TEAL, TEAL, radius=30)
 icon("cpu.fill", "FFFFFF", (1850, 1250), 150)
 text(1850, 1350, "Frozen on-device model", f(50, AB), fill="white", anchor="m")
-text(1850, 1420, "Gemma 4 12B or Qwen3.5 4B,", f(40), fill="white", anchor="m")
-text(1850, 1472, "run by Ollama on the laptop", f(40), fill="white", anchor="m")
+text(1850, 1420, "An open-weight local model,", f(40), fill="white", anchor="m")
+text(1850, 1472, "run by a local model service", f(40), fill="white", anchor="m")
 icon("lock.fill", "FFFFFF", (1640, 1612), 60)
 text(1690, 1586, "Weights never change", f(42, AB), fill="white")
 arrow([(1340, rows[2] - 30), (1500, rows[2] - 30)], TEAL, width=9)
@@ -152,8 +152,8 @@ arrow([(1340, rows[0]), (1500, rows[0])], PURPLE, width=8, head=24, both=True)
 
 # Laptop note
 icon("laptopcomputer", "0F766E", (1590, 1900), 130)
-text(1680, 1800, "One laptop, no cloud call:", f(40, AB), fill=TEAL)
-text(1680, 1856, "MacBook Pro M5 Pro, 24 GB. The engine reaches only the Ollama service on the same machine.", f(36), fill=SOFT, width=500)
+text(1680, 1800, "On the device, no cloud call:", f(40, AB), fill=TEAL)
+text(1680, 1856, "The engine reaches only the local model service on the same machine.", f(36), fill=SOFT, width=500)
 
 # OUTPUT
 pill(60, 2254, "3  OUTPUT", GREEN)

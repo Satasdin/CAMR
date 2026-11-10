@@ -6,16 +6,16 @@ This chapter presents how the design of Chapter 4 was implemented, tested, and e
 
 ## 5.2 Implementation Environment
 
-Burrow was developed and tested on one laptop, which is also the machine it is meant to run on. It has not been published for public download. The models ran in Ollama on the same machine, and the cloud model was called only by the evaluation harness.
+Burrow is meant for a consumer computer that can run a local model service. It was developed and tested on one laptop of that kind, and it has not yet been published for public download. The models ran in Ollama on the same machine, and the cloud model was called only by the evaluation harness.
 
 ### 5.2.1 Hardware and Deployment Environment
 
-Table 5.1 states the machine used. It is the only configuration that was tested, so it is also the minimum that can be claimed.
+Table 5.1 states what the system needs and the machine on which it was tested. That is the only configuration tested, so other computers and operating systems are not claimed.
 
 !tab Table 5.1: Hardware and deployment environment
 !widths 1.0,2.0,2.2,1.1
 | Item | Tested specification | Purpose and justification | Evidence |
-| Laptop | Apple MacBook Pro, M5 Pro chip, 24 GB of shared memory | Runs the engine, the index and the local models together, which is the on-device setting the study is about | burrow fit output, Figure 5.5 |
+| Computer | A consumer laptop with 24 GB of shared memory (tested on an Apple MacBook Pro, M5 Pro chip) | Runs the engine, the index and the local models together, which is the on-device setting the study is about | burrow fit output, Figure 5.5 |
 | Storage | Internal SSD | The index is one database file beside the vault, and the vectors are one file mapped into memory | NFR-05 |
 | Graphics | The chip's own graphics processor, no separate card | Used by Ollama to run the models | Ollama (2026) |
 | Network | Needed only to download models and to call the cloud model during evaluation | The engine itself works offline | NFR-01 |
@@ -27,7 +27,7 @@ Table 5.2 lists the software and the models with the versions that were tested.
 !tab Table 5.2: Software, models and services
 !widths 1.7,1.8,2.8
 | Software | Tested version | Role and reason |
-| macOS | 27.2 | Operating system of the target laptop |
+| macOS | 27.2 | Operating system of the tested computer; the package requires version 14 or later |
 | Swift | 6.4.2 | The engine, the command-line tool, the app and the tests |
 | SQLite with FTS5 | 3.54.0 | The embedded index: word search, vectors and links |
 | Ollama | 0.40.14 | Runs the frozen local models on the device |
@@ -43,7 +43,7 @@ The key for the cloud service was read from a private file outside the repositor
 
 ### 5.2.3 Deployment and Reproducibility
 
-The system is installed from source. A person needs a Mac with Xcode and Ollama, and pulls the two models with ollama pull gemma4:12b and ollama pull qwen3-embedding:0.6b. The command swift build -c release builds the command-line tool, and app/build.sh builds the Mac application. The command burrow index builds the index of a vault, and burrow fit measures the model once. A first question through burrow ask verifies that the installation works. Appendix 5 gives these steps as a user guide. The evaluation is repeated by following trials/gap/README.md in the repository. Everything runs locally except the two cloud set-ups, which need a paid key for the Claude service. No dataset in the study is restricted.
+The system is currently installed from source, and Section 4.4.5 gives the planned release path. A person needs the Swift toolchain and Ollama, and pulls the two models with ollama pull gemma4:12b and ollama pull qwen3-embedding:0.6b. The command swift build -c release builds the command-line tool, and app/build.sh builds the desktop application. The command burrow index builds the index of a vault, and burrow fit measures the model once. A first question through burrow ask verifies that the installation works. The evaluation is repeated by following trials/gap/README.md in the repository. Everything runs locally except the two cloud set-ups, which need a paid key for the Claude service. No dataset in the study is restricted.
 
 ## 5.3 Dataset Description
 
@@ -59,7 +59,7 @@ The evaluation used one vault of real documents and 170 questions. The material 
 | Private project | Burrow's source and decision log at tag evaluation-1 | 39 | 25 | 15 | - |
 | Reasoning | Problems from the GSM8K test split (Cobbe et al., 2021), chosen with a fixed seed | - | - | - | 50 |
 
-The 120 knowledge questions are synthetic data: Claude Code agents wrote them from the documents, with an answer key for each. A several-fact question needs two passages from two different files. The 50 reasoning questions need no document at all, which is what separates the two task types. Table 3.1 shows two of the records, and Appendix 3 shows one question of each kind.
+The 120 knowledge questions are synthetic data: Claude Code agents wrote them from the documents, with an answer key for each. A several-fact question needs two passages from two different files. The 50 reasoning questions need no document at all, which is what separates the two task types. Table 3.1 shows two of the records.
 
 ### 5.3.2 Data Preparation and Partitioning
 
@@ -69,17 +69,17 @@ The data was prepared so that nothing could leak. The vault holds the source doc
 
 ## 5.4 System Implementation
 
-The engine is one Swift library with four surfaces over it: a command-line tool, a Mac app, a terminal chat and a Model Context Protocol server. This section shows each part working, in the order of Figure 4.6 and Figure 4.7, and links each to its requirements.
+The engine is one Swift library with four surfaces over it: a command-line tool, a desktop app, a terminal chat and a Model Context Protocol server. This section shows each part working, in the order of Figure 4.6 and Figure 4.7, and links each to its requirements.
 
 ### 5.4.1 The Vault and Its Index
 
-The vault is an ordinary folder that the person chooses, which implements FR-01 and DR-01. Figure 5.1 shows the graph of a vault in the Mac app. Each dot is a note or a file, each line is a link, and the colours are folders. This is the evaluation vault of Section 5.3. It holds 59 notes and 37 code files, joined by 290 links.
+The vault is an ordinary folder that the person chooses, which implements FR-01 and DR-01. Figure 5.1 shows the graph of a vault in the desktop app. Each dot is a note or a file, each line is a link, and the colours are folders. This is the evaluation vault of Section 5.3. It holds 59 notes and 37 code files, joined by 290 links.
 
-!fig figures/screens3/graph.png | Figure 5.1: The graph of a vault in the Mac app, coloured by folder | 6.2
+!fig figures/screens3/graph.png | Figure 5.1: The graph of a vault in the desktop app, coloured by folder | 6.2
 
 Figure 5.2 shows a sample note being edited. The note is a plain Markdown file, and the panel on the right draws its neighbours and lists its properties.
 
-!fig figures/screens3/note.png | Figure 5.2: A note in the Mac app, with its links and properties | 6.2
+!fig figures/screens3/note.png | Figure 5.2: A note in the desktop app, with its links and properties | 6.2
 
 ### 5.4.2 Decide
 
@@ -87,9 +87,9 @@ For every question the engine runs one fast search and reads its signal. It then
 
 !fig figures/screens2/console-engine.png | Figure 5.3: The engine answering a question about code and reporting its decision, the skill used, the files read and the citation check | 6.2
 
-Figure 5.4 shows the opposite decision in the Mac app. The question is a sum, so the engine left the vault out and gave the model the skill for working a calculation. The line under the answer says so.
+Figure 5.4 shows the opposite decision in the desktop app. The question is a sum, so the engine left the vault out and gave the model the skill for working a calculation. The line under the answer says so.
 
-!fig figures/screens3/ask-sum.png | Figure 5.4: A sum in the Mac app, answered with the vault left out | 6.2
+!fig figures/screens3/ask-sum.png | Figure 5.4: A sum in the desktop app, answered with the vault left out | 6.2
 
 ### 5.4.3 Fit
 
@@ -101,9 +101,9 @@ For the scored runs Gemma 4 12B was measured at about 670 tokens a second and wa
 
 ### 5.4.4 Answer and Check
 
-Figure 5.6 shows a question about a document answered in the Mac app, which implements FR-07 and IR-01. Under the answer the app states the decision, the skill and the files that were read, and each file opens at the lines that were read.
+Figure 5.6 shows a question about a document answered in the desktop app, which implements FR-07 and IR-01. Under the answer the app states the decision, the skill and the files that were read, and each file opens at the lines that were read.
 
-!fig figures/screens3/ask-law.png | Figure 5.6: A question answered from the vault in the Mac app, with the engine's decision and the files read | 6.2
+!fig figures/screens3/ask-law.png | Figure 5.6: A question answered from the vault in the desktop app, with the engine's decision and the files read | 6.2
 
 Figure 5.7 shows the same moment from the graph. The files the model was shown light up while the answer is written, so the person can see what the model read.
 
@@ -177,19 +177,19 @@ Table 5.6 gives the fraction of the gap closed. On knowledge questions the on-de
 
 !include generated2/gap.md | Table 5.6 | 1.15,1.25,0.95,0.95,0.8,0.7,0.7
 
-Table 5.7 gives the cost. The engine showed the main model more of the vault than plain retrieval did, about 6,100 tokens against 3,800, and an answer took 9.2 seconds against 8.3. The engine's own work before the model started took 0.06 seconds. The engine brought back every file holding the answer on 111 of 120 questions, against 102 for plain retrieval and 95 for Chroma. Table A3.2 in Appendix 3 gives the results by subject.
+Table 5.7 gives the cost. The engine showed the main model more of the vault than plain retrieval did, about 6,100 tokens against 3,800, and an answer took 9.2 seconds against 8.3. The engine's own work before the model started took 0.06 seconds. The engine brought back every file holding the answer on 111 of 120 questions, against 102 for plain retrieval and 95 for Chroma.
 
 !include generated2/cost.md | Table 5.7 | 1.15,1.5,0.8,0.8,0.9,1.15
 
 ### 5.5.4 Results on the Small Model
 
-The smaller model gave a mixed result, shown in Figure 5.13 and in Table A3.1 of Appendix 3. Alone, Qwen3.5 4B answered 6 of the 120 knowledge questions. With plain retrieval it answered 97, with the Chroma baseline 75, and with the engine 91. On knowledge the engine therefore did not improve on plain retrieval for this model (1 question gained and 7 lost, p = 0.070). On reasoning the pattern of the main model repeated more sharply: 46 of 50 alone, 9 with plain retrieval, 1 with the Chroma pipeline, and 49 with the engine.
+The smaller model gave a mixed result, shown in Figure 5.13. Alone, Qwen3.5 4B answered 6 of the 120 knowledge questions. With plain retrieval it answered 97, with the Chroma baseline 75, and with the engine 91. On knowledge the engine therefore did not improve on plain retrieval for this model (1 question gained and 7 lost, p = 0.070). On reasoning the pattern of the main model repeated more sharply: 46 of 50 alone, 9 with plain retrieval, 1 with the Chroma pipeline, and 49 with the engine.
 
 !fig figures/v2/chart-accuracy-small.png | Figure 5.13: Answers right by set-up and task type, Qwen3.5 4B and the cloud model | 6.2
 
 ### 5.5.5 Ablation, Budget and Speed
 
-Two parts of the engine were switched off in turn on the main model. With every part on, the engine answered 150 of the 170 questions. Without skills it answered 149, and without the citation check it answered 151. The check asked the model again on only 1 of the 170 questions, because only 1 of the 145 places the model cited was not among what it had been shown. Without skills the total moved by one: one knowledge answer gained and two reasoning answers net lost. The run without the check differs from the full run by one retry, and its one score change was variation between runs. Twelve of the 120 knowledge answers cited no place, so the check had nothing to test there. Table A3.3 in Appendix 3 gives the paired tests.
+Two parts of the engine were switched off in turn on the main model. With every part on, the engine answered 150 of the 170 questions. Without skills it answered 149, and without the citation check it answered 151. The check asked the model again on only 1 of the 170 questions, because only 1 of the 145 places the model cited was not among what it had been shown. Without skills the total moved by one: one knowledge answer gained and two reasoning answers net lost. The run without the check differs from the full run by one retry, and its one score change was variation between runs. Twelve of the 120 knowledge answers cited no place, so the check had nothing to test there.
 
 Figure 5.14 and Table 5.8 answer the question of how much to show. The engine was run again on the 120 knowledge questions with the amount shown fixed at four sizes, beside the fitted 17,417 characters. At 2,000 characters most questions received nothing, because the best piece did not fit, and 15 were answered. Accuracy then rose with every increase: 56 at 4,000 characters, 76 at 8,000, 102 at the fitted size and 112 at 32,000. The gain per token was highest at 2,000 characters (58.1 points for each 1,000 tokens), but only because 94 of the 120 questions there received nothing. Among budgets that delivered excerpts it fell from 27.9 at 4,000 characters to 7.8 at 32,000, and the time for an answer rose from 2.1 to 15.6 seconds.
 
@@ -226,7 +226,7 @@ Claude passed all 42 checks in every set-up. Gemma alone passed 41. With the bri
 
 ### 5.6.1 Test Strategy and Acceptance Criteria
 
-Testing was done at three levels. Unit tests checked each type of the library alone. Integration tests ran the whole loop from a question to a kept note with a scripted model, so that a result does not depend on what a real model happens to say. System test cases then verified each requirement of Chapter 4, by automated test, by running the frozen program, by using the Mac app, or by inspection where the requirement concerns how the system is built. The tests include normal cases, wrong input, and failures of the model service. The acceptance criterion was that every automated test passes on the frozen source and that every requirement of Chapter 4 has a test case whose observed result equals its expected result. No person other than the developer has used the app, so no user acceptance test is claimed.
+Testing was done at three levels. Unit tests checked each type of the library alone. Integration tests ran the whole loop from a question to a kept note with a scripted model, so that a result does not depend on what a real model happens to say. System test cases then verified each requirement of Chapter 4, by automated test, by running the frozen program, by using the desktop app, or by inspection where the requirement concerns how the system is built. The tests include normal cases, wrong input, and failures of the model service. The acceptance criterion was that every automated test passes on the frozen source and that every requirement of Chapter 4 has a test case whose observed result equals its expected result. IR-05 is excluded because the release path of Section 4.4.5 is not yet live. No person other than the developer has used the app, so no user acceptance test is claimed.
 
 The engine has 212 automated tests, and all of them passed on the frozen source. The full record is saved in the repository as unit-tests-evaluation-2.log.
 
@@ -244,7 +244,7 @@ Table 5.10 gives the test cases, with the requirement each one verifies.
 | TC-05 | FR-04 | The 50 reasoning problems of Section 5.5, on the frozen program | The vault is left out | Left out on 50 of 50; saved results | Pass |
 | TC-06 | FR-05 | A sum, with a calculation skill and a documents skill in the vault | The calculation skill and no excerpts | As expected; test log | Pass |
 | TC-07 | FR-06 | A fast small model, a fast large model and a slow large model | 8,000, 24,000 and 6,400 characters | As expected; test log | Pass |
-| TC-08 | FR-07, IR-01 | A question about a regulation, in the Mac app | An answer with the decision line and the files read | As in Figure 5.6 | Pass |
+| TC-08 | FR-07, IR-01 | A question about a regulation, in the desktop app | An answer with the decision line and the files read | As in Figure 5.6 | Pass |
 | TC-09 | FR-08 | An answer citing a file it was not shown, with a scripted model | One retry; the better grounded answer kept | As expected; test log | Pass |
 | TC-10 | FR-09, DR-03 | Three proposed notes, one quoting words the person never typed; a note kept with and without agreement | Only the two backed by the person's words offered; nothing written without agreement | As expected; test log | Pass |
 | TC-11 | FR-10, IR-03 | vault_prepare called through MCP; a tool called before initialising | The decision and excerpts, no chat model called; the early call refused | As in Figure 5.10; test log | Pass |
@@ -264,7 +264,7 @@ Five defects were recorded. Two affected the runs and were corrected and reteste
 
 ## 5.7 Version Control and Implementation Evidence
 
-Project repository: https://github.com/Satasdin/CAMR, with burrow as its default branch. Figure 5.17 shows the history of the engine's source, the tags and the folders. The engine is in Sources, its tests in Tests, the Mac app in app, the evaluation in trials, and this report with its scripts in docs/report. The README states the problem, the set-up, and how to run and test the system.
+Project repository: https://github.com/Satasdin/CAMR, with burrow as its default branch. Figure 5.17 shows the history of the engine's source, the tags and the folders. The engine is in Sources, its tests in Tests, the desktop app in app, the evaluation in trials, and this report with its scripts in docs/report. The README states the problem, the set-up, and how to run and test the system.
 
 !fig figures/screens2/console-git.png | Figure 5.17: The history of the engine's source, the tags and the folders of the repository | 6.2
 
@@ -272,7 +272,7 @@ The workflow supported the evaluation directly. Each evaluation was run on a tag
 
 ## 5.8 Author Oversight and Use of AI-Assisted Tools
 
-Claude Code, a coding assistant from Anthropic, was used throughout this project. It assisted with the plan of the engine, the Swift source code and its tests, the evaluation harness, the writing of the curated questions, the diagrams, and the drafting and layout of this report. Its output was checked in four ways. The code was checked by the 212 automated tests. The answer keys were checked by script against the text of the vault. Each source was checked against its publisher, arXiv or official page, and the statute by its title and number. Every table and chart was generated by script from the saved answers. The cloud model in the experiments was Claude, called through its API and scored by fixed answer keys. Appendix 7 gives the AI-use log. The author made the final decisions and takes full responsibility for the submitted work. [PENDING: the student to add his own AI use before 9 November 2026 and confirm this declaration.]
+Claude Code, a coding assistant from Anthropic, assisted with the system design, implementation, testing, and evaluation reported in Chapters 4 and 5, and with the drafting of those two chapters. Its output was checked against the automated tests, the saved results, and the cited sources. The author made the final decisions and takes full responsibility for the submitted work.
 
 ## 5.9 Evaluation Results, Discussion and Limitations
 
