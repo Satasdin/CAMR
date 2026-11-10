@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soma Vault | Private Student Notes</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --text: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            line-height: 1.6; 
+            color: var(--text);
+            background-color: #ffffff;
+        }
+        header {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 100;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        nav {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        nav a { text-decoration: none; color: var(--text); font-weight: 500; }
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        section { padding: 4rem 0; text-align: center; }
+        #hero h1 { font-size: 3rem; margin-bottom: 1rem; color: var(--dark); }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .feature { padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 12px; }
+        #pricing { background: #f1f5f9; border-radius: 24px; padding: 4rem 1rem; }
+        .price-display { font-size: 3rem; font-weight: bold; margin: 1rem 0; }
+        [hidden] { display: none !important; }
+        @media (max-width: 599px) {
+            #nav { display: none; }
+            #nav.mobile-open { display: block; }
+            #nav.mobile-open { 
+                flex-direction: column; 
+                position: absolute; 
+                top: 60px; 
+                left: 0; 
+                right: 0; 
+                background: white; 
+                padding: 1rem; 
+                border: 1px solid #e2e8f0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight: bold; font-size: 1.2rem;">Soma Vault</div>
+    <button id="menu" type="button" class="btn">Menu</button>
+    <nav id="nav">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+    </nav>
+</header>
+
+<main>
+    <section id="hero">
+        <h1>Your notes, locked in your vault.</h1>
+        <p>Soma Vault keeps your academic research and personal notes encrypted on your local machine. No cloud, no leaks, just privacy.</p>
+        <br>
+        <button class="btn">Download for Free</button>
+    </section>
+
+    <section id="features">
+        <h2>Why Students Love Soma</h2>
+        <div class="feature-grid">
+            <div class="feature">
+                <h3>Local Storage</h3>
+                <p>Your data never leaves your hard drive. We don't have access to your files.</p>
+            </div>
+            <div class="feature">
+                <h3>AES-256 Encryption</h3>
+                <p>Military-grade security ensures that only you can unlock your study materials.</p>
+            </div>
+            <div class="feature">
+                <h3>Zero Tracking</h3>
+                <p>No telemetry, no ads, and no hidden data collection. Pure privacy.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing">
+        <h2>Simple Pricing</h2>
+        <p>Choose the plan that fits your study habits.</p>
+        <div style="margin: 2rem 0;">
+            <input type="checkbox" id="billing">
+            <label for="billing">Switch to Yearly Billing</label>
+        </div>
+        <div class="price-display" id="price">KES 500</div>
+        <p>Payable per month/year depending on selection.</p>
+    </section>
+</main>
+
+<script>
+    (function() {
+        const menuBtn = document.getElementById('menu');
+        const nav = document.getElementById('nav');
+        const billingCheck = document.getElementById('billing');
+        const priceDisplay = document.getElementById('price');
+
+        // Verify IDs
+        if (!menuBtn || !nav || !billingCheck || !priceDisplay) {
+            console.error("Required elements not found");
+            return;
+        }
+
+        // Toggle Mobile Menu
+        menuBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isVisible = nav.classList.toggle('mobile-open');
+            menuBtn.textContent = isVisible ? 'Close' : 'Menu';
+        });
+
+        // Handle Pricing Logic
+        function updatePrice() {
+            const isYearly = billingCheck.checked;
+            const monthlyRate = 500;
+            const yearlyRate = 5000;
+            
+            const finalPrice = isYearly ? yearlyRate : monthlyRate;
+            priceDisplay.textContent = `KES ${finalPrice.toLocaleString("en-US")}`;
+        }
+
+        billingCheck.addEventListener('change', updatePrice);
+        
+        // Initial run
+        updatePrice();
+    })();
+</script>
+</body>
+</html>

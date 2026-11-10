@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matatu Fare Splitter</title>
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #f1f5f0;
+    color: #1d2b22;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { text-align: center; padding: 24px 0 16px; }
+  .badge {
+    display: inline-block;
+    background: #0b7a43;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+  h1 { font-size: 2rem; margin: 12px 0 8px; line-height: 1.15; }
+  header p { margin: 0; color: #4a5c50; font-size: 1.05rem; }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px 20px;
+    margin-top: 16px;
+    box-shadow: 0 2px 12px rgba(11, 60, 35, 0.1);
+  }
+  label { display: block; font-weight: 600; margin: 0 0 6px; }
+  .field { margin-bottom: 18px; }
+  input, select {
+    width: 100%;
+    font: inherit;
+    font-size: 1.15rem;
+    padding: 12px 14px;
+    border: 2px solid #c9d6cd;
+    border-radius: 10px;
+    background: #fff;
+    color: inherit;
+  }
+  input:focus, select:focus, button:focus-visible {
+    outline: 3px solid #f5b700;
+    border-color: #0b7a43;
+  }
+  button {
+    width: 100%;
+    font: inherit;
+    font-size: 1.15rem;
+    font-weight: 700;
+    padding: 14px;
+    border: 0;
+    border-radius: 10px;
+    background: #0b7a43;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:active { background: #086236; }
+  #message {
+    margin: 16px 0 0;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #fdecea;
+    color: #9b1c1c;
+    font-weight: 600;
+  }
+  .results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+  .box { background: #eaf5ee; border-radius: 12px; padding: 16px 12px; text-align: center; }
+  .box span.label { display: block; font-size: 0.85rem; color: #4a5c50; text-transform: uppercase; letter-spacing: 0.05em; }
+  .box strong { display: block; font-size: 1.8rem; color: #0b7a43; min-height: 2.2rem; word-break: break-word; }
+  .note { font-size: 0.9rem; color: #4a5c50; margin: 16px 0 0; text-align: center; }
+  @media (max-width: 400px) { .results { grid-template-columns: 1fr; } h1 { font-size: 1.7rem; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="badge">Nairobi</span>
+    <h1>Matatu Fare Splitter</h1>
+    <p>Riding together? Work out the fare and who pays what.</p>
+  </header>
+
+  <main class="card">
+    <div class="field">
+      <label for="distance">Distance (kilometres)</label>
+      <input id="distance" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 10">
+    </div>
+    <div class="field">
+      <label for="passengers">Number of passengers</label>
+      <input id="passengers" type="number" inputmode="numeric" min="1" step="1" placeholder="e.g. 4">
+    </div>
+    <div class="field">
+      <label for="period">Time of day</label>
+      <select id="period">
+        <option value="peak">Peak (fare x 1.5)</option>
+        <option value="offpeak">Off-peak</option>
+      </select>
+    </div>
+    <button id="calculate" type="button">Calculate fare</button>
+
+    <p id="message" role="alert" hidden></p>
+
+    <div class="results" aria-live="polite">
+      <div class="box"><span class="label">Total fare</span><strong id="total"></strong></div>
+      <div class="box"><span class="label">Each pays</span><strong id="each"></strong></div>
+    </div>
+    <p class="note">Fare = KES 50 + KES 12 per km. Peak hours multiply the whole fare by 1.5.</p>
+  </main>
+</div>
+
+<script>
+  const distanceEl = document.getElementById("distance");
+  const passengersEl = document.getElementById("passengers");
+  const periodEl = document.getElementById("period");
+  const calcBtn = document.getElementById("calculate");
+  const totalEl = document.getElementById("total");
+  const eachEl = document.getElementById("each");
+  const messageEl = document.getElementById("message");
+
+  function calculate() {
+    const km = Number(distanceEl.value);
+    const people = Number(passengersEl.value);
+    if (distanceEl.value.trim() === "" || passengersEl.value.trim() === "" || !(km > 0) || !(people > 0)) {
+      totalEl.textContent = "";
+      eachEl.textContent = "";
+      messageEl.textContent = "Please enter a distance and number of passengers above zero.";
+      messageEl.hidden = false;
+      return;
+    }
+    messageEl.textContent = "";
+    messageEl.hidden = true;
+    let fare = 50 + 12 * km;
+    if (periodEl.value === "peak") fare = fare * 1.5;
+    totalEl.textContent = "KES " + Math.round(fare).toLocaleString("en-US");
+    eachEl.textContent = "KES " + Math.round(fare / people).toLocaleString("en-US");
+  }
+
+  calcBtn.addEventListener("click", calculate);
+</script>
+</body>
+</html>

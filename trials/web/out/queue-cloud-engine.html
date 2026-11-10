@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Queue Board</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+    color: #1d2b2a;
+    background: #eef4f3;
+  }
+  main {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 16px 48px;
+  }
+  header { margin-bottom: 24px; }
+  h1 { margin: 0 0 4px; font-size: 2rem; color: #0f766e; }
+  header p { margin: 0; color: #4b5f5d; }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(15, 60, 55, 0.08);
+  }
+  h2 { margin: 0 0 14px; font-size: 1.15rem; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  input, select, button {
+    font: inherit;
+    width: 100%;
+    min-height: 48px;
+    border-radius: 10px;
+  }
+  input, select {
+    padding: 10px 12px;
+    border: 2px solid #c6d6d4;
+    background: #fff;
+    color: inherit;
+    margin-bottom: 14px;
+  }
+  input:focus, select:focus, button:focus-visible {
+    outline: 3px solid #99d6cf;
+    border-color: #0f766e;
+  }
+  button {
+    border: 0;
+    cursor: pointer;
+    font-weight: 700;
+    background: #0f766e;
+    color: #fff;
+    padding: 10px 16px;
+  }
+  button:hover { background: #0b5d57; }
+  #next { background: #1d2b2a; }
+  #next:hover { background: #000; }
+  .msg { min-height: 1.5em; margin: 10px 0 0; color: #b42318; font-size: 0.95rem; }
+  .now-box { text-align: center; }
+  .now-label { margin: 0; color: #4b5f5d; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  #now {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0f766e;
+    margin: 4px 0 16px;
+    overflow-wrap: anywhere;
+    min-height: 1.5em;
+  }
+  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .head h2 { margin: 0; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #4b5f5d;
+    font-size: 0.95rem;
+  }
+  #count {
+    background: #0f766e;
+    color: #fff;
+    min-width: 2em;
+    padding: 2px 10px;
+    border-radius: 999px;
+    text-align: center;
+    font-weight: 700;
+  }
+  ol { margin: 0; padding-left: 28px; }
+  li { padding: 10px 0; border-bottom: 1px solid #e3ecea; }
+  li:last-child { border-bottom: 0; }
+  li::marker { color: #0f766e; font-weight: 700; }
+  .n { font-weight: 600; overflow-wrap: anywhere; }
+  .r {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: #d9efec;
+    color: #0b5d57;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .empty { margin: 0; color: #6b7d7b; text-align: center; padding: 8px 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Clinic Queue Board</h1>
+    <p>Front desk: add arriving patients and call the next one.</p>
+  </header>
+
+  <section class="card now-box" aria-live="polite">
+    <p class="now-label">Now serving</p>
+    <p id="now">—</p>
+    <button id="next" type="button">Call next patient</button>
+  </section>
+
+  <section class="card">
+    <h2>Add a patient</h2>
+    <label for="name">Patient name</label>
+    <input id="name" type="text" placeholder="e.g. Maria Lopez" autocomplete="off" maxlength="80">
+    <label for="reason">Reason for visit</label>
+    <select id="reason">
+      <option value="Consultation">Consultation</option>
+      <option value="Pharmacy">Pharmacy</option>
+      <option value="Lab">Lab</option>
+    </select>
+    <button id="add" type="button">Add to queue</button>
+    <p class="msg" id="msg" role="status"></p>
+  </section>
+
+  <section class="card">
+    <div class="head">
+      <h2>Waiting</h2>
+      <span class="badge">Patients waiting: <span id="count">0</span></span>
+    </div>
+    <ol id="queue"></ol>
+    <p class="empty" id="empty">No one is waiting.</p>
+  </section>
+</main>
+
+<script>
+(function () {
+  var KEY = 'clinic-queue';
+  var nameEl = document.getElementById('name');
+  var reasonEl = document.getElementById('reason');
+  var addBtn = document.getElementById('add');
+  var nextBtn = document.getElementById('next');
+  var queueEl = document.getElementById('queue');
+  var countEl = document.getElementById('count');
+  var nowEl = document.getElementById('now');
+  var msgEl = document.getElementById('msg');
+  var emptyEl = document.getElementById('empty');
+
+  var queue = [];
+  var current = '';
+
+  function load() {
+    try {
+      var data = JSON.parse(localStorage.getItem(KEY));
+      if (data && Array.isArray(data.queue)) {
+        queue = data.queue.filter(function (p) {
+          return p && typeof p.name === 'string' && typeof p.reason === 'string';
+        });
+      }
+      if (data && typeof data.current === 'string') current = data.current;
+    } catch (e) {
+      queue = [];
+      current = '';
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ queue: queue, current: current }));
+    } catch (e) { /* storage unavailable; keep working in memory */ }
+  }
+
+  function render() {
+    queueEl.textContent = '';
+    queue.forEach(function (p) {
+      var li = document.createElement('li');
+      var n = document.createElement('span');
+      var r = document.createElement('span');
+      n.className = 'n';
+      r.className = 'r';
+      n.textContent = p.name;
+      r.textContent = p.reason;
+      li.appendChild(n);
+      li.appendChild(document.createTextNode(' '));
+      li.appendChild(r);
+      queueEl.appendChild(li);
+    });
+    countEl.textContent = String(queue.length);
+    nowEl.textContent = current || '—';
+    emptyEl.style.display = queue.length ? 'none' : 'block';
+  }
+
+  function addPatient() {
+    var name = nameEl.value.trim();
+    if (!name) {
+      msgEl.textContent = 'Please enter the patient\u2019s name.';
+      nameEl.focus();
+      return;
+    }
+    queue.push({ name: name, reason: reasonEl.value });
+    nameEl.value = '';
+    msgEl.textContent = '';
+    save();
+    render();
+    nameEl.focus();
+  }
+
+  function callNext() {
+    if (!queue.length) {
+      msgEl.textContent = 'No one is waiting.';
+      return;
+    }
+    current = queue.shift().name;
+    msgEl.textContent = '';
+    save();
+    render();
+  }
+
+  addBtn.addEventListener('click', addPatient);
+  nextBtn.addEventListener('click', callNext);
+  nameEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') addPatient();
+  });
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>

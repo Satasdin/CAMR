@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matatu Fare Splitter</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 720px;
+        }
+        h1 { color: #d32f2f; margin-top: 0; }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        .results {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        #message { color: #d32f2f; font-weight: bold; }
+        .result-line { margin: 10px 0; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Matatu Fare Splitter</h1>
+        <p>Calculate the shared cost for your Nairobi commute.</p>
+        
+        <div class="form-group">
+            <label for="distance">Distance (km)</label>
+            <input type="number" id="distance" placeholder="e.g. 10">
+        </div>
+
+        <div class="form-group">
+            <label for="passengers">Number of Passengers</label>
+            <input type="number" id="passengers" placeholder="e.g. 4">
+        </div>
+
+        <div class="form-group">
+            <label for="period">Travel Period</label>
+            <select id="period">
+                <option value="offpeak">Off-Peak</option>
+                <option value="peak">Peak</option>
+            </select>
+        </div>
+
+        <button id="calculate">Calculate Split</button>
+
+        <div class="results">
+            <div id="message"></div>
+            <div id="total" class="result-line"></div>
+            <div id="each" class="result-line"></div>
+        </div>
+    </div>
+
+    <script>
+        const distInput = document.getElementById('distance');
+        const passInput = document.getElementById('passengers');
+        const periodSelect = document.getElementById('period');
+        const calcBtn = document.getElementById('calculate');
+        const totalDisplay = document.getElementById('total');
+        const eachDisplay = document.getElementById('each');
+        const msgDisplay = document.getElementById('message');
+
+        calcBtn.addEventListener('click', () => {
+            const dist = Number(distInput.value);
+            const passengers = Number(passInput.value);
+            const period = periodSelect.value;
+
+            // Reset displays
+            msgDisplay.textContent = "";
+            totalDisplay.textContent = "";
+            eachDisplay.textContent = "";
+
+            if (isNaN(dist) || dist <= 0 || isNaN(passengers) || passengers <= 0) {
+                msgDisplay.textContent = "Please enter valid numbers greater than zero.";
+                return;
+            }
+
+            // Calculation: 50 + (12 * distance)
+            let fare = 50 + (12 * dist);
+
+            // Peak multiplier
+            if (period === 'peak') {
+                fare = fare * 1.5;
+            }
+
+            const totalRounded = Math.round(fare);
+            const share = Math.round(totalRounded / passengers);
+
+            totalDisplay.textContent = `Total: KES ${totalRounded}`;
+            eachDisplay.textContent = `Each: KES ${share}`;
+        });
+    </script>
+</body>
+</html>

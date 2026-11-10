@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soma Vault: private notes that never leave your laptop</title>
+<meta name="description" content="Soma Vault keeps a student's notes encrypted and stored on their own laptop. No account, no cloud, no one else reading over your shoulder.">
+<style>
+  :root {
+    --bg: #0f1420;
+    --surface: #171e2e;
+    --surface-2: #1e2740;
+    --line: #2a3553;
+    --text: #e9edf7;
+    --muted: #a3aec7;
+    --accent: #5eead4;
+    --accent-ink: #062a25;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+
+  .wrap { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+  /* Header */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15, 20, 32, .92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    min-height: 64px;
+  }
+  .brand {
+    font-weight: 800; font-size: 1.15rem; letter-spacing: .01em;
+    text-decoration: none; display: flex; align-items: center; gap: 10px;
+  }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #60a5fa);
+    position: relative; display: inline-block;
+  }
+  .brand-mark::after {
+    content: ""; position: absolute; left: 8px; top: 6px; width: 10px; height: 8px;
+    border: 2.5px solid var(--accent-ink); border-radius: 6px 6px 0 0; border-bottom: 0;
+  }
+  .brand-mark::before {
+    content: ""; position: absolute; left: 6px; top: 13px; width: 14px; height: 8px;
+    background: var(--accent-ink); border-radius: 3px;
+  }
+  #menu {
+    font: inherit; font-weight: 600; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--line);
+    padding: 10px 16px; min-height: 44px; border-radius: 10px; cursor: pointer;
+  }
+  #menu:hover { border-color: var(--accent); }
+  #nav ul { list-style: none; margin: 0; padding: 0; }
+  #nav a {
+    display: block; padding: 14px 4px; text-decoration: none; color: var(--muted); font-weight: 500;
+  }
+  #nav a:hover { color: var(--text); }
+
+  @media (max-width: 599px) {
+    #nav { display: none; width: 100%; padding-bottom: 8px; }
+    #nav.open { display: block; }
+    #nav li + li { border-top: 1px solid var(--line); }
+  }
+  @media (min-width: 600px) {
+    #menu { display: none; }
+    #nav ul { display: flex; gap: 8px; }
+    #nav a { padding: 8px 14px; border-radius: 8px; }
+    #nav a:hover { background: var(--surface-2); }
+  }
+
+  /* Buttons */
+  .btn {
+    font: inherit; font-weight: 700; font-size: 1.05rem;
+    background: var(--accent); color: var(--accent-ink);
+    border: 0; border-radius: 12px; padding: 14px 26px; min-height: 52px;
+    cursor: pointer; transition: transform .15s ease, filter .15s ease;
+  }
+  .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  /* Hero */
+  #hero { padding: 64px 0 56px; text-align: center; }
+  .eyebrow {
+    display: inline-block; font-size: .85rem; font-weight: 600; color: var(--accent);
+    background: rgba(94, 234, 212, .1); border: 1px solid rgba(94, 234, 212, .3);
+    padding: 5px 14px; border-radius: 999px; margin: 0 0 20px;
+  }
+  #hero h1 {
+    font-size: clamp(2.1rem, 8vw, 3.8rem); line-height: 1.1; letter-spacing: -.02em;
+    margin: 0 auto 20px; max-width: 18ch;
+  }
+  #hero p.lead {
+    font-size: clamp(1.05rem, 3.5vw, 1.25rem); color: var(--muted);
+    max-width: 56ch; margin: 0 auto 32px;
+  }
+  .fine { font-size: .9rem; color: var(--muted); margin: 16px 0 0; }
+
+  /* Sections */
+  section { padding: 56px 0; }
+  .section-head { text-align: center; margin-bottom: 36px; }
+  .section-head h2 { font-size: clamp(1.6rem, 5vw, 2.3rem); letter-spacing: -.01em; margin: 0 0 10px; line-height: 1.2; }
+  .section-head p { color: var(--muted); margin: 0 auto; max-width: 52ch; }
+
+  /* Features */
+  .grid { display: grid; gap: 18px; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  .feature {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 26px;
+  }
+  .feature .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 10px; font-weight: 800;
+    background: var(--surface-2); color: var(--accent); margin-bottom: 14px;
+  }
+  .feature h3 { margin: 0 0 8px; font-size: 1.2rem; }
+  .feature p { margin: 0; color: var(--muted); }
+
+  /* Pricing */
+  .card {
+    max-width: 440px; margin: 0 auto; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 20px; padding: 28px 24px;
+    text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, .3);
+  }
+  .toggle {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-bottom: 24px; font-weight: 600; color: var(--muted);
+  }
+  .toggle label { cursor: pointer; }
+  #billing {
+    appearance: none; -webkit-appearance: none; margin: 0; flex: none;
+    width: 56px; height: 32px; border-radius: 999px; cursor: pointer; position: relative;
+    background: var(--surface-2); border: 1px solid var(--line); transition: background .2s;
+  }
+  #billing::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px;
+    border-radius: 50%; background: var(--text); transition: transform .2s;
+  }
+  #billing:checked { background: var(--accent); }
+  #billing:checked::after { transform: translateX(24px); background: var(--accent-ink); }
+  .toggle .on { color: var(--text); }
+  .amount { display: flex; align-items: baseline; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  #price { font-size: clamp(2.4rem, 11vw, 3.4rem); font-weight: 800; letter-spacing: -.02em; }
+  #period { color: var(--muted); font-size: 1.05rem; }
+  #saving { min-height: 1.6em; margin: 4px 0 20px; color: var(--accent); font-weight: 600; }
+  .card ul { list-style: none; padding: 0; margin: 0 0 26px; text-align: left; }
+  .card li { padding: 10px 0 10px 30px; border-top: 1px solid var(--line); position: relative; }
+  .card li::before {
+    content: ""; position: absolute; left: 6px; top: 16px; width: 6px; height: 11px;
+    border: solid var(--accent); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+  }
+  .card .btn { width: 100%; }
+
+  footer { border-top: 1px solid var(--line); padding: 32px 0 40px; color: var(--muted); font-size: .95rem; text-align: center; }
+  footer p { margin: 0 0 6px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="#hero"><span class="brand-mark" aria-hidden="true"></span>Soma Vault</a>
+    <button id="menu" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
+    <nav id="nav" aria-label="Main">
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">Privacy</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section id="hero">
+    <div class="wrap">
+      <p class="eyebrow">For students who take their notes seriously</p>
+      <h1>Your notes stay on your laptop. Only yours.</h1>
+      <p class="lead">Soma Vault is a notebook for lectures, revision and research that stores everything encrypted on your own computer. No account to create, no cloud to trust, and nothing to lose when the Wi-Fi drops.</p>
+      <button class="btn" type="button" id="cta">Get Soma Vault</button>
+      <p class="fine">Works offline on Windows, macOS and Linux.</p>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Built around one promise</h2>
+        <p>Your notes are your business. Soma Vault is designed so nobody else, including us, has a way in.</p>
+      </div>
+      <div class="grid">
+        <article class="feature">
+          <span class="num" aria-hidden="true">1</span>
+          <h3>Stored only on your device</h3>
+          <p>Every note lives in a file on your laptop. Nothing is uploaded, synced or backed up to a server we run, so there is nothing for anyone to leak.</p>
+        </article>
+        <article class="feature">
+          <span class="num" aria-hidden="true">2</span>
+          <h3>Locked with your passphrase</h3>
+          <p>Your vault is encrypted with a passphrase that only you know. Share a laptop with a sibling or a hostel roommate and your notes still stay closed.</p>
+        </article>
+        <article class="feature">
+          <span class="num" aria-hidden="true">3</span>
+          <h3>Fast search, even offline</h3>
+          <p>Find a formula, a definition or that one lecture comment in an instant. Search runs on your machine, so it works in the library, on the matatu or during a power cut.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>One plan, priced for students</h2>
+        <p>Everything is included. Pay monthly, or pay yearly and get two months free.</p>
+      </div>
+      <div class="card">
+        <div class="toggle">
+          <label for="billing" id="lbl-monthly" class="on">Monthly</label>
+          <input type="checkbox" id="billing">
+          <label for="billing" id="lbl-yearly">Yearly</label>
+        </div>
+        <div class="amount">
+          <span id="price" aria-live="polite">KES 500</span>
+          <span id="period">per month</span>
+        </div>
+        <p id="saving"></p>
+        <ul>
+          <li>Unlimited notes and notebooks</li>
+          <li>Encrypted storage on your own laptop</li>
+          <li>Full-text search that works offline</li>
+          <li>Export to plain text and Markdown any time</li>
+        </ul>
+        <button class="btn" type="button">Start using Soma Vault</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Straight answers about privacy</h2>
+        <p>Because your notes are encrypted with a passphrase only you hold, we cannot reset it or recover your notes if you forget it. Keep it somewhere safe, and export a copy of your notes whenever you like.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Soma Vault</strong>: private notes for students.</p>
+    <p>Made in Nairobi. Your notes never are.</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var menu = document.getElementById('menu');
+    var nav = document.getElementById('nav');
+
+    function setOpen(open) {
+      nav.classList.toggle('open', open);
+      menu.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    menu.addEventListener('click', function () {
+      setOpen(!nav.classList.contains('open'));
+    });
+
+    nav.addEventListener('click', function (e) {
+      if (e.target.closest('a')) setOpen(false);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && nav.classList.contains('open')) {
+        setOpen(false);
+        menu.focus();
+      }
+    });
+
+    var billing = document.getElementById('billing');
+    var price = document.getElementById('price');
+    var period = document.getElementById('period');
+    var saving = document.getElementById('saving');
+    var lm = document.getElementById('lbl-monthly');
+    var ly = document.getElementById('lbl-yearly');
+
+    function renderPrice() {
+      var yearly = billing.checked;
+      price.textContent = yearly ? 'KES 5,000' : 'KES 500';
+      period.textContent = yearly ? 'per year' : 'per month';
+      saving.textContent = yearly ? 'You save KES 1,000 compared with paying monthly.' : '';
+      lm.classList.toggle('on', !yearly);
+      ly.classList.toggle('on', yearly);
+    }
+
+    billing.addEventListener('change', renderPrice);
+    renderPrice();
+
+    document.getElementById('cta').addEventListener('click', function () {
+      document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soma Vault: private notes that stay on your laptop</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  :root { --accent: #5b3fd9; --ink: #1d1b2b; --muted: #5d5a70; --bg: #faf9ff; --line: #e3e0f3; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.6; font-size: 18px; }
+  .wrap { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 20px; }
+  header { border-bottom: 1px solid var(--line); background: #fff; position: sticky; top: 0; z-index: 5; }
+  .bar { display: flex; align-items: center; justify-content: space-between; min-height: 64px; flex-wrap: wrap; }
+  .logo { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; color: var(--accent); }
+  #menu { display: none; background: none; border: 2px solid var(--accent); color: var(--accent); font: inherit; font-weight: 600; padding: 6px 14px; border-radius: 8px; cursor: pointer; }
+  #nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 24px; }
+  #nav a { color: var(--ink); text-decoration: none; font-weight: 500; }
+  #nav a:hover { color: var(--accent); }
+  @media (max-width: 599px) {
+    #menu { display: inline-block; }
+    #nav { width: 100%; padding-bottom: 12px; }
+    #nav ul { flex-direction: column; gap: 0; }
+    #nav a { display: block; padding: 12px 0; border-top: 1px solid var(--line); }
+  }
+  section { padding: 56px 0; }
+  #hero { text-align: center; padding-top: 72px; }
+  .tag { display: inline-block; background: #ece8ff; color: var(--accent); font-size: 0.85rem; font-weight: 700; padding: 4px 12px; border-radius: 99px; margin-bottom: 18px; }
+  h1 { font-size: clamp(2rem, 8vw, 3rem); line-height: 1.15; letter-spacing: -0.03em; margin: 0 0 18px; }
+  h2 { font-size: 1.75rem; margin: 0 0 24px; letter-spacing: -0.02em; }
+  .lead { color: var(--muted); font-size: 1.15rem; margin: 0 auto 30px; max-width: 560px; }
+  #cta { background: var(--accent); color: #fff; border: 0; font: inherit; font-weight: 700; padding: 16px 30px; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 18px rgba(91,63,217,.3); }
+  #cta:hover { background: #4a30bd; }
+  .feature { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 16px; }
+  .feature h3 { margin: 0 0 6px; font-size: 1.15rem; color: var(--accent); }
+  .feature p { margin: 0; color: var(--muted); }
+  #pricing { text-align: center; }
+  .card { background: #fff; border: 2px solid var(--accent); border-radius: 18px; padding: 32px 20px; max-width: 420px; margin: 0 auto; }
+  .toggle { display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 600; margin-bottom: 22px; flex-wrap: wrap; }
+  #billing { width: 48px; height: 26px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+  #price { font-size: 3rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  #period { color: var(--muted); margin: 4px 0 18px; }
+  .card ul { list-style: none; padding: 0; margin: 0; color: var(--muted); }
+  .card li { padding: 6px 0; }
+  footer { border-top: 1px solid var(--line); padding: 28px 0; text-align: center; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <span class="logo">Soma Vault</span>
+    <button id="menu" type="button" aria-controls="nav" aria-expanded="false">Menu</button>
+    <nav id="nav" aria-label="Main">
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main>
+  <section id="hero">
+    <div class="wrap">
+      <span class="tag">Made for students</span>
+      <h1>Your notes belong to you, and only you.</h1>
+      <p class="lead">Soma Vault keeps every lecture note, essay draft and revision sheet encrypted on your own laptop. No cloud account, no company reading along.</p>
+      <button id="cta" type="button">Get Soma Vault</button>
+    </div>
+  </section>
+  <section id="features">
+    <div class="wrap">
+      <h2>Built to keep your study life private</h2>
+      <div class="feature">
+        <h3>Stored only on your laptop</h3>
+        <p>Your notes never leave your device. There is no server to hack and no sync to switch off.</p>
+      </div>
+      <div class="feature">
+        <h3>Locked with your passphrase</h3>
+        <p>Everything is encrypted before it is saved, so a lost or borrowed laptop does not mean exposed notes.</p>
+      </div>
+      <div class="feature">
+        <h3>Works without internet</h3>
+        <p>Study in a matatu, a library or a power cut. Soma Vault opens instantly and never needs a connection.</p>
+      </div>
+    </div>
+  </section>
+  <section id="pricing">
+    <div class="wrap">
+      <h2>Simple pricing</h2>
+      <div class="card">
+        <label class="toggle" for="billing">
+          <span>Monthly</span>
+          <input type="checkbox" id="billing">
+          <span>Yearly</span>
+        </label>
+        <div id="price">KES 500</div>
+        <p id="period">per month</p>
+        <ul>
+          <li>Unlimited notes and notebooks</li>
+          <li>Encrypted backups to a USB drive</li>
+          <li>Free updates</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">&copy; Soma Vault. Your notes stay yours.</div></footer>
+<script>
+  var menu = document.getElementById("menu");
+  var nav = document.getElementById("nav");
+  var cta = document.getElementById("cta");
+  var billing = document.getElementById("billing");
+  var price = document.getElementById("price");
+  var period = document.getElementById("period");
+  var mq = window.matchMedia("(max-width: 599px)");
+
+  function syncNav() {
+    nav.hidden = mq.matches;
+    menu.setAttribute("aria-expanded", "false");
+  }
+  syncNav();
+  if (mq.addEventListener) { mq.addEventListener("change", syncNav); }
+  else { mq.addListener(syncNav); }
+
+  menu.addEventListener("click", function () {
+    nav.hidden = !nav.hidden;
+    menu.setAttribute("aria-expanded", String(!nav.hidden));
+  });
+
+  nav.addEventListener("click", function (e) {
+    if (e.target.tagName === "A" && mq.matches) { syncNav(); }
+  });
+
+  cta.addEventListener("click", function () {
+    document.getElementById("pricing").scrollIntoView({ behavior: "smooth" });
+  });
+
+  function renderPrice() {
+    var amount = billing.checked ? 5000 : 500;
+    price.textContent = "KES " + amount.toLocaleString("en-US");
+    period.textContent = billing.checked ? "per year" : "per month";
+  }
+  billing.addEventListener("change", renderPrice);
+  renderPrice();
+</script>
+</body>
+</html>

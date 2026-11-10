@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f7a43">
+<title>Matatu Fare Splitter</title>
+<style>
+  :root {
+    --green: #0f7a43;
+    --green-dark: #0a5530;
+    --yellow: #ffc83d;
+    --ink: #1c2a24;
+    --muted: #5d6b64;
+    --bg: #eef3ef;
+    --card: #ffffff;
+    --error: #b3261e;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  header {
+    width: 100%;
+    background: var(--green);
+    color: #fff;
+    padding: calc(24px + env(safe-area-inset-top)) 20px 56px;
+    text-align: center;
+    position: relative;
+  }
+  header::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 10px;
+    background: repeating-linear-gradient(90deg, var(--yellow) 0 24px, var(--ink) 24px 48px);
+  }
+  .logo { font-size: 38px; line-height: 1; margin-bottom: 8px; }
+  h1 { margin: 0; font-size: 1.6rem; letter-spacing: .2px; }
+  header p { margin: 6px 0 0; opacity: .9; font-size: .95rem; }
+
+  main {
+    width: 100%;
+    max-width: 460px;
+    padding: 0 16px 32px;
+    margin-top: -30px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(15, 60, 35, .15);
+    padding: 22px 20px;
+  }
+  .field { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: .9rem;
+    margin-bottom: 6px;
+  }
+  .input-wrap { position: relative; }
+  input, select {
+    width: 100%;
+    font: inherit;
+    font-size: 1.1rem; /* prevents iOS zoom */
+    padding: 13px 14px;
+    border: 2px solid #d3ddd7;
+    border-radius: 12px;
+    background: #fafcfb;
+    color: var(--ink);
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .input-wrap .unit {
+    position: absolute;
+    right: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: .95rem;
+    pointer-events: none;
+  }
+  .input-wrap input { padding-right: 52px; }
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: "";
+    position: absolute;
+    right: 16px; top: 50%;
+    width: 8px; height: 8px;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 0 4px rgba(15, 122, 67, .18);
+    background: #fff;
+  }
+  button {
+    width: 100%;
+    font: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 15px;
+    margin-top: 4px;
+    border: none;
+    border-radius: 12px;
+    background: var(--yellow);
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: 0 3px 0 #d9a21c;
+    transition: transform .06s, box-shadow .06s;
+  }
+  button:active { transform: translateY(2px); box-shadow: 0 1px 0 #d9a21c; }
+  button:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+
+  #message {
+    margin: 14px 0 0;
+    padding: 0;
+    color: var(--error);
+    font-weight: 600;
+    font-size: .95rem;
+    text-align: center;
+    min-height: 0;
+  }
+  #message:not(:empty) {
+    background: #fdecea;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .results {
+    margin-top: 18px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .results[hidden] { display: none; }
+  .result {
+    border-radius: 14px;
+    padding: 14px 12px;
+    text-align: center;
+  }
+  .result.total { background: var(--green); color: #fff; }
+  .result.each { background: #fff6dc; border: 2px solid var(--yellow); }
+  .result .label {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    opacity: .85;
+    font-weight: 600;
+  }
+  .result .value {
+    font-size: 1.55rem;
+    font-weight: 800;
+    margin-top: 4px;
+    word-break: break-word;
+  }
+  .note {
+    margin: 18px 4px 0;
+    color: var(--muted);
+    font-size: .82rem;
+    text-align: center;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo" aria-hidden="true">🚐</div>
+    <h1>Matatu Fare Splitter</h1>
+    <p>Share the ride, split the fare.</p>
+  </header>
+
+  <main>
+    <form class="card" id="form" novalidate>
+      <div class="field">
+        <label for="distance">Distance</label>
+        <div class="input-wrap">
+          <input id="distance" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 10">
+          <span class="unit">km</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="passengers">Passengers</label>
+        <input id="passengers" type="number" inputmode="numeric" min="1" step="1" placeholder="e.g. 4">
+      </div>
+
+      <div class="field">
+        <label for="period">Time of travel</label>
+        <div class="select-wrap">
+          <select id="period">
+            <option value="offpeak">Off-peak</option>
+            <option value="peak">Peak (×1.5)</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="calculate" type="submit">Calculate fare</button>
+
+      <p id="message" role="alert" aria-live="polite"></p>
+
+      <div class="results" id="results" hidden aria-live="polite">
+        <div class="result total">
+          <div class="label">Total fare</div>
+          <div class="value" id="total"></div>
+        </div>
+        <div class="result each">
+          <div class="label">Each pays</div>
+          <div class="value" id="each"></div>
+        </div>
+      </div>
+
+      <p class="note">Fare = KES 50 base + KES 12 per km. Peak hours multiply the whole fare by 1.5.</p>
+    </form>
+  </main>
+
+<script>
+(function () {
+  var form = document.getElementById('form');
+  var distanceEl = document.getElementById('distance');
+  var passengersEl = document.getElementById('passengers');
+  var periodEl = document.getElementById('period');
+  var totalEl = document.getElementById('total');
+  var eachEl = document.getElementById('each');
+  var messageEl = document.getElementById('message');
+  var resultsEl = document.getElementById('results');
+
+  function clearResult() {
+    totalEl.textContent = '';
+    eachEl.textContent = '';
+    resultsEl.hidden = true;
+  }
+
+  function showMessage(text) {
+    clearResult();
+    messageEl.textContent = text;
+  }
+
+  function parse(el) {
+    var raw = el.value.trim();
+    if (raw === '') return NaN;
+    return Number(raw);
+  }
+
+  function calculate() {
+    messageEl.textContent = '';
+
+    var distance = parse(distanceEl);
+    var passengers = parse(passengersEl);
+
+    if (!isFinite(distance) || distance <= 0) {
+      showMessage('Enter a distance above 0 km.');
+      return;
+    }
+    if (!isFinite(passengers) || passengers <= 0) {
+      showMessage('Enter a number of passengers above 0.');
+      return;
+    }
+    if (Math.floor(passengers) !== passengers) {
+      showMessage('Passengers must be a whole number.');
+      return;
+    }
+
+    var fare = 50 + 12 * distance;
+    if (periodEl.value === 'peak') fare *= 1.5;
+
+    var total = Math.round(fare);
+    var each = Math.round(fare / passengers);
+
+    totalEl.textContent = 'KES ' + total;
+    eachEl.textContent = 'KES ' + each;
+    resultsEl.hidden = false;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    calculate();
+  });
+
+  // Clear stale results when inputs change
+  [distanceEl, passengersEl, periodEl].forEach(function (el) {
+    el.addEventListener('input', function () {
+      clearResult();
+      messageEl.textContent = '';
+    });
+    el.addEventListener('change', function () {
+      clearResult();
+      messageEl.textContent = '';
+    });
+  });
+})();
+</script>
+</body>
+</html>

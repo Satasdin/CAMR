@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Queue Board</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --success: #22c55d;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        h1 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .current-patient-card {
+            background: #eff6ff;
+            border: 2px solid var(--primary);
+            text-align: center;
+            padding: 30px 10px;
+        }
+
+        .current-patient-card h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #64748b;
+        }
+
+        #now {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        input, select, button {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        #add {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        #add:active {
+            transform: scale(0.98);
+            background-color: var(--primary-dark);
+        }
+
+        #next {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .queue-list-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        ol {
+            padding-left: 25px;
+            margin: 0;
+        }
+
+        li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .badge {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #e2e8f0;
+            margin-left: 8px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .count-badge {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Clinic Queue Board</h1>
+    </header>
+
+    <div class="card current-patient-card">
+        <h2>NOW SERVING</h2>
+        <div id="now">---</div>
+    </div>
+
+    <div class="card">
+        <div class="stats">
+            <strong>Waiting Queue</strong>
+            <span class="count-badge"><span id="count">0</span></span>
+        </div>
+        <div class="queue-list-container">
+            <ol id="queue"></ol>
+            <div id="empty-msg" class="empty-state" style="display: none;">No one waiting</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="input-group">
+            <input type="text" id="name" placeholder="Patient Name" autocomplete="off">
+            <select id="reason">
+                <option value="Consultation">Consultation</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Lab">Lab</option>
+            </select>
+            <button id="add">Add to Queue</button>
+        </div>
+    </div>
+
+    <button id="next">Call Next Patient</button>
+</div>
+
+<script>
+    const nameInput = document.getElementById('name');
+    const reasonInput = document.getElementById('reason');
+    const addBtn = document.getElementById('add');
+    const nextBtn = document.getElementById('next');
+    const queueList = document.getElementById('queue');
+    const countDisplay = document.getElementById('count');
+    const nowDisplay = document.getElementById('now');
+    const emptyMsg = document.getElementById('empty-msg');
+
+    let queue = [];
+    let currentPatient = null;
+
+    // Initialize
+    function init() {
+        const savedData = localStorage.getItem('clinic-queue');
+        if (savedData) {
+            const parsed = JSON.parse(savedData);
+            queue = parsed.queue || [];
+            currentPatient = parsed.currentPatient || null;
+            render();
+        }
+    }
+
+    function saveData() {
+        const data = {
+            queue: queue,
+            currentPatient: currentPatient
+        };
+        localStorage.setItem('clinic-queue', JSON.stringify(data));
+    }
+
+    function render() {
+        // Update Count
+        countDisplay.innerText = queue.length;
+
+        // Update Queue List
+        queueList.innerHTML = '';
+        if (queue.length === 0) {
+            emptyMsg.style.display = 'block';
+        } else {
+            emptyMsg.style.display = 'none';
+            queue.forEach((patient, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${patient.name}</strong> <span class="badge">${patient.reason}</span>`;
+                queueList.appendChild(li);
+            });
+        }
+
+        // Update Current Patient
+        if (currentPatient) {
+            nowDisplay.innerText = currentPatient.name;
+        } else {
+            nowDisplay.innerText = '---';
+        }
+    }
+
+    addBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        const reason = reasonInput.value;
+
+        if (name) {
+            queue.push({ name, reason });
+            nameInput.value = '';
+            saveData();
+            render();
+        } else {
+            alert('Please enter a patient name');
+        }
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (queue.length > 0) {
+            currentPatient = queue.shift();
+            saveData();
+            render();
+        } else {
+            alert('No patients in queue');
+        }
+    });
+
+    // Run on load
+    init();
+</script>
+
+</body>
+</html>

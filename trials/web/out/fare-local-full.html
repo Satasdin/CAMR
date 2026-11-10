@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matatu Fare Splitter</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --bg: #f4f7f6;
+            --text: #333;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 { margin-top: 0; color: var(--primary); font-size: 1.5rem; text-align: center; }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .results {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #eef6ff;
+            border-radius: 8px;
+            display: none;
+        }
+        #message { color: #d93025; font-weight: bold; margin-top: 1rem; }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Matatu Fare Splitter</h1>
+        <div class="form-group">
+            <label for="distance">Distance (km)</label>
+            <input type="number" id="distance" placeholder="e.g. 10">
+        </div>
+        <div class="form-group">
+            <label for="passengers">Number of Passengers</label>
+            <input type="number" id="passengers" placeholder="e.g. 4">
+        </div>
+        <div class="form-group">
+            <label for="period">Travel Period</label>
+            <select id="period">
+                <option value="offpeak">Off-Peak</option>
+                <option value="peak">Peak</option>
+            </select>
+        </div>
+        <button type="button" id="calculate">Calculate Split</button>
+
+        <div id="message" hidden>Please enter valid numbers greater than zero.</div>
+
+        <div id="results-area" class="results" hidden>
+            <p>Total Fare: <span id="total"></span></p>
+            <p>Each Person: <span id="each"></span></p>
+        </div>
+    </div>
+
+    <script>
+        const distInput = document.getElementById('distance');
+        const passInput = document.getElementById('passengers');
+        const periodSelect = document.getElementById('period');
+        const calcBtn = document.getElementById('calculate');
+        const totalSpan = document.getElementById('total');
+        const eachSpan = document.getElementById('each');
+        const msgDiv = document.getElementById('message');
+        const resultsArea = document.getElementById('results-area');
+
+        calcBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            const dist = Number(distInput.value);
+            const pass = Number(passInput.value);
+            const period = periodSelect.value;
+
+            // Validation
+            if (isNaN(dist) || dist <= 0 || isNaN(pass) || pass <= 0) {
+                msgDiv.hidden = false;
+                resultsArea.hidden = true;
+                msgDiv.textContent = "Please enter valid numbers greater than zero.";
+                return;
+            }
+
+            msgDiv.hidden = true;
+            
+            // Calculation
+            // Base: 50 + (12 * distance)
+            let total = 50 + (12 * dist);
+            
+            if (period === 'peak') {
+                total = total * 1.5;
+            }
+
+            const share = total / pass;
+
+            // Formatting
+            const roundedTotal = Math.round(total);
+            const roundedShare = Math.round(share);
+
+            // Display
+            totalSpan.textContent = `KES ${roundedTotal.toLocaleString()}`;
+            eachSpan.textContent = `KES ${roundedShare.toLocaleString()}`;
+            
+            resultsArea.hidden = false;
+        });
+    </script>
+</body>
+</html>

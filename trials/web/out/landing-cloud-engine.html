@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soma Vault: private notes for students</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { --accent: #5b3df5; --ink: #1b1b2f; --muted: #5c5c75; --line: #e4e4ef; --soft: #f6f5ff; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: #fff;
+  }
+  .wrap { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 20px; }
+  header { border-bottom: 1px solid var(--line); }
+  header .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; padding-top: 14px; padding-bottom: 14px; }
+  .logo { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.01em; }
+  .logo span { color: var(--accent); }
+  button { font: inherit; cursor: pointer; }
+  #menu {
+    background: none; border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 14px; color: var(--ink); font-weight: 600;
+  }
+  nav { width: 100%; }
+  nav ul { list-style: none; margin: 0; padding: 0; }
+  nav a { display: block; padding: 12px 0; color: var(--ink); text-decoration: none; font-weight: 600; border-top: 1px solid var(--line); }
+  nav a:hover { color: var(--accent); }
+  @media (max-width: 599px) {
+    nav { display: none; margin-top: 10px; }
+    nav.open { display: block; }
+  }
+  @media (min-width: 600px) {
+    #menu { display: none; }
+    nav { width: auto; }
+    nav ul { display: flex; gap: 24px; }
+    nav a { border-top: 0; padding: 4px 0; }
+  }
+  section { padding: 56px 0; }
+  #hero { padding-top: 72px; text-align: center; }
+  h1 { font-size: 2.3rem; line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 16px; }
+  h2 { font-size: 1.6rem; margin: 0 0 24px; letter-spacing: -0.01em; }
+  .lead { color: var(--muted); font-size: 1.15rem; margin: 0 auto 28px; max-width: 34em; }
+  #cta {
+    background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+    padding: 14px 28px; font-weight: 700; font-size: 1.05rem;
+  }
+  #cta:hover { background: #4529d6; }
+  .feature { border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  .feature h3 { margin: 0 0 6px; font-size: 1.15rem; color: var(--accent); }
+  .feature p { margin: 0; color: var(--muted); }
+  #pricing { background: var(--soft); }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 28px 20px; text-align: center; }
+  .toggle { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  #billing { width: 22px; height: 22px; accent-color: var(--accent); }
+  #price { font-size: 2.6rem; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+  #period { color: var(--muted); margin: 0 0 16px; }
+  .card ul { list-style: none; padding: 0; margin: 0; color: var(--muted); }
+  footer { padding: 28px 0; text-align: center; color: var(--muted); font-size: 0.95rem; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">Soma<span>Vault</span></div>
+    <button id="menu" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
+    <nav id="nav" aria-label="Main">
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section id="hero">
+    <div class="wrap">
+      <h1>Your notes stay on your laptop. Only yours.</h1>
+      <p class="lead">Soma Vault keeps lecture notes, essays and revision sheets private on your own device, with no account to hand over and no cloud to leak from.</p>
+      <button id="cta" type="button">See pricing</button>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Built for how students really study</h2>
+      <div class="feature">
+        <h3>Stored only on your device</h3>
+        <p>Every note is encrypted and saved on your laptop. Nothing is uploaded, so nobody else can read it.</p>
+      </div>
+      <div class="feature">
+        <h3>Works without internet</h3>
+        <p>Revise on the matatu, in the library or during a power cut. Soma Vault never needs a connection.</p>
+      </div>
+      <div class="feature">
+        <h3>Find any note in seconds</h3>
+        <p>Search across every course and semester instantly, then jump straight to the line you need.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <h2>Simple pricing</h2>
+      <div class="card">
+        <div class="toggle">
+          <span>Monthly</span>
+          <input type="checkbox" id="billing" aria-label="Bill yearly">
+          <span>Yearly</span>
+        </div>
+        <p id="price">KES 500</p>
+        <p id="period">per month</p>
+        <ul>
+          <li>Unlimited notes and courses</li>
+          <li>Encrypted storage on your laptop</li>
+          <li>Free updates</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">&copy; Soma Vault. Made for students, kept private.</div>
+</footer>
+
+<script>
+  var menu = document.getElementById('menu');
+  var nav = document.getElementById('nav');
+  var billing = document.getElementById('billing');
+  var price = document.getElementById('price');
+  var period = document.getElementById('period');
+  var cta = document.getElementById('cta');
+  var pricing = document.getElementById('pricing');
+
+  menu.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    menu.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  nav.addEventListener('click', function (e) {
+    if (e.target.tagName === 'A') {
+      nav.classList.remove('open');
+      menu.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  billing.addEventListener('change', function () {
+    price.textContent = billing.checked ? 'KES 5,000' : 'KES 500';
+    period.textContent = billing.checked ? 'per year' : 'per month';
+  });
+
+  cta.addEventListener('click', function () {
+    pricing.scrollIntoView({ behavior: 'smooth' });
+  });
+</script>
+</body>
+</html>

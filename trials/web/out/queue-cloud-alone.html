@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Clinic Queue Board</title>
+<style>
+  :root {
+    --brand: #0f766e;
+    --brand-dark: #115e59;
+    --brand-soft: #ccfbf1;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --danger: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  header {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff;
+    padding: calc(18px + env(safe-area-inset-top)) 20px 64px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { margin: 0; font-size: 1.35rem; letter-spacing: .2px; display: flex; align-items: center; gap: 10px; }
+  h1 svg { flex: none; }
+  .waiting-pill {
+    background: rgba(255,255,255,.18);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: .9rem;
+    white-space: nowrap;
+  }
+  .waiting-pill strong { font-size: 1.1rem; }
+  main { max-width: 720px; margin: -44px auto 0; padding: 0 14px 32px; display: grid; gap: 14px; }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.06);
+  }
+  h2 {
+    margin: 0 0 12px;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  /* Now serving */
+  .now-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .now-info { min-width: 0; flex: 1 1 180px; }
+  #now {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--brand-dark);
+    overflow-wrap: anywhere;
+    min-height: 1.3em;
+  }
+  #now.idle { color: #94a3b8; font-weight: 600; }
+  #now-reason { color: var(--muted); font-size: .95rem; min-height: 1.3em; }
+
+  /* Form */
+  form { display: grid; gap: 10px; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 4px; color: #334155; }
+  input, select, button { font: inherit; }
+  input[type="text"], select {
+    width: 100%;
+    font-size: 16px; /* avoids iOS zoom */
+    padding: 12px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--text);
+    min-height: 48px;
+  }
+  select { appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+  input:focus, select:focus, button:focus-visible {
+    outline: 3px solid rgba(15,118,110,.35);
+    border-color: var(--brand);
+  }
+  input.invalid { border-color: var(--danger); animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-4px);} 75% { transform: translateX(4px);} }
+  .error { color: var(--danger); font-size: .85rem; min-height: 1.2em; margin-top: 4px; }
+  .row { display: grid; gap: 10px; }
+  @media (min-width: 560px) {
+    .row { grid-template-columns: 1fr 200px; }
+  }
+
+  button {
+    border: 0;
+    border-radius: 12px;
+    min-height: 48px;
+    padding: 0 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .05s, background .15s, opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active { transform: scale(.98); }
+  #add { background: var(--brand); color: #fff; width: 100%; }
+  #add:hover { background: var(--brand-dark); }
+  #next { background: #0f172a; color: #fff; }
+  #next:hover { background: #1e293b; }
+  #next.disabled { opacity: .4; cursor: not-allowed; }
+  .now-card #next { flex: 1 1 140px; }
+
+  /* Queue */
+  .queue-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .queue-head h2 { margin-bottom: 8px; }
+  .count-wrap { color: var(--muted); font-size: .85rem; }
+  #count { font-weight: 700; color: var(--text); font-size: 1rem; }
+  #queue { list-style: none; margin: 0; padding: 0; counter-reset: pos; }
+  #queue li {
+    counter-increment: pos;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+  }
+  #queue li:first-child { border-top: 0; }
+  #queue li::before {
+    content: counter(pos);
+    flex: none;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--muted);
+    font-weight: 700;
+    font-size: .9rem;
+    display: grid; place-items: center;
+  }
+  #queue li:first-child::before { background: var(--brand-soft); color: var(--brand-dark); }
+  .pname { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .badge {
+    flex: none;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .badge.Consultation { background: #dbeafe; color: #1d4ed8; }
+  .badge.Pharmacy { background: #dcfce7; color: #15803d; }
+  .badge.Lab { background: #fef3c7; color: #b45309; }
+  .empty { text-align: center; color: var(--muted); padding: 22px 0 8px; }
+  .empty[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M12 8v8M8 12h8"/></svg>
+        Clinic Queue Board
+      </h1>
+      <div class="waiting-pill"><strong id="count-mirror">0</strong> waiting</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card now-card" aria-label="Now serving">
+      <div class="now-info">
+        <h2>Now serving</h2>
+        <div id="now" class="idle" aria-live="polite">—</div>
+        <div id="now-reason"></div>
+      </div>
+      <button id="next" type="button">Call next patient</button>
+    </section>
+
+    <section class="card" aria-label="Add patient">
+      <h2>Add patient</h2>
+      <form id="form" novalidate>
+        <div class="row">
+          <div>
+            <label for="name">Patient name</label>
+            <input id="name" type="text" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="e.g. Maria Santos">
+          </div>
+          <div>
+            <label for="reason">Reason for visit</label>
+            <select id="reason">
+              <option value="Consultation">Consultation</option>
+              <option value="Pharmacy">Pharmacy</option>
+              <option value="Lab">Lab</option>
+            </select>
+          </div>
+        </div>
+        <div class="error" id="error" role="alert"></div>
+        <button id="add" type="submit">Add to queue</button>
+      </form>
+    </section>
+
+    <section class="card" aria-label="Waiting queue">
+      <div class="queue-head">
+        <h2>Waiting</h2>
+        <div class="count-wrap"><span id="count">0</span> in line</div>
+      </div>
+      <ol id="queue"></ol>
+      <div class="empty" id="empty">No one is waiting. 🎉</div>
+    </section>
+  </main>
+
+<script>
+(function () {
+  var KEY = 'clinic-queue';
+  var REASONS = ['Consultation', 'Pharmacy', 'Lab'];
+  var state = load();
+
+  var nameEl = document.getElementById('name');
+  var reasonEl = document.getElementById('reason');
+  var queueEl = document.getElementById('queue');
+  var countEl = document.getElementById('count');
+  var mirrorEl = document.getElementById('count-mirror');
+  var nowEl = document.getElementById('now');
+  var nowReasonEl = document.getElementById('now-reason');
+  var nextBtn = document.getElementById('next');
+  var emptyEl = document.getElementById('empty');
+  var errorEl = document.getElementById('error');
+  var form = document.getElementById('form');
+
+  function load() {
+    var fallback = { queue: [], current: null };
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return fallback;
+      var data = JSON.parse(raw);
+      var queue = Array.isArray(data.queue) ? data.queue.filter(function (p) {
+        return p && typeof p.name === 'string' && p.name.trim();
+      }).map(function (p) {
+        return { name: p.name, reason: REASONS.indexOf(p.reason) > -1 ? p.reason : 'Consultation' };
+      }) : [];
+      var cur = data.current;
+      if (cur && typeof cur === 'object' && typeof cur.name === 'string') {
+        cur = { name: cur.name, reason: cur.reason || '' };
+      } else if (typeof cur === 'string' && cur) {
+        cur = { name: cur, reason: '' };
+      } else {
+        cur = null;
+      }
+      return { queue: queue, current: cur };
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function render() {
+    queueEl.innerHTML = '';
+    state.queue.forEach(function (p) {
+      var li = document.createElement('li');
+      var n = document.createElement('span');
+      n.className = 'pname';
+      n.textContent = p.name;
+      var r = document.createElement('span');
+      r.className = 'badge ' + p.reason;
+      r.textContent = p.reason;
+      li.appendChild(n);
+      li.appendChild(r);
+      queueEl.appendChild(li);
+    });
+    var c = String(state.queue.length);
+    countEl.textContent = c;
+    mirrorEl.textContent = c;
+    emptyEl.hidden = state.queue.length > 0;
+
+    if (state.current) {
+      nowEl.textContent = state.current.name;
+      nowEl.classList.remove('idle');
+      nowReasonEl.textContent = state.current.reason;
+    } else {
+      nowEl.textContent = '—';
+      nowEl.classList.add('idle');
+      nowReasonEl.textContent = '';
+    }
+    nextBtn.classList.toggle('disabled', state.queue.length === 0);
+    nextBtn.setAttribute('aria-disabled', state.queue.length === 0 ? 'true' : 'false');
+  }
+
+  function add() {
+    var name = nameEl.value.trim();
+    if (!name) {
+      errorEl.textContent = 'Please enter the patient\u2019s name.';
+      nameEl.classList.remove('invalid');
+      void nameEl.offsetWidth;
+      nameEl.classList.add('invalid');
+      nameEl.focus();
+      return;
+    }
+    errorEl.textContent = '';
+    nameEl.classList.remove('invalid');
+    state.queue.push({ name: name, reason: reasonEl.value });
+    nameEl.value = '';
+    save();
+    render();
+    nameEl.focus();
+  }
+
+  function next() {
+    if (!state.queue.length) return;
+    state.current = state.queue.shift();
+    save();
+    render();
+  }
+
+  form.addEventListener('submit', function (e) { e.preventDefault(); add(); });
+  nameEl.addEventListener('input', function () {
+    if (nameEl.value.trim()) { errorEl.textContent = ''; nameEl.classList.remove('invalid'); }
+  });
+  nextBtn.addEventListener('click', next);
+
+  render();
+})();
+</script>
+</body>
+</html>
