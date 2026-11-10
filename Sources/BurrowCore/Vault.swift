@@ -44,6 +44,7 @@ public final class Vault {
     CREATE TABLE IF NOT EXISTS vectors(chunk_id INTEGER PRIMARY KEY REFERENCES chunks(id) ON DELETE CASCADE, vector BLOB NOT NULL);
     CREATE TABLE IF NOT EXISTS links(source TEXT NOT NULL, target TEXT NOT NULL, kind TEXT NOT NULL, via TEXT, PRIMARY KEY(source, target, kind));
     CREATE INDEX IF NOT EXISTS links_target ON links(target);
+    CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
     """
 
     /// - Parameter store: where the memory lives. Defaults to `.burrow` inside the project.
@@ -112,8 +113,9 @@ public final class Vault {
                                  [.text(link.from), .text(link.to), .text(link.kind.rawValue), link.via.map(Value.text) ?? .null])
             }
             report.links = links.count
+            if outOfDate || report.filesChanged + report.filesRemoved > 0 { try bumpGeneration() }
         }
-        database.locked { vectorCache = nil }
+        database.locked { forgetCaches() }
         if let embedder { report.embedded = try await embedMissing(embedder, onProgress: onProgress) }
         report.chunks = try count("chunks")
         return report
@@ -158,31 +160,23 @@ public final class Vault {
             start += batch.count
             onProgress?("embedded \(done) of \(missing.count)")
         }
-        database.locked { vectorCache = nil }
+        if done > 0 { try bumpGeneration() }
+        database.locked { forgetCaches() }
         return done
     }
 
     // MARK: Vectors
 
-    var vectorCache: (ids: [Int], vectors: [[Float]])?
+    // What is held in memory between questions. See Index.swift.
+    var catalogueCache: Catalogue?
+    var vectorIndexCache: VectorIndex?
+    var seenDataVersion = -1
+    var questionVectors: [String: [Float]] = [:]
+    var skillVectorCache: [String: [Float]] = [:]
 
     static func pack(_ vector: [Float]) -> Data { vector.withUnsafeBufferPointer { Data(buffer: $0) } }
     static func unpack(_ data: Data) -> [Float] {
         data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
-    }
-
-    func loadVectors() throws -> (ids: [Int], vectors: [[Float]]) {
-        try database.locked {
-            if let vectorCache { return vectorCache }
-            var ids: [Int] = []
-            var vectors: [[Float]] = []
-            for row in try database.rows("SELECT chunk_id, vector FROM vectors ORDER BY chunk_id") {
-                ids.append(row[0].int!)
-                vectors.append(Self.unpack(row[1].blob!))
-            }
-            vectorCache = (ids, vectors)
-            return (ids, vectors)
-        }
     }
 
     // MARK: Notes

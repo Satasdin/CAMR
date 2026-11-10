@@ -46,6 +46,17 @@ actor Engine {
             return try await vault.retrieve(question, mode: .walk, embedder: nil, scope: scope)
         }
     }
+
+    /// The engine's whole decision for a question, sized for the model that will answer.
+    func brief(_ question: String, scope: String?, model: String) async throws -> (brief: Brief, profile: ModelProfile) {
+        let profile = await vault.profile(for: model, ollama: ollama)
+        let usable = try vault.stats().vectors > 0
+        do {
+            return (try await vault.brief(question, budget: profile.budget, embedder: usable ? ollama.embedder() : nil, scope: scope), profile)
+        } catch is URLError {
+            return (try await vault.brief(question, budget: profile.budget, embedder: nil, scope: scope), profile)
+        }
+    }
 }
 
 struct Source: Identifiable, Hashable {
@@ -89,6 +100,11 @@ final class Turn: Identifiable {
     var remembering = false
     var toRemember: [ProposedNote]?
     var kept = Set<String>()
+    /// What the engine decided for this question, in words, and the method it handed the model.
+    var decided: String?
+    var method: String?
+    /// Places the answer pointed at that were not among what the model read.
+    var unverified: [String] = []
     init(question: String, wantsChange: Bool, scope: String?) {
         self.question = question
         self.wantsChange = wantsChange
@@ -594,7 +610,15 @@ final class Workspace {
         Task {
             let started = Date()
             do {
-                let found = try await engine.retrieve(words, scope: scope)
+                // A plain question goes through the engine. A change request keeps the walk, because it needs whole files.
+                var prepared: (brief: Brief, profile: ModelProfile)?
+                if !wantsChange { prepared = try await engine.brief(words, scope: scope, model: chosen) }
+                let found: Retrieved
+                if let prepared { found = prepared.brief.retrieved } else { found = try await engine.retrieve(words, scope: scope) }
+                if let brief = prepared?.brief {
+                    turn.decided = brief.route.mode == .none ? "Answered without the vault: \(brief.route.why)." : "Read the vault: \(brief.route.why)."
+                    turn.method = brief.skill?.name
+                }
                 turn.sources = found.excerpts.map {
                     Source(path: $0.path, startLine: $0.startLine, endLine: $0.endLine, isNote: $0.isNote, how: $0.reason.label)
                 }
@@ -606,10 +630,14 @@ final class Workspace {
                 Task { await lightUp() }
                 let whole = wantsChange ? await wholeFiles(for: found) : []
                 let shown = whole.map { "<file path=\"\($0.path)\" whole=\"true\">\n\($0.text)\n</file>" }.joined(separator: "\n\n")
-                let prompt = (shown.isEmpty ? "" : shown + "\n\n") + Asking.prompt(question: words, excerpts: found.excerpts)
-                let answerer = ollama.answerer(model: chosen, contextWords: wantsChange ? 16384 : 8192)
-                let result = try await answerer.answer(system: wantsChange ? Self.changeRules : Asking.withMemory, user: prompt) { word in
+                let prompt = prepared?.brief.user ?? ((shown.isEmpty ? "" : shown + "\n\n") + Asking.prompt(question: words, excerpts: found.excerpts))
+                let answerer = ollama.answerer(model: chosen, contextWords: prepared?.profile.windowTokens ?? 16384)
+                let result = try await answerer.answer(system: prepared?.brief.system ?? Self.changeRules, user: prompt) { word in
                     Task { @MainActor in turn.answer += word }
+                }
+                if !found.excerpts.isEmpty {
+                    let cited = BurrowCore.Engine.citations(in: result.text, shown: found.excerpts)
+                    turn.unverified = cited.filter { !$0.shown }.map { "\($0.path):\($0.line)" }
                 }
                 turn.answer = result.text
                 turn.seconds = Date().timeIntervalSince(started)
@@ -702,6 +730,7 @@ final class Library {
             workspace.runSearch()
         }
         if environment["BURROW_SIDEBAR"] == "tags" { workspace.sidebarMode = .tags }
+        if let chosen = environment["BURROW_MODEL"] { workspace.model = chosen }
         workspace.askScope = environment["BURROW_SCOPE"]
         if let question = environment["BURROW_ASK"] { workspace.ask(question, wantsChange: environment["BURROW_CHANGE"] != nil) }
         if let words = environment["BURROW_TYPE"] {

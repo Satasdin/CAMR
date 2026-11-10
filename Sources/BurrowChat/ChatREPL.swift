@@ -29,6 +29,7 @@ public final class ChatREPL {
     private static let help = """
     /folders       show the folders you can limit this chat to
     /folder NAME   limit the chat to one folder. /folder alone clears it
+    /keep          write down what you decided in this conversation, one note at a time
     /new           forget this conversation and start again
     /help          show this
     /quit          leave. Control-D works too
@@ -95,6 +96,26 @@ public final class ChatREPL {
         switch parts[0] {
         case "/quit", "/exit": return true
         case "/help": put(Self.help + "\n\n")
+        case "/keep":
+            guard interactive else {
+                put(dim("A note can only be kept when someone is at the keyboard.\n\n"))
+                return false
+            }
+            let ollama = Ollama()
+            let embedder: Embedder? = ((try? tools.vault.stats().vectors) ?? 0) > 0 ? ollama.embedder() : nil
+            do {
+                let found = try await tools.vault.lessons(from: session.exchanges, answerer: ollama.answerer(model: backend.model), embedder: embedder)
+                if found.isEmpty { put(dim("Nothing new to keep from this conversation.\n\n")) }
+                for lesson in found {
+                    put("  \(lesson.kind.rawValue): \(lesson.text)\n  Keep it? [y/N] ")
+                    guard Swift.readLine()?.trimmingCharacters(in: .whitespaces).lowercased() == "y" else { continue }
+                    let written = try await tools.vault.keep([lesson], embedder: embedder)
+                    put(dim("  kept in \(written.joined(separator: ", "))\n"))
+                }
+                put("\n")
+            } catch {
+                put("✗ \(error)\n\n")
+            }
         case "/new":
             session.clear()
             put(dim("Started again.\n\n"))

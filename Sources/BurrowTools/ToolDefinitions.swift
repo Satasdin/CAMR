@@ -89,5 +89,13 @@ extension VaultTools {
                 ToolParameter("model", .string, "An installed Ollama model name. Leave it out for the default."),
             ],
             readOnly: true),
+        ToolDefinition(
+            name: "vault_prepare",
+            description: "Get ready for a task in one call. Burrow decides whether the user's vault is needed, picks the excerpts worth reading, and returns a short method for this kind of task if it has one. Call this before starting any task about the user's notes, documents or code.",
+            parameters: [
+                ToolParameter("task", .string, "The task or question, in the user's words.", required: true),
+                ToolParameter("folder", .string, "Only use this vault folder or linked folder. Leave it out to use everything."),
+            ],
+            readOnly: true),
     ]
 }

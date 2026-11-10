@@ -6,6 +6,20 @@ public struct ChatResult: Sendable {
     public let totalSeconds: Double
     public let promptTokens: Int
     public let answerTokens: Int
+    /// How long the model spent reading the prompt and writing the answer, as the model runner reports them.
+    public var promptSeconds: Double = 0
+    public var answerSeconds: Double = 0
+
+    public init(text: String, secondsToFirstWord: Double, totalSeconds: Double, promptTokens: Int, answerTokens: Int,
+                promptSeconds: Double = 0, answerSeconds: Double = 0) {
+        self.text = text
+        self.secondsToFirstWord = secondsToFirstWord
+        self.totalSeconds = totalSeconds
+        self.promptTokens = promptTokens
+        self.answerTokens = answerTokens
+        self.promptSeconds = promptSeconds
+        self.answerSeconds = answerSeconds
+    }
 }
 
 public struct OllamaError: Error, CustomStringConvertible {
@@ -67,12 +81,29 @@ public struct Ollama: Sendable {
     }
 
     public func embedder(model: String = Ollama.embeddingModel) -> some Embedder { OllamaEmbedder(ollama: self, model: model) }
-    public func answerer(model: String = Ollama.defaultModel, contextWords: Int = 8192) -> some Answerer {
-        OllamaAnswerer(ollama: self, model: model, contextWords: contextWords)
+    public func answerer(model: String = Ollama.defaultModel, contextWords: Int = 8192, longestAnswer: Int = 2048) -> some Answerer {
+        OllamaAnswerer(ollama: self, model: model, contextWords: contextWords, longestAnswer: longestAnswer)
+    }
+
+    /// What a model says about itself: the longest prompt it accepts, and its size in billions of parameters.
+    public func describe(model: String) async throws -> (contextTokens: Int, billions: Double) {
+        let call = try request("api/show", ["model": model])
+        let (data, response) = try await Self.session().data(for: call)
+        try check(response, data)
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        let info = root["model_info"] as? [String: Any] ?? [:]
+        let context = info.first { $0.key.hasSuffix(".context_length") }?.value as? Int ?? 8192
+        var billions = (info["general.parameter_count"] as? Double).map { $0 / 1e9 } ?? 0
+        if billions == 0, let size = (root["details"] as? [String: Any])?["parameter_size"] as? String {
+            let number = Double(size.filter { $0.isNumber || $0 == "." }) ?? 0
+            billions = size.uppercased().contains("M") ? number / 1000 : number
+        }
+        return (context, billions)
     }
 
     fileprivate func embed(model: String, inputs: [String]) async throws -> [[Float]] {
-        let call = try request("api/embed", ["model": model, "input": inputs])
+        // Every question needs the embedding model and it is small, so it is kept loaded between questions.
+        let call = try request("api/embed", ["model": model, "input": inputs, "keep_alive": "30m"])
         let (data, response) = try await Self.session().data(for: call)
         try check(response, data)
         let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -82,14 +113,14 @@ public struct Ollama: Sendable {
         return lists.map { $0.map(Float.init) }
     }
 
-    fileprivate func chat(model: String, contextWords: Int, system: String, user: String,
+    fileprivate func chat(model: String, contextWords: Int, longestAnswer: Int = 2048, system: String, user: String,
                           onWord: @escaping @Sendable (String) -> Void) async throws -> ChatResult {
         // Qwen3 can ignore "think": false, and then reasons at length before answering. This is its own off switch.
         let content = model.lowercased().contains("qwen3") ? user + "\n\n/no_think" : user
         let call = try request("api/chat", [
             "model": model, "stream": true, "think": false,
             "messages": [["role": "system", "content": system], ["role": "user", "content": content]],
-            "options": ["temperature": 0, "seed": 7, "num_ctx": contextWords, "num_predict": 2048],
+            "options": ["temperature": 0, "seed": 7, "num_ctx": contextWords, "num_predict": longestAnswer],
         ])
         let started = Date()
         var firstWord: Double?
@@ -97,6 +128,8 @@ public struct Ollama: Sendable {
         var shown = ""
         var promptTokens = 0
         var answerTokens = 0
+        var promptSeconds = 0.0
+        var answerSeconds = 0.0
         let (bytes, response) = try await Self.session().bytes(for: call)
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             throw OllamaError(description: "Ollama answered \(http.statusCode) for model \(model). Is it installed?")
@@ -117,11 +150,13 @@ public struct Ollama: Sendable {
             if part["done"] as? Bool == true {
                 promptTokens = part["prompt_eval_count"] as? Int ?? 0
                 answerTokens = part["eval_count"] as? Int ?? 0
+                promptSeconds = (part["prompt_eval_duration"] as? Double ?? 0) / 1e9
+                answerSeconds = (part["eval_duration"] as? Double ?? 0) / 1e9
             }
         }
         let total = Date().timeIntervalSince(started)
         return ChatResult(text: Thinking.visible(text), secondsToFirstWord: firstWord ?? total, totalSeconds: total,
-                          promptTokens: promptTokens, answerTokens: answerTokens)
+                          promptTokens: promptTokens, answerTokens: answerTokens, promptSeconds: promptSeconds, answerSeconds: answerSeconds)
     }
 
     private func check(_ response: URLResponse, _ data: Data) throws {
@@ -140,7 +175,8 @@ private struct OllamaAnswerer: Answerer {
     let ollama: Ollama
     let model: String
     let contextWords: Int
+    let longestAnswer: Int
     func answer(system: String, user: String, onWord: @escaping @Sendable (String) -> Void) async throws -> ChatResult {
-        try await ollama.chat(model: model, contextWords: contextWords, system: system, user: user, onWord: onWord)
+        try await ollama.chat(model: model, contextWords: contextWords, longestAnswer: longestAnswer, system: system, user: user, onWord: onWord)
     }
 }

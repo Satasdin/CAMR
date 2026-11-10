@@ -139,6 +139,7 @@ public final class VaultTools {
             case "vault_folders": return try folders()
             case "vault_remember": return try await remember(given)
             case "vault_ask": return try await ask(given)
+            case "vault_prepare": return try await prepare(given)
             default: throw ToolCallProblem(description: "Unknown tool: \(name)")
             }
         } catch let problem as ToolCallProblem {
@@ -236,12 +237,47 @@ public final class VaultTools {
     /// Answers without going through the tool list, for a screen that wants the words as they arrive.
     public func answer(_ question: String, folder: String?, model: String? = nil, onFound: (Found) -> Void = { _ in },
                        onWord: @escaping @Sendable (String) -> Void = { _ in }) async throws -> (found: Found, result: ChatResult) {
-        let found = try await find(question, folder: folder)
+        let brief = try await prepared(question, folder: folder)
+        let found = Found(retrieved: brief.retrieved, how: Self.words(for: brief))
         onFound(found)
-        let result = try await answerer(model ?? defaultModel).answer(
-            system: found.retrieved.excerpts.isEmpty ? Asking.withoutMemory : Asking.withMemory,
-            user: Asking.prompt(question: question, excerpts: found.retrieved.excerpts), onWord: onWord)
+        let result = try await answerer(model ?? defaultModel).answer(system: brief.system, user: brief.user, onWord: onWord)
         return (found, result)
+    }
+
+    /// The engine's decision for a question: whether the vault is needed, how it is read, and the method to hand over.
+    public func prepared(_ question: String, folder: String?) async throws -> Brief {
+        var budget = Budget()
+        budget.characters = searchCharacters
+        budget.entryFiles = max(4, searchCharacters / 3_000)
+        if hasVectors, let embedder {
+            do { return try await vault.brief(question, budget: budget, embedder: embedder, scope: folder) } catch {
+                log("meaning search unavailable: \(error)")
+            }
+        }
+        return try await vault.brief(question, budget: budget, scope: folder)
+    }
+
+    static func words(for brief: Brief) -> String {
+        var line = "Decided: \(brief.route.mode == .none ? "no vault" : brief.route.mode.rawValue), because \(brief.route.why)."
+        if let skill = brief.skill { line += " Method: \(skill.name)." }
+        return line
+    }
+
+    private func prepare(_ given: ToolArguments) async throws -> ToolResult {
+        let task = given.text("task")!
+        let folder: String?
+        do { folder = try scope(given.text("folder")) } catch let problem as ToolProblem { return .failure(problem.description) }
+        let brief = try await prepared(task, folder: folder)
+        var parts = [Self.words(for: brief)]
+        if let skill = brief.skill { parts.append("A method for this kind of task. Follow it where it fits:\n" + skill.body) }
+        let excerpts = brief.retrieved.excerpts
+        if excerpts.isEmpty {
+            parts.append("Nothing in the vault is needed for this.")
+        } else {
+            parts.append(ProjectContent.notice + "\n" + excerpts.map(ProjectContent.block).joined(separator: "\n\n"))
+        }
+        return ToolResult(text: parts.joined(separator: "\n\n"), sources: sources(brief.retrieved),
+                          summary: "\(brief.route.mode.rawValue), \(excerpts.count) excerpts" + (brief.skill.map { ", method: \($0.name)" } ?? ""))
     }
 
     private func sources(_ found: Retrieved) -> [ToolResult.Source] {

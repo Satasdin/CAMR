@@ -43,6 +43,20 @@ swift test
 
 Other commands: `find` shows what would be read without asking a model, `links` shows what a file connects to, and `stats` shows the size of the memory. Add `--mode none`, `--mode search` or `--mode walk` to compare the three ways of giving a model memory.
 
+## The engine
+
+Burrow does more than find excerpts. On every question it decides whether the vault is needed, fits what it shows to the model, checks what the answer cites, and can hand the model a method for the task.
+
+```
+.build/release/burrow fit ~/vault --vault --model gemma4:12b        # measure a model once
+.build/release/burrow skills ~/vault --vault --install               # add the starter skills to <vault>/Skills
+.build/release/burrow ask ~/vault "When is rent due?" --mode engine --model gemma4:12b --vault
+.build/release/burrow brief ~/vault "When is rent due?" --vault --json   # the same question packed for any other model
+.build/release/burrow learn ~/vault conversation.json --vault        # keep what a conversation decided
+```
+
+`ask --mode engine` prints what it decided, the skill it used, what it read, and how many cited places were not among what it read. A skill is a Markdown file in the vault's `Skills` folder with a `when:` line; edit them or add your own. In `burrow chat`, `/keep` proposes notes from the conversation and asks before writing each one. MCP clients get the same preparation from the `vault_prepare` tool.
+
 ## In the terminal
 
 A vault is a folder of Markdown notes, with code folders linked in read-only. The first command below is once per code folder and the second builds the index with meaning search.

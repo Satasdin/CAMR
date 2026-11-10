@@ -13,14 +13,29 @@ final class ToolsTests: XCTestCase {
         return VaultTools(vault: vault, embedder: embedder) { _ in chosen }
     }
 
-    func testTheSevenToolsAreDefinedOnce() {
+    func testTheToolsAreDefinedOnce() {
         let names = VaultTools.definitions.map(\.name)
-        XCTAssertEqual(names, ["vault_search", "vault_read", "vault_links", "vault_list", "vault_folders", "vault_remember", "vault_ask"])
+        XCTAssertEqual(names, ["vault_search", "vault_read", "vault_links", "vault_list", "vault_folders", "vault_remember", "vault_ask", "vault_prepare"])
         XCTAssertEqual(Set(names).count, names.count)
         XCTAssertEqual(VaultTools.definitions.filter { !$0.readOnly }.map(\.name), ["vault_remember"])
         let schema = VaultTools.definitions[0].inputSchema
         XCTAssertEqual(schema["required"] as? [String], ["query"])
         XCTAssertEqual(schema["type"] as? String, "object")
+    }
+
+    func testPrepareGivesTheDecisionAndTheExcerptsWithoutCallingAModel() async throws {
+        let box = tools(try await fixture.opened())
+        let result = try await box.call("vault_prepare", arguments: ["task": "How often do we retry a failed charge?"])
+        XCTAssertFalse(result.isError)
+        XCTAssertTrue(result.text.hasPrefix("Decided: "))
+        XCTAssertTrue(result.text.contains(ProjectContent.notice))
+        XCTAssertTrue(result.text.contains("<excerpt file=\"Decisions/Retry.md\""))
+        XCTAssertTrue(result.sources.contains { $0.path == "Decisions/Retry.md" })
+    }
+
+    func testPrepareRefusesAFolderThatIsNotThere() async throws {
+        let result = try await tools(try await fixture.opened()).call("vault_prepare", arguments: ["task": "x", "folder": "nowhere"])
+        XCTAssertTrue(result.isError)
     }
 
     func testSearchMarksExcerptsAsProjectContentAndNamesFiles() async throws {

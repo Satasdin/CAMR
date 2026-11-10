@@ -38,10 +38,23 @@ public struct Excerpt: Sendable, Equatable {
     public let isNote: Bool
 }
 
+/// How well the vault matched a question, before anything is shown to a model.
+public struct Signal: Sendable, Equatable {
+    /// Closeness of the nearest piece by meaning, from -1 to 1. Nil when the vault has no vectors.
+    public var nearest: Float?
+    /// How many pieces share a word with the question.
+    public var wordMatches = 0
+    public init(nearest: Float? = nil, wordMatches: Int = 0) {
+        self.nearest = nearest
+        self.wordMatches = wordMatches
+    }
+}
+
 public struct Retrieved: Sendable {
     public let mode: Mode
     public let excerpts: [Excerpt]
     public let seconds: Double
+    public var signal = Signal()
     public var characters: Int { excerpts.reduce(0) { $0 + $1.text.count } }
     public var paths: [String] {
         var seen = Set<String>()
@@ -56,22 +69,42 @@ extension Vault {
         let isNote: Bool
     }
 
+    /// One pass over the word index for a question: every matching piece with its score, best first.
+    /// Both the ranking and the walk read from this, so the index is searched once per question.
+    private struct WordMatches {
+        var ranked: [Int] = []
+        /// bm25 scores are negative, and the more negative the better.
+        var score: [Int: Double] = [:]
+    }
+
     /// Finds what to show the model. The vault walks; the model only reads the result.
     /// - Parameter scope: a folder to stay inside, such as one linked project. Nothing outside it is read.
     public func retrieve(_ question: String, mode: Mode, budget: Budget = Budget(), embedder: Embedder? = nil, scope: String? = nil) async throws -> Retrieved {
         let started = Date()
         guard mode != .none else { return Retrieved(mode: mode, excerpts: [], seconds: 0) }
-        let queryVector = try await embedder?.embed([question]).first
-        let hits = try fused(question, vector: queryVector, limit: 60, scope: scope)
-        let excerpts = mode == .search ? try searchOnly(hits, budget) : try walking(question, hits, budget, scope: scope)
-        return Retrieved(mode: mode, excerpts: excerpts, seconds: Date().timeIntervalSince(started))
+        let queryVector = try await questionVector(question, embedder: embedder)
+        let shelf = try catalogue()
+        let words = try wordMatches(question)
+        var signal = Signal(wordMatches: words.ranked.count)
+        let hits = try fused(question, vector: queryVector, limit: 60, scope: scope, shelf: shelf, words: words, signal: &signal)
+        let excerpts = mode == .search ? try searchOnly(hits, budget)
+            : try walking(question, hits, budget, scope: scope, shelf: shelf, words: words)
+        return Retrieved(mode: mode, excerpts: excerpts, seconds: Date().timeIntervalSince(started), signal: signal)
     }
 
     // MARK: Search
 
-    private func wordRanks(_ question: String, limit: Int) throws -> [Int] {
-        guard let query = Words.query(from: question) else { return [] }
-        return try matches(query, limit: limit)
+    private func wordMatches(_ question: String) throws -> WordMatches {
+        guard let query = Words.query(from: question) else { return WordMatches() }
+        var found = WordMatches()
+        for row in try database.rows("""
+            SELECT rowid, bm25(chunks_fts, 3.0, 1.0) AS score FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY score
+            """, [.text(query)]) {
+            guard let id = row[0].int, let score = row[1].real else { continue }
+            found.ranked.append(id)
+            found.score[id] = score
+        }
+        return found
     }
 
     private func matches(_ search: String, limit: Int) throws -> [Int] {
@@ -93,40 +126,26 @@ extension Vault {
         return Array((defining + mentioning).prefix(limit))
     }
 
-    private func meaningRanks(_ vector: [Float]?, limit: Int) throws -> [Int] {
-        guard let vector else { return [] }
-        let stored = try loadVectors()
-        guard !stored.ids.isEmpty else { return [] }
-        let queryLength = sqrt(vector.reduce(0) { $0 + $1 * $1 })
-        guard queryLength > 0 else { return [] }
-        var scored: [(id: Int, score: Float)] = []
-        scored.reserveCapacity(stored.ids.count)
-        for (id, candidate) in zip(stored.ids, stored.vectors) where candidate.count == vector.count {
-            var dot: Float = 0
-            var length: Float = 0
-            for index in candidate.indices {
-                dot += candidate[index] * vector[index]
-                length += candidate[index] * candidate[index]
-            }
-            if length > 0 { scored.append((id, dot / (sqrt(length) * queryLength))) }
-        }
-        scored.sort { $0.score == $1.score ? $0.id < $1.id : $0.score > $1.score }
-        return scored.prefix(limit).map(\.id)
-    }
-
     /// Merges the word and meaning rankings. Reciprocal rank fusion needs no tuning between two unlike scores.
-    private func fused(_ question: String, vector: [Float]?, limit: Int, scope: String?) throws -> [Hit] {
+    private func fused(_ question: String, vector: [Float]?, limit: Int, scope: String?, shelf: Catalogue, words: WordMatches,
+                       signal: inout Signal) throws -> [Hit] {
         var score: [Int: Double] = [:]
         // A narrow folder can sit far down the whole vault's ranking, so look further before narrowing.
         let reach = scope == nil ? limit : max(limit, 4000)
-        for ranking in [try wordRanks(question, limit: reach), try meaningRanks(vector, limit: reach)] {
+        var byMeaning: [Int] = []
+        if let vector {
+            let index = try vectorIndex()
+            byMeaning = index.nearest(to: vector, limit: reach)
+            // Skills are in the index too, but how close one is says nothing about what the vault knows.
+            if let first = byMeaning.first(where: { id in shelf.fileOf[id].map { !Skills.holds($0.path) && Self.inside(scope, $0.path) } ?? false }) {
+                signal.nearest = index.similarity(of: first, to: vector)
+            }
+        }
+        for ranking in [Array(words.ranked.prefix(reach)), byMeaning] {
             for (rank, id) in ranking.enumerated() { score[id, default: 0] += 1.0 / Double(60 + rank + 1) }
         }
         let asked = Asked(question)
-        var fileOf: [Int: (path: String, isNote: Bool)] = [:]
-        for row in try database.rows("SELECT c.id, f.path, f.is_note FROM chunks c JOIN files f ON f.id = c.file_id") {
-            fileOf[row[0].int!] = (row[1].text!, row[2].int == 1)
-        }
+        let fileOf = shelf.fileOf
         for id in Array(score.keys) { score[id]! *= asked.weight(of: fileOf[id]?.path ?? "") }
 
         // Someone who types an exact name means that name, so those chunks go ahead of the merged ranking.
@@ -139,7 +158,8 @@ extension Vault {
         let ordered = (try exactRanks(question, limit: front) + named.prefix(front) + merged).filter { seen.insert($0).inserted }
         var hits: [Hit] = []
         for id in ordered where hits.count < limit {
-            guard let file = fileOf[id], Self.inside(scope, file.path) else { continue }
+            // A skill is a way of working, not a fact about the vault. It reaches the model by another road.
+            guard let file = fileOf[id], Self.inside(scope, file.path), !Skills.holds(file.path) else { continue }
             hits.append(Hit(chunk: id, path: file.path, isNote: file.isNote))
         }
         return hits
@@ -172,11 +192,13 @@ extension Vault {
 
     // MARK: Walking
 
-    private func walking(_ question: String, _ hits: [Hit], _ budget: Budget, scope: String?) throws -> [Excerpt] {
+    private func walking(_ question: String, _ hits: [Hit], _ budget: Budget, scope: String?, shelf: Catalogue, words: WordMatches) throws -> [Excerpt] {
         var taken: [Excerpt] = []
         var takenChunks = Set<Int>()
         var used = 0
         var entries: [String] = []
+        // Nothing useful is shorter than this, so once less is left the walk stops looking.
+        let smallest = 200
 
         func take(_ chunk: Int, _ reason: Reason) throws -> Bool {
             guard !takenChunks.contains(chunk), let piece = try excerpt(chunk: chunk, reason: reason, budget: budget),
@@ -196,13 +218,13 @@ extension Vault {
         // Then spread out. Candidates are ranked: a note about a file first, then what the question's words support.
         var visited = Set(entries)
         var frontier = entries
-        let wordMatches = try wordScores(question)
+        let wordMatches = wordScores(words, shelf: shelf)
         let asked = Asked(question)
-        for hop in 1...max(1, budget.hops) where !frontier.isEmpty {
+        for hop in 1...max(1, budget.hops) where !frontier.isEmpty && budget.characters - used >= smallest {
             var candidates: [(score: Double, path: String, neighbour: Vault.Neighbour, from: String)] = []
             for source in frontier {
                 for neighbour in try neighbours(of: source) where !visited.contains(neighbour.path)
-                    && Self.inside(scope, neighbour.path) {
+                    && Self.inside(scope, neighbour.path) && !Skills.holds(neighbour.path) {
                     var score = (wordMatches[neighbour.path] ?? 0) / Double(hop)
                     switch neighbour.kind {
                     case .about: score += 3
@@ -216,55 +238,44 @@ extension Vault {
             var next: [String] = []
             for candidate in candidates where !visited.contains(candidate.path) {
                 visited.insert(candidate.path)
-                guard let chunk = try bestChunk(of: candidate.path, question: question, via: candidate.neighbour.via) else { continue }
+                guard let chunk = try bestChunk(of: candidate.path, via: candidate.neighbour.via, shelf: shelf, words: words) else { continue }
                 let reason = Reason.link(from: candidate.from, kind: candidate.neighbour.kind, via: candidate.neighbour.via)
                 if try take(chunk, reason) { next.append(candidate.path) }
-                if used >= budget.characters { break }
+                if budget.characters - used < smallest { break }
             }
             frontier = next
         }
 
         // Links ran out before the budget did: use the rest on further search results, so no mode reads less.
-        for hit in hits where used < budget.characters { _ = try take(hit.chunk, .search) }
+        for hit in hits where budget.characters - used >= smallest { _ = try take(hit.chunk, .search) }
         return taken
     }
 
     /// How strongly each file matches the question's words, scaled so the best file scores 1.
-    private func wordScores(_ question: String) throws -> [String: Double] {
-        guard let query = Words.query(from: question) else { return [:] }
-        // bm25 only works on the search table by itself, so the grouping by file happens here.
-        let rows = try database.rows("SELECT rowid, bm25(chunks_fts, 3.0, 1.0) FROM chunks_fts WHERE chunks_fts MATCH ?", [.text(query)])
-        var pathOf: [Int: String] = [:]
-        for row in try database.rows("SELECT c.id, f.path FROM chunks c JOIN files f ON f.id = c.file_id") { pathOf[row[0].int!] = row[1].text! }
+    private func wordScores(_ words: WordMatches, shelf: Catalogue) -> [String: Double] {
         var strongest: [String: Double] = [:]
-        for row in rows {
-            guard let id = row[0].int, let score = row[1].real, let path = pathOf[id] else { continue }
+        for (id, score) in words.score {
+            guard let path = shelf.fileOf[id]?.path else { continue }
             strongest[path] = min(strongest[path] ?? 0, score)
         }
-        // bm25 scores are negative, and the more negative the better.
         guard let best = strongest.values.min(), best < 0 else { return [:] }
         return strongest.mapValues { $0 / best }
     }
 
     /// The part of a linked file worth opening: where the linking symbol is defined, or else the best word match.
-    private func bestChunk(of path: String, question: String, via: String?) throws -> Int? {
-        let chunks = try database.rows("""
-            SELECT c.id, c.body FROM chunks c JOIN files f ON f.id = c.file_id WHERE f.path = ? ORDER BY c.start_line
-            """, [.text(path)])
+    private func bestChunk(of path: String, via: String?, shelf: Catalogue, words: WordMatches) throws -> Int? {
+        guard let chunks = shelf.chunksOf[path], !chunks.isEmpty else { return nil }
         if let via {
-            let found = chunks.first { row in
+            let bodies = try database.rows("""
+                SELECT c.id, c.body FROM chunks c JOIN files f ON f.id = c.file_id WHERE f.path = ? ORDER BY c.start_line
+                """, [.text(path)])
+            let found = bodies.first { row in
                 row[1].text.map { LinkFinder.definedSymbols(in: $0).contains(via) } ?? false
-            } ?? chunks.first { $0[1].text?.contains(via) ?? false }
+            } ?? bodies.first { $0[1].text?.contains(via) ?? false }
             if let found { return found[0].int }
         }
-        if let query = Words.query(from: question),
-           let row = try database.rows("""
-            SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ?
-            AND rowid IN (SELECT c.id FROM chunks c JOIN files f ON f.id = c.file_id WHERE f.path = ?)
-            ORDER BY bm25(chunks_fts, 3.0, 1.0) LIMIT 1
-            """, [.text(query), .text(path)]).first {
-            return row[0].int
-        }
-        return chunks.first?[0].int
+        let matched = chunks.filter { words.score[$0] != nil }
+        if let best = matched.min(by: { (words.score[$0]!, $0) < (words.score[$1]!, $1) }) { return best }
+        return chunks.first
     }
 }

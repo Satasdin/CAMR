@@ -53,7 +53,7 @@ final class MCPTests: XCTestCase {
         try await start()
         let reply = try json(await server.handle(#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#))
         let tools = (reply["result"] as! [String: Any])["tools"] as! [[String: Any]]
-        XCTAssertEqual(tools.count, 7)
+        XCTAssertEqual(tools.count, 8)
         XCTAssertTrue(tools.allSatisfy { ($0["inputSchema"] as? [String: Any])?["type"] as? String == "object" })
         XCTAssertEqual((tools.first { $0["name"] as? String == "vault_remember" }?["annotations"] as? [String: Any])?["readOnlyHint"] as? Bool, false)
     }
@@ -108,6 +108,15 @@ final class MCPTests: XCTestCase {
     func testBlankLinesAreIgnored() async throws {
         let reply = await server.handle("   ")
         XCTAssertNil(reply)
+    }
+
+    func testAnOutsideModelCanAskBurrowToPrepareATask() async throws {
+        try await start()
+        let line = await server.handle(#"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"vault_prepare","arguments":{"task":"retry a failed charge"}}}"#)
+        let result = try XCTUnwrap(try json(line)["result"] as? [String: Any])
+        let text = ((result["content"] as? [[String: Any]])?.first?["text"] as? String) ?? ""
+        XCTAssertTrue(text.contains("Decided: "))
+        XCTAssertNotEqual(result["isError"] as? Bool, true)
     }
 
     func testRepliesCarryTheRequestsIDAndAreOneLine() async throws {

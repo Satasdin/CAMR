@@ -72,7 +72,13 @@ public final class ChatSession {
         self.settings = settings
     }
 
-    public func clear() { history = [] }
+    /// What was asked and answered, kept so the person can have the conversation's decisions written down.
+    public private(set) var exchanges: [(question: String, answer: String)] = []
+
+    public func clear() {
+        history = []
+        exchanges = []
+    }
 
     /// Qwen3 can ignore `think: false`, and this is its own off switch, as in `Ollama.swift`.
     private func userContent(_ text: String) -> String { backend.model.lowercased().contains("qwen3") ? text + "\n\n/no_think" : text }
@@ -125,11 +131,12 @@ public final class ChatSession {
 
         var spent = 0
         if settings.alwaysSearchFirst {
-            let arguments: [String: Any] = ["query": question]
-            let content = await run("vault_search", arguments, forced: true, on: observer, into: &turn)
+            // The engine prepares the question: whether the vault is needed, what to read, and a method if one fits.
+            let arguments: [String: Any] = ["task": question]
+            let content = await run("vault_prepare", arguments, forced: true, on: observer, into: &turn)
             spent += content.count
-            messages.append(Self.callMessage("vault_search", arguments))
-            messages.append(["role": "tool", "tool_name": "vault_search", "content": content])
+            messages.append(Self.callMessage("vault_prepare", arguments))
+            messages.append(["role": "tool", "tool_name": "vault_prepare", "content": content])
         }
 
         var seen = Set<String>()
@@ -162,6 +169,7 @@ public final class ChatSession {
         history.append(["role": "assistant", "content": turn.answer])
         if history.count > 12 { history.removeFirst(history.count - 12) }
         turn.seconds = Date().timeIntervalSince(started)
+        exchanges.append((question, turn.answer))
         return turn
     }
 }

@@ -143,7 +143,7 @@ struct AnswerView: View {
             if turn.finished, turn.wantsChange, turn.proposals.isEmpty, turn.failure == nil {
                 Text("No change to review.").font(.callout).foregroundStyle(.secondary)
             }
-            if !turn.sources.isEmpty { sources }
+            if !turn.sources.isEmpty || turn.decided != nil { sources }
             if turn.finished, turn.failure == nil { actions }
             if let notes = turn.toRemember { remembered(notes) }
         }
@@ -179,7 +179,15 @@ struct AnswerView: View {
 
     private var sources: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Used").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            if let decided = turn.decided {
+                Label(decided + (turn.method.map { " Method: \($0)." } ?? ""), systemImage: "gearshape.2")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if !turn.unverified.isEmpty {
+                Label("Not among what it read: " + turn.unverified.prefix(4).joined(separator: ", "), systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            if !turn.sources.isEmpty { Text("Used").font(.caption.weight(.semibold)).foregroundStyle(.secondary) }
             ForEach(turn.sources) { source in
                 Button { workspace.go(.file(source.path), newTab: true, line: source.startLine) } label: {
                     HStack(spacing: 7) {
