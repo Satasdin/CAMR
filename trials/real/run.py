@@ -31,7 +31,7 @@ def stats(clone, store):
     return line
 
 
-results.mkdir(parents=True, exist_ok=False)
+results.mkdir(parents=True, exist_ok=True)
 for repo in repos:
     name = repo.split("/")[1]
     chosen = sorted((row for row in rows if row["repo"] == repo), key=lambda row: row["created_at"])[-LIMIT:]
@@ -62,8 +62,11 @@ for repo in repos:
                     seen.append(piece["path"])
             record[mode] = {"files": seen, "seconds": found["seconds"], "characters": found["characters"]}
         if number < ANSWER_TIMES:
-            answer = json.loads(run(binary, "ask", str(clone), row["problem_statement"], "--mode", "walk", "--json", "--store", str(store)).stdout.strip().split("\n")[-1])
-            record["answer_seconds"] = answer["total_s"]
+            try:
+                answer = json.loads(run(binary, "ask", str(clone), row["problem_statement"], "--mode", "walk", "--json", "--store", str(store)).stdout.strip().split("\n")[-1])
+                record["answer_seconds"] = answer["total_s"]
+            except subprocess.CalledProcessError as problem:
+                record["answer_error"] = problem.stderr.strip()[:300]
         out.write(json.dumps(record) + "\n")
         out.flush()
         print(repo, number + 1, "of", len(chosen), flush=True)

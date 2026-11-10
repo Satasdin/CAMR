@@ -1,0 +1,10 @@
+decision: Charge a processing fee of 1.5 percent of the loan, calculated using BASIS_POINTS_OF from sacco/money.py, and record it as income using record_fee_income from sacco/loans/fees.py. The fee is deducted from the amount sent, not added to the principal.  
+file: sacco/loans/disbursement.py  
+rejected: Adding the processing fee to the loan's principal and billing it separately. This was rejected because it led to under-secured loans and unpaid bills in previous pilots.  
+file: sacco/loans/disbursement.py  
+bug: Loans with processing fees were sometimes under-secured because the fee was added to the principal, leading to pledges not covering the total amount.  
+file: sacco/loans/disbursement.py  
+bug: In the 2022 pilot, 37 loans were under-secured, with pledges falling short by KES 4,350 on loan 2207.  
+file: sacco/loans/disbursement.py  
+bug: Billing the processing fee separately led to a third of the bills being unpaid.  
+file: sacco/loans/disbursement.py

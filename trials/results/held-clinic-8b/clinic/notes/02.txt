@@ -1,0 +1,12 @@
+decision: paediatric_dose rounds down to the nearest step_mg when the calculated dose falls between two measurable quantities, to ensure no child receives more than the maximum allowed per kg, and to align with the medicines committee's decision  
+file: clinic/prescriptions/dosing.py  
+rejected: rounding to the nearest step_mg, as it could result in doses exceeding the maximum allowed per kg for certain drugs, leading to potential over-treatment  
+file: clinic/prescriptions/dosing.py  
+rejected: rounding up to the next step_mg to avoid under-treatment, as the audit found that rounding up could lead to doses exceeding the maximum allowed per kg for some drugs  
+file: clinic/prescriptions/dosing.py  
+rejected: leaving the exact calculated dose without rounding, as pharmacy cannot measure out fractional amounts of the drug  
+file: clinic/prescriptions/dosing.py  
+decision: prescribe_for_child uses paediatric_dose to calculate the dose and then proceeds with the prescribe function to ensure allergy and interaction checks are applied  
+file: clinic/prescriptions/prescribing.py  
+bug: the original spreadsheet rounded to the nearest step_mg, which led to some doses exceeding the maximum allowed per kg for certain drugs, as identified in the July audit  
+file: clinic/prescriptions/dosing.py

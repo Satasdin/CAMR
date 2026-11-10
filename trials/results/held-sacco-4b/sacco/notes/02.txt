@@ -1,0 +1,7 @@
+decision: PROCESSING_FEE_BASIS_POINTS = 150 in sacco/loans/disbursement.py was set to represent 1.5% processing fee based on basis_points_of from sacco/money.py  
+decision: The fee is booked as income via record_fee_income in sacco/loans/fees.py when disburse_loan sends an approved loan  
+decision: The Disbursement returned by disburse_loan includes fee_cents (the fee amount) and sent_cents (actual amount sent)  
+decision: A loan not approved raises InvalidLoanState, not a fee or disbursement  
+rejected: Adding processing fee to loan principal was rejected because it led to 37 under-secured loans during 2023 SASRA inspection  
+rejected: Billing the fee separately after disbursement was rejected because 33% of such bills were never paid  
+bug: No record of fee income was created if disbursement fails validation or is cancelled (not addressed in this session)

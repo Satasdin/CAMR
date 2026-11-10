@@ -1,0 +1,11 @@
+decision: paediatric_dose in dosing.py uses floor to round down to the lower measurable step when amount falls between two step sizes, to ensure no child receives a dose above the mg_per_kg ceiling  
+file: clinic/prescriptions/dosing.py  
+
+rejected: rounding to the nearest step in paediatric_dose, because it could exceed the committee's 15 mg per kg ceiling for drugs like Zolvicin  
+file: clinic/prescriptions/dosing.py  
+
+rejected: rounding up to the next step in paediatric_dose, because it would risk over-treatment and not be corrected at review visits  
+file: clinic/presitecture/dosing.py  
+
+bug: in July audit, Zolvicin prescription for 8 kg child calculated as 120 mg but delivered as 125 mg due to rounding to nearest step, violating ceiling limit  
+file: clinic/prescriptions/prescribing.py

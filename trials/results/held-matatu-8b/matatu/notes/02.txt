@@ -1,0 +1,10 @@
+decision: Define a day as an operating day from 03:00 to 03:00 Nairobi time in `matatu/reports/day_close.py` to align with the business process and avoid splitting night service takings across calendar days  
+decision: Use the operating day definition in all functions that determine which day a ticket belongs to, except for `figures_for` which remains on calendar days  
+rejected: Using calendar days for reporting as it would split night service takings across days and cause discrepancies in reporting  
+rejected: Proposing a different cut-over hour per route as it would complicate the system and not align with the business process where crews can change routes during a night  
+bug: The initial implementation counted calendar days, leading to incorrect reporting of night service takings across two days  
+file: matatu/reports/day_close.py  
+file: matatu/api/handlers.py  
+file: matatu/reports/day_close.py  
+file: matatu/reports/day_close.py  
+file: matatu/reports/day_close.py

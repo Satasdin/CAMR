@@ -1,0 +1,47 @@
+dropped (the fix only added new files): 0
+
+All repositories: 101 instances
+mode    right file first   any changed file reached   every changed file reached   mean recall
+search   36/101             59/101                      48/101                       0.517
+walk     36/101             72/101                      59/101                       0.647
+  first: walk better on 0, search better on 0, exact sign test p = 1.000
+  any: walk better on 15, search better on 2, exact sign test p = 0.002
+  all: walk better on 13, search better on 2, exact sign test p = 0.007
+
+django: 30 instances
+mode    right file first   any changed file reached   every changed file reached   mean recall
+search   10/30             17/30                      13/30                       0.484
+walk     10/30             21/30                      16/30                       0.619
+  first: walk better on 0, search better on 0, exact sign test p = 1.000
+  any: walk better on 5, search better on 1, exact sign test p = 0.219
+  all: walk better on 4, search better on 1, exact sign test p = 0.375
+
+flask: 11 instances
+mode    right file first   any changed file reached   every changed file reached   mean recall
+search    7/11              9/11                       6/11                       0.652
+walk      7/11             11/11                       9/11                       0.894
+  first: walk better on 0, search better on 0, exact sign test p = 1.000
+  any: walk better on 2, search better on 0, exact sign test p = 0.500
+  all: walk better on 3, search better on 0, exact sign test p = 0.250
+
+pytest: 30 instances
+mode    right file first   any changed file reached   every changed file reached   mean recall
+search    9/30             15/30                      15/30                       0.500
+walk      9/30             18/30                      18/30                       0.600
+  first: walk better on 0, search better on 0, exact sign test p = 1.000
+  any: walk better on 3, search better on 0, exact sign test p = 0.250
+  all: walk better on 3, search better on 0, exact sign test p = 0.250
+
+requests: 30 instances
+mode    right file first   any changed file reached   every changed file reached   mean recall
+search   10/30             18/30                      14/30                       0.518
+walk     10/30             22/30                      16/30                       0.631
+  first: walk better on 0, search better on 0, exact sign test p = 1.000
+  any: walk better on 5, search better on 1, exact sign test p = 0.219
+  all: walk better on 3, search better on 1, exact sign test p = 0.625
+
+Growth
+django 3833 files, 0 notes, 246 clusters, 11614 chunks, 65054 links, 11614 vectors, index 133136 KB | repo MB 58.3 | index MB 136.3 | first index s 336.3 | retrieve median s 0.842 max 24.131 | answer mean s 4.0
+flask 197 files, 0 notes, 14 clusters, 720 chunks, 988 links, 720 vectors, index 7036 KB | repo MB 2.1 | index MB 7.2 | first index s 20.5 | retrieve median s 0.099 max 0.317 | answer mean s 4.5
+pytest 495 files, 0 notes, 18 clusters, 2629 chunks, 4692 links, 2629 vectors, index 26312 KB | repo MB 6.1 | index MB 26.9 | first index s 0.6 | retrieve median s 0.442 max 10.08 | answer mean s 3.6
+requests 106 files, 0 notes, 9 clusters, 444 chunks, 494 links, 444 vectors, index 5260 KB | repo MB 1.7 | index MB 5.4 | first index s 25.5 | retrieve median s 0.091 max 0.951 | answer mean s 4.3

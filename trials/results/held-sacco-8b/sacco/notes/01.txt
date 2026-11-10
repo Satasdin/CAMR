@@ -1,0 +1,14 @@
+decision: Reversing a ledger entry posts a new ledger line for the opposite amount, and the original line is never changed or removed. Both lines stay on the statement. This ensures consistency between printed statements and the ledger.  
+file: sacco/savings/reversals.py  
+decision: The `reverse_entry` function undoes the ledger entry so that the account's balance is back to what it was without that entry, and returns the account's new balance in cents.  
+file: sacco/savings/reversals.py  
+decision: The `reverse_posting` handler takes `{"entry_id": ..., "reason": ...}` and returns `{"entry_id": ..., "balance_cents": ...}`.  
+file: sacco/api/handlers.py  
+rejected: Setting a `reversed` flag on an entry to mark it as reversed. This would change the meaning of an old line after the fact, causing discrepancies between printed statements and the ledger.  
+file: sacco/savings/ledger.py  
+rejected: Deleting the ledger line for a reversed entry. This would cause discrepancies between printed statements and the ledger, as the line would no longer exist.  
+file: sacco/savings/ledger.py  
+bug: Reversing the same entry a second time raises `AlreadyReversed` to prevent duplicate reversals.  
+file: sacco/savings/reversals.py  
+bug: An unknown entry raises `NotFound` like `find_entry` in `sacco/savings/ledger.py` to handle invalid entry IDs.  
+file: sacco/savings/ledger.py

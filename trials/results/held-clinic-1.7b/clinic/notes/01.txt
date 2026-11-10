@@ -1,0 +1,5 @@
+decision: clinic/reminders/dispatch.py must be modified to include SMS sending logic, because many patients have no email address and SMS is needed for those who do.  
+rejected: an opt-in box for detailed texts, because it would require asking every patient and the default would be wrong for those it hurts.  
+bug: send_reminders in clinic/reminders/dispatch.py does not send SMS messages, because the required parameters are not properly handled.  
+decision: clinic/clock.py must be modified to include functions to retrieve the patient's first name, day of the week, time of day, and appointment ID, because SMS messages need these details.  
+rejected: shortening departments to codes such as ONC, because it would be difficult for patients to recognize the department from the code.

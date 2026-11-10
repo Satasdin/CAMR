@@ -1,0 +1,11 @@
+decision: reconcile_statement in matatu/payments/reconcile.py must add lines with no matching ticket to suspense with reason 'unknown reference' and count them in result.suspended  
+decision: reconcile_statement must continue processing lines even when a line matches no ticket  
+rejected: matching on phone number and amount was rejected as it led to incorrect ticket matching  
+rejected: taking the ticket closest in time was rejected as it is an unreliable method for matching tickets  
+bug: on Easter Monday, 31 tickets on route 46 were marked paid against the wrong passengers due to incorrect matching logic  
+bug: conductors often pay from their own phone for a group, leading to repeated phone and amount combinations in statements  
+bug: the old fallback logic of using phone number and amount caused errors in ticket matching  
+file: matatu/payments/reconcile.py  
+function: reconcile_statement  
+file: matatu/payments/reconcile.py  
+function: add_to_suspense

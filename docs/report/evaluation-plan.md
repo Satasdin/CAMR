@@ -23,3 +23,8 @@ Measures for search and walk, each held to 12,000 characters: right file first; 
 ## Growth test (RQ4)
 
 From the same four repositories: files, pieces, links, index size, time of the first full index, median and longest retrieval time over all instances, and mean time for a full answer on the first five instances.
+
+## Amendments made during the run
+
+10 November 2026: the first pytest instance's answer failed because Ollama refused a very long question (HTTP 400), and the harness stopped. The engine was not changed. The harness now records a failed answer and carries on, and the remaining repositories were run with it. The harness was also changed to allow its results folder to be reused, so that the stopped run could be resumed. The fault is reported as a defect. Requests and flask had finished and are unaffected.
+

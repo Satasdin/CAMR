@@ -1,0 +1,5 @@
+decision: reverse_entry in sacco/savings/reversals.py undoes a ledger entry by posting a new opposite-amount entry, leaving the original entry intact, so both lines remain on statements and balances are accurate without altering historical records.
+
+rejected: setting a reversed flag on an existing ledger line was rejected because it creates inconsistency between printed statements and ledger entries after the fact, violating audit integrity.
+
+bug: no validation in reverse_entry to prevent reversing the same entry twice, leading to potential duplicate reversals and incorrect balance calculations.

@@ -1,0 +1,17 @@
+"""Passes that cover a passenger's rides for a day."""
+
+from typing import List
+
+from ..clock import day_of
+from ..config import DAY_PASS_PRICE_KES
+from ..models import DayPass
+from ..store.repositories import save_day_pass
+
+
+def sell_day_pass(store, phone: str, clock) -> DayPass:
+    return save_day_pass(store, DayPass(id=store.next_id("PAS"), phone=phone, price_kes=DAY_PASS_PRICE_KES,
+                                        bought_at=clock.now()))
+
+
+def passes_sold_on(store, day: str) -> List[DayPass]:
+    return [item for item in store.day_passes.values() if day_of(item.bought_at) == day]
