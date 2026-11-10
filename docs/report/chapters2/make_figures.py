@@ -73,11 +73,11 @@ def incremental():
     arrow(ax, (0.45, 0.55), (11.3, 0.55)); arrow(ax, (0.45, 0.55), (0.45, 6.5))
     ax.text(5.9, 0.2, "Project timeline", ha="center", style="italic", fontsize=11, color=INK)
     ax.text(0.2, 3.5, "System capability (measured)", va="center", rotation=90, style="italic", fontsize=11, color=INK)
-    steps = [("Increment 1", "Baseline gap, no memory", "Evaluation harness"),
-             ("Increment 2", "Control condition", "Simplest treatment"),
-             ("Increment 3", "Measured rows added", "Engine steps and skills"),
-             ("Increment 4", "Complete engine", "Device profiling"),
-             ("Increment 5", "Engine a person can use", "App, terminal chat, MCP server")]
+    steps = [("Increment 1", "The gap measured", "First prototype, CAMR"),
+             ("Increment 2", "Memory in plain files", "Vault, index, search, links"),
+             ("Increment 3", "Memory a person can use", "App, terminal chat, MCP server"),
+             ("Increment 4", "Retrieval tested", "Real bug fixes, held-back projects"),
+             ("Increment 5", "Engine around the model", "Five steps, skills, final evaluation")]
     w, h = 1.55, 1.5
     for i, (name, green, below) in enumerate(steps):
         x = 0.85 + i * 2.12

@@ -199,7 +199,7 @@ def charts(data, numbers):
         ys = [100 * point["right"] / point["n"] for point in curve]
         ax.plot(xs, ys, color=colours["local_engine"], marker="o", linewidth=2)
         for point, x, y in zip(curve, xs, ys):
-            ax.annotate(f"{point['characters']:,} characters", (x, y), textcoords="offset points", xytext=(6, -11), fontsize=7, color=ink)
+            ax.annotate(f"{point['characters']:,} characters", (x, y), textcoords="offset points", xytext=(7, 4) if point["characters"] == 2000 else (6, -11), fontsize=7, color=ink)
         ax.set_xlabel("Median tokens read per answer")
         ax.set_ylabel("Knowledge answers right (%)")
         ax.yaxis.grid(True, color=grid, linewidth=0.6)

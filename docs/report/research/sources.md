@@ -677,3 +677,12 @@ Not re-verified today (not relied on in this pack): Anthropic (2026a, 2026b) Cla
 - **DBLP lookups.** DBLP's API returned empty responses today, so no entry relies on it. Venues come from arXiv comment fields, Crossref DOI records, publisher pages, the ACL Anthology and Semantic Scholar.
 - **Left out for lack of a second confirmation:** the PMLR volume number for Liu et al. (2024, MobileLLM); publication venues that only Semantic Scholar reports for Voyager (TMLR), MemoryAgentBench (ICLR) and GSM-DC (EMNLP 2025). These are cited as preprints with a note.
 - **Considered and dropped as lower value:** MTEB (Muennighoff et al., 2023, EACL, verified, pp. 2014–2037, https://doi.org/10.18653/v1/2023.eacl-main.148); Reflexion (Shinn et al., 2023, NeurIPS 36, verified, https://doi.org/10.52202/075280-0377); Attributed QA (Bohnet et al., 2022, arXiv:2212.08037, verified preprint); "A survey of small language models" (Van Nguyen et al., 2024, arXiv:2410.20011, verified preprint); "Long context RAG performance of large language models" (Leng et al., 2024, arXiv:2411.03538, workshop paper); "When to retrieve" (Labruna et al., 2024, arXiv:2404.19705); MiniRAG (Fan et al., 2025, arXiv:2501.06713, preprint about retrieval for small models, usable in 2.3 if a small-model retrieval system is wanted). All exist and can be added if a section needs them.
+
+
+## Added on 10 November 2026 for the Word report
+
+@ Larman, C., & Basili, V. R. (2003). Iterative and incremental development: A brief history. *Computer*, *36*(6), 47–56. https://doi.org/10.1109/MC.2003.1204375
+Verified at: https://doi.org/10.1109/MC.2003.1204375 (Crossref record read on 10 November 2026: authors C. Larman and V. R. Basili, Computer, volume 36, issue 6, pages 47 to 56, June 2003, IEEE).
+Use in report: 3.3.1, as the source for iterative and incremental development.
+
+Removed from the cited list: Anthropic (n.d.), Agent Skills, because the course guide asks that undated sources be avoided. The sentence that cited it was cut.

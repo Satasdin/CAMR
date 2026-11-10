@@ -31,9 +31,9 @@ def _toolbar(s):
 
 def _sidebar(s, bottom, chosen=None):
     s.rect(8, 34, 132, bottom - 34)
-    s.rect(16, 42, 116, 22, "Files | Search | Tags", size=7.2)
-    s.rect(16, 70, 116, 20, "Graph", size=7.2, line=1.6 if chosen == "Graph" else 0.8)
-    s.rect(16, 94, 116, 20, "Ask", size=7.2, line=1.6 if chosen == "Ask" else 0.8)
+    s.rect(16, 92, 116, 22, "Files | Search | Tags", size=7.2)
+    s.rect(16, 42, 116, 20, "Graph", size=7.2, line=1.6 if chosen == "Graph" else 0.8)
+    s.rect(16, 66, 116, 20, "Ask", size=7.2, line=1.6 if chosen == "Ask" else 0.8)
 
 
 def wire_editor():
@@ -108,7 +108,7 @@ def wire_keep():
     s.text(74, 252, "Skills\nlinked code folders", size=7.2)
     s.rect(16, 316, 116, 40, "Add: note, folder,\nlink a folder", size=7.2)
     # The conversation so far.
-    s.rect(330, 46, 270, 24, "The person's words, where a decision was stated", size=7)
+    s.rect(158, 46, 442, 24, "The person's words, where a decision was stated", size=7)
     s.rect(158, 80, 442, 36, "Answer, with its decision line and the files it used", size=7.2)
     s.text(166, 132, "Seconds taken, on this Mac     Keep as Note", ha="left", size=7)
     s.rect(372, 122, 160, 20, "What Should Burrow Remember?", size=7, line=1.6)

@@ -1,0 +1,183 @@
+# Chapter 4:  System Analysis and Design
+
+## 4.1 Introduction
+
+This chapter presents the analysis and design of Burrow, the memory engine of this study, and addresses the second specific objective. The system was analysed and designed with Object-Oriented Analysis and Design (OOAD), as justified in Section 3.3, and the diagrams use the Unified Modeling Language (UML). Section 4.2 gives the requirements of the system. Section 4.3 presents the analysis diagrams, which are a use case diagram, two sequence diagrams, an activity diagram, and a class diagram. Section 4.4 presents the design diagrams, which are the system architecture, the engine's steps, the logical database schema, the wireframes, and a deployment diagram.
+
+## 4.2 System Requirements
+
+The system requirements identified for this project are presented in the following subsections. They were worked backwards from the specific objectives in Section 1.3 and from the Sprint II review of 5 November 2026. Each requirement has an identifier, a priority, the objective it serves, and the test case of Section 5.6 that verifies it. A requirement is marked Must when an objective depends on it and Should when it was added to strengthen the engine. No limit on response time was set in advance, because no measurement existed to justify one. Appendix 4 traces each requirement to its objective, its component, and its test.
+
+### 4.2.1 Functional Requirements
+
+Table 4.1 lists the functional requirements. FR-01 to FR-03 cover the memory, FR-04 to FR-09 are the five steps of the engine, and FR-10 opens the engine to outside models.
+
+!tab Table 4.1: Functional requirements
+!widths 0.75,3.2,0.75,0.9,0.7
+| ID | Requirement | Priority | Objective | Verified by |
+| FR-01 | The engine shall index a vault of Markdown notes, documents, and linked code folders on the device, and later re-index only the files that changed. | Must | iii | TC-01 |
+| FR-02 | The engine shall rank the pieces of the vault by word match and by meaning, and return excerpts with their file and line numbers within a character budget. | Must | ii | TC-02 |
+| FR-03 | The engine shall follow the links between files for up to two hops from the best matches. | Must | ii | TC-03 |
+| FR-04 | Decide: the engine shall judge from one search whether a question needs the vault, and whether to search or to follow links, and state the reason in words. | Must | ii | TC-04, TC-05 |
+| FR-05 | Decide: the engine shall hand the model at most one skill, chosen by how closely it fits the question or else by the kind of material found. | Should | ii | TC-06 |
+| FR-06 | Fit: the engine shall measure a local model once and set from that measurement how many characters the model is shown. | Must | ii, v | TC-07 |
+| FR-07 | Answer: the engine shall have a local model answer from the excerpts, naming a file and line for each statement. | Must | iii | TC-08 |
+| FR-08 | Check: the engine shall check every cited file and line against the excerpts shown, ask once more if a citation was not shown, and report any left unverified, on the command burrow ask --mode engine. | Should | ii | TC-09 |
+| FR-09 | Learn: the engine shall propose at most three notes from a conversation, each backed by the person's own words, and in the terminal chat write a note only when the person accepts it. | Must | ii | TC-10 |
+| FR-10 | The engine shall give the same decision, skill, and excerpts to an outside model through a command and through a Model Context Protocol (MCP) tool, without calling a chat model itself. | Should | iii | TC-11 |
+
+### 4.2.2 Non-Functional Requirements
+
+Table 4.2 lists the non-functional requirements. They cover privacy, durability, safety, cost, footprint, and portability, which are the qualities that matter for a memory kept on a person's own device. NFR-04 requires that cost be measured on every answer.
+
+!tab Table 4.2: Non-functional requirements
+!widths 0.75,3.2,0.75,0.9,0.7
+| ID | Requirement | Priority | Objective | Verified by |
+| NFR-01 | Privacy: the engine shall send notes and code only to the Ollama service on the same machine, at the loopback address 127.0.0.1. | Must | iii | TC-13 |
+| NFR-02 | Durability: the person's files shall be the only lasting record, and the index shall be rebuilt from them if it is deleted. | Must | iii | TC-12 |
+| NFR-03 | Safety: text from the vault shall be given to a model as material to read, with a rule that no instruction written inside it is followed. | Should | iii | TC-14 |
+| NFR-04 | Cost: for every answer the engine shall report the tokens read, the tokens written, the seconds before the model was called, and the seconds the model took. | Must | iv | TC-15 |
+| NFR-05 | Footprint: the index shall be one embedded database file inside the vault's .burrow folder, with no database server process. A rebuildable copy of its vectors and two small settings files sit beside it. | Must | iii | TC-16 |
+| NFR-06 | Portability: the engine shall build as one Swift package with no third-party dependency, and its tests shall run with one command. | Should | iii | TC-17 |
+
+### 4.2.3 Data Requirements
+
+Table 4.3 lists the data requirements. They describe what the engine reads, what it stores, what it is allowed to write, and how the evaluation data is kept apart from the memory.
+
+!tab Table 4.3: Data requirements
+!widths 0.75,3.2,0.75,0.9,0.7
+| ID | Requirement | Priority | Objective | Verified by |
+| DR-01 | The input shall be a folder of plain Markdown files and linked code folders. The engine shall read these files and shall not change them. | Must | iii | TC-18 |
+| DR-02 | For each piece of a file the index shall store its file, its first and last line, its text, and at most one embedding vector. | Must | iii | TC-19 |
+| DR-03 | In the chat and the app a note shall be written only when the person accepts it, as a readable Markdown file in the Memory folder. No write shall overwrite a note. Other writes are limited to the starter skills on request, accepted file changes, and notes added by burrow note, burrow learn, or an MCP client. | Must | ii | TC-10 |
+| DR-04 | The evaluation questions and their answer keys shall be kept outside the vault, and the vault shall be built from the source documents only. | Must | iv | TC-20 |
+
+### 4.2.4 Interface and Integration Requirements
+
+Table 4.4 lists the interface and integration requirements. They describe how a person, the local model service, and outside tools meet the engine, and what happens when the model service fails.
+
+!tab Table 4.4: Interface and integration requirements
+!widths 0.75,3.2,0.75,0.9,0.7
+| ID | Requirement | Priority | Objective | Verified by |
+| IR-01 | Under each answer the application shall show what the engine decided, the skill it used, and the files it read, and shall open a file at the cited line. | Must | Sprint II | TC-08 |
+| IR-02 | If the Ollama service cannot embed a question, the search shall continue on words alone. If it cannot answer, the failure shall be reported and no answer shown. | Must | iii | TC-21 |
+| IR-03 | The MCP server shall exchange JSON-RPC messages over standard input and output, and shall offer its tools only after the client has initialised the session. | Should | iii | TC-11 |
+| IR-04 | The vault shall stay a folder that Obsidian can open: plain Markdown with links written between double square brackets. | Should | iii | TC-22 |
+
+## 4.3 System Analysis Diagrams
+
+This section presents the diagrams used to analyse the actors, the behaviour, and the structure of the system. Each diagram is introduced, shown, and then interpreted.
+
+### 4.3.1 Use Case Diagram
+
+The use case diagram gives the widest view of the system, namely who uses Burrow and for what. It was chosen because the engine serves three kinds of actor, and it addresses requirements FR-04 to FR-10. Figure 4.1 shows the boundary of the system and its actors: the person who owns the vault, the local model served by Ollama, and an outside model or tool that brings its own model.
+
+!fig figures/v2/use_cases.png | Figure 4.1: Use case diagram of Burrow | 6.2
+
+Asking a question and preparing a task for another model both include the same use case, deciding and packing the excerpts, so the engine's judgement is shared by every way of using it. Only the path of the local model includes checking the citations, because only there does the engine see the answer. Table 4.5 describes the use case that carries the study, "Ask a question", which exercises four of the five steps.
+
+!tab Table 4.5: Use case description: Ask a question
+!widths 1.4,4.9
+| Item | Description |
+| Actors | Person (primary), local model (supporting) |
+| Precondition | The vault has been indexed. Ollama is running with a chat model. |
+| Main flow | 1. The person asks a question. 2. The engine searches once and decides: leave the vault out, search, or follow links. 3. The engine picks a skill and packs the excerpts within the model's budget. 4. The local model answers. 5. The engine checks each file and line cited. 6. The person receives the answer, the decision line, and the sources. |
+| Alternative flows | At step 2 nothing in the vault is close, so the model answers without excerpts. At step 5, on the command line, a citation was not among the excerpts, so the model is asked once more and the better grounded answer is kept. |
+| Exceptions | Ollama cannot embed the question, so ranking continues on words alone. Ollama cannot answer, so the failure is reported and no answer is shown. |
+| Postcondition | No file in the vault has changed. Any citation that could not be verified is named. |
+
+### 4.3.2 Sequence Diagrams
+
+A sequence diagram shows the order of the messages between the parts of the system. It was chosen because the five steps must run in a fixed order, and the first diagram addresses FR-04 to FR-08. Figure 4.2 shows the messages exchanged when a person asks a question through the engine.
+
+!fig figures/v2/sequence_engine.png | Figure 4.2: Sequence diagram of a question asked through the engine | 5.6
+
+The model profile is fetched first, so the budget is known before any search begins. The local model is called once in the usual case and twice at most, the second time with the wrongly cited places named. Figure 4.3 shows the second way in, which addresses FR-10: an outside model using Burrow through the MCP tool vault_prepare.
+
+!fig figures/v2/sequence_mcp.png | Figure 4.3: Sequence diagram of an outside model preparing a task through MCP | 5.6
+
+The only model Burrow calls on this path is the embedding model. The outside model receives the decision, a skill, and the excerpts, and writes the answer itself. Burrow therefore never sees that answer and cannot check its citations.
+
+### 4.3.3 Activity Diagram
+
+The activity diagram shows the decisions of the engine's loop and who makes each one. It was chosen because the study depends on separating what the engine decides from what the model writes, and it addresses FR-04 to FR-09. Figure 4.4 follows the loop from a question to a kept note, in three swimlanes for the person, the engine, and the local model.
+
+!fig figures/v2/activity.png | Figure 4.4: Activity diagram of the engine's loop | 5.3
+
+Every choice about what the model reads is made in the engine lane, before the model is called. Each time the model returns something, the engine examines it before it is used. The last decision belongs to the person, who accepts or declines each proposed note.
+
+### 4.3.4 Class Diagram
+
+The class diagram shows the types of the engine and how they depend on one another. It was chosen because it maps directly to the Swift code and guided how the library was divided. Figure 4.5 shows the main types as they were built.
+
+!fig figures/v2/classes.png | Figure 4.5: Class diagram of the engine | 6.2
+
+The Vault type is the single entry point: brief decides and packs, engage adds the answer and the check, and lessons and keep are the two halves of Learn. A Brief contains no answer, which is why it can be handed to an outside model. Embedder and Answerer are protocols, so the tests run the whole loop with a scripted model in place of a real one.
+
+## 4.4 System Design Diagrams
+
+This section presents the diagrams that show how the system was organised to satisfy the analysed requirements.
+
+### 4.4.1 System Architecture
+
+The architecture diagram shows the components of Burrow and which component depends on which. It was chosen to show that all memory logic sits in one library that every surface uses, and it addresses FR-10 and NFR-06. Figure 4.6 shows the components in three layers: the surfaces that a person or a tool touches, a shared set of tools, and the core.
+
+!fig figures/v2/architecture.png | Figure 4.6: Architecture of Burrow | 6.2
+
+All memory logic is in BurrowCore, and every surface depends on it, so a change to the engine reaches the application, the terminal chat, and the MCP server at once. The Ollama client is the only part that leaves the process. Not every surface runs every step: the check with retry runs only on the command line, the app warns about an unverified citation, and the terminal chat and the MCP server use a fixed budget of 12,000 characters and not the fitted one.
+
+### 4.4.2 Engine Steps and Retrieval Design
+
+Objective ii names three mechanisms: a write policy, a retrieval policy, and a token budgeting mechanism. Figure 4.7 shows the five steps of the engine, what each reads and writes, and how the steps map to those mechanisms.
+
+!fig figures/v2/engine_steps.png | Figure 4.7: The five steps of the engine and the mechanisms of the proposal | 6.2
+
+Learn is the write policy, Decide and the retrieval behind it are the retrieval policy, and Fit is the token budgeting mechanism. Check was added in this study. The recency and importance scores of the proposal were not built, and ranking is by words, meaning, and links, as Section 5.4.7 records.
+
+Retrieval ranks each piece twice, by word match with BM25 (Robertson & Zaragoza, 2009) and by meaning. Meaning is the cosine between the vector of the question, q, and the vector of a piece, v, as in Equation 4.1.
+
+!eq cosine | Equation 4.1: Cosine similarity between a question and a piece
+
+The two rankings are merged by reciprocal rank fusion (Cormack et al., 2009), as in Equation 4.2, where the rank of piece p in ranking r counts from 1 and w(p) lowers the weight of test files and of the output of past runs. Pieces holding an exact name from the question, or from a file the question names, are placed before this ranking.
+
+!eq rrf | Equation 4.2: Merged score of a piece
+
+When links are followed, a neighbouring file n is ranked by Equation 4.3, where b(n) is its word match scaled so that the best file scores 1, h is the hop number, and k(n) depends on the kind of link.
+
+!eq walk | Equation 4.3: Score of a neighbouring file during a walk
+
+### 4.4.3 Logical Database Schema
+
+The index is the only database in the system, and it holds no original data. The schema was chosen as a design view because its tables decide what can be searched by words, by meaning, and by links, and it addresses DR-02 and NFR-02. Figure 4.8 shows its logical schema, which is one SQLite database.
+
+!fig figures/v2/schema.png | Figure 4.8: Logical schema of the index | 6.2
+
+A file is cut into pieces stored as chunks, and a piece has at most one vector, because the index also works on words alone. The chunks_fts table is the full-text index, and the links table holds the links between files. Nothing in the schema is a source of truth: the whole index, with the memory-mapped copy of its vectors and two small settings files beside it, can be rebuilt from the Markdown files, which satisfies NFR-02.
+
+### 4.4.4 Wireframes
+
+The wireframes planned where the engine's decisions would be shown to the person, which addresses IR-01 and the Sprint II request for something a person can see and use. Figure 4.9 is the main window of the Mac application with the Ask panel open.
+
+!fig figures/v2/wire_main.png | Figure 4.9: Wireframe of the main window with the Ask panel | 6.0
+
+The decision line sits directly under the answer and says whether the vault was read, why, and which skill was handed to the model. A warning line appears only when the answer cites a place the model was not shown. Figure 4.10 is the note editor, where a note is a plain Markdown file and a link to another note is written between double square brackets.
+
+!fig figures/v3/wire_editor.png | Figure 4.10: Wireframe of the note editor with its links | 6.0
+
+The panel on the right shows the note's neighbours as a small graph and lists the notes that link to it and the files it links to. These links are the ones the engine follows in FR-03. Figure 4.11 is the step where the person agrees to what is kept, which addresses FR-09 and DR-03. The engine offers at most three notes, each with its kind and one sentence.
+
+!fig figures/v3/wire_keep.png | Figure 4.11: Wireframe of the step where the person keeps what was decided | 6.0
+
+Each note has its own Keep button, so in the app a proposed note is written only by an act of the person, and a kept note appears as a new file in the Memory folder. Figure 4.12 is the terminal chat, which shows the same two moments as the window.
+
+!fig figures/v2/wire_terminal.png | Figure 4.12: Wireframe of the terminal chat | 6.0
+
+The line under each question is the engine's decision, and the /keep command offers each note in turn and waits for a yes before it writes.
+
+### 4.4.5 Deployment Diagram
+
+The deployment diagram shows where each part runs. It was chosen because it allows the privacy requirement NFR-01 to be inspected. Figure 4.13 shows the laptop and the two connections that leave it.
+
+!fig figures/v2/deployment.png | Figure 4.13: Deployment diagram of Burrow | 6.0
+
+The application, the command-line tool, the vault, the index, and both local models are on one laptop, and the engine reaches Ollama only on the loopback address. Neither of the two outside connections is made by the engine. One is an MCP client that the person chooses to connect, and the other is the evaluation harness calling the cloud model.
