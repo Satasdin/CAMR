@@ -4,7 +4,17 @@ Private project memory for local language models. Burrow keeps a software projec
 
 Burrow is a private vault for everything: notes in Markdown, with code folders linked in read-only, and any local Ollama model can read it. There is a Mac app, a terminal version and an MCP server, all on the same engine. Pick a folder as your vault, and an Obsidian vault works as it is. Build the app with `app/build.sh`, then open `app/build/Burrow.app`. It needs macOS 26 or later.
 
-## Needs
+## Install
+
+On Apple silicon with macOS 14 or later, from the [landing page](https://satasdin.github.io/CAMR/) or with:
+
+```bash
+curl -fsSL https://github.com/Satasdin/CAMR/releases/latest/download/install.sh | sh
+```
+
+Add `-s -- --app` after `sh` to install the desktop app as well.
+
+## Needs to build from source
 
 - A Mac with Xcode
 - [Ollama](https://ollama.com) with a chat model and the embedding model:
