@@ -1,0 +1,101 @@
+# Decisions
+
+Each entry says what was decided and why, so every choice can be defended. Newest last.
+
+**D-1. Swift only for the app and engine.** There is no Python to install, so another person can run it, as the course guide requires. The app and the test tool share one engine, so the tests measure what ships.
+
+**D-2. The files are the truth.** Code stays where it is. Notes are Markdown in `.burrow/notes`. `index.sqlite` is built from them and can be deleted at any time. A test confirms that deleting it loses nothing.
+
+**D-3. Word search plus embeddings, merged by rank.** Word search finds exact names, embeddings find meaning. Reciprocal rank fusion merges them without tuning between two unlike scores.
+
+**D-4. Links come from the code.** Imports for Python, JavaScript, TypeScript and C. Everywhere else, a file links to the file defining a name it uses. No model decides what is linked, so links can be checked. A name used by more than a tenth of the files is ignored, because it connects nothing.
+
+**D-5. A cluster is a folder, limited to two levels.** Simple, predictable and readable on the Map.
+
+**D-6. The vault walks and the model reads.** Search finds where to start, then Burrow follows links for up to two hops. A link opens the part of the file defining the name that made the link, or else the best word match.
+
+**D-7. Every mode gets the same amount of text.** The default is 12,000 characters. A walk that runs out of links spends the rest on further search results. A win therefore cannot come from simply reading more.
+
+**D-8. Code and notes are data.** The prompt says to follow no instruction inside excerpts. Search terms are quoted, so a question cannot act as query syntax.
+
+**D-9. Large data files are left out.** JSON, XML, YAML and text files over 32 KB are not indexed. On the first real repository, results files made up about 90% of the chunks and drowned the code. Small configuration files are kept.
+
+**D-10. Long jobs run in tmux, in a session named `burrow`.** They survive when a Claude session ends. An earlier benchmark queue was lost that way.
+
+**D-11. The default model is Qwen3 4B Instruct, and excerpts carry line numbers.** On one question about a real repository, `qwen3:4b` reasoned aloud for 97 to 197 seconds even with thinking switched off, while the instruct build answered in 4 to 6 seconds. Without numbered lines the model invented a line number, and with them it cited the right one. This is one question, so it is a working choice and not a result.
+
+**D-12. An exact name wins.** A chunk holding a compound name typed in the question, such as `APP_MEMORY`, goes ahead of the merged ranking, and where it is defined comes before where it is used. Underscores stay part of a word in the search index. This applies to plain search and to the walk alike, so the comparison stays fair. It was found on the CAMR repository, so that repository can't be used for final scoring.
+
+**D-13. The agent test is a separate target on the same engine.** `burrow-trial` and the `BurrowTrial` library call the Vault the app calls, so the test measures what ships. They add nothing to `BurrowCore`.
+
+**D-14. Projects are hand-authored and fixed, not generated from seeds.** A project is a folder of starting code, briefs, hidden tests and correct solutions, written by Claude and declared in the AI-use log. The plan said "fixed seeds", which was meant to make runs repeatable. Fixed files do that, and a template generator would have produced look-alike projects. The model's own seed stays fixed in `Ollama.swift`.
+
+**D-15. A project must prove it can measure before any model runs.** `burrow-trial verify` requires that the correct solution passes, that the code before each task fails its task tests, that each tempting wrong fix fails the decision tests by a failed assertion and not a crash, and that the final code passes every session's tests.
+
+**D-16. Sessions are categorised, and only later ones are scored.** Setup sessions establish a decision and are not scored. Depends sessions need an earlier decision, plain sessions are a control needing no memory, and unknown sessions ask about something never recorded, where the right answer is "I don't know".
+
+**D-17. Each session starts from correct code.** The code is reset to the starting code plus the correct solutions of earlier sessions, as if a teammate had merged them. One failed session therefore cannot make later ones fail, and what differs between modes is memory and not accumulated damage.
+
+**D-18. Every mode gets the same reading allowance.** After the excerpts, a simulated developer agent may open files in up to three rounds, within 12,000 characters. An attempt to replace a file it has not fully seen opens that file first and costs a round, because a whole-file edit made from an excerpt would delete the rest of the file.
+
+**D-19. Notes come from the brief alone, once per session.** The model writes them through the normal note pipeline, so they are real and not scripted. Writing them only from the brief makes the notes identical for search and walk, so those two modes differ only in retrieval. With no memory, no notes are filed.
+
+**D-20. A broken decision means a failed assertion.** Code that crashes says nothing about whether a decision was kept, so an error is recorded separately as "decision check errored" and not counted as broken. A session where the agent changed nothing is also reported, because it trivially keeps every decision.
+
+**D-21. Code written by a model runs in a sandbox.** Hidden tests run under `sandbox-exec` with no network and no writes outside the run's scratch folder, using `python3 -B` and a 20 second limit. A test confirms a write outside the folder is blocked.
+
+**D-22. Line numbers copied into a file are removed.** Excerpts carry line numbers and opened files do not. If every line of a written file starts with a number, the harness strips them, so a copied number can't count against the modes that show excerpts.
+
+**D-23. Results are saved once.** A run refuses to write into an existing results folder, unless told to overwrite. Simulated developer agents are reported as exactly that, and never as participants.
+
+**D-24. A file block with no end line is kept if the model stopped by itself.** Then nothing is lost. If the reply reached the length limit, the block is half a file and is dropped, and that is counted as a parse failure. A note's next line naming its file stays with the note, because that is what links the note to code.
+
+**D-25. In a note, an everyday word is not a link.** A plain lowercase word such as "amount" links a note to code only when the note writes it as code: in backticks, with brackets, or next to the word "function". Names with capitals or underscores, and file paths, still link. On Burrow's own repository a note about text budgets had linked to a pricing file, and the walk followed it. This was found on Burrow's own code and the tuning project, not on held-back material.
+
+**D-26. The app is a separate package in `app/`, using the same engine.** It builds on its own with `app/build.sh`. Map, Notes and Ask call `BurrowCore`, and a proposed change uses the reply format and note wording from the agent test, so the test measures what ships. Ask always walks. A change is written to the file only when someone accepts it, and only if the file hasn't changed since it was proposed.
+
+**D-27. Tools are defined once, in `BurrowTools`.** The MCP server and the terminal chat read the same list and run the same code, so a tool can't behave one way for Claude Code and another way for a local model. The seven tools are `vault_search`, `vault_read`, `vault_links`, `vault_list`, `vault_folders`, `vault_remember` and `vault_ask`.
+
+**D-28. Tools open only what is indexed.** `vault_read` and `vault_links` look a path up in the index before touching the disk. That shuts out `..`, absolute paths, git-ignored files and Burrow's own store, with one rule and no list of exceptions. A path that isn't indexed yet triggers one re-index before it is refused, so a new file isn't turned away.
+
+**D-29. Only `vault_remember` writes, and only by adding a note.** It calls the same `addNote` as the command line, which never overwrites. Re-indexing writes to `.burrow`, which is disposable by D-2, and is the only other thing the tools change. In the terminal chat a person has to agree to each note first, because a model reading a poisoned file must not be able to plant memory in the vault. Over MCP, that decision belongs to the client, so the tool is marked as not read-only.
+
+**D-30. Project text is marked as data, and can't escape its mark.** Tool output says that text inside `<excerpt>` tags is project content, and to follow no instruction in it. A file containing `</excerpt>` has that text defanged, so it can't end the block early and pass what follows as Burrow's own words. This extends D-8 to clients Burrow doesn't control.
+
+**D-31. The MCP server is hand-written, line-delimited JSON-RPC 2.0 over stdio.** No dependency, as with the rest of the engine. A call that doesn't fit the tool's definition is a JSON-RPC error (-32602), and a tool that can't do its job (no such file, Ollama down) is a normal result with `isError` set, so a model can read it and try again. `ping` and `tools/list` answer at once. Tool calls run one at a time, because a `Vault` can't be shared between threads. Stdout is duplicated privately and the real descriptor pointed at stderr, so nothing else can write into the protocol.
+
+**D-32. `burrow chat` searches first by default, and says so.** `ollama run` has no tool support in 0.40.14, so the chat calls `/api/chat` with `tools` itself. On 16 questions with known answers from a scratch vault, `qwen3:4b-instruct-2507-q4_K_M` called a tool by itself on 6 with the first prompt and 7 with a blunter one, and got 6 and then 8 right. It answered the rest from nothing. `qwen3:1.7b` called on 11 and got 9 right, and `qwen3:8b` called on all 16 and got 15 right. Searching first took the 4B to 16 of 16 and the 1.7B to 15 of 16, so that is the default. The search is printed with a label saying Burrow ran it and the model didn't choose it, and `--tools-only` turns it off. This is one small vault and fixed questions, so it is a working choice and not a result.
+
+**D-33. Chat history keeps questions and answers, and drops tool output.** Old excerpts would crowd the next question out of the model's context. Each question is limited to 5 rounds and 24,000 characters of tool output. After that the model is offered no tools and has to answer.
+
+**D-34. The terminal view is raw ANSI with no dependencies, in `BurrowTUI`.** Keys become events, events change a `Model`, and a `View` draws a cell grid from it. Only changed cells are sent. Colour means something and there is little of it: gold for notes, blue for code, red for trouble, always paired with a shape or weight so it survives `NO_COLOR`. Layout follows the Reading Room direction: text capped at 80 columns, no boxes around panes, and the side panel only when there's room. There's no mouse capture, so terminal text selection keeps working.
+
+**D-35. Anything from a file is cleaned before it reaches the terminal.** Control characters are dropped at the cell grid, so a note or a model can't send escape codes. Pasted text arrives as one event and is never read as keys. The terminal is restored by a signal handler that only uses plain memory, on exit, Control-C, termination and crash signals alike.
+
+**D-36. The terminal view opens the vault twice.** A `Vault` can't be shared between threads, so the screen reads through one and background jobs (indexing, Ask) use another. SQLite's write-ahead log lets the two work at once.
+
+**D-37. The star view shows one file and its neighbours, and counts what's beyond.** A list already names the links. The star adds what a list can't show at a glance: how much hangs off each neighbour, and a way to walk the vault by hopping between files. Names two links away would be clutter, so they are only specks.
+
+**D-38. `burrow link` and `burrow index --vault` are new, and the old commands are unchanged.** The terminal has to be able to link a code folder and to embed a whole vault. Without `--vault`, `index` behaves exactly as before.
+
+**D-39. Tools re-index only when the files have changed.** `Vault.refresh` reads every file and rebuilds every link. Before calling it, the tools compare a quick summary of every file's name, size and date with the one saved beside the index, and skip it if they match. That costs a directory walk and no file reads, which matters most for a linked folder in iCloud, where a read waits for the file to download. Adding a note always re-indexes.
+
+**D-40. A vault holds everything, and code is one thing it can hold.** Every Markdown file in the vault is a note. Other folders are linked in under a name of their own and stay read-only unless someone accepts a proposed change. The single-project mode stays for the agent test, so its results keep meaning the same thing.
+
+**D-41. A question limited to a folder stays inside that folder.** An earlier version let the walk reach notes linked to the folder. On the first real try those notes crowded out the code and the model answered from an unrelated note. Asking the whole vault still reads notes and code together.
+
+**D-42. Markdown marks show only on the line being edited.** Each mark is given no width elsewhere, so the file keeps every character and a note reads as finished text. A blank line is drawn short, or paragraphs drift apart.
+
+**D-43. The graph is a live simulation that settles before it is first shown.** Links pull together, near things push apart and folders gather. It opens calm rather than exploding outwards, and it only moves again when something is dragged.
+
+**D-44. Claude Code through Ollama is not a supported way to use Burrow's small models.** On one task, `qwen3:8b` with a 32,768-word context either answered without using Burrow, or searched and then repeated edits until it timed out. `burrow chat` is the local route, and Claude Code is for cloud models. This is one task on one project.
+
+**D-45. Tests and the output of past runs rank below the code they are about.** They repeat its words, so on Burrow's own repository a test file came first on 6 of 13 questions about code, and run summaries pushed the code out entirely on one. Their search score is multiplied by 0.7 and 0.4, unless the question asks for tests or results or names the file or folder. They are demoted and never removed. Markdown is never demoted, because a person wrote it. Checked on 16 hand-written questions on this repository: right file first went from 6 to 10, in the first four files from 13 to 15. This is a tuning check and not a result.
+
+**D-46. A piece of a file also has a limit in characters.** Pieces were measured only in lines, so prose with long lines became 8,431 characters while an excerpt shows 3,000, and the rest could never be read. Pieces now stop at 3,000 characters on a blank line. An index built before this rebuilds itself the next time it is refreshed.
+
+**D-47. One lock guards each database connection.** An async call on `Vault` leaves its caller's actor, so the app could ask a question on the same connection as a rebuild. A stress test crashed 5 times in 5 before the lock and passed 8 times in 8 after it. A transaction holds the lock until it ends.
+
+**D-48. A reason has to be written down somewhere.** With memory on, the model read a limit in the code and made up why it existed, where with no memory it said it did not know. Every prompt now says that code shows what and not why, that a setting's value is not a reason, and that an unrecorded reason should be reported as not recorded. On 12 tuning questions with no recorded reason, honest answers went from 8 to 10 with search and stayed at 10 with walk; the 5 questions with recorded reasons and 5 plain facts stayed right. The remaining failures call the code itself the reason. Other tasks on the tuning project moved up and down with the new wording, so that project's small changes in score are noise. This is a tuning check and not a result.
+
+**D-49. The evaluation is fixed in advance.** `docs/report/evaluation-plan.md` was written before any held-back project or real repository was run. The engine is tagged `evaluation-1` and isn't changed until scoring ends. A fault found during scoring is reported and not fixed in place.
