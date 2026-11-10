@@ -1,0 +1,98 @@
+{
+ "created": "2026-11-10T13:21:28+03:00",
+ "model": "qwen3.5:4b",
+ "cloud_model": "claude-sonnet-5-5",
+ "date": "2026-11-10T13:21:28+03:00",
+ "ollama_version": "ollama version is 0.40.14",
+ "burrow": "work/bin/burrow-evaluation-2",
+ "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+ "task_files": {
+  "tasks/knowledge.jsonl": "fdd35a67b0369edf26ad0e4dbfd5f122a390b975dc8ec3dcfeb45476521b16b9",
+  "tasks/project.jsonl": "667f0303f8e23ffa67a8b2388878a8f211880e33ba772f2cdc1705488cd25b84",
+  "tasks/reasoning.jsonl": "0b938b170ed0b1399a2a2bbec6337a4cbafa17eec29177478f57809bae6d98c9"
+ },
+ "setups": {
+  "local_alone": {
+   "model": "qwen3.5:4b",
+   "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+   "vault": null,
+   "reasoning_suffix": true
+  },
+  "local_database": {
+   "model": "qwen3.5:4b",
+   "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+   "vault": "/Users/p3wrky/Developer/burrow/trials/gap/vault",
+   "reasoning_suffix": true
+  },
+  "chroma": {
+   "model": "qwen3.5:4b",
+   "embed_model": "qwen3-embedding:0.6b",
+   "vault": "/Users/p3wrky/Developer/burrow/trials/gap/vault",
+   "reasoning_suffix": true
+  },
+  "local_engine": {
+   "model": "qwen3.5:4b",
+   "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+   "vault": "/Users/p3wrky/Developer/burrow/trials/gap/vault",
+   "reasoning_suffix": true
+  }
+ },
+ "invocations": [
+  {
+   "date": "2026-11-10T13:21:28+03:00",
+   "setups": [
+    "local_alone",
+    "local_database",
+    "chroma",
+    "local_engine"
+   ],
+   "model": "qwen3.5:4b",
+   "cloud_model": "claude-sonnet-5-5",
+   "burrow": "work/bin/burrow-evaluation-2",
+   "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+   "ollama_version": "ollama version is 0.40.14",
+   "task_files": {
+    "tasks/knowledge.jsonl": "fdd35a67b0369edf26ad0e4dbfd5f122a390b975dc8ec3dcfeb45476521b16b9",
+    "tasks/project.jsonl": "667f0303f8e23ffa67a8b2388878a8f211880e33ba772f2cdc1705488cd25b84",
+    "tasks/reasoning.jsonl": "0b938b170ed0b1399a2a2bbec6337a4cbafa17eec29177478f57809bae6d98c9"
+   },
+   "vault": "/Users/p3wrky/Developer/burrow/trials/gap/vault",
+   "store": "/Users/p3wrky/Developer/burrow/trials/gap/work/store",
+   "tasks_selected": 170,
+   "python": "3.9.6",
+   "reasoning_suffix": "\n\nShow your working briefly, then give the final answer as a number on the last line.",
+   "argv": [
+    "--tasks",
+    "tasks/knowledge.jsonl",
+    "tasks/project.jsonl",
+    "tasks/reasoning.jsonl",
+    "--burrow",
+    "work/bin/burrow-evaluation-2",
+    "--vault",
+    "vault",
+    "--store",
+    "work/store",
+    "--no-index",
+    "--setups",
+    "local_alone",
+    "local_database",
+    "chroma",
+    "local_engine",
+    "--model",
+    "qwen3.5:4b",
+    "--out",
+    "../results/gap-1/qwen3.5-4b"
+   ]
+  }
+ ],
+ "chroma": {
+  "version": "1.5.9",
+  "embed_model": "qwen3-embedding:0.6b",
+  "pieces": 846,
+  "chunk_chars": 1200,
+  "overlap": 150,
+  "budget_chars": 12000,
+  "vault_sha256": "2e41f6a939c0754e53a151820033ee9f72399b375ef6d4fd59c7740180fa771e",
+  "build_s": 0.0
+ }
+}

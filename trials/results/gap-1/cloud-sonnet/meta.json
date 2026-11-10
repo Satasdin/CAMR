@@ -1,0 +1,76 @@
+{
+ "created": "2026-11-10T12:14:01+03:00",
+ "model": "qwen3:4b-instruct-2507-q4_K_M",
+ "cloud_model": "claude-sonnet-5-5",
+ "date": "2026-11-10T12:14:01+03:00",
+ "ollama_version": "ollama version is 0.40.14",
+ "burrow": "work/bin/burrow-evaluation-2",
+ "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+ "task_files": {
+  "tasks/knowledge.jsonl": "fdd35a67b0369edf26ad0e4dbfd5f122a390b975dc8ec3dcfeb45476521b16b9",
+  "tasks/project.jsonl": "667f0303f8e23ffa67a8b2388878a8f211880e33ba772f2cdc1705488cd25b84",
+  "tasks/reasoning.jsonl": "0b938b170ed0b1399a2a2bbec6337a4cbafa17eec29177478f57809bae6d98c9"
+ },
+ "setups": {
+  "cloud_alone": {
+   "cloud_model": "claude-sonnet-5-5",
+   "vault": null,
+   "reasoning_suffix": true
+  },
+  "cloud_engine": {
+   "cloud_model": "claude-sonnet-5-5",
+   "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+   "vault": "/Users/p3wrky/Developer/burrow/trials/gap/vault",
+   "reasoning_suffix": true
+  }
+ },
+ "invocations": [
+  {
+   "date": "2026-11-10T12:14:01+03:00",
+   "setups": [
+    "cloud_alone",
+    "cloud_engine"
+   ],
+   "model": "qwen3:4b-instruct-2507-q4_K_M",
+   "cloud_model": "claude-sonnet-5-5",
+   "burrow": "work/bin/burrow-evaluation-2",
+   "burrow_sha256": "172c3b3831c4d7cf2c1c60e8abd216669cdc56c2c1df07f14642a8293312cc8a",
+   "ollama_version": "ollama version is 0.40.14",
+   "task_files": {
+    "tasks/knowledge.jsonl": "fdd35a67b0369edf26ad0e4dbfd5f122a390b975dc8ec3dcfeb45476521b16b9",
+    "tasks/project.jsonl": "667f0303f8e23ffa67a8b2388878a8f211880e33ba772f2cdc1705488cd25b84",
+    "tasks/reasoning.jsonl": "0b938b170ed0b1399a2a2bbec6337a4cbafa17eec29177478f57809bae6d98c9"
+   },
+   "vault": "/Users/p3wrky/Developer/burrow/trials/gap/vault",
+   "store": "/Users/p3wrky/Developer/burrow/trials/gap/work/store",
+   "tasks_selected": 170,
+   "python": "3.9.6",
+   "reasoning_suffix": "\n\nShow your working briefly, then give the final answer as a number on the last line.",
+   "argv": [
+    "--tasks",
+    "tasks/knowledge.jsonl",
+    "tasks/project.jsonl",
+    "tasks/reasoning.jsonl",
+    "--burrow",
+    "work/bin/burrow-evaluation-2",
+    "--vault",
+    "vault",
+    "--store",
+    "work/store",
+    "--no-index",
+    "--setups",
+    "cloud_alone",
+    "cloud_engine",
+    "--cloud-model",
+    "claude-sonnet-5-5",
+    "--out",
+    "../results/gap-1/cloud-sonnet"
+   ]
+  }
+ ],
+ "cloud_tokens": {
+  "input": 1286668,
+  "output": 93397
+ },
+ "cloud_temperature_sent": false
+}
