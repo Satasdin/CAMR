@@ -1,4 +1,4 @@
-!tab Table 5.11: Answers right by subject, Gemma 4 12B and the cloud model
+!tab Table A3.2: Answers right by subject, Gemma 4 12B and the cloud model
 !widths 1.1,0.9,0.9,0.9,0.9,0.9,0.9
 | Subject | Alone | Plain retrieval | Chroma | Engine | Cloud alone | Cloud with Burrow |
 | Kenyan law | 8 of 40 (20%) | 29 of 40 (72%) | 17 of 40 (42%) | 31 of 40 (78%) | 19 of 40 (48%) | 33 of 40 (82%) |

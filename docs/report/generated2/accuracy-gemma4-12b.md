@@ -1,4 +1,4 @@
-!tab Table 5.9: Answers right by set-up and task type, Gemma 4 12B
+!tab Table 5.4: Answers right by set-up and task type, Gemma 4 12B
 !widths 1.9,1.4,1.5,1.3
 | Set-up | Knowledge, one fact | Knowledge, several facts | Reasoning |
 | Model alone | 8 of 75 (11%) | 1 of 45 (2%) | 47 of 50 (94%) |

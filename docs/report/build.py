@@ -25,7 +25,7 @@ PROJECT_TYPE = "[Internal Project]"
 
 TITLE = "A Lightweight External Memory Engine to Bridge the Capability Gap Between On-Device and Cloud Language Models"
 # The chapters revised from the approved proposal live in chapters2. The rejected first rewrite stays in chapters.
-CHAPTERS = HERE / "chapters2"
+CHAPTERS = HERE / "chapters3"
 INLINE = re.compile(r"(\[PENDING:.*?\]|\*\*\*.+?\*\*\*|\*\*.+?\*\*|\*.+?\*|`.+?`)")
 
 
@@ -81,6 +81,7 @@ def mparen(*body):
 
 
 EQUATIONS = {
+    "accuracy": lambda: [mt("Accuracy = "), mfrac([mt("answers marked right", plain=True)], [mt("questions asked", plain=True)])],
     "gap": lambda: [mt("Gap closed = "), mfrac([msub([mt("S")], [mt("treatment", plain=True)]), mt(" \u2212 "), msub([mt("S")], [mt("floor", plain=True)])], [msub([mt("S")], [mt("ceiling", plain=True)]), mt(" \u2212 "), msub([mt("S")], [mt("floor", plain=True)])])],
     "recall": lambda: [mt("recall(i, m) = "), mfrac([mt("|"), msub([mt("G")], [mt("i")]), mt(" \u2229 "), msub([mt("F")], [mt("i,m")]), mt("|")], [mt("|"), msub([mt("G")], [mt("i")]), mt("|")])],
     "sign": lambda: [mt("p = min"), mparen(mt("1, 2 "), msum([mt("j=0")], [mt("min(b,c)")], [mparen(mfrac([mt("b+c")], [mt("j")], bar=False)), mt(" 0.5"), mel("sSup", mel("e", mt("")), mel("sup", mt("b+c")))]))],

@@ -141,7 +141,7 @@ def extras(data, numbers):
     # One example of each kind.
     def first(prefix):
         return tasks[sorted(i for i in tasks if i.startswith(prefix))[0]]
-    lines = ["!tab Table 5.5: One question of each kind with its answer key", "!widths 1.1,3.6,1.6", "| Kind | Question | Key |"]
+    lines = ["!tab Table A3.7: One question of each kind with its answer key", "!widths 1.1,3.6,1.6", "| Kind | Question | Key |"]
     for label, prefix in (("Law, one fact", "law-s"), ("Software, several facts", "sw-m"), ("Private project, one fact", "proj-s"), ("Reasoning", "gsm")):
         task = first(prefix)
         key = task.get("answer") or "; ".join(" or ".join(group) for group in task["must_include"])
@@ -237,7 +237,7 @@ def main():
     cloud_alone, cloud_engine = data[CLOUD]["cloud_alone"], data[CLOUD]["cloud_engine"]
     knowledge = lambda r: r["type"] != "reasoning"
 
-    for folder, label, number in ((MAIN, "Gemma 4 12B", "5.9"), (SMALL, "Qwen3.5 4B", "5.10")):
+    for folder, label, number in ((MAIN, "Gemma 4 12B", "5.4"), (SMALL, "Qwen3.5 4B", "A3.1")):
         local = data[folder]
         if not local["local_alone"]:
             continue
@@ -268,7 +268,7 @@ def main():
         row.append(percent(right(cloud_engine, keep)) if cloud_engine else "-")
         rows.append(row)
     (OUT / "subjects.md").write_text(table(
-        "Table 5.11: Answers right by subject, Gemma 4 12B and the cloud model", [1.1, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+        "Table A3.2: Answers right by subject, Gemma 4 12B and the cloud model", [1.1, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
         ["Subject", "Alone", "Plain retrieval", "Chroma", "Engine", "Cloud alone", "Cloud with Burrow"], rows))
 
     # Gap closed.
@@ -286,7 +286,7 @@ def main():
                 "not reported" if gaps[f"{folder}|{name}|{s}"] is None else f"{100 * gaps[f'{folder}|{name}|{s}']:.0f}%"
                 for s in ("local_database", "chroma", "local_engine")])
     (OUT / "gap.md").write_text(table(
-        "Table 5.12: Fraction of the capability gap closed (Equation 3.1), against the cloud model alone", [0.9, 1.2, 1.0, 1.0, 0.8, 0.7, 0.7],
+        "Table 5.5: Fraction of the capability gap closed (Equation 3.1), against the cloud model alone", [0.9, 1.2, 1.0, 1.0, 0.8, 0.7, 0.7],
         ["Local model", "Task type", "Floor: model alone", "Ceiling: cloud alone", "Plain retrieval", "Chroma", "Engine"], rows))
     numbers["gap"] = gaps
 
@@ -306,7 +306,7 @@ def main():
             rows.append(["Claude", NAMES[setup], f"{median(source, 'prompt_tokens', knowledge):.0f}", f"{median(source, 'seconds', knowledge):.1f}", "-",
                          percent(recall(source, knowledge)) if setup == "cloud_engine" else "-"])
     (OUT / "cost.md").write_text(table(
-        "Table 5.13: Cost of an answer on knowledge questions: tokens read, seconds, and whether the evidence was retrieved", [0.9, 1.6, 0.8, 0.8, 0.9, 1.2],
+        "Table 5.6: Cost of an answer on knowledge questions: tokens read, seconds, and whether the evidence was retrieved", [0.9, 1.6, 0.8, 0.8, 0.9, 1.2],
         ["Model", "Set-up", "Median tokens read", "Median seconds", "Median seconds before the model", "Every evidence file retrieved"], rows))
 
     # Where the wrong answers came from.
@@ -325,7 +325,7 @@ def main():
         split["cloud|cloud_engine"] = (shown, missing)
         rows.append(["Claude", NAMES["cloud_engine"], shown + missing, missing, shown])
     (OUT / "wrong.md").write_text(table(
-        "Table 5.18: Wrong knowledge answers, by whether the files holding the answer were shown to the model", [0.9, 1.9, 0.9, 1.4, 1.4],
+        "Table A3.6: Wrong knowledge answers, by whether the files holding the answer were shown to the model", [0.9, 1.9, 0.9, 1.4, 1.4],
         ["Model", "Set-up", "Wrong answers", "A needed file was not shown", "Every needed file was shown"], rows))
     numbers["wrong"] = split
 
@@ -347,7 +347,7 @@ def main():
                 tests[f"{folder}|{a}|{b}|{name}"] = (up, down, p)
                 rows.append([label, f"{NAMES[a]} against {NAMES[b].lower()}", name, up, down, fmt_p(p)])
     (OUT / "sign.md").write_text(table(
-        "Table 5.14: Paired comparisons by exact sign test", [0.9, 2.5, 0.9, 0.7, 0.7, 0.7],
+        "Table A3.3: Paired comparisons by exact sign test", [0.9, 2.5, 0.9, 0.7, 0.7, 0.7],
         ["Model", "Comparison", "Questions", "First right only", "Second right only", "p"], rows))
     numbers["sign"] = tests
 
@@ -363,8 +363,8 @@ def main():
                              "skills": dict(skills), "retried": retried, "citations_named": named, "citations_not_shown": missing}
         rows = [[("Reasoning" if k[0] else "Knowledge"), {"none": "Vault left out", "search": "Search", "walk": "Search, then links"}.get(k[1], k[1]), v]
                 for k, v in sorted(routes.items())]
-        text = table("Table 5.15: What the engine decided, Gemma 4 12B", [1.5, 2.2, 1.0], ["Questions", "Decision", "Count"], rows)
-        text += "\n" + table("Table 5.16: The method handed to the model, Gemma 4 12B", [2.6, 1.0], ["Skill", "Questions"],
+        text = table("Table A3.4: What the engine decided, Gemma 4 12B", [1.5, 2.2, 1.0], ["Questions", "Decision", "Count"], rows)
+        text += "\n" + table("Table A3.5: The method handed to the model, Gemma 4 12B", [2.6, 1.0], ["Skill", "Questions"],
                              [[k, v] for k, v in skills.most_common()])
         (OUT / "decisions.md").write_text(text)
 
@@ -393,7 +393,7 @@ def main():
             rows.append([f"{size:,}" + (" (fitted)" if size == int(budget) else ""), percent((got, n)), f"{tokens:.0f}",
                          "-" if value is None else f"{100 * value:.0f}%", f"{per_thousand:.1f}", f"{median(rows_, 'seconds', knowledge):.1f}"])
         (OUT / "sweep.md").write_text(table(
-            "Table 5.17: How much of the vault the model is shown, against what it gains, Gemma 4 12B, knowledge questions", [1.3, 1.3, 0.9, 0.9, 1.2, 0.8],
+            "Table 5.7: How much of the vault the model is shown, against what it gains, Gemma 4 12B, knowledge questions", [1.3, 1.3, 0.9, 0.9, 1.2, 0.8],
             ["Characters shown", "Answers right", "Median tokens read", "Gap closed", "Points gained per 1,000 tokens", "Median seconds"], rows))
         numbers["sweep"] = curve
 

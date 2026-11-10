@@ -1,4 +1,4 @@
-!tab Table 5.5: One question of each kind with its answer key
+!tab Table A3.7: One question of each kind with its answer key
 !widths 1.1,3.6,1.6
 | Kind | Question | Key |
 | Law, one fact | Under Kenya's Data Protection Act, 2019, within how many hours of becoming aware of a personal data breach that poses a real risk of harm must a data controller notify the Data Commissioner? | seventy-two or 72 |
