@@ -432,10 +432,8 @@ class Writer:
         if name.startswith("7-"):
             self.heading(1, "References")
             wanted = set(self.library.cited)
-            # The reference list itself is inserted in Word by Mendeley Cite (Insert Bibliography) at this bookmark.
-            made = self.document.add_paragraph(style="Bibliography")
-            made.add_run(" ")
-            self.marks.wrap(made, "ReferenceListHere", 0)
+            # The full list is written out inside Mendeley's bibliography control, so a Mendeley Refresh updates it in place.
+            self.bibliography([l[2:].strip() for l in lines if l.startswith("@ ")])
             return
         i = 0
         while i < len(lines):
