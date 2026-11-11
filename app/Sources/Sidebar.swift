@@ -16,6 +16,7 @@ struct Sidebar: View {
                     ExplorerTab(icon: "folder", help: "Files", on: workspace.sidebarMode == .files) { workspace.sidebarMode = .files }
                     ExplorerTab(icon: "magnifyingglass", help: "Search (⇧⌘F)", on: workspace.sidebarMode == .search) { workspace.sidebarMode = .search }
                     ExplorerTab(icon: "number", help: "Tags", on: workspace.sidebarMode == .tags) { workspace.sidebarMode = .tags }
+                    ExplorerTab(icon: "bookmark", help: "Bookmarks", on: workspace.sidebarMode == .bookmarks) { workspace.sidebarMode = .bookmarks }
                     Spacer()
                     if workspace.sidebarMode == .files {
                         ExplorerTab(icon: "square.and.pencil", help: "New note (⌘N)", on: false) { Task { await workspace.newNote() } }
@@ -27,6 +28,7 @@ struct Sidebar: View {
                 case .files: FileTree(workspace: workspace)
                 case .search: SearchPanel(workspace: workspace)
                 case .tags: TagPanel(workspace: workspace)
+                case .bookmarks: BookmarksPanel(workspace: workspace)
                 }
             }
         }
@@ -223,6 +225,7 @@ struct FileTree: View {
             }
         } else {
             Button("Open in New Tab") { workspace.go(.file(node.path), newTab: true) }
+            Button(workspace.isBookmarked(node.path) ? "Remove Bookmark" : "Bookmark") { Task { await workspace.toggleBookmark(node.path) } }
             Divider()
         }
         if node.isLinkedRoot {
@@ -312,6 +315,34 @@ struct TagPanel: View {
         .listStyle(.sidebar)
         .overlay {
             if workspace.tags.isEmpty { Text("Write #tags in your notes to see them here.").font(.callout).foregroundStyle(.secondary).padding() }
+        }
+    }
+}
+
+/// Obsidian's bookmarks: files kept to hand, in the order they were added.
+struct BookmarksPanel: View {
+    let workspace: Workspace
+
+    var body: some View {
+        List(selection: Binding(get: { workspace.currentPath }, set: { if let path = $0 { workspace.go(.file(path)) } })) {
+            ForEach(workspace.bookmarks, id: \.self) { path in
+                Label {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(path.title).lineLimit(1)
+                        if !path.folderPath.isEmpty { Text(path.folderPath).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                    }
+                } icon: {
+                    Image(systemName: LibraryKind.of(path).symbol).foregroundStyle(LibraryKind.colour(of: path) ?? .secondary)
+                }
+                .tag(path)
+                .contextMenu { Button("Remove Bookmark") { Task { await workspace.toggleBookmark(path) } } }
+            }
+        }
+        .listStyle(.sidebar)
+        .overlay {
+            if workspace.bookmarks.isEmpty {
+                ContentUnavailableView("No bookmarks", systemImage: "bookmark", description: Text("Right-click a file and choose Bookmark, or press the bookmark in a note's toolbar."))
+            }
         }
     }
 }

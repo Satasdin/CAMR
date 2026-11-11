@@ -98,6 +98,12 @@ struct MainWindow: View {
                 }
                 .help(workspace.isReading ? "Edit this note (⌘E)" : "Read this note (⌘E)")
             }
+            if let path = workspace.currentPath {
+                Button { Task { await workspace.toggleBookmark(path) } } label: {
+                    Label(workspace.isBookmarked(path) ? "Remove Bookmark" : "Bookmark", systemImage: workspace.isBookmarked(path) ? "bookmark.fill" : "bookmark")
+                }
+                .help(workspace.isBookmarked(path) ? "Remove this file from Bookmarks" : "Bookmark this file")
+            }
             Button { showInspector.toggle() } label: { Label("Details", systemImage: "sidebar.right") }
                 .help("Show or hide links and outline")
         }

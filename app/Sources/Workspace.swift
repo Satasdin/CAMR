@@ -30,6 +30,16 @@ actor Engine {
     }
     func revert(_ id: String, why: String) throws { try Ledger(vault: vault).revert(id, why: why, author: "person", client: "Burrow app") }
     func resumeText(_ branch: String?) -> String { Ledger(vault: vault).resume(branch: branch) }
+    /// Bookmarks live beside the index, as Obsidian keeps its own in the vault: a plain list of vault paths.
+    func bookmarks() -> [String] {
+        let file = vault.store.appendingPathComponent("bookmarks.json")
+        return (try? JSONDecoder().decode([String].self, from: Data(contentsOf: file))) ?? []
+    }
+    func saveBookmarks(_ paths: [String]) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        try encoder.encode(paths).write(to: vault.store.appendingPathComponent("bookmarks.json"), options: .atomic)
+    }
     func sessions() -> [VaultSession] { SessionStore(vault: vault).list().filter { !$0.isEmpty } }
     func shelf() -> [ShelfItem] {
         let shelf = KVShelf(vault: vault)
@@ -178,7 +188,7 @@ struct Tab: Identifiable, Hashable {
     var forward: [TabContent] = []
 }
 
-enum SidebarMode: Hashable { case files, search, tags }
+enum SidebarMode: Hashable { case files, search, tags, bookmarks }
 
 @MainActor @Observable
 final class Workspace {
@@ -197,6 +207,7 @@ final class Workspace {
     var sessions: [VaultSession] = []
     var shelf: [ShelfItem] = []
     var ledger = LedgerState()
+    var bookmarks: [String] = []
     var librarySelection: String?
     /// Runs once the files are known, before meanings are learned, so layout checks need not wait for Ollama.
     var afterFirstRead: (() -> Void)?
@@ -304,6 +315,7 @@ final class Workspace {
         sessions = await engine.sessions()
         shelf = await engine.shelf()
         ledger = await engine.ledger()
+        bookmarks = await engine.bookmarks()
         let sim = self.sim
         let linkedNames = Set(linked.map(\.name))
         await Task.detached { sim.load(newMap, linked: linkedNames) }.value
@@ -439,6 +451,17 @@ final class Workspace {
     }
 
     func resumeText(_ branch: String?) async -> String { await engine.resumeText(branch) }
+
+    func isBookmarked(_ path: String) -> Bool { bookmarks.contains(path) }
+
+    func toggleBookmark(_ path: String) async {
+        var next = bookmarks
+        if let index = next.firstIndex(of: path) { next.remove(at: index) } else { next.append(path) }
+        do {
+            try await engine.saveBookmarks(next)
+            bookmarks = next
+        } catch { warning = "Could not save bookmarks: \(error)" }
+    }
 
     /// A file's text as the vault reads it, for covers and previews. Documents come back as their extracted Markdown.
     func text(of path: String) async -> String? { await engine.text(of: path) }

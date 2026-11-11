@@ -116,6 +116,7 @@ struct CoverCard: View {
         .contextMenu {
             Button("Open") { workspace.go(.file(path)) }
             Button("Open in New Tab") { workspace.go(.file(path), newTab: true) }
+            Button(workspace.isBookmarked(path) ? "Remove Bookmark" : "Bookmark") { Task { await workspace.toggleBookmark(path) } }
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([workspace.fileURL(path)]) }
         }
     }
