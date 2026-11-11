@@ -6,21 +6,28 @@ struct Sidebar: View {
     let library: Library
     @Bindable var workspace: Workspace
 
+    // Obsidian's shape: a thin ribbon of places on the far left, the file explorer beside it with its own tabs and actions.
     var body: some View {
-        VStack(spacing: 0) {
-            Places(workspace: workspace).padding(.horizontal, 10).padding(.bottom, 8)
-            Picker("Show", selection: $workspace.sidebarMode) {
-                Label("Files", systemImage: "folder").tag(SidebarMode.files)
-                Label("Search", systemImage: "magnifyingglass").tag(SidebarMode.search)
-                Label("Tags", systemImage: "number").tag(SidebarMode.tags)
-            }
-            .pickerStyle(.segmented).labelsHidden().labelStyle(.iconOnly)
-            .padding(.horizontal, 10).padding(.bottom, 6)
-
-            switch workspace.sidebarMode {
-            case .files: FileTree(workspace: workspace)
-            case .search: SearchPanel(workspace: workspace)
-            case .tags: TagPanel(workspace: workspace)
+        HStack(spacing: 0) {
+            Ribbon(workspace: workspace)
+            Divider()
+            VStack(spacing: 0) {
+                HStack(spacing: 2) {
+                    ExplorerTab(icon: "folder", help: "Files", on: workspace.sidebarMode == .files) { workspace.sidebarMode = .files }
+                    ExplorerTab(icon: "magnifyingglass", help: "Search (⇧⌘F)", on: workspace.sidebarMode == .search) { workspace.sidebarMode = .search }
+                    ExplorerTab(icon: "number", help: "Tags", on: workspace.sidebarMode == .tags) { workspace.sidebarMode = .tags }
+                    Spacer()
+                    if workspace.sidebarMode == .files {
+                        ExplorerTab(icon: "square.and.pencil", help: "New note (⌘N)", on: false) { Task { await workspace.newNote() } }
+                        ExplorerTab(icon: "folder.badge.plus", help: "New folder (⇧⌘N)", on: false) { Task { await workspace.newFolder() } }
+                    }
+                }
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                switch workspace.sidebarMode {
+                case .files: FileTree(workspace: workspace)
+                case .search: SearchPanel(workspace: workspace)
+                case .tags: TagPanel(workspace: workspace)
+                }
             }
         }
         .toolbar {
@@ -45,49 +52,72 @@ struct Sidebar: View {
     }
 }
 
-/// The places of the Night Library: what the vault holds, what programs did with it, and its saved model memory.
-struct Places: View {
+/// Obsidian's ribbon: one icon per place, the quick switcher and today's note at the foot. Red dots mark something to check.
+struct Ribbon: View {
     let workspace: Workspace
 
     private var content: TabContent? { workspace.currentTab?.content }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            heading("Library")
-            ForEach(LibraryKind.allCases, id: \.self) { kind in
-                let count = kind == .all ? workspace.map.files.count : workspace.count(kind)
-                if kind == .all || count > 0 {
-                    PlaceRow(title: kind.title, icon: kind.symbol, active: content == .library(kind), count: count,
-                             dot: kind == .notes ? Night.note : (kind == .documents || kind == .images) ? Night.document : nil) {
-                        workspace.go(.library(kind))
-                    }
-                }
-            }
-            heading("Conversations")
-            PlaceRow(title: "All", icon: "point.3.connected.trianglepath.dotted", active: content == .conversations(nil), count: workspace.sessions.count, dot: Night.conversation) {
-                workspace.go(.conversations(nil))
-            }
-            ForEach(Program.allCases) { program in
-                let count = workspace.sessions(for: program).count
-                if count > 0 {
-                    PlaceRow(title: program.name, icon: program.symbol, active: content == .conversations(program), count: count, dot: nil) {
-                        workspace.go(.conversations(program))
-                    }
-                }
-            }
-            heading("Memory")
-            PlaceRow(title: "Ledger", icon: "books.vertical", active: { if case .ledger = content { return true } else { return false } }(),
-                     count: workspace.ledger.commits.count,
-                     dot: workspace.ledger.stale.isEmpty && workspace.ledger.reverted.isEmpty ? nil : Night.stale) { workspace.go(.ledger(nil)) }
-            PlaceRow(title: "Shelf", icon: "memorychip", active: content == .shelf, count: workspace.shelf.count,
-                     dot: workspace.shelf.contains { $0.stale != nil } ? Night.stale : Night.cache) { workspace.go(.shelf) }
-            PlaceRow(title: "Programs", icon: "app.connected.to.app.below.fill", active: content == .programs, count: nil, dot: nil) { workspace.go(.programs) }
-            PlaceRow(title: "Map", icon: "circle.hexagongrid", active: content == .graph, count: nil, dot: nil) { workspace.go(.graph) }
+        VStack(spacing: 4) {
+            RibbonButton(icon: "square.grid.2x2", help: "Library (⌘1)", on: { if case .library = content { return true }; return false }()) { workspace.go(.library(.all)) }
+            RibbonButton(icon: "point.3.connected.trianglepath.dotted", help: "Conversations (⌘2)", on: { if case .conversations = content { return true }; if case .session = content { return true }; return false }(),
+                         dot: workspace.sessions.isEmpty ? nil : Night.conversation) { workspace.go(.conversations(nil)) }
+            RibbonButton(icon: "books.vertical", help: "Ledger (⌘5)", on: { if case .ledger = content { return true }; return false }(),
+                         dot: workspace.ledger.stale.isEmpty && workspace.ledger.reverted.isEmpty ? nil : Night.stale) { workspace.go(.ledger(nil)) }
+            RibbonButton(icon: "memorychip", help: "Shelf (⌘3)", on: content == .shelf,
+                         dot: workspace.shelf.contains { $0.stale != nil } ? Night.stale : nil) { workspace.go(.shelf) }
+            RibbonButton(icon: "app.connected.to.app.below.fill", help: "Programs (⌘4)", on: content == .programs) { workspace.go(.programs) }
+            RibbonButton(icon: "circle.hexagongrid", help: "Map (⇧⌘G)", on: content == .graph) { workspace.go(.graph) }
+            Spacer()
+            RibbonButton(icon: "command", help: "Quick switcher (⌘K)", on: workspace.paletteOpen) { workspace.paletteOpen = true }
+            RibbonButton(icon: "calendar", help: "Today's note (⇧⌘D)", on: false) { Task { await workspace.dailyNote() } }
         }
+        .padding(.top, 8).padding(.bottom, 30)   // clear of the status bar along the window's foot
+        .frame(width: 40)
     }
+}
 
-    private func heading(_ text: String) -> some View {
-        Text(text).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.top, 10).padding(.bottom, 2)
+struct RibbonButton: View {
+    let icon: String
+    let help: String
+    let on: Bool
+    var dot: Color? = nil
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 14, weight: on ? .semibold : .regular))
+                .frame(width: 30, height: 28)
+                .foregroundStyle(on ? Color.primary : .secondary)
+                .background(on ? Color.primary.opacity(0.13) : hovering ? Color.primary.opacity(0.06) : .clear, in: .rect(cornerRadius: 6))
+                .overlay(alignment: .topTrailing) {
+                    if let dot { Circle().fill(dot).frame(width: 6, height: 6).shadow(color: dot, radius: 3).padding(3) }
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .accessibilityLabel(help)
+        .onHover { hovering = $0 }
+    }
+}
+
+struct ExplorerTab: View {
+    let icon: String
+    let help: String
+    let on: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 12)).frame(width: 26, height: 22)
+                .foregroundStyle(on ? Color.primary : .secondary)
+                .background(on ? Color.primary.opacity(0.12) : .clear, in: .rect(cornerRadius: 5))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).help(help).accessibilityLabel(help)
     }
 }
 

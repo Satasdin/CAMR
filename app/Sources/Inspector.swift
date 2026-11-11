@@ -25,6 +25,9 @@ struct FileInspector: View {
     let document: Document
     @State private var mentions: [FoundLine] = []
     @State private var neighbours: [Vault.Neighbour] = []
+    /// Obsidian's right sidebar: one panel at a time, picked by icon.
+    @State private var pane = Pane.links
+    enum Pane: String, CaseIterable { case links, outline, history }
 
     private var outgoing: [Vault.Neighbour] { neighbours.filter(\.forward) }
     private var usedBy: [Vault.Neighbour] { neighbours.filter { !$0.forward && $0.kind != .about } }
@@ -45,13 +48,28 @@ struct FileInspector: View {
     var body: some View {
         VStack(spacing: 0) {
             LocalGraph(workspace: workspace, path: path).frame(height: 210).clipped()
+            HStack(spacing: 2) {
+                ExplorerTab(icon: "link", help: "Backlinks and links", on: pane == .links) { pane = .links }
+                ExplorerTab(icon: "list.bullet.indent", help: "Outline and properties", on: pane == .outline) { pane = .outline }
+                ExplorerTab(icon: "books.vertical", help: "History in the Ledger", on: pane == .history) { pane = .history }
+                Spacer()
+                Text("\(mentions.count) backlink\(mentions.count == 1 ? "" : "s")").font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+            }
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            Divider()
+            if pane == .history {
+                ScrollView { LedgerAboutFile(workspace: workspace, path: path).padding(12) }
+            } else {
             List {
-                if !fields.isEmpty {
+                if pane == .outline, !fields.isEmpty {
                     Section("Properties") {
                         ForEach(fields, id: \.0) { LabeledContent($0.0, value: $0.1) }
                     }
                 }
-                if !headings.isEmpty {
+                if pane == .outline, headings.isEmpty, fields.isEmpty {
+                    Text("No headings or properties in this file.").foregroundStyle(.secondary)
+                }
+                if pane == .outline, !headings.isEmpty {
                     Section("Outline") {
                         ForEach(headings, id: \.id) { heading in
                             Button { document.pendingLine = heading.line } label: {
@@ -61,6 +79,7 @@ struct FileInspector: View {
                         }
                     }
                 }
+                if pane == .links {
                 Section("Linked mentions") {
                     if mentions.isEmpty { Text("Nothing links here yet").foregroundStyle(.secondary) }
                     ForEach(mentions) { mention in
@@ -80,6 +99,8 @@ struct FileInspector: View {
                 if !usedBy.isEmpty {
                     Section("Used by") { ForEach(usedBy.prefix(60), id: \.rowID) { row($0) } }
                 }
+                }
+            }
             }
         }
         .task(id: "\(path)|\(workspace.stats?.links ?? 0)") {

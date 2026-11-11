@@ -38,14 +38,17 @@ struct MainWindow: View {
         }
         .animation(.spring(response: 0.25, dampingFraction: 1), value: workspace.paletteOpen)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let warning = workspace.warning {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
-                    Text(warning).lineLimit(2)
-                    Spacer()
-                    Button("Dismiss") { workspace.warning = nil }.buttonStyle(.link)
+            VStack(spacing: 0) {
+                if let warning = workspace.warning {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+                        Text(warning).lineLimit(2)
+                        Spacer()
+                        Button("Dismiss") { workspace.warning = nil }.buttonStyle(.link)
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 8).background(.bar)
                 }
-                .padding(.horizontal, 14).padding(.vertical, 8).background(.bar)
+                StatusBar(workspace: workspace)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -175,5 +178,45 @@ struct EmptyPage: View {
                 }
             }
         }
+    }
+}
+
+/// Obsidian's status bar: a quiet line of counts in the bottom-right corner, about the open file or else the vault.
+struct StatusBar: View {
+    let workspace: Workspace
+
+    private var items: [String] {
+        if let path = workspace.currentPath {
+            let text = workspace.document(path).text
+            let words = text.split { $0.isWhitespace || $0.isNewline }.count
+            var out = ["\(words.formatted()) words", "\(text.count.formatted()) characters"]
+            let read = workspace.sessions(reading: path).count
+            if read > 0 { out.append("read in \(read.counted("conversation"))") }
+            let kept = workspace.ledger.citing(path).count
+            if kept > 0 { out.append("\(kept.counted("Ledger commit"))") }
+            return out
+        }
+        var out: [String] = []
+        if let stats = workspace.stats { out += ["\(stats.notes.formatted()) notes", "\(stats.files.formatted()) files", "\(stats.links.formatted()) links"] }
+        if !workspace.sessions.isEmpty { out.append(workspace.sessions.count.counted("conversation")) }
+        if !workspace.ledger.commits.isEmpty { out.append(workspace.ledger.commits.count.counted("Ledger commit")) }
+        let shelf = workspace.shelf.reduce(0) { $0 + $1.entry.bytes }
+        if shelf > 0 { out.append("\(shelf.bytesText) on the Shelf") }
+        return out
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            if let progress = workspace.progress {
+                ProgressView().controlSize(.mini)
+                Text(progress).lineLimit(1)
+            }
+            Spacer()
+            ForEach(items, id: \.self) { Text($0) }
+        }
+        .font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+        .padding(.horizontal, 12).frame(height: 22)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
     }
 }

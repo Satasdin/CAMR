@@ -57,10 +57,22 @@ struct LibraryPage: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(kind == .all ? "Library" : kind.title).font(.system(size: 28, weight: .bold)).tracking(-0.4)
-            Text(summary).foregroundStyle(Night.dim).monospacedDigit()
-            Spacer()
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(kind == .all ? "Library" : kind.title).font(.system(size: 28, weight: .bold)).tracking(-0.4)
+                Text(summary).foregroundStyle(Night.dim).monospacedDigit()
+                Spacer()
+            }
+            // The kinds the sidebar used to list, as filter chips: Obsidian keeps the sidebar for the file tree.
+            HStack(spacing: 8) {
+                ForEach(LibraryKind.allCases, id: \.self) { each in
+                    let count = each == .all ? workspace.map.files.count : workspace.count(each)
+                    if each == .all || count > 0 {
+                        Chip(title: each.title, count: count, dot: LibraryKind.colour(of: each == .notes ? "x.md" : each == .documents ? "x.pdf" : each == .images ? "x.png" : ""),
+                             selected: each == kind) { workspace.go(.library(each)) }
+                    }
+                }
+            }
         }
     }
 
@@ -313,5 +325,28 @@ struct ReadBy: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+}
+
+/// A filter chip: a name, a count, and the colour of what it holds.
+struct Chip: View {
+    let title: String
+    var count: Int? = nil
+    var dot: Color? = nil
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let dot { Circle().fill(dot).frame(width: 6, height: 6) }
+                Text(title).font(.system(size: 12.5, weight: .medium))
+                if let count { Text("\(count)").font(.system(size: 11.5)).foregroundStyle(Night.faint).monospacedDigit() }
+            }
+            .padding(.horizontal, 11).padding(.vertical, 5)
+            .background(selected ? Color.white.opacity(0.16) : Night.card, in: .capsule)
+            .overlay { Capsule().strokeBorder(selected ? Color.white.opacity(0.25) : Night.line) }
+        }
+        .buttonStyle(.plain)
     }
 }

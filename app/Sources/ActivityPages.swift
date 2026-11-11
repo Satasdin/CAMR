@@ -24,6 +24,13 @@ struct ConversationsPage: View {
                     Text(program?.name ?? "Conversations").font(.system(size: 28, weight: .bold)).tracking(-0.4)
                     Text("\(workspace.sessions(for: program).count) kept by Burrow").foregroundStyle(Night.dim).monospacedDigit()
                 }
+                HStack(spacing: 8) {
+                    Chip(title: "All", count: workspace.sessions.count, dot: Night.conversation, selected: program == nil) { workspace.go(.conversations(nil)) }
+                    ForEach(Program.allCases) { each in
+                        let count = workspace.sessions(for: each).count
+                        if count > 0 { Chip(title: each.name, count: count, selected: program == each) { workspace.go(.conversations(each)) } }
+                    }
+                }
                 if days.isEmpty {
                     ContentUnavailableView("No conversations yet", systemImage: "point.3.connected.trianglepath.dotted",
                                            description: Text("When Claude Code, OpenCode, LM Studio, llama.cpp or Ollama use the vault through burrow mcp, each conversation lands here with what it looked up."))
