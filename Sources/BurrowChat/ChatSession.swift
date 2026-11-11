@@ -65,6 +65,7 @@ public final class ChatSession {
     public var settings: Settings
     private var history: [[String: Any]] = []
     private let schemas = VaultTools.forChat.map(OllamaChat.schema)
+    static let offered = Set(VaultTools.forChat.map(\.name))
 
     public init(tools: VaultTools, backend: ChatBackend, settings: Settings = Settings()) {
         self.tools = tools
@@ -96,7 +97,13 @@ public final class ChatSession {
         let started = Date()
         var event = ToolEvent(name: name, arguments: shown, outcome: "", failed: false, seconds: 0, forced: forced)
         var content: String
-        if name == "vault_remember", !observer.mayRemember(arguments["text"] as? String ?? "", arguments["kind"] as? String ?? "note") {
+        if !Self.offered.contains(name) {
+            // Only the tools this chat offers may run. A model that names another one (the session or ledger tools,
+            // which write) gets a refusal, not a quiet write the person was never asked about.
+            content = "\(name) is not one of the tools in this chat. Use the tools you were given."
+            event.outcome = "refused: not offered in this chat"
+            event.failed = true
+        } else if name == "vault_remember", !observer.mayRemember(arguments["text"] as? String ?? "", arguments["kind"] as? String ?? "note") {
             content = "The user did not allow this note to be kept. Nothing was written."
             event.outcome = "not allowed, nothing written"
             event.failed = true

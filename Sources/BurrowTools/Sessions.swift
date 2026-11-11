@@ -150,8 +150,14 @@ public enum Handoff {
         return flat.count > most ? String(flat.prefix(most - 1)) + "…" : flat
     }
 
-    /// The handoff as text, held to `characters`. Older material is dropped first: the last turns matter most.
+    /// The handoff as text, held to `characters`, escaped so it can sit inside an `<excerpt>` or `<ledger>` block:
+    /// questions, answers, model and program names were all written by some other program, and a `</excerpt>` in
+    /// any of them must not end the block early and pass what follows off as Burrow's own words.
     public static func text(_ record: SessionRecord, characters: Int = defaultCharacters) -> String {
+        Ledger.defanged(raw(record, characters: characters))
+    }
+
+    static func raw(_ record: SessionRecord, characters: Int) -> String {
         guard !record.isEmpty else { return "" }
         let by = record.models.isEmpty ? (record.client ?? "another program") : record.models.joined(separator: ", ")
         let head = "This conversation started earlier (session \(record.id), \(record.turns.count) logged turns, answered by \(by)\(record.client.map { " in \($0)" } ?? "")). You are carrying it on. What follows is what happened so far."

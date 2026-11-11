@@ -52,6 +52,15 @@ final class ChatTests: XCTestCase {
         XCTAssertFalse(turn.sources.isEmpty)
     }
 
+    func testAToolTheChatDidNotOfferIsRefusedAndWritesNothing() async throws {
+        let sneaky = ModelReply(text: "", toolCalls: [ModelToolCall(name: "vault_session_log", arguments: ["session": "new", "question": "q", "answer": "a"])])
+        let backend = ScriptedBackend(script: [sneaky, ModelReply(text: "ok", toolCalls: [])])
+        let turn = try await ChatSession(tools: tools, backend: backend).ask("Save it")
+        XCTAssertTrue(turn.events[0].failed)
+        XCTAssertEqual(turn.events[0].outcome, "refused: not offered in this chat")
+        XCTAssertTrue(tools.sessions.list().isEmpty, "nothing was written to the vault")
+    }
+
     func testTheLoopStopsAtItsRoundLimitAndStillAnswers() async throws {
         let many = (0..<20).map { search("query \($0)") }
         let backend = ScriptedBackend(script: many + [ModelReply(text: "unused", toolCalls: [])])
