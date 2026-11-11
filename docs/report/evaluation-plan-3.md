@@ -54,3 +54,9 @@ A smoke run (`--quick`, four questions per test, results discarded) checked that
 1. `burrow resume` cut "where the last session stopped" to 700 characters, so a handoff kept only its first answered turn. It now gets up to 1,500 characters, and each turn's answer is kept to 240 characters.
 2. Qwen3 4B called `burrow_resume` with a branch it made up ("last_conversation") and was told nothing had been kept. An unknown branch now falls back to the current one, and the reply says so.
 3. Harness: a program that reconnects within 30 minutes carries on its earlier session (D-45 era behaviour, by design), so the five test conversations merged into one session. Each test conversation now names itself apart. The harness also hands a refused tool call back to the model as an error instead of stopping.
+
+## A fault found in scoring, and the rerun (11 November 2026)
+
+In the notes test, the harness cut every tool result at 12,000 characters before handing it to the model, a limit carried over from the connect trial. Burrow's search results in that test ran 14,993 to 18,175 characters, and the Ledger notes come at the end of them, so in all 43 searches of the notes arm the notes were cut off and never reached Qwen3 4B. That arm therefore tested nothing; it is reported as it ran, with this explanation, and not used for the claim.
+
+The small model's half of the test (`e2b`) was run again with whole tool results (a cap of 40,000 characters, larger than any result), on the same frozen binary, the same split, and the same 76 notes Claude had left; no note was added or changed. Both Burrow arms were run again so they stay paired. The other three tests are unaffected in what they compare: their arms were cut the same way, and the trust line and the Ledger's resume text sit at the start of a result.

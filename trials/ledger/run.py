@@ -115,7 +115,7 @@ class Local:
 
     label = property(lambda self: self.name)
 
-    def run(self, system, question, burrow=None, tools=None, history=(), most_rounds=6):
+    def run(self, system, question, burrow=None, tools=None, history=(), most_rounds=6, cap=12000):
         """One question through a chat program: Burrow's tools offered, every call run, until the model answers."""
         offered = (burrow.tools if tools is None else tools) if burrow else []
         schemas = [{"type": "function", "function": {"name": t["name"], "description": t["description"], "parameters": t["inputSchema"]}}
@@ -140,7 +140,7 @@ class Local:
                 content, failed = burrow.call(name, arguments) if burrow else ("No tools here.", True)
                 calls.append({"name": name, "arguments": arguments, "failed": failed, "characters": len(content),
                               "ledger_notes": "Notes earlier sessions left in the Ledger" in content})
-                messages.append({"role": "tool", "tool_name": name, "content": content[:12000]})
+                messages.append({"role": "tool", "tool_name": name, "content": content[:cap]})
         return {"answer": "", "calls": calls, "rounds": most_rounds, "prompt_tokens": prompt_tokens,
                 "seconds": round(time.time() - started, 2), "stopped": True}
 
@@ -377,6 +377,37 @@ def e2():
         say(f"  {arm:13}: right {sum(r['right'] for r in mine)}/{len(mine)}  {by_type}")
     save("e2", rows)
     save("e2-cloud-usage", {"input_tokens": cloud.input_tokens, "output_tokens": cloud.output_tokens})
+
+
+def e2b():
+    """The small model's half of E2 again, with whole tool results. The first run cut every result at 12,000
+    characters, and Burrow's searches ran 15,000 to 17,000, so the Ledger notes at their end never reached the model.
+    Claude's notes from the first run are reused unchanged; both Burrow arms are run again so they stay paired."""
+    say("E2b notes, with whole tool results")
+    vault = os.path.join(WORK, "vault-e2")
+    split = json.load(open(os.path.join(RESULTS, "e2-split.json")))
+    tasks = {t["id"]: t for t in knowledge()}
+    half_b = [tasks[i] for i in split["b"]]
+    if QUICK:
+        half_b = half_b[:4]
+    small = Local(SMALL)
+    with_notes = Burrow(vault, "--tools", "door", "--no-sessions", client="evaluation-3")
+    without = Burrow(vault, "--tools", "door", "--no-sessions", "--no-ledger-notes", client="evaluation-3")
+    rows = []
+    for task in half_b:
+        for arm, server in {"engine": without, "engine+notes": with_notes}.items():
+            out = small.run(system_for(server), task["question"], burrow=server, cap=40000)
+            rows.append({"arm": arm, "model": small.label, "task": task["id"], "type": task["type"], "right": correct(out["answer"], task),
+                         "saw_notes": any(c.get("ledger_notes") for c in out["calls"]),
+                         "longest_result": max([c["characters"] for c in out["calls"]] or [0]), **out})
+        save("e2b", rows)
+    with_notes.close()
+    without.close()
+    for arm in ["engine", "engine+notes"]:
+        mine = [r for r in rows if r["arm"] == arm]
+        by_type = {kind: f"{sum(r['right'] for r in mine if r['type'] == kind)}/{sum(r['type'] == kind for r in mine)}" for kind in ["single", "multi"]}
+        say(f"  {arm:13}: right {sum(r['right'] for r in mine)}/{len(mine)}  {by_type}, notes seen in {sum(r['saw_notes'] for r in mine)}")
+    save("e2b", rows)
 
 
 # ---------------------------------------------------------------- E3: saying the vault does not hold it

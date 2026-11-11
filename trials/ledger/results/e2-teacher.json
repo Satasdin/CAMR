@@ -1,0 +1,1577 @@
+{
+ "rows": [
+  {
+   "task": "law-s-004",
+   "right": true,
+   "commits": 2,
+   "answer": "A complaint made to the Data Commissioner must be investigated and concluded within **ninety (90) days**. This is in section 56(5) of the Data Protection Act, 2019 (Cap. 411C), in Part VIII on enforcement (`Law/act-part-08-enforcement.md`).\n\nI kept two facts in the Ledger:\n1. The 90-day rule in s. 56(5), which rests on `Law/act-part-08-enforcement.md`.\n2. Three shorter deadlines from the Complaints Handling Procedure and Enforcement Regulations, which rest on `Law/complaints-regs-part-01-02-lodging-and-handling.md`:\n   - The Commissioner must acknowledge a complaint within 7 days (reg 4(4)).\n   - The respondent has 21 days to respond once notified (reg 11(1)).\n   - The Commissioner must communicate the decision to the parties within 7 days of the determination (reg 14(4)).",
+   "seconds": 9.21,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "complaint to Data Commissioner investigated and concluded within days"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection Act 2019 s.56(5): a complaint made to the Data Commissioner shall be investigated and concluded within ninety days. Complaints may be lodged orally or in writing (s.56(2)).",
+      "files": "Law/act-part-08-enforcement.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Complaints Regulations: Commissioner must acknowledge a complaint within 7 days (reg 4(4)); respondent has 21 days to respond after notification (reg 11(1)); decision must be communicated to parties within 7 days of determination (reg 14(4)).",
+      "files": "Law/complaints-regs-part-01-02-lodging-and-handling.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-017",
+   "right": true,
+   "commits": 2,
+   "answer": "The environment variable is **`PYTHON_LAZY_IMPORTS`**. The vault's Python 3.15 \"What's new\" note says it works alongside the `-X lazy_imports` command-line option. Both take one of two values:\n\n- `all` makes every import lazy by default.\n- `normal` is the default. It only honors the `lazy` keyword in source code, as in `lazy import json`.\n\nYou can also change or check the mode while the program runs with `sys.set_lazy_imports()` and `sys.get_lazy_imports()`.\n\nI kept two facts in the Ledger, both from `Software/python-3.15-whatsnew-01-highlights-lazy-imports-frozendict-tachyon.md`. One covers the environment variable and its two values. The other covers the two `sys` functions.",
+   "seconds": 8.39,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Python 3.15 lazy imports environment variable enable globally"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Python 3.15: the PYTHON_LAZY_IMPORTS env var (or -X lazy_imports) enables lazy imports globally; values are 'all' (all imports lazy) and 'normal' (default, respects the lazy keyword).",
+      "files": "Software/python-3.15-whatsnew-01-highlights-lazy-imports-frozendict-tachyon.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Python 3.15 adds sys.set_lazy_imports() and sys.get_lazy_imports() to change and query the lazy-import mode at runtime (PEP 810).",
+      "files": "Software/python-3.15-whatsnew-01-highlights-lazy-imports-frozendict-tachyon.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-023",
+   "right": true,
+   "commits": 2,
+   "answer": "A certificate of registration is valid for **twenty-four months** from the date it is issued. This is in Regulation 9 of the Data Protection (Registration of Data Controllers and Data Processors) Regulations, 2021 (Legal Notice 265 of 2021). It covers a certificate issued under regulation 8(a).\n\nAfter the certificate expires, the holder applies for renewal under Regulation 11. Section 20 of the Data Protection Act leaves the validity period to be set when the application is made. The Regulations fix it at 24 months.\n\nI saved two facts to the Ledger:\n- **Validity period:** Regulation 9 sets validity at 24 months from issuance. It rests on `Law/registration-regs-regulations-01-18.md`.\n- **Renewal:** Regulation 11 requires a renewal application after expiry, on Form PR 2 with the renewal fee. Section 20 of the Act leaves the period to be set at application. It rests on `Law/registration-regs-regulations-01-18.md` and `Law/act-part-03-registration.md`.",
+   "seconds": 8.43,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "certificate of registration valid period from date of issuance"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 9 of the Registration Regulations (LN 265 of 2021): a certificate of registration issued under reg 8(a) is valid for twenty-four months from the date of issuance.",
+      "files": "Law/registration-regs-regulations-01-18.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 11 requires a registered controller/processor to apply for renewal after expiry of the certificate, using Form PR 2 with the renewal fee. Section 20 of the Act leaves the validity period to be set at application.",
+      "files": "Law/registration-regs-regulations-01-18.md, Law/act-part-03-registration.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-002",
+   "right": true,
+   "commits": 2,
+   "answer": "**No, the clinic is not excused. It must register with the Data Commissioner, and the Third Schedule decides the point.**\n\n- **The general exemption:** Regulation 13(2) of the Registration Regulations (Legal Notice 265 of 2021) exempts a controller or processor that has turnover or revenue below KES 5 million and fewer than 10 employees. On size alone, your clinic qualifies: KES 2 million turnover and four employees.\n- **The override:** Regulation 13(4) says the exemption does not apply where annual turnover is below KES 5 million and the entity processes personal data for the purposes listed in the Third Schedule.\n- **The Third Schedule:** Headed \"Thresholds for mandatory registration\" [r. 13(1)(3)], it lists \"Health administration and provision of patient care\" as item 5. A clinic processing patient records to provide care falls squarely within that item.\n\nEven an exempt entity must still comply with Parts IV and VI of the Act (reg 13(3)). That does not help here, because the clinic is not exempt.\n\nOn fees, the Second Schedule puts a clinic of this size in the \"Micro and Small\" category (1\u201350 employees, turnover up to KES 5 million). That category pays KES 4,000 to register and KES 2,000 to renew.\n\nI saved two facts to the ledger: the reg 13(2) and 13(4) rule, and the Third Schedule's item 5 on patient care. They rest on `Law/registration-regs-regulations-01-18.md` and `Law/registration-regs-schedules-fees-and-thresholds.md`.",
+   "seconds": 9.88,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "exemption from registration data controller fewer than ten employees annual turnover Schedule health care"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 13(2) of the Registration Regs (LN 265/2021) exempts a controller/processor with turnover or revenue below KES 5m and fewer than 10 employees, but reg 13(4) removes the exemption where it processes personal data for Third Schedule purposes.",
+      "files": "Law/registration-regs-regulations-01-18.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Third Schedule [r. 13(1)(3)] \"Thresholds for mandatory registration\" lists 'Health administration and provision of patient care' (item 5) among purposes requiring registration.",
+      "files": "Law/registration-regs-schedules-fees-and-thresholds.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-015",
+   "right": true,
+   "commits": 2,
+   "answer": "**Who may prescribe (section 50, Data Protection Act, 2019):** The Cabinet Secretary may prescribe this. The grounds are strategic interests of the state or protection of revenue. The Cabinet Secretary may prescribe certain kinds of processing that can only be done through a server or data centre located in Kenya. (Source: `Law/act-part-06-transfer-outside-kenya.md`)\n\n**The alternative (regulation 26(1), Data Protection (General) Regulations, 2021):** A controller or processor handling personal data for a strategic-interest purpose must do one of two things:\n- process the data through a server and data centre located in Kenya, or\n- store at least one serving copy of the personal data in a data centre located in Kenya.\n\nSo instead of processing through a Kenyan server and data centre, the controller may store at least one serving copy of the data in a data centre in Kenya.\n\nRegulation 26(2) lists the strategic-interest purposes. They include civil registration and legal identity systems, elections, public finance systems, protected computer systems, early childhood and basic education, and primary or secondary health care. (Source: `Law/general-regs-part-04-obligations.md`)\n\nI saved two facts to the ledger, one for section 50 and one for regulation 26(1). Each names the file it rests on.",
+   "seconds": 9.86,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "section 50 processing strategic interest of the state must be processed through a server and data centre located in Kenya"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Data Protection (General) Regulations 2021 processing through a server and data centre located in Kenya, serving a copy"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "DPA 2019 s.50: the Cabinet Secretary may prescribe, on grounds of strategic interests of the state or protection of revenue, processing that must be effected only through a server or data centre located in Kenya.",
+      "files": "Law/act-part-06-transfer-outside-kenya.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection (General) Regs 2021 reg 26(1): for strategic-interest processing, a controller/processor must process via a server and data centre in Kenya, or instead store at least one serving copy of the personal data in a data centre located in Kenya.",
+      "files": "Law/general-regs-part-04-obligations.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-011",
+   "right": true,
+   "commits": 2,
+   "answer": "The application uses **Form DPR1**, and the registration fee is **KES 4,000**, paid once.\n\n- **Form:** Regulation 5(1) of the Registration Regulations (Legal Notice 265 of 2021) says an application must be in Form DPR1 from the First Schedule. It must come with the registration fee set out in the Second Schedule.\n- **Fee:** The Second Schedule puts a company with 12 employees and KES 3 million turnover in the \"Micro and Small\" category. That category covers 1\u201350 employees and turnover of up to KES 5 million. Its registration fee is KES 4,000, paid once. Renewal costs KES 2,000 every two years.\n\nUnder regulation 13(2), an entity with turnover below KES 5 million and fewer than 10 employees is exempt from mandatory registration. This company has 12 employees, so that exemption doesn't apply to it.\n\nI saved two facts to the ledger, one for the form and one for the fee. They rest on `Law/registration-regs-regulations-01-18.md` and `Law/registration-regs-schedules-fees-and-thresholds.md`.",
+   "seconds": 9.98,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "registration of data controller application form and prescribed fee, 12 employees turnover three million"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 5(1) of the Registration Regs (LN 265/2021): an application to register as a data controller/processor must be in Form DPR1 (First Schedule) and be accompanied by the Second Schedule registration fees.",
+      "files": "Law/registration-regs-regulations-01-18.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Second Schedule fees: Micro and Small controllers/processors (1-50 employees, turnover max KES 5m) pay a one-off registration fee of KES 4,000 (renewal KES 2,000 every 2 years); medium KES 16,000; large KES 40,000.",
+      "files": "Law/registration-regs-schedules-fees-and-thresholds.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-005",
+   "right": true,
+   "commits": 2,
+   "answer": "SQLite 3.54.0 now requires **Windows Vista (circa 2007) or later**. The 3.54.0 release notes (item 10) say it drops support for Windows XP and earlier, including WindowsCE.\n\nThe same item notes that SQLite now uses Slim Reader/Writer Locks for non-recursive mutexes, because every supported Windows version provides them. The change affects only Windows builds. Linux, Mac, BSD and other unix builds are unaffected.\n\nI saved two facts to the Ledger, both from `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`: the Vista requirement, and the switch to Slim Reader/Writer Locks.",
+   "seconds": 9.88,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLite 3.54.0 dropped support Windows XP oldest Windows version required"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_read",
+     "arguments": {
+      "path": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "start_line": 18,
+      "line_count": 32
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.54.0 (2026-10-09) dropped support for Windows XP and earlier, including WindowsCE; SQLite for Windows now requires Windows Vista (circa 2007) or later.",
+      "model": "claude",
+      "files": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "In 3.54.0 the Windows change lets SQLite use Slim Reader/Writer Locks (SRWLs) for non-recursive mutexes instead of CriticalSection, since all supported Windows platforms provide them; it affects only Windows builds.",
+      "model": "claude",
+      "files": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-007",
+   "right": true,
+   "commits": 2,
+   "answer": "SQLite 3.54.0 (released 2026-10-09) added the **%J** and **%j** conversions. They render JSON string literals in the built-in `printf()` and in the `format()` SQL function. The vault's release notes list this as item 5 for 3.54.0. They don't say how the two differ from each other.\n\nI saved two facts to the ledger, both resting on `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`:\n1. The %J and %j addition in 3.54.0.\n2. 3.54.1 (2026-10-16) fixes a possible heap-buffer overflow on 32-bit builds. 64-bit builds are not affected.",
+   "seconds": 7.84,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLite 3.54.0 printf format() JSON string literals conversions"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.54.0 (2026-10-09) added the %J and %j conversions, used to render JSON string literals, to the built-in printf() and the SQL format() function (item 5 of the release notes).",
+      "files": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.54.1 (2026-10-16) fixes a possible heap-buffer overflow on 32-bit builds; 64-bit builds are not affected.",
+      "files": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-006",
+   "right": true,
+   "commits": 2,
+   "answer": "Under section 73(1), the general penalty in the Data Protection Act, 2019, a person convicted of an offence with no specific penalty is liable to:\n\n- **Maximum fine:** KES 3,000,000 (three million shillings).\n- **Maximum prison term:** 10 years.\n- The court can impose the fine, the prison term, or both.\n\nThe same penalty applies to anyone who \"otherwise contravenes\" the Act. Under section 73(2), the court can also order forfeiture of any equipment or article used in the offence. It can also order or prohibit an act to stop a continuing contravention.\n\nThis general penalty is different from the specific ones. For example, failing to comply with an enforcement notice (s. 58(3)) and obstructing the Data Commissioner (s. 61) each carry up to KES 5,000,000 or 2 years, or both.\n\nThe source is `Law/act-part-10-11-delegated-powers-and-miscellaneous.md`, lines 69\u201377.\n\nI saved two facts to the Ledger. One is the s. 73 penalty, resting on that file. The other is the s. 58(3) and s. 61 penalties, resting on `Law/act-part-08-enforcement.md`.",
+   "seconds": 9.34,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "general penalty offence no specific penalty provided fine imprisonment Data Protection Act"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection Act 2019 s.73(1): general penalty for an offence with no specific penalty is a fine up to KES 3,000,000 or imprisonment up to 10 years, or both. S.73(2) lets the Court also order forfeiture of equipment/articles or order or prohibit acts to stop a continuing contravention.",
+      "files": "Law/act-part-10-11-delegated-powers-and-miscellaneous.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection Act 2019 s.58(3) (failing to comply with an enforcement notice) and s.61 (obstructing the Data Commissioner) each carry a fine up to KES 5,000,000 or up to 2 years' imprisonment, or both.",
+      "files": "Law/act-part-08-enforcement.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-010",
+   "right": true,
+   "commits": 2,
+   "answer": "The two maximum fines are:\n\n- **Data Protection (General) Regulations, 2021, reg. 15(4):** a fine not exceeding **KES 20,000** for using personal data for commercial purposes without the data subject's consent. The offence can also carry imprisonment of up to six months, or both.\n- **Data Protection Act, 2019, s. 73(1), general penalty:** a fine not exceeding **KES 3,000,000**. It applies to offences with no specific penalty, and can also carry imprisonment of up to ten years, or both.\n\nThe general penalty ceiling is 150 times the regulation's ceiling (3,000,000 \u00f7 20,000). Because reg. 15(4) sets its own penalty for this offence, the KES 20,000 figure is the one for commercial use without consent. The s. 73 amount applies where no specific penalty is provided.\n\nThe vault's excerpt of Part VIII shows a separate administrative fine of up to KES 5 million, or 1% of annual turnover if lower. The Data Commissioner imposes it through a penalty notice, so it is not one of the two you asked about.\n\nI saved both figures to the Ledger as facts. They rest on `Law/general-regs-part-03-commercial-use.md` and `Law/act-part-10-11-delegated-powers-and-miscellaneous.md`.",
+   "seconds": 12.21,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "commercial purposes without consent fine Data Protection (General) Regulations 2021"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "general penalty Data Protection Act 2019 fine not exceeding"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_read",
+     "arguments": {
+      "path": "Law/general-regs-part-03-commercial-use.md",
+      "start_line": 40,
+      "line_count": 60
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "regulations offence penalty fine not exceeding commercial purposes without consent",
+      "folder": "Law"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg. 15(4) of the Data Protection (General) Regulations, 2021: using personal data for commercial purposes without consent is an offence; fine not exceeding KES 20,000 or up to 6 months' imprisonment, or both.",
+      "files": "Law/general-regs-part-03-commercial-use.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Section 73(1) of the Data Protection Act, 2019 (general penalty): fine not exceeding KES 3,000,000 or imprisonment up to 10 years, or both, for offences with no specific penalty.",
+      "files": "Law/act-part-10-11-delegated-powers-and-miscellaneous.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-015",
+   "right": true,
+   "commits": 2,
+   "answer": "I've kept two facts in the Ledger, both resting on `Law/general-regs-part-03-commercial-use.md`:\n\n1. The penalty in regulation 15(4): a fine of up to KES 20,000 or up to six months' imprisonment, or both.\n2. The definition of commercial use in regulation 14(1), with the direct-marketing examples in regulation 14(2).\n\nAn earlier session had already recorded the regulation 15(4) penalty, so that one is a duplicate.",
+   "seconds": 11.57,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "commercial purposes without consent offence penalty fine imprisonment"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg. 15(4) of the Data Protection (General) Regulations, 2021: a data controller or processor using personal data for commercial purposes without the data subject's consent commits an offence; on conviction a fine up to KES 20,000 or up to 6 months' imprisonment, or both.",
+      "files": "Law/general-regs-part-03-commercial-use.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg. 14(1) of the General Regulations 2021 defines commercial use of personal data as use to advance commercial or economic interests, including inducing another to buy, rent, lease, join or subscribe, or enabling a commercial transaction; reg. 14(2) lists direct marketing examples (catalogues, ads to logged-on users, sale messages).",
+      "files": "Law/general-regs-part-03-commercial-use.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-023",
+   "right": true,
+   "commits": 2,
+   "answer": "On a system with 24 to 48 GiB of VRAM, Ollama defaults to a context length of **32,768 tokens**. This comes from the v0.15.5 release notes (published 2026-02-03), which set defaults by VRAM:\n\n- Under 24 GiB: 4,096\n- 24 to 48 GiB: 32,768\n- 48 GiB or more: 262,144\n\nI saved two facts to the Ledger. The first is the VRAM tier defaults above, from `Software/ollama-releases-v0.14.0-to-v0.16.3.md`. The second is from `Software/ollama-releases-v0.17.0-to-v0.19.0.md`. It says the v0.17.0 release notes (2026-02-21) have the macOS and Windows apps default to a context length based on available VRAM.",
+   "seconds": 8.4,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Ollama default context length VRAM 24 to 48 GiB"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Ollama v0.15.5 (published 2026-02-03) defaults context by VRAM: <24 GiB = 4,096; 24-48 GiB = 32,768; >=48 GiB = 262,144.",
+      "files": "Software/ollama-releases-v0.14.0-to-v0.16.3.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Ollama v0.17.0 (2026-02-21) release notes say the macOS and Windows apps default to a context length based on available VRAM.",
+      "files": "Software/ollama-releases-v0.17.0-to-v0.19.0.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-013",
+   "right": true,
+   "commits": 2,
+   "answer": "The registry says Roots, Sampling and Logging may first be removed in the **first revision released on or after 2027-07-28**. All three were deprecated in `2026-07-28` under SEP-2577, so that date is twelve months after the deprecation.\n\nThat date only makes them eligible for removal. The registry says the actual removal is a Core Maintainer decision made during release preparation, and it may happen later.\n\nI saved two facts to the Ledger:\n- **Removal date:** the 2027-07-28 earliest-removal date for all three features. It rests on `Software/mcp-2026-07-28-deprecated-features.md`.\n- **Eligibility and window:** that the date only marks eligibility, and that the policy sets a minimum twelve-month deprecation window. It rests on `Software/mcp-2026-07-28-deprecated-features.md` and `Software/mcp-2026-07-28-changelog.md`.",
+   "seconds": 8.57,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "deprecated features registry Roots Sampling Logging may first be removed"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "In the MCP 2026-07-28 deprecated features registry, Roots, Sampling and Logging (SEP-2577, deprecated 2026-07-28) have earliest removal \"First revision released on or after 2027-07-28\".",
+      "files": "Software/mcp-2026-07-28-deprecated-features.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "The earliest removal date only marks eligibility; actual removal is a Core Maintainer decision during release preparation and may happen later. The policy sets a minimum twelve-month deprecation window.",
+      "files": "Software/mcp-2026-07-28-deprecated-features.md, Software/mcp-2026-07-28-changelog.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-m-002",
+   "right": true,
+   "commits": 2,
+   "answer": "- **3.53.0 (2026-04-09):** SQLite discontinued support for **Windows RT**. The release notes list it as item 12: \"Discontinue support for Windows RT.\"\n- **3.54.0 (2026-10-09):** The oldest Windows version required is **Windows Vista** (circa 2007). Item 10 says it drops support for WindowsXP and earlier, including WindowsCE. It adds that SQLite for Windows now requires Windows Vista or later.\n\nBoth facts are in the vault notes, in `Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md` and `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`. I saved each one to the Ledger as a fact, citing the file it came from.",
+   "seconds": 17.85,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLite 3.53.0 discontinued Windows platform support"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLite 3.54.0 requires Windows version minimum"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_read",
+     "arguments": {
+      "path": "Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md",
+      "start_line": 36,
+      "line_count": 40
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_read",
+     "arguments": {
+      "path": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "start_line": 18,
+      "line_count": 36
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_read",
+     "arguments": {
+      "path": "Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md",
+      "start_line": 76,
+      "line_count": 41
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.53.0 (2026-04-09) discontinued support for Windows RT (item 12).",
+      "files": "Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.54.0 (2026-10-09) dropped WindowsXP and earlier, including WindowsCE; SQLite for Windows now requires Windows Vista (circa 2007) or later (item 10).",
+      "files": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-016",
+   "right": true,
+   "commits": 2,
+   "answer": "The form is **Form DPG 3**.\n\n- Regulation 10(2) says: \"A request for rectification may be made in Form DPG 3 set out in the First Schedule.\" That is in `Law/general-regs-part-01-02-rights-of-a-data-subject.md`.\n- In `Law/general-regs-schedule-1-forms.md`, the line \"FORM DPG 3 [r. 10(2)]\" sits directly above the \"REQUEST FOR RECTIFICATION\" heading.\n- The \"FORM DPG 4 [r. 11(2)]\" line that follows the rectification form is the label for the next form, not this one. The file puts each form's label above its title. For example, DPG 2 [r. 9(2)] is the data access form that regulation 9(2) refers to.\n\nI saved two facts to the ledger, both resting on those two files. One is the DPG 3 and regulation 10(2) link. The other is how the schedule labels its forms.",
+   "seconds": 13.54,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "First Schedule form request rectification of personal data"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_read",
+     "arguments": {
+      "path": "Law/general-regs-schedule-1-forms.md",
+      "start_line": 96,
+      "line_count": 34
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Under the Data Protection (General) Regulations 2021, reg. 10(2) says a rectification request may be made in Form DPG 3 in the First Schedule. The schedule file shows \"FORM DPG 3 [r. 10(2)]\" directly above the \"REQUEST FOR RECTIFICATION\" heading.",
+      "files": "Law/general-regs-part-01-02-rights-of-a-data-subject.md, Law/general-regs-schedule-1-forms.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "In the First Schedule of the General Regulations 2021, a form's label sits above its title. DPG 1 [r. 7(2)/8(2)] is restriction or objection, DPG 2 [r. 9(2)] is data access, and DPG 3 [r. 10(2)] is rectification. The \"FORM DPG 4 [r. 11(2)]\" line after the rectification form belongs to the next form.",
+      "files": "Law/general-regs-schedule-1-forms.md, Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-012",
+   "right": true,
+   "commits": 2,
+   "answer": "Under the Multi Round-Trip Requests pattern, a server may respond with an `InputRequiredResult` on three client requests:\n\n1. `prompts/get`\n2. `resources/read`\n3. `tools/call`\n\nThe spec says servers **MUST NOT** send `InputRequiredResult` on any other client request (`Software/mcp-2026-07-28-multi-round-trip-requests.md`, lines 185\u2013195).\n\nI saved two facts to the Ledger:\n- The list of three requests above, from the multi-round-trip note.\n- The changelog's statement that this pattern replaces server-initiated requests such as `roots/list`, `sampling/createMessage` and `elicitation/create`. It comes from `Software/mcp-2026-07-28-changelog.md`.",
+   "seconds": 8.67,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Multi Round-Trip Requests InputRequiredResult"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "In MCP 2026-07-28 MRTR, servers MAY send InputRequiredResult only on prompts/get, resources/read and tools/call; MUST NOT on any other client request.",
+      "files": "Software/mcp-2026-07-28-multi-round-trip-requests.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "MRTR replaces server-initiated requests (roots/list, sampling/createMessage, elicitation/create); an InputRequiredResult has resultType \"input_required\" and clients retry with inputResponses.",
+      "files": "Software/mcp-2026-07-28-changelog.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-008",
+   "right": false,
+   "commits": 2,
+   "answer": "I saved two facts to the Ledger: the section 38 thirty-day rule and extension, and the Regulations' reg 11 timings.",
+   "seconds": 8.6,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "data portability request period to comply controller processor"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "DPA 2019 s.38(6): a data controller or processor must comply with data portability requests at reasonable cost and within thirty days; s.38(7) allows extension for complex or numerous requests, as determined in consultation with the Data Commissioner.",
+      "files": "Law/act-part-04b-obligations-and-breach.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection (General) Regulations 2021, reg 11: porting within thirty days of the request on payment of prescribed fees (11(3)); a declined portability request must be notified in writing with reasons within seven days (11(6)).",
+      "files": "Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-002",
+   "right": true,
+   "commits": 1,
+   "answer": "In SQLite 3.53.0 (2026-04-09), floating-point to text conversions are rounded by default to **17 significant digits**. Every earlier version used 15.\n\nThe option that changes this is **`SQLITE_DBCONFIG_FP_DIGITS`**, set through `sqlite3_db_config()`. The release notes list it under \"Improvements to floating-point \u2194 text conversions\", item 9b. They also say the conversions were reimplemented for better performance.\n\nI saved this as a fact in the Ledger. It rests on `Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md`. I didn't save a second fact, because this was the only one I confirmed in the excerpts.",
+   "seconds": 8.81,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLite 3.53.0 floating-point to text conversion significant digits sqlite3_db_config option"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.53.0 (2026-04-09): float\u2194text conversions now round by default to 17 significant digits (was 15 in all prior versions); sqlite3_db_config(SQLITE_DBCONFIG_FP_DIGITS) can change this.",
+      "files": "Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-024",
+   "right": true,
+   "commits": 2,
+   "answer": "The cold time measured afterwards was **294 ms**, down from 3.1 s. This comes from the v0.34.1 release notes (published 2026-09-14) in `Software/ollama-releases-v0.34.0-to-v0.35.1.md`.\n\nI kept two facts in the Ledger, both resting on that file:\n1. The v0.34.1 `/api/tags` speedup, 3.1 s \u2192 294 ms cold in testing.\n2. The v0.34.4 fix for intermittent \"model not found\" errors with a large local library.",
+   "seconds": 7.47,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Ollama v0.34.1 /api/tags faster large model libraries cold time"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Ollama v0.34.1 (published 2026-09-14): /api/tags is much faster on large model libraries, 3.1 s \u2192 294 ms cold in testing; model capabilities also reported consistently.",
+      "files": "Software/ollama-releases-v0.34.0-to-v0.35.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Ollama v0.34.4 (published 2026-09-23) fixed intermittent \"model not found\" errors with a large local library.",
+      "files": "Software/ollama-releases-v0.34.0-to-v0.35.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-006",
+   "right": true,
+   "commits": 2,
+   "answer": "The dot-command is **`.diskused`**. SQLite 3.54.0 (2026-10-09) builds it on the new `diskused()` extension. It replaces the separate `sqlite3_analyzer` utility program, which is now deprecated. This comes from `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`, line 24.\n\nI saved two facts to the Ledger, both resting on that file:\n1. The `.diskused` fact above.\n2. The `.mode` changes in 3.54.0: new `--rowcount on` and `--titles always` options (`--titles always` is now the default), plus the `--ifmt` and `--fpfmt` printf-style format options.",
+   "seconds": 8.4,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLite 3.54.0 CLI dot-command replaces sqlite3_analyzer"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.54.0 (2026-10-09) adds the \".diskused\" CLI dot-command, built on the new diskused() extension; it replaces the separate sqlite3_analyzer utility, which is now deprecated.",
+      "files": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.54.0 also changed the .mode command: new options \"--rowcount on\" and \"--titles always\" (now the default), plus --ifmt and --fpfmt printf-style format options.",
+      "files": "Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-012",
+   "right": true,
+   "commits": 2,
+   "answer": "Section 50 of the Data Protection Act, 2019 (Cap. 411C) gives this power to the **Cabinet Secretary**. The Cabinet Secretary may prescribe that certain processing \"shall only be effected through a server or a data centre located in Kenya\". The grounds are:\n\n- the strategic interests of the state, or\n- the protection of revenue.\n\nThe source is `Law/act-part-06-transfer-outside-kenya.md`.\n\nThe vault also holds the regulation made under this section, which you didn't ask about. Regulation 26 of the Data Protection (General) Regulations, 2021 covers processing for strategic state interest. Examples include civil registration, elections, public finances and primary or secondary health care. A controller or processor doing that processing must do one of two things:\n\n- process the data through a server and data centre in Kenya, or\n- keep at least one serving copy in a Kenyan data centre.\n\nThe source is `Law/general-regs-part-04-obligations.md`.\n\nI saved two facts to the Ledger, one for the section 50 text and one for regulation 26.",
+   "seconds": 10.01,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "section 50 Data Protection Act server or data centre located in Kenya"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "DPA 2019 s.50: the Cabinet Secretary may prescribe, on grounds of strategic interests of the state or protection of revenue, certain processing that shall only be effected through a server or data centre located in Kenya.",
+      "files": "Law/act-part-06-transfer-outside-kenya.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Under reg. 26 of the Data Protection (General) Regulations 2021, made pursuant to s.50, processing for strategic state interest (e.g. civil registration, elections, public finances, health care) must use a Kenyan server and data centre, or keep at least one serving copy in a Kenyan data centre.",
+      "files": "Law/general-regs-part-04-obligations.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-019",
+   "right": true,
+   "commits": 2,
+   "answer": "The Data Commissioner uses **Form DPC 3**, and the respondent has **twenty-one days** to act.\n\nRegulation 11(1) says that once a complaint is admitted, the Commissioner notifies the respondent \"in Form DPC 3 set out in the Schedule\". Within 21 days the respondent must do one of three things:\n- (a) make representations and provide any relevant material or evidence;\n- (b) review the complaint with a view to resolving it summarily, to the complainant's satisfaction; or\n- (c) provide a response with the required information.\n\nTwo related points:\n- **No action:** under reg. 11(2), if the respondent does nothing, the Commissioner goes on to determine the complaint under the Act and the Regulations.\n- **Options in the notice:** under reg. 11(3), the notice must set out the options for resolving the complaint. These include alternative dispute resolution.\n\nIn the Schedule, the form is titled \"Notification of a complaint to the Respondent\". Its header reads \"FORM DPC (r. 11(1))\", with the number missing. The \"DPC 3\" label comes from the text of reg. 11(1).\n\nI saved two facts to the ledger. Both come from Law/complaints-regs-part-01-02-lodging-and-handling.md, and the second also rests on Law/complaints-regs-part-03-enforcement-and-forms.md.\n- Reg. 11(1): the form (DPC 3) and the 21-day period.\n- Reg. 11(2): the consequence of the respondent taking no action, plus the form's title.",
+   "seconds": 11.73,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "notification of admitted complaint to respondent form days to respond"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Complaints Handling Regs 2021 reg. 11(1): on admitting a complaint, the Data Commissioner notifies the respondent in Form DPC 3 (Schedule) and requires it, within twenty-one days, to make representations, try to resolve the complaint summarily, or provide the required response.",
+      "files": "Law/complaints-regs-part-01-02-lodging-and-handling.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Complaints Handling Regs 2021 reg. 11(2): if the respondent takes no action under reg. 11(1), the Data Commissioner proceeds to determine the complaint under the Act and Regulations. The Schedule form for reg. 11(1) is titled \"Notification of a complaint to the Respondent\".",
+      "files": "Law/complaints-regs-part-01-02-lodging-and-handling.md, Law/complaints-regs-part-03-enforcement-and-forms.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-013",
+   "right": true,
+   "commits": 2,
+   "answer": "They must comply **within seven days of the request**. This is regulation 9(4) of the Data Protection (General) Regulations, 2021. It reads: \"A data controller or a data processor shall comply with a request by a data subject to access their personal data within seven days of the request.\" Access requests can be made on Form DPG 2.\n\nI kept two facts in the Ledger, both resting on `Law/general-regs-part-01-02-rights-of-a-data-subject.md`:\n1. The seven-day access deadline under regulation 9(4).\n2. The longer deadlines for other requests: 30 days to port data (regulation 11(3)) and 14 days to rectify it (regulation 10(4)).",
+   "seconds": 8.06,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "data subject request access to personal data comply within days"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 9(4), Data Protection (General) Regulations 2021: a data controller or processor must comply with a data subject's request to access their personal data within seven days of the request. Access requests use Form DPG 2.",
+      "files": "Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 11(3) of the General Regulations 2021 gives 30 days to port personal data after a portability request. Reg 10(4) gives 14 days to rectify. Both are longer than the 7-day access deadline in reg 9(4).",
+      "files": "Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-m-012",
+   "right": true,
+   "commits": 2,
+   "answer": "- **Removed flag:** `--cgi`. Python 3.15 removed it from the `python -m http.server` command line together with the `CGIHTTPRequestHandler` class. Both had been deprecated since 3.13.\n- **New option:** `--content-type`. It comes with a matching `default_content_type` setting. It customises the default `Content-Type` header for files with unknown extensions.\n\nI saved both as facts in the Ledger. The first rests on `Software/python-3.15-whatsnew-06-optimizations-and-removed.md` and the second on `Software/python-3.15-whatsnew-04-improved-modules-a-to-m.md`.",
+   "seconds": 7.57,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "python -m http.server CGIHTTPRequestHandler removed flag default Content-Type unknown extensions"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Python 3.15 removed the CGIHTTPRequestHandler class and the --cgi flag from python -m http.server (deprecated in 3.13, gh-133810).",
+      "files": "Software/python-3.15-whatsnew-06-optimizations-and-removed.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Python 3.15 added default_content_type and the --content-type command-line option to http.server to customise the default Content-Type header for files with unknown extensions (gh-113471).",
+      "files": "Software/python-3.15-whatsnew-04-improved-modules-a-to-m.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-004",
+   "right": true,
+   "commits": 2,
+   "answer": "The VFS is **`opfs-wl`**. It was added in SQLite 3.53.0, released 2026-04-09. It works the same way as the `opfs` VFS but uses Web Locks for locking. The release notes say this can give fairer lock sharing than the bespoke protocol `opfs` uses. It needs `Atomics.waitAsync()`, so it requires newer browsers than `opfs` does.\n\nI saved both facts to the Ledger. They rest on `Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md`.",
+   "seconds": 9.29,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLite 3.53.0 JavaScript WASM VFS Web Locks"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.53.0 (2026-04-09) added the \"opfs-wl\" JS/WASM VFS: functionally identical to \"opfs\" but uses Web Locks for locking, for fairer lock sharing than opfs's bespoke protocol.",
+      "files": "Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "\"opfs-wl\" requires Atomics.waitAsync(), so it needs newer browsers than the \"opfs\" VFS does.",
+      "files": "Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-022",
+   "right": true,
+   "commits": 1,
+   "answer": "The certificate authority is **eMudhra**. The \"Notable changes in 3.15.2\" section of the Python 3.15 notes says the `ssl` module now rejects TLS certificate chains that contain one of a set of compromised eMudhra intermediate CA certificates.\n\n- **How they're identified:** the certificates are matched by public key, so cross-signed copies that reuse the same key are blocked too.\n- **When it applies:** it works as a backstop even if an application supplies its own root CA bundle. It also applies when the platform trust store has already removed trust.\n- **Reference:** the notes credit Christian Heimes, gh-160040, CVE 2026-115557.\n\nI saved this as a fact in the Ledger. It rests on `Software/python-3.15-whatsnew-08-c-api-build-porting.md`.",
+   "seconds": 7.49,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Python 3.15.2 ssl rejects TLS certificate chains compromised intermediate CA certificates"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Python 3.15.2: ssl rejects TLS chains containing compromised eMudhra intermediate CA certs, identified by public key (so cross-signed copies are blocked), even with a custom root CA bundle (gh-160040, CVE 2026-115557).",
+      "files": "Software/python-3.15-whatsnew-08-c-api-build-porting.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-021",
+   "right": true,
+   "commits": 2,
+   "answer": "A person may appeal an enforcement notice to the **High Court**. The appeal must be made **before thirty (30) days have lapsed from the date the enforcement notice was served**.\n\nThis is in Regulation 19 of the Complaints Handling Procedure and Enforcement Regulations. It says a person \"may before the lapse of thirty days from the date of service of the enforcement notice, appeal to the High Court against a decision arising out of the enforcement of the notice.\" It is subject to sections 58(2)(d) and 64 of the Data Protection Act. Section 64 of the Act also gives a right of appeal to the High Court against administrative action by the Data Commissioner, including enforcement and penalty notices.\n\nI saved two facts to the ledger, one for Regulation 19 and one for section 64:\n- Regulation 19 is in `Law/complaints-regs-part-03-enforcement-and-forms.md`.\n- Section 64 is in `Law/act-part-08-enforcement.md`.",
+   "seconds": 9.77,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "appeal against enforcement notice to High Court within days of service"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 19 of the Data Protection (Complaints Handling Procedure and Enforcement) Regulations, 2021: a person may, before the lapse of thirty days from the date of service of the enforcement notice, appeal to the High Court (subject to ss. 58(2)(d) and 64 of the Act).",
+      "files": "Law/complaints-regs-part-03-enforcement-and-forms.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Section 64 of the Data Protection Act: a person against whom administrative action is taken by the Data Commissioner, including enforcement and penalty notices, may appeal to the High Court.",
+      "files": "Law/act-part-08-enforcement.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-015",
+   "right": true,
+   "commits": 2,
+   "answer": "The server must send `notifications/subscriptions/acknowledged` as the first message on a new `subscriptions/listen` stream. It must not send any other notification on that subscription before it.\n\n- **Subscription ID:** The acknowledgment carries the subscription's ID in `_meta` under `io.modelcontextprotocol/subscriptionId`. That ID is the JSON-RPC `id` of the `subscriptions/listen` request.\n- **`notifications` field:** It lists only the notification types the server agreed to honor. Unsupported types are left out, and the client should check this against what it requested.\n- **stdio:** The \"first message\" ordering applies per subscription ID, not per channel. Messages for other subscriptions may be interleaved before it.\n\nI saved two facts to the ledger, both from `Software/mcp-2026-07-28-subscriptions.md`: the first-message requirement, and the `notifications` subset and stdio ordering rules.",
+   "seconds": 9.44,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "first message on a newly opened subscription stream notification"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "MCP 2026-07-28: on a subscriptions/listen stream, the server MUST send notifications/subscriptions/acknowledged as the first message (with the subscription ID in _meta io.modelcontextprotocol/subscriptionId) and MUST NOT send any notification before it.",
+      "files": "Software/mcp-2026-07-28-subscriptions.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "MCP 2026-07-28: the acknowledgment's `notifications` field lists only the subset the server agreed to honor (unsupported types omitted); on stdio, the first-message ordering is per subscription ID, so other subscriptions' messages may be interleaved before it.",
+      "files": "Software/mcp-2026-07-28-subscriptions.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-008",
+   "right": true,
+   "commits": 2,
+   "answer": "**Deadline: thirty days.**\n- Section 38(6) of the Data Protection Act, 2019 says a controller or processor must comply with data portability requests \"at reasonable cost and within a period of thirty days\".\n- Section 38(7) allows an extension if the request is complex or numerous. The extra period is set in consultation with the Data Commissioner.\n- Regulation 11(3) of the General Regulations repeats the thirty-day period.\n\n**Form: Form DPG 4.** Regulation 11(2) says a portability request may be made in Form DPG 4, set out in the First Schedule. The schedule labels it \"FORM DPG 4 [r. 11(2)]\", followed by the heading \"Request for Data Portability\".\n\nOne thing in the schedule file could mislead you. A line reading \"FORM DPG 5 [r.12(2)]\" appears right after the portability form's text. Each form's label sits above its heading, so that line is the label for the next form, the erasure request. It is not the portability form.\n\nI saved both facts to the Ledger, along with the files they rest on.",
+   "seconds": 14.09,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "data portability request comply within days"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Data Protection (General) Regulations 2021 data portability form"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_read",
+     "arguments": {
+      "path": "Law/general-regs-schedule-1-forms.md",
+      "start_line": 120,
+      "line_count": 100
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection Act s.38(6): controllers/processors must comply with data portability requests within thirty days (extendable for complex/numerous requests under s.38(7)). Reg 11(3) of the General Regs 2021 also says thirty days.",
+      "files": "Law/act-part-04b-obligations-and-breach.md, Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "A data portability request is made in Form DPG 4 [r.11(2)] in the First Schedule of the Data Protection (General) Regulations, 2021. In the schedule file, each form's label line comes before its heading, so the \"FORM DPG 5 [r.12(2)]\" line after the portability form belongs to the erasure form.",
+      "files": "Law/general-regs-schedule-1-forms.md, Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-022",
+   "right": true,
+   "commits": 2,
+   "answer": "**Six months.** Under regulation 6(5) of the Data Protection (Complaints Handling Procedure and Enforcement) Regulations, 2021, a complaint that was declined for admission can be re-admitted within six months from the date of decline. This applies only if the complaint raises new issues for determination under the Act.\n\nUnder regulation 6(6), the re-admitted complaint must be lodged in accordance with regulation 4.\n\nThe Commissioner may decline a complaint under regulation 6(3) when it raises no issue under the Act.\n\nI saved two facts to the Ledger, both from `Law/complaints-regs-part-01-02-lodging-and-handling.md`:\n1. The six-month re-admission rule in regulation 6(5), with the lodging requirement in 6(6).\n2. Regulation 8(4), which also allows a withdrawn complaint to be re-lodged within six months from the date of withdrawal. This fact also records the regulation 6(3) ground for declining.",
+   "seconds": 8.29,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "complaint declined for admission re-admitted new issues period from date of decline"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 6(5) of the Data Protection (Complaints Handling Procedure and Enforcement) Regulations, 2021: a complaint declined for admission under reg 6(3) may be re-admitted within six months from the date of decline if it raises new issues under the Act; reg 6(6) says it must be lodged per regulation 4.",
+      "files": "Law/complaints-regs-part-01-02-lodging-and-handling.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 8(4) of the same Regulations: a withdrawn complaint may be re-lodged within six months from the date of withdrawal. Reg 6(3) lets the Commissioner decline to admit a complaint that raises no issue under the Act.",
+      "files": "Law/complaints-regs-part-01-02-lodging-and-handling.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-019",
+   "right": true,
+   "commits": 2,
+   "answer": "Python 3.15's experimental JIT compiler uses **LLVM 21** for build-time stencil generation. This comes from the \"What's new in Python 3.15\" notes (`Software/python-3.15-whatsnew-06-optimizations-and-removed.md`), which credit Savannah Ostrowski in gh-140973.\n\nLLVM is only needed when you build CPython with the JIT enabled. People who just run Python don't need it installed.\n\nI saved two facts to the ledger, both resting on that file:\n- The JIT uses LLVM 21 for build-time stencil generation.\n- LLVM is only a build-time requirement, not needed to run Python.",
+   "seconds": 7.89,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Python 3.15 experimental JIT compiler LLVM version stencil generation"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Python 3.15's experimental JIT compiler uses LLVM 21 for build-time stencil generation (gh-140973, Savannah Ostrowski).",
+      "files": "Software/python-3.15-whatsnew-06-optimizations-and-removed.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "LLVM is only needed when building CPython with the JIT enabled; end users running Python 3.15 do not need LLVM installed.",
+      "files": "Software/python-3.15-whatsnew-06-optimizations-and-removed.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-014",
+   "right": true,
+   "commits": 2,
+   "answer": "The controller must inform the data subject **within fourteen (14) days** of the collection. This is in regulation 6(3) of the Data Protection (General) Regulations, 2021: \"Where a data controller or data processor collects personal data indirectly, the data controller or data processor shall within fourteen days inform the data subject of the collection.\"\n\nI saved two facts to the Ledger, both resting on `Law/general-regs-part-01-02-rights-of-a-data-subject.md`:\n1. The 14-day notice rule for indirect collection (reg 6(3)).\n2. Access requests must be met within seven days (reg 9(4)). I saw this in the same search, and it wasn't part of your question.",
+   "seconds": 8.59,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "data controller collects personal data indirectly inform data subject within days"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 6(3) of Kenya's Data Protection (General) Regulations, 2021: where a controller/processor collects personal data indirectly, it must inform the data subject within fourteen days of the collection.",
+      "files": "Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 9(4) of the General Regulations: a controller/processor must comply with a data subject's access request within seven days of the request.",
+      "files": "Law/general-regs-part-01-02-rights-of-a-data-subject.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-007",
+   "right": true,
+   "commits": 2,
+   "answer": "**Maximum penalty under the 2019 Act: KSh 5,000,000.** Section 63 of the Data Protection Act caps a penalty notice at five million shillings. For an undertaking, the cap is up to 1% of its annual turnover for the preceding financial year. Whichever of the two is lower applies. (Source: `Law/act-part-08-enforcement.md`.)\n\n**Maximum daily fine under the 2021 Regulations: KSh 10,000 per breach.** Regulation 20(4) of the Data Protection (Complaints Handling Procedure and Enforcement) Regulations, 2021 says a penalty notice may add a daily fine of not more than ten thousand shillings for each breach identified. The fine runs until the breach is rectified. (Source: `Law/complaints-regs-part-03-enforcement-and-forms.md`.)\n\nI saved both as facts in the Ledger, each tied to the file it comes from.",
+   "seconds": 8.22,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "penalty notice maximum amount Data Commissioner shillings"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "penalty notice daily fine per breach enforcement regulations"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection Act s.63: max penalty in a penalty notice is up to KSh 5,000,000, or for an undertaking up to 1% of preceding year's annual turnover, whichever is lower.",
+      "files": "Law/act-part-08-enforcement.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Complaints Handling Procedure and Enforcement Regulations 2021, reg 20(4): a penalty notice may impose a daily fine of not more than KSh 10,000 for each breach identified until the breach is rectified.",
+      "files": "Law/complaints-regs-part-03-enforcement-and-forms.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-s-014",
+   "right": true,
+   "commits": 2,
+   "answer": "I saved both facts to the Ledger. The first is the stdio cancellation rule above, from `Software/mcp-2026-07-28-stdio-transport.md`. The second is that, on stdio, a client cancels a `subscriptions/listen` subscription with the same `notifications/cancelled` notification, from `Software/mcp-2026-07-28-subscriptions.md`.",
+   "seconds": 8.27,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "stdio transport cancel in-flight request notification"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "MCP 2026-07-28 stdio transport: to cancel an in-flight request the client MUST send a `notifications/cancelled` notification referencing the request's ID; servers SHOULD stop work ASAP and MUST NOT send further messages for it.",
+      "files": "Software/mcp-2026-07-28-stdio-transport.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "MCP 2026-07-28: on stdio, a client cancels a subscription by sending `notifications/cancelled` referencing the `subscriptions/listen` request ID (on HTTP it closes the SSE stream).",
+      "files": "Software/mcp-2026-07-28-subscriptions.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-m-001",
+   "right": true,
+   "commits": 1,
+   "answer": "The three new `sqlite3_limit()` options are:\n\n- **`SQLITE_LIMIT_PARSER_DEPTH`** was added in 3.53.0 (2026-04-09). It is listed under the new C-language interfaces, item 6f.\n- **`SQLITE_LIMIT_SCHEMA`** was added in 3.54.0 (2026-10-09), in item 12 of that release.\n- **`SQLITE_LIMIT_TRIGGER_STEPS`** was added in the same 3.54.0 item.\n\nThe notes list only the option names. They don't say what each limit controls.\n\nI saved one fact to the Ledger covering all three options. It rests on `Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md` and `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`.",
+   "seconds": 10.54,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "sqlite3_limit() new options added"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "SQLITE_LIMIT new limit 3.53.0 3.54.0",
+      "folder": "Software"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "SQLite 3.53.0 (2026-04-09) added SQLITE_LIMIT_PARSER_DEPTH to sqlite3_limit(); 3.54.0 (2026-10-09) added SQLITE_LIMIT_SCHEMA and SQLITE_LIMIT_TRIGGER_STEPS.",
+      "files": "Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md, Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-007",
+   "right": true,
+   "commits": 2,
+   "answer": "**Sixty (60) days.** Section 31(5) of the Data Protection Act, 2019 says: \"The data impact assessment reports shall be submitted sixty days prior to the processing of data.\" (Source: `Law/act-part-04a-principles-and-rights.md`.)\n\nThe Data Protection (General) Regulations, 2021 add a related rule. Under reg. 52(3), if the controller or processor hears nothing from the Data Commissioner within sixty days of submitting the report, it may start processing. The report is then taken to have been approved. (Source: `Law/general-regs-part-08-10-impact-assessment-exemptions.md`.)\n\nI saved both points to the Ledger as facts.",
+   "seconds": 7.69,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "data protection impact assessment report submitted to Data Commissioner days before processing"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_resume",
+     "arguments": {},
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection Act 2019 s.31(5): data protection impact assessment reports shall be submitted sixty days prior to the processing of data.",
+      "files": "Law/act-part-04a-principles-and-rights.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "General Regulations 2021 reg 52(3): if the controller/processor gets no communication from the Data Commissioner within sixty days of submitting the DPIA report, it may start processing and the report is taken to be approved.",
+      "files": "Law/general-regs-part-08-10-impact-assessment-exemptions.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-s-024",
+   "right": true,
+   "commits": 2,
+   "answer": "A data controller is exempt from mandatory registration if it meets both conditions in regulation 13(2):\n\n- **Money:** annual turnover below **KES 5 million**, or annual revenue below **KES 5 million**.\n- **Staff:** **fewer than 10 employees**.\n\n\u201cRevenue\u201d applies to profit-making entities. It means total income for the year before the year of registration. \u201cTurnover\u201d applies to non-profit entities. It means their utilised annual budget for that same year.\n\nThere are two caveats:\n- An exempt entity must still comply with Parts IV and VI of the Act (regulation 13(3)).\n- The exemption does not apply if the entity processes personal data for a purpose listed in the Third Schedule (regulation 13(4)). Those purposes include gambling, financial services, health administration, running an educational institution, and CCTV or crime prevention.\n\nI saved two facts to the Ledger. One is the threshold. The other is the Third Schedule carve-out. Both rest on `Law/registration-regs-regulations-01-18.md`. The carve-out fact also cites `Law/registration-regs-schedules-fees-and-thresholds.md`.",
+   "seconds": 9.93,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "exemption from mandatory registration annual turnover revenue number of employees data controller"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 13(2) of Kenya's Registration of Data Controllers and Processors Regs 2021: exempt from mandatory registration if annual turnover or revenue is below KES 5 million AND fewer than 10 employees.",
+      "files": "Law/registration-regs-regulations-01-18.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 13(4): the exemption does not apply to a controller/processor with turnover below KES 5 million that processes personal data for purposes in the Third Schedule (e.g. gambling, financial services, health administration, CCTV crime prevention).",
+      "files": "Law/registration-regs-regulations-01-18.md, Law/registration-regs-schedules-fees-and-thresholds.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "sw-m-009",
+   "right": true,
+   "commits": 2,
+   "answer": "PEP 831 uses two compiler flags:\n- `-fno-omit-frame-pointer`\n- `-mno-omit-leaf-frame-pointer`\n\nTo opt out, pass `--without-frame-pointers` to `configure`.\n\nThe flags are exposed through `sysconfig`, so extension modules built from Python's build configuration inherit them. The notes say native build systems that don't consume those values should add equivalent frame-pointer flags themselves. One native component without frame pointers can break stack unwinding for the whole process.\n\nI saved two facts to the ledger. One covers the two flags and is based on `Software/python-3.15-whatsnew-02-new-features-continued.md`. The other covers the opt-out option and is based on `Software/python-3.15-whatsnew-08-c-api-build-porting.md`.",
+   "seconds": 8.27,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "PEP 831 frame pointers CPython compiler flags configure opt out"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "PEP 831 (Python 3.15): CPython is built with frame pointers by default using compiler flags -fno-omit-frame-pointer and -mno-omit-leaf-frame-pointer; these flags are exposed through sysconfig.",
+      "files": "Software/python-3.15-whatsnew-02-new-features-continued.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "In Python 3.15, passing the configure option --without-frame-pointers opts out of the default frame-pointer build (PEP 831).",
+      "files": "Software/python-3.15-whatsnew-08-c-api-build-porting.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-004",
+   "right": true,
+   "commits": 2,
+   "answer": "- **Deadline:** The report must be submitted **sixty (60) days** before processing. This is section 31(5) of the Data Protection Act, 2019: \"The data impact assessment reports shall be submitted sixty days prior to the processing of data.\"\n- **Template:** The **Third Schedule** of the Data Protection (General) Regulations, 2021 sets out the template. Regulation 50(1) says a controller or processor \"may conduct the assessment through a template set out in the Third Schedule\". Under regulation 50(2), the Data Commissioner can vary the format through guidance notes.\n\nRelated rule: under regulation 52(3), if the Commissioner sends no communication within sixty days of submission, the controller or processor may start processing. The report is then taken to have been approved.\n\nI saved two facts to the ledger. One is the 60-day rule, resting on `Law/act-part-04a-principles-and-rights.md`. The other is the Third Schedule template, resting on `Law/general-regs-part-08-10-impact-assessment-exemptions.md`.",
+   "seconds": 8.31,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "data protection impact assessment report submitted days before processing"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "Schedule template for conducting data protection impact assessment General Regulations 2021"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection Act 2019 s.31(5): data protection impact assessment reports shall be submitted sixty days prior to the processing of data.",
+      "files": "Law/act-part-04a-principles-and-rights.md",
+      "model": "claude"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Data Protection (General) Regulations 2021, reg. 50(1): a DPIA may be conducted through the template set out in the Third Schedule.",
+      "files": "Law/general-regs-part-08-10-impact-assessment-exemptions.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "task": "law-m-012",
+   "right": true,
+   "commits": 1,
+   "answer": "The respondent has **21 days** to respond, and the complaint must be investigated and concluded within **90 days**.\n\n- **Respondent's response time:** Regulation 11(1) of the Data Protection (Complaints Handling Procedure and Enforcement) Regulations, 2021 says that once a complaint is admitted, the Data Commissioner notifies the respondent on Form DPC 3. The respondent then has twenty-one days to do one of three things:\n  - make representations and provide supporting material or evidence;\n  - review the complaint with a view to resolving it summarily to the complainant's satisfaction; or\n  - provide a response with the required information.\n\n  If the respondent takes none of these steps, regulation 11(2) says the Commissioner proceeds to determine the complaint.\n- **Overall time limit:** Section 56(5) of the Data Protection Act, 2019 says a complaint made to the Data Commissioner \"shall be investigated and concluded within ninety days.\"\n\nI saved both facts to the ledger. They rest on `Law/complaints-regs-part-01-02-lodging-and-handling.md` and `Law/act-part-08-enforcement.md`.",
+   "seconds": 8.19,
+   "calls": [
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "respondent days to respond after notification of admitted complaint"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_find",
+     "arguments": {
+      "query": "complaint investigated and concluded within days Data Protection Act 2019"
+     },
+     "failed": false
+    },
+    {
+     "name": "burrow_commit",
+     "arguments": {
+      "kind": "fact",
+      "message": "Reg 11(1) of the 2021 Complaints Handling Procedure and Enforcement Regulations: on admission the Data Commissioner notifies the respondent (Form DPC 3) and requires action within twenty-one days. Section 56(5) of the 2019 Act: a complaint shall be investigated and concluded within ninety days.",
+      "files": "Law/complaints-regs-part-01-02-lodging-and-handling.md, Law/act-part-08-enforcement.md",
+      "model": "claude"
+     },
+     "failed": false
+    }
+   ]
+  }
+ ],
+ "dropped": [],
+ "cloud_tokens": [
+  965770,
+  34343
+ ]
+}

@@ -1,0 +1,3141 @@
+[
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the specific conversation history between you and a previous assistant. While I can see the code and notes in your vault (such as the `ChatSession.swift` file which manages how history is stored), the actual content of past turns is not preserved in a way that allows me to retrieve a specific \"first question\" from a previous session.\n\nHowever, if you can provide a hint or a topic we were discussing, I can search the vault for related notes or code to help reconstruct the context!",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "first question"
+    },
+    "failed": false,
+    "characters": 14888,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of conversation"
+    },
+    "failed": false,
+    "characters": 14266,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of the current session"
+    },
+    "failed": false,
+    "characters": 15129,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15950,
+  "seconds": 42.72
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": false,
+  "answer": "In our earlier conversation, I answered that the Kenya Data Protection Act, 2019, does not specify a strict number of hours for notifying the Data Commissioner. Instead, it requires notification to be made **\"as soon as reasonably practicable\"** after the data controller or data processor becomes aware of the breach.\n\nThe information was sourced from:\n*   **Section 43** of the Data Protection Act, 2019\n*   **Regulation 38** of the Data Protection (General) Regulations, 2021 (Legal Notice 263 of 2021)\n\nThe specific file in your vault containing this information is:\n`Law/general-regs-part-06-breach-notification.md`",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Kenya Data Protection Act 2019 breach notification time frame"
+    },
+    "failed": false,
+    "characters": 16796,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6330,
+  "seconds": 10.39
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation, your first question was: *\"Under Kenya's Data Protection Act, 2019, within how many hours of becoming aware of a personal data breach that poses a real risk of harm m...\"*\n\nThe assistant answered that the **Kenya Data Protection Act, 2019, does not specify a specific number of hours** for reporting a breach.\n\nThe information was retrieved from the following files:\n*   `Law/general-regs-part-06-breach-notification.md`\n*   `Law/act-part-04b-obligations-and-breach.md`",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2365,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 2907,
+  "seconds": 5.25
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": true,
+  "answer": "To your first question back then, I answered that the Kenya Data Protection Act, 2019, does not specify a strict time frame for notifying the Data Commissioner of a personal data breach. Instead, it emphasizes that the notification must be made **as soon as reasonably practicable**.\n\nThe information was retrieved from the following file:\n**Law/act-part-04b-obligations-and-breach.md**",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2309,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1825,
+  "seconds": 4.08
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your vault.\n\nHowever, I can see that the `ChatSession.swift` file (lines 160-163) manages the conversation history:\n\n```swift\n160:         // Only the question and the answer are kept, so old excerpts don't crowd out the next question.\n161:         history.append([\"role\": \"user\", \"content\": userContent(question)])\n162:         history.append([\"role\": \"assistant\", \"content\": turn.answer])\n163:         if history.count > 12 { history.removeFirst(history.count - 12) }\n```\n\nIf you can provide the question or the topic we were discussing, I can search the vault to find the relevant information for you.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "second question"
+    },
+    "failed": false,
+    "characters": 14265,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "second question answer"
+    },
+    "failed": false,
+    "characters": 14044,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions"
+    },
+    "failed": false,
+    "characters": 14303,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15352,
+  "seconds": 40.28
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": false,
+  "answer": "In our previous conversation, I answered that in **SQLite 3.53.0** (released on 2026-04-09), floating-point to text conversions are rounded to **17 significant digits** by default.\n\nThe information came from the following file:\n`Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md`",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "SQLite 3.53.0 floating-point to text conversions"
+    },
+    "failed": false,
+    "characters": 15355,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6734,
+  "seconds": 7.88
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation, your second question was: *\"In SQLite 3.53.0, released 2026-04-09, to how many significant digits are floating-point to text conversions rounded by default, and which sqlite3_db_config() option changes this?\"*\n\nThe answer provided was:\n**17 significant digits**\n\nThis information came from the file:\n`Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md`",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2365,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 2907,
+  "seconds": 5.0
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": true,
+  "answer": "In your second question, I answered that in SQLite 3.53.0 (released on 2026-04-09), floating-point to text conversions are rounded to **17 significant digits** by default.\n\nThis information came from the file:\n`Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md`",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2309,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1825,
+  "seconds": 3.34
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history with the previous assistant. However, I can see that your vault contains a `sessions.jsonl` file (referenced in `Project/Sources/BurrowTrial/Runner.swift`) which is designed to store records of every session, including the questions asked and the answers provided.\n\nIf you can provide the specific topic or a keyword from that third question, I can search the `sessions.jsonl` file for you to retrieve the exact answer and the file it came from.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "third question"
+    },
+    "failed": false,
+    "characters": 14629,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log"
+    },
+    "failed": false,
+    "characters": 14242,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log file"
+    },
+    "failed": false,
+    "characters": 14314,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log records"
+    },
+    "failed": false,
+    "characters": 14051,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15174,
+  "seconds": 37.52
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": true,
+  "used_memory": false,
+  "answer": "In the conversation you provided, the answer to your third question was:\n\n**Five years**\n\nThe information came from the following file:\n`Law/act-part-02-office-of-the-data-commissioner.md`\n\n*(Note: While the assistant's response in your provided text cited Section 11(1) and a 5-year term, the actual content of that file in your vault currently shows a 6-year term in line 71. However, based strictly on the conversation history you shared, the answer given was **five years**.)*",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Commissioner term of office"
+    },
+    "failed": false,
+    "characters": 16107,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6000,
+  "seconds": 8.01
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation, your third question was: *\"Under Kenya's Data Protection Act, 2019, how long is the Data Commissioner's term of office, and can it be renewed?\"*\n\nThe answer provided was that the term of office is **five years**, and it **can be renewed**.\n\nThis information came from **Section 11(1)** of the Act, as found in the file:\n`Law/act-part-04b-obligations-and-breach.md`",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2365,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 2907,
+  "seconds": 5.1
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": false,
+  "used_memory": true,
+  "answer": "The answer to your third question was that the Data Commissioner's term of office is **five years**.\n\nThis information came from **Section 11(1)** of the **Kenya Data Protection Act, 2019**, which is located in the file:\n`Law/act-part-01-preliminary.md`",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2309,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1825,
+  "seconds": 3.2
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the specific conversation history between you and a previous assistant. While I can see the code and notes in your vault (such as the `ChatSession.swift` file which manages how history is stored), the actual content of past turns is not preserved in a way that allows me to retrieve a specific \"first question\" from a previous session.\n\nHowever, if you can provide a hint or a topic we were discussing, I can search the vault for related notes or code to help reconstruct the context!",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "first question"
+    },
+    "failed": false,
+    "characters": 14888,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of conversation"
+    },
+    "failed": false,
+    "characters": 14266,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of the current session"
+    },
+    "failed": false,
+    "characters": 15129,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15950,
+  "seconds": 42.8
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": true,
+  "used_memory": false,
+  "answer": "In our earlier conversation, I answered that a complaint made to the Data Commissioner must be investigated and concluded within **ninety days**.\n\nThis information was sourced from the following file:\n**Law/act-part-08-enforcement.md** (specifically Section 56(5) of the Data Protection Act, 2019).",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Protection Act 2019 complaint investigation 90 days"
+    },
+    "failed": false,
+    "characters": 16290,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 5709,
+  "seconds": 8.65
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-210320-a099`), the first question you asked was:\n\n**\"Under Kenya's Data Protection Act, 2019, within how many days must a complaint made to the Data Commissioner be investigated and concluded?\"**\n\nThe assistant answered that the investigation and conclusion of a complaint are governed by the **Data Protection (Complaints Handling Procedure and Enforcement) Regulations, 2021**. Specifically, the regulations state that the Data Commissioner shall communicate the decision (the determination) within **seven days** from the date of such determination (as per Regulation 14(4)).\n\nThe information was sourced from:\n**`Law/complaints-regs-part-01-02-lodging-and-handling.md`**",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2575,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_read",
+    "arguments": {
+     "path": "Law/complaints-regs-part-01-02-lodging-and-handling.md"
+    },
+    "failed": false,
+    "characters": 10811,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_read",
+    "arguments": {
+     "path": "Law/complaints-regs-part-01-02-lodging-and-handling.md",
+     "start_line": 201
+    },
+    "failed": false,
+    "characters": 4517,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 4,
+  "prompt_tokens": 7527,
+  "seconds": 14.5
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": true,
+  "used_memory": true,
+  "answer": "In our previous conversation, the answer to your first question was:\n\n**Ninety days**\n\nThis was sourced from the file: `Law/act-part-01-preliminary.md` (specifically Section 56(5) of the Data Protection Act, 2019).",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2283,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1823,
+  "seconds": 3.58
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your vault.\n\nHowever, I can see that the `ChatSession.swift` file (lines 160-163) manages the conversation history:\n\n```swift\n160:         // Only the question and the answer are kept, so old excerpts don't crowd out the next question.\n161:         history.append([\"role\": \"user\", \"content\": userContent(question)])\n162:         history.append([\"role\": \"assistant\", \"content\": turn.answer])\n163:         if history.count > 12 { history.removeFirst(history.count - 12) }\n```\n\nIf you can provide the question or the topic we were discussing, I can search the vault to find the relevant information for you.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "second question"
+    },
+    "failed": false,
+    "characters": 14265,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions"
+    },
+    "failed": false,
+    "characters": 14303,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions asked"
+    },
+    "failed": false,
+    "characters": 14892,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15481,
+  "seconds": 41.5
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": false,
+  "used_memory": false,
+  "answer": "In the conversation you shared, the answer to your second question was:\n\n**\"The provided excerpts do not contain any information about the minimum Windows version required by SQLite 3.54.0. While the release notes mention improvements to Windows-specific features (e.g., using Slim Reader/Writer Locks), they do not specify the oldest Windows version that is now required.\"**\n\nThis information was derived from the file:\n`Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "SQLite 3.54.0 Windows XP"
+    },
+    "failed": false,
+    "characters": 15035,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 6338,
+  "seconds": 10.19
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-210320-a099`), your second question was:\n\n*\"SQLite 3.54.0, released 2026-10-09, dropped support for Windows XP and earlier. What is the oldest Windows version it now requires?\"*\n\nThe assistant's answer was that the provided excerpts **did not contain any information** about the specific minimum Windows version required, though it noted that the release notes mentioned improvements to Windows-specific features.\n\nThe information was sought from the following files:\n* `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`\n* `Software/ollama-releases-v0.30.0-to-v0.31.2.md`\n* `Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md`\n* `Software/ollama-releases-v0.20.0-to-v0.24.0.md`\n* `Law/complaints-regs-part-01-02-lodging-and-handling.md`\n* `Law/act-part-06-transfer-outside-kenya.md`",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2575,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 2976,
+  "seconds": 7.54
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": false,
+  "used_memory": true,
+  "answer": "To your second question, the previous assistant answered that the provided excerpts do not contain any information about the minimum Windows version required by SQLite 3.54.0.\n\nThe information was sourced from:\n**Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md**",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2283,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1823,
+  "seconds": 3.71
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history with the previous assistant. However, I can see that your vault contains a `sessions.jsonl` file (referenced in `Project/Sources/BurrowTrial/Runner.swift`) which is designed to store records of every session, including the questions asked and the answers provided.\n\nIf you can provide the specific topic or a keyword from that third question, I can search the `sessions.jsonl` file for you to retrieve the exact answer and the file it came from.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "third question"
+    },
+    "failed": false,
+    "characters": 14629,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log"
+    },
+    "failed": false,
+    "characters": 14242,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log file"
+    },
+    "failed": false,
+    "characters": 14314,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log records"
+    },
+    "failed": false,
+    "characters": 14051,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15174,
+  "seconds": 40.08
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": true,
+  "used_memory": false,
+  "answer": "In our previous conversation, the answer to your third question was:\n\n**Maximum Fine:** KSh 10 million\n**Maximum Prison Term:** 10 years\n\nThis information was sourced from **Section 56(6)** of the **Data Protection Act, 2019 (Cap. 411C)**.\n\n*(Note: While the current vault content in `Law/act-part-10-11-delegated-powers-and-miscellaneous.md` lists a fine of \"not exceeding three million shillings\" under Section 73, the specific answer provided in your previous session was based on the 10 million / 10 years figure from Section 56(6).)*",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Protection Act 2019 general penalty"
+    },
+    "failed": false,
+    "characters": 15729,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 5944,
+  "seconds": 9.93
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-210320-a099`), your third question was:\n\n*\"Under the general penalty in Kenya's Data Protection Act, 2019, what is the maximum fine and the maximum prison term for an offence for which no specific penalty is provided?\"*\n\nI answered that the maximum fine is **KSh 10 million** and the maximum prison term is **10 years**.\n\nThis information came from the file:\n`Law/act-part-06-transfer-outside-kenya.md` (specifically referencing Section 56(6) of the Act).",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2575,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 2976,
+  "seconds": 5.49
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": false,
+  "used_memory": true,
+  "answer": "To your third question, the answer was:\n\n**Maximum fine: KSh 10 million**\n**Maximum prison term: 10 years**\n\nThis information came from the file: `Law/act-part-08-enforcement.md` (specifically Section 56(6) of the Data Protection Act, 2019).",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2283,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1823,
+  "seconds": 3.69
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your private vault.\n\nHowever, I can see that the system is designed to manage conversation history in `Project/Sources/BurrowChat/ChatSession.swift`. Specifically, the `history` variable (lines 66-163) stores the interaction between the user and the assistant, and the `ask` function (lines 120-167) handles the flow of questions and answers.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "first question"
+    },
+    "failed": false,
+    "characters": 14888,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of conversation"
+    },
+    "failed": false,
+    "characters": 14266,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of the current session"
+    },
+    "failed": false,
+    "characters": 15129,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15950,
+  "seconds": 44.13
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": true,
+  "used_memory": false,
+  "answer": "In our previous conversation, I answered that the specific submission deadline for data protection impact assessment reports is not explicitly stated in the Act.\n\nHowever, I cited the following figure from the **Data Protection (General) Regulations, 2021 (Legal Notice 263 of 2021)**:\n\n*   **Figure:** **60 days**\n*   **File:** `Law/general-regs-part-08-10-impact-assessment-exemptions.md` (specifically Section 52(3))\n\nThe regulation states that if a data controller or processor submits the report and does not receive any communication from the Data Commissioner within **sixty days** of submission, they may commence processing operations and the report shall be taken to have been approved.",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Kenya Data Protection Act 2019 submission deadline data protection impact assessment"
+    },
+    "failed": false,
+    "characters": 16590,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6132,
+  "seconds": 9.26
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-210648-cfa2`), your first question was: *\"Under Kenya's Data Protection Act, 2019, how many days before the processing of data must data protection impact assessment reports be submitted?\"*\n\nThe assistant's answer was:\n**\"Based on the provided content, the specific submission deadline for a data protection impact assessment (DPIA) is not explicitly stated.\"**\n\nThe assistant noted that the information was not found in the provided files (which included `Law/act-part-01-preliminary.md` and `Law/general-regs-part-08-10-impact-assessment-exemptions.md`).",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2765,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3028,
+  "seconds": 5.89
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": false,
+  "used_memory": true,
+  "answer": "To your first question in our last conversation, the answer was that the specific submission deadline for data protection impact assessment reports under Kenya's Data Protection Act, 2019 is **not explicitly stated** in the provided content.\n\nThe information was sourced from the following files:\n*   `Law/act-part-01-preliminary.md`\n*   `Law/general-regs-part-08-10-impact-assessment-exemptions.md`",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2280,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1731,
+  "seconds": 4.26
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your vault.\n\nHowever, I can see that the `ChatSession.swift` file (lines 160-163) manages the conversation history:\n\n```swift\n160:         // Only the question and the answer are kept, so old excerpts don't crowd out the next question.\n161:         history.append([\"role\": \"user\", \"content\": userContent(question)])\n162:         history.append([\"role\": \"assistant\", \"content\": turn.answer])\n163:         if history.count > 12 { history.removeFirst(history.count - 12) }\n```\n\nThis indicates that the system keeps the last 12 turns of the conversation. If you can provide the question or a topic we were discussing, I can search the vault for the relevant information to help reconstruct the answer.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "second question"
+    },
+    "failed": false,
+    "characters": 14265,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions"
+    },
+    "failed": false,
+    "characters": 14303,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions asked"
+    },
+    "failed": false,
+    "characters": 14892,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15481,
+  "seconds": 45.04
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": true,
+  "used_memory": false,
+  "answer": "In our previous conversation, the answer to your second question was:\n\nThe RPC is **`server/discover`**.\n\nThis information came from the following file:\n**`Software/mcp-2026-07-28-changelog.md`**",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "mcp 2026 07 28"
+    },
+    "failed": false,
+    "characters": 15923,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6423,
+  "seconds": 10.01
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": true,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-210648-cfa2`), your second question was:\n\n*\"In the 2026-07-28 revision of the Model Context Protocol specification, which RPC must every server implement to advertise its supported protocol versions, capabilities and identity?\"*\n\nThe answer provided was:\nThe RPC is **`server/discover`**.\n\nThis information came from the file:\n**`Software/mcp-2026-07-28-changelog.md`**",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2765,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3028,
+  "seconds": 7.06
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": true,
+  "used_memory": true,
+  "answer": "To your second question in our previous conversation, I answered that the RPC every server must implement to advertise its supported protocol versions, capabilities, and identity is `server/discover`.\n\nThis information came from the file: `Software/mcp-2026-07-28-changelog.md`.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2280,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1731,
+  "seconds": 4.45
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history with the previous assistant. However, I can see that your vault contains a `sessions.jsonl` file (referenced in `Project/Sources/BurrowTrial/Runner.swift`) which is designed to store records of every session, including the questions asked and the answers provided.\n\nIf you can provide the specific topic or a keyword from that third question, I can search the `sessions.jsonl` file for you to retrieve the exact answer and the file it came from.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "third question"
+    },
+    "failed": false,
+    "characters": 14629,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log"
+    },
+    "failed": false,
+    "characters": 14242,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log file"
+    },
+    "failed": false,
+    "characters": 14314,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log records"
+    },
+    "failed": false,
+    "characters": 14051,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15174,
+  "seconds": 43.52
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": true,
+  "used_memory": false,
+  "answer": "In our previous conversation, the answer to your third question was that the content does not explicitly state the shortest period, but it mentions a period of **\"not less than twenty-one days\"** (though the previous assistant's response noted a 15-day period from a different regulation).\n\nSpecifically, the information regarding the enforcement notice period is found in:\n**File:** `Law/act-part-08-enforcement.md`\n**Line:** 45\n\nThe text in that file states:\n> \"(c) specify a period which shall not be less than twenty-one days within which those measures shall be implemented;\"",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Protection Act 2019 enforcement notice 15 days"
+    },
+    "failed": false,
+    "characters": 15896,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6335,
+  "seconds": 9.09
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-210648-cfa2`), your third question was: *\"Under Kenya's Data Protection Act, 2019, what is the shortest period an enforcement notice may give a person to implement the measures it specifies?\"*\n\nThe assistant's answer stated that the shortest period is **not explicitly stated** in the provided content. \n\nThe information was sourced from:\n**Law/act-part-01-preliminary.md** (which contains references to Section 52 of the Data Protection (General) Regulations, 2021).",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2765,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3028,
+  "seconds": 5.91
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": false,
+  "used_memory": true,
+  "answer": "The third question you asked was: *\"Under Kenya's Data Protection Act, 2019, what is the shortest period an enforcement notice may give a person to implement the measures it specifies?\"*\n\nThe answer provided was that the **shortest period is not explicitly stated** in the provided content. The assistant noted that the content included a reference to an enforcement notice but did not specify a minimum timeframe.\n\nThis information was derived from the following files:\n*   `Law/act-part-01-preliminary.md`\n*   `Law/act-part-06-transfer-outside-kenya.md`\n*   `Law/general-regs-part-01-02-rights-of-a-data-subject.md`\n*   `Law/general-regs-part-07-transfer-outside-kenya.md`\n*   `Law/general-regs-part-08-10-impact-assessment-exemptions.md`\n*   `Law/registration-regs-regulations-01-18.md`",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2280,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1731,
+  "seconds": 5.41
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your private vault.\n\nHowever, I can see that the system is designed to manage conversation history in `Project/Sources/BurrowChat/ChatSession.swift`. Specifically, the `history` variable (lines 66-163) stores the interaction history, and the `ask` function (lines 120-167) manages how those messages are sent to the model.\n\nIf you would like me to look for a specific topic we might have discussed, please let me know!",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "first question"
+    },
+    "failed": false,
+    "characters": 14888,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of conversation"
+    },
+    "failed": false,
+    "characters": 14266,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of the current session"
+    },
+    "failed": false,
+    "characters": 15129,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15950,
+  "seconds": 41.44
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": true,
+  "used_memory": false,
+  "answer": "I answered that the **Public Service Commission** invites applications for the position of Data Commissioner, and it must do so within **seven days** of being notified of the vacancy.\n\nThis information was sourced from:\n**File:** `Law/act-part-02-office-of-the-data-commissioner.md`\n**Lines:** 31\u201333",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Kenya's Data Protection Act, 2019 Data Commissioner vacancy"
+    },
+    "failed": false,
+    "characters": 16104,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Protection Act 2019 Public Service Commission vacancy"
+    },
+    "failed": false,
+    "characters": 16379,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 10060,
+  "seconds": 13.05
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-211110-ebe9`), the first question you asked was:\n\n*\"Under Kenya's Data Protection Act, 2019, which body invites applications for the position of Data Commissioner when the office falls vacant\u2026\"*\n\nThe assistant answered that the **Public Service Commission** is the body responsible for this.\n\nThe information came from the following file:\n**Law/act-part-01-preliminary.md**",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2990,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3114,
+  "seconds": 5.81
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": true,
+  "used_memory": true,
+  "answer": "In our first turn of that conversation, I answered that the **Public Service Commission** invites applications for the position of Data Commissioner when the office falls vacant (within seven days of being notified of the vacancy).\n\nThis information came from the file: `Law/act-part-02-office-of-the-data-commissioner.md`.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2260,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1774,
+  "seconds": 3.78
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your vault.\n\nHowever, I can see that the `ChatSession.swift` file (lines 160-163) manages the conversation history:\n\n```swift\n160:         // Only the question and the answer are kept, so old excerpts don't crowd out the next question.\n161:         history.append([\"role\": \"user\", \"content\": userContent(question)])\n162:         history.append([\"role\": \"assistant\", \"content\": turn.answer])\n163:         if history.count > 12 { history.removeFirst(history.count - 12) }\n```\n\nIf you can provide the question or the topic we were discussing, I can search the vault to find the relevant information for you.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "second question"
+    },
+    "failed": false,
+    "characters": 14265,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions"
+    },
+    "failed": false,
+    "characters": 14303,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions asked"
+    },
+    "failed": false,
+    "characters": 14892,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15481,
+  "seconds": 41.28
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": true,
+  "used_memory": false,
+  "answer": "I answered the second question (regarding the caching model of the 2026-07-28 Model Context Protocol specification) with the following information:\n\nThe two fields are:\n1. **Time-to-live (TTL) Field** (`ttlMs`)\n2. **Cache Scope Field** (`cacheScope`)\n\nThis information was retrieved from the following file:\n**Software/mcp-2026-07-28-caching.md** (specifically lines 44\u201347).",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "mcp 2026 07 28 caching"
+    },
+    "failed": false,
+    "characters": 15328,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6076,
+  "seconds": 8.27
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": true,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-211110-ebe9`), your second question was:\n\n*\"In the caching model of the 2026-07-28 Model Context Protocol specification, what are the names of the two fields that carry caching hints on cacheable results?\"*\n\nThe assistant answered that the two fields are:\n1. **Time-to-live (TTL) Field** (`ttlMs`)\n2. **Cache Scope Field** (`cacheScope`)\n\nThese were identified from the following files:\n* `Software/mcp-2026-07-28-caching.md`\n* `Software/mcp-2026-07-28-changelog.md`\n* `Software/mcp-2026-07-28-server-discover.md`\n* `Software/mcp-2026-07-28-deprecated-features.md`",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2990,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3114,
+  "seconds": 6.06
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": true,
+  "used_memory": true,
+  "answer": "To your second question, I answered that the two fields that carry caching hints on cacheable results in the caching model of the 2026-07-28 Model Context Protocol specification are:\n\n1. **Time-to-live (TTL) Field** (`ttlMs`)\n2. **Cache Scope Field** (`cacheScope`)\n\nThis information came from the file: `Software/mcp-2026-07-28-caching.md`.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2260,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1774,
+  "seconds": 3.56
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history with the previous assistant. However, I can see that your vault contains a `sessions.jsonl` file (referenced in `Project/Sources/BurrowTrial/Runner.swift`) which is designed to store records of every session, including the questions asked and the answers provided.\n\nIf you can provide the specific topic or a keyword from that third question, I can search the `sessions.jsonl` file for you to retrieve the exact answer and the file it came from.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "third question"
+    },
+    "failed": false,
+    "characters": 14629,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log"
+    },
+    "failed": false,
+    "characters": 14242,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log file"
+    },
+    "failed": false,
+    "characters": 14314,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log records"
+    },
+    "failed": false,
+    "characters": 14051,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15174,
+  "seconds": 40.23
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": true,
+  "used_memory": false,
+  "answer": "I apologize, but there appears to be a discrepancy between the answer provided in our previous conversation and the actual text in your vault.\n\nBased on the file **`Law/act-part-06-transfer-outside-kenya.md`**, the correct answer to your third question is:\n\nThe **Cabinet Secretary** may prescribe that certain processing shall only be effected through a server or data centre located in Kenya. This is based on grounds of **strategic interests of the state or protection of revenue**.\n\nThe previous assistant's answer (which stated the Data Protection Commissioner and grounds of national security/public interest) does not match the text in your vault.\n\n**Source:**\n*   **File:** `Law/act-part-06-transfer-outside-kenya.md`\n*   **Line:** 41",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Kenya's Data Protection Act, 2019 Section 50"
+    },
+    "failed": false,
+    "characters": 15434,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_read",
+    "arguments": {
+     "path": "Law/act-part-06-transfer-outside-kenya.md"
+    },
+    "failed": false,
+    "characters": 3065,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 7013,
+  "seconds": 11.57
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-211110-ebe9`), your third question was:\n\n*\"Under section 50 of Kenya's Data Protection Act, 2019, who may prescribe that certain processing shall only be effected through a server or data centre located in Kenya, and on what grounds?\"*\n\nThe assistant answered that the **Data Protection Commissioner** may prescribe this, and the grounds are **national security, public interest, or the protection of personal data**.\n\nThe information came from the following file:\n**Law/act-part-02-office-of-the-data-commissioner.md**",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 2990,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3114,
+  "seconds": 5.75
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": false,
+  "used_memory": true,
+  "answer": "To your third question, I answered that the **Data Protection Commissioner** may prescribe that certain processing shall only be effected through a server or data centre located in Kenya.\n\nThis information came from the file: `Law/act-part-02-office-of-the-data-commissioner.md`.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2260,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1774,
+  "seconds": 3.58
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your private vault.\n\nHowever, I can see that the system is designed to manage conversation history in `Project/Sources/BurrowChat/ChatSession.swift`. Specifically, the `history` variable (lines 66-163) stores the interaction history, and the `ask` function (lines 120-167) manages how those messages are sent to the model.\n\nIf you would like me to look for a specific topic we might have discussed, please let me know!",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "first question"
+    },
+    "failed": false,
+    "characters": 14888,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of conversation"
+    },
+    "failed": false,
+    "characters": 14266,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of the current session"
+    },
+    "failed": false,
+    "characters": 15129,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15950,
+  "seconds": 43.01
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": true,
+  "used_memory": false,
+  "answer": "To your first question, the answer was:\n\n**Seven days**\n\nThis was sourced from the file:\n`Law/general-regs-part-01-02-rights-of-a-data-subject.md`",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Kenya's Data Protection (General) Regulations, 2021 access request"
+    },
+    "failed": false,
+    "characters": 15647,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 6207,
+  "seconds": 8.4
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-211429-4125`), the first question you asked was:\n\n*\"Under Kenya's Data Protection (General) Regulations, 2021, within how many days must a data controller or data processor comply with a data...\"*\n\nThe assistant's answer to that question was:\n**30 days**\n\nThis information came from the file:\n`Law/general-regs-part-01-02-rights-of-a-data-subject.md`",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3261,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3253,
+  "seconds": 5.53
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": true,
+  "used_memory": true,
+  "answer": "In our previous conversation, the answer to your first question was **seven days**.\n\nThis information came from the file: `Law/general-regs-part-01-02-rights-of-a-data-subject.md`.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2260,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1779,
+  "seconds": 3.91
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history between you and other assistants. My memory is limited to the current session and the contents of your vault.\n\nHowever, I can see that the `ChatSession.swift` file (lines 160-163) manages the conversation history:\n\n```swift\n160:         // Only the question and the answer are kept, so old excerpts don't crowd out the next question.\n161:         history.append([\"role\": \"user\", \"content\": userContent(question)])\n162:         history.append([\"role\": \"assistant\", \"content\": turn.answer])\n163:         if history.count > 12 { history.removeFirst(history.count - 12) }\n```\n\nIf you can provide the question or the topic we were discussing, I can search the vault to find the relevant information for you.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "second question"
+    },
+    "failed": false,
+    "characters": 14265,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history"
+    },
+    "failed": false,
+    "characters": 14802,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions"
+    },
+    "failed": false,
+    "characters": 14303,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "history of questions asked"
+    },
+    "failed": false,
+    "characters": 14892,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15481,
+  "seconds": 41.81
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": true,
+  "used_memory": false,
+  "answer": "To your second question, the answer was:\n\nA client must send a **`notifications/cancelled`** notification to cancel an in-flight request.\n\nThis information came from the file:\n`Software/mcp-2026-07-28-stdio-transport.md`",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "stdio transport 2026-07-28 Model Context Protocol notifications/cancelled"
+    },
+    "failed": false,
+    "characters": 15192,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6163,
+  "seconds": 7.52
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": true,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-211429-4125`), your second question was:\n\n*\"In the stdio transport of the 2026-07-28 Model Context Protocol specification, which notification must a client send to cancel an in-flight request?\"*\n\nThe answer provided was:\nA client must send a **`notifications/cancelled`** notification.\n\nThis information came from the file:\n`Software/mcp-2026-07-28-stdio-transport.md`",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3261,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3253,
+  "seconds": 5.79
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": true,
+  "used_memory": true,
+  "answer": "To your second question, the answer was that a client must send a **`notifications/cancelled`** notification to cancel an in-flight request.\n\nThis information came from the file: `Software/mcp-2026-07-28-stdio-transport.md`.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2260,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1779,
+  "seconds": 3.14
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": false,
+  "answer": "I do not have access to the conversation history with the previous assistant. However, I can see that your vault contains a `sessions.jsonl` file (referenced in `Project/Sources/BurrowTrial/Runner.swift`) which is designed to store records of every session, including the questions asked and the answers provided.\n\nIf you can provide the specific topic or a keyword from that third question, I can search the `sessions.jsonl` file for you to retrieve the exact answer and the file it came from.",
+  "calls": [
+   {
+    "name": "vault_resume",
+    "arguments": {},
+    "failed": true,
+    "characters": 64,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "third question"
+    },
+    "failed": false,
+    "characters": 14629,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log"
+    },
+    "failed": false,
+    "characters": 14242,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log file"
+    },
+    "failed": false,
+    "characters": 14314,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "session log records"
+    },
+    "failed": false,
+    "characters": 14051,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 6,
+  "prompt_tokens": 15174,
+  "seconds": 40.7
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": false,
+  "answer": "In our previous conversation, I answered your third question with the following figures:\n\n*   **Maximum fine**: KES 10 million (Kenyan Shillings)\n*   **Maximum prison term**: 10 years\n\nThis information was sourced from **Section 14 (Penalties)** of the **Data Protection (General) Regulations, 2021**.",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Kenya Data Protection (General) Regulations 2021 penalties"
+    },
+    "failed": false,
+    "characters": 15918,
+    "ledger_notes": false
+   },
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Protection (General) Regulations 2021 Section 14 Penalties"
+    },
+    "failed": false,
+    "characters": 15954,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 10487,
+  "seconds": 14.45
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": true,
+  "answer": "In our last conversation (session `20261111-211429-4125`), the answer to your third question was:\n\n*   **Maximum fine**: KES 10 million (Kenyan Shillings)\n*   **Maximum prison term**: 10 years\n\nThis information came from the file: `Law/general-regs-part-01-02-rights-of-a-data-subject.md`.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3261,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3253,
+  "seconds": 5.43
+ },
+ {
+  "from": "burrow-qwen3-4b-16k",
+  "to": "burrow-gemma4-12b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": true,
+  "answer": "In your third question, you asked about the maximum fine and maximum prison term for a data controller convicted of using personal data for commercial purposes without consent under Kenya's Data Protection (General) Regulations, 2021.\n\nThe answer provided was:\n- **Maximum Fine:** 5,000,000 Kenyan Shillings\n- **Maximum Prison Term:** 12 months\n\nThis information came from the file: `Law/general-regs-part-04-obligations.md`.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {},
+    "failed": false,
+    "characters": 2260,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1779,
+  "seconds": 3.87
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you search your vault for relevant notes or files related to your first question. Let me know how you'd like to proceed!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 1.23
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": false,
+  "answer": "The Data Commissioner's term of office under Kenya's Data Protection Act, 2019, is **six years**, and the term **cannot be renewed**.\n\nThis information is specified in **Section 7(2)** of the Act, found in the file `Law/act-part-02-office-of-the-data-commissioner.md`.",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Commissioner term of office Kenya Data Protection Act 2019",
+     "folder": "Law"
+    },
+    "failed": false,
+    "characters": 16345,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6058,
+  "seconds": 4.89
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure from the last conversation is **six years** for the term of office of the Data Commissioner under Kenya's Data Protection Act, 2019. This information comes from the file `Law/act-part-08-enforcement.md`. \n\nThe Data Commissioner is appointed for a single term of six years and is not eligible for re-appointment.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3431,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3525,
+  "seconds": 5.85
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-001",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure from the earlier conversation is **six years**.\n\nThis answer came from the file: **Law/act-part-02-office-of-the-data-commissioner.md**.\n\nIt states that under Kenya's Data Protection Act, 2019, the Data Commissioner's term of office is **six years**, and it can be renewed.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2352,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1895,
+  "seconds": 2.16
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your second question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 1.35
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": false,
+  "answer": "The figure for the number of significant digits in floating-point to text conversions in SQLite 3.53.0 is **17**.\n\nThis information comes from the file: `Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md`.",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "SQLite 3.53.0 floating-point to text conversions significant digits",
+     "folder": "Software"
+    },
+    "failed": false,
+    "characters": 15911,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 7428,
+  "seconds": 6.19
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure from the second question in the last conversation is **17 significant digits**. This information comes from the file: **Software/sqlite-releases-2026-01-to-07-3.51.2-to-3.53.4.md**.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3431,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3525,
+  "seconds": 2.19
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-002",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking for is **six years**.\n\nThis answer came from the file: **Law/act-part-02-office-of-the-data-commissioner.md**.\n\nIt responds to your second question in the earlier conversation: *\"Under Kenya's Data Protection Act, 2019, how long is the Data Commissioner's term of office, and can it be renewed?\"*  \n\nThe response states: *\"The Data Commissioner is appointed for a single term of six years.\"*  \n\nThis is confirmed in the Ledger under the \"last_conversation\" branch, though the branch itself does not exist\u2014this information is stored under the main branch. The file referenced is part of the Law folder, specifically the section on the Office of the Data Commissioner.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2352,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1895,
+  "seconds": 2.71
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past interactions or conversations with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your third question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 4.54
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": true,
+  "used_memory": false,
+  "answer": "The Data Commissioner's term of office under Kenya's Data Protection Act, 2019, is **six years**, and the term **cannot be renewed**.\n\nThis information is specified in **Section 7(2)** of the Act, found in the file `Law/act-part-02-office-of-the-data-commissioner.md`.",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "Data Commissioner term of office Kenya Data Protection Act 2019",
+     "folder": "Law"
+    },
+    "failed": false,
+    "characters": 16345,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6058,
+  "seconds": 4.83
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": true,
+  "used_memory": true,
+  "answer": "The figure from your third question in the last conversation is **six years**. This information comes from the file `Law/act-part-02-office-of-the-data-commissioner.md`.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3431,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3525,
+  "seconds": 1.74
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-003",
+  "right": true,
+  "used_memory": true,
+  "answer": "The figure for your third question is **six years**. This is the term of office for the Data Commissioner under Kenya's Data Protection Act, 2019.\n\nThe file it came from is: **Law/act-part-02-office-of-the-data-commissioner.md**.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2352,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1895,
+  "seconds": 1.57
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you search your vault for relevant notes or files related to your first question. Let me know how you'd like to proceed!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 4.53
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": true,
+  "used_memory": false,
+  "answer": "I don't have a record of prior interactions with \"another assistant\" or a history of responses to your first question from a previous session. The conversation history you provided is the most recent one I have access to.\n\nHowever, based on the current context, I can confirm that my answer to your first question \u2014 about the investigation and conclusion period for a complaint under Kenya's Data Protection Act, 2019 \u2014 is:\n\n- **Figure:** 90 days\n- **File:** `Law/act-part-10-11-delegated-powers-and-miscellaneous.md` (specifically Section 56(5))\n\nThis is the correct answer derived from the vault content, and it is the only version I have access to in this session.\n\nIf you are asking about a different, earlier interaction with a different assistant, I cannot retrieve that information because it is not stored in this system or accessible to me.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2321,
+  "seconds": 2.75
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure and the file it came from are:\n\n- **Maximum Fine:** Three million shillings  \n- **Maximum Prison Term:** Ten years  \n- **File:** `Law/general-regs-part-01-02-rights-of-a-data-subject.md`  \n\nThis answer was provided in the conversation with the session ID `20261111-211851-9f2e`.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3686,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3638,
+  "seconds": 2.69
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-004",
+  "right": true,
+  "used_memory": true,
+  "answer": "The figure from the earlier conversation is **ninety (90) days**.\n\nThis answer came from the file: **Law/act-part-08-enforcement.md**, specifically **Section 56(5)** of the Kenya Data Protection Act, 2019, which states that a complaint made to the Data Commissioner must be investigated and concluded within 90 days.\n\nThis is confirmed in the ledger entry under the \"last_conversation\" context, though no explicit file path is listed in the ledger for that exact section. However, the relevant content is tied to enforcement provisions, which are covered in **Law/act-part-08-enforcement.md**.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2375,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1918,
+  "seconds": 2.55
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your second question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 4.61
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": true,
+  "used_memory": false,
+  "answer": "I did not answer your second question back then. I am the assistant responding to your current query, and I have not previously answered it in a prior session with you. My response to your second question\u2014about SQLite 3.54.0's required Windows version\u2014is based on the content of the file `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`, line 45, which states that SQLite 3.54.0 now requires **Windows Vista** or later.\n\nIf you are asking about a previous interaction with another assistant, I do not have access to that history. My responses are generated based on the current conversation and the content of your vault, not on prior interactions with other assistants.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2321,
+  "seconds": 2.36
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure for your second question in the last conversation is:\n\n- **Maximum Fine:** Three million shillings  \n- **Maximum Prison Term:** Ten years  \n\nThis information came from the file: `Law/general-regs-part-01-02-rights-of-a-data-subject.md`.  \n\nThis answer was provided in response to the question: *\"Under the general penalty in Kenya's Data Protection Act, 2019, what is the maximum fine and the maximum prison term for an offence for which no specific penalty is provided?\"*",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3686,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3638,
+  "seconds": 2.93
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-005",
+  "right": true,
+  "used_memory": true,
+  "answer": "The second question in the earlier conversation was:  \n\n**\"SQLite 3.54.0, released 2026-10-09, dropped support for Windows XP and earlier. What is the oldest Windows version it now requires?\"**  \n\nThe correct answer, based on the actual release notes in the file:  \n**Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md**, is:  \n**Windows Vista (circa 2007) or later.**  \n\nThis is explicitly stated in the section titled *\"Release History Of SQLite (releases dated October 2026)\"* under the entry for **2026-10-09 (3.54.0)**:  \n> \"Drop support for WindowsXP and earlier Windows versions, including WindowsCE. SQLite for Windows now requires Windows Vista (circa 2007) or later.\"  \n\nThus, the figure and the file are:  \n- **Figure:** Windows Vista (circa 2007) or later  \n- **File:** `Software/sqlite-releases-2026-10-3.54.0-and-3.54.1.md`  \n\nThis confirms the accuracy of the earlier response, even though the file was initially misattributed. The correct source is now verified.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2375,
+    "ledger_notes": false
+   },
+   {
+    "name": "burrow_find",
+    "arguments": {
+     "query": "SQLite 3.54.0 release notes",
+     "folder": "Software"
+    },
+    "failed": false,
+    "characters": 16634,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 3,
+  "prompt_tokens": 7329,
+  "seconds": 12.64
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past interactions or conversations with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your third question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 4.51
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": true,
+  "used_memory": false,
+  "answer": "I did not answer your third question in a prior conversation with another assistant. My response to your third question\u2014about the maximum fine and prison term under the general penalty in Kenya's Data Protection Act, 2019\u2014was based on the content of your vault, specifically the file `Law/act-part-10-11-delegated-powers-and-miscellaneous.md`, lines 70\u201371.\n\nThe answer I provided was:\n- **Maximum Fine:** Three million shillings\n- **Maximum Prison Term:** Ten years\n\nThis information is derived from the Data Protection Act, 2019 (Cap. 411C), as cited in the vault.\n\nIf you are referring to a different conversation or assistant, I cannot access or recall prior interactions with other assistants. My responses are generated based on the content of your vault and the current task.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2321,
+  "seconds": 2.57
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": true,
+  "used_memory": true,
+  "answer": "The figure for your third question in the last conversation is:\n\n- **Maximum Fine:** Three million shillings  \n- **Maximum Prison Term:** Ten years  \n\nThis information came from the file: `Law/general-regs-part-01-02-rights-of-a-data-subject.md`.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3686,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3638,
+  "seconds": 2.26
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-006",
+  "right": false,
+  "used_memory": true,
+  "answer": "The third question in the earlier conversation was:\n\n**\"Under the general penalty in Kenya's Data Protection Act, 2019, what is the maximum fine and the maximum prison term for an offence for which no specific penalty is provided?\"**\n\nMy answer was:\n\n> Under the general penalty provision of the **Data Protection Act, 2019 (Cap. 411C)**, for any offence for which no specific penalty is provided (or for any other contravention of the Act), the maximum penalties are:\n> *   **Maximum Fine:** T\u2026\n\nThe figure (maximum fine) was not fully specified in the response, but the context indicates it is tied to the general penalty section of the Act.\n\nThe file it came from is: **Law/act-part-08-enforcement.md**, as it is the section most likely to contain enforcement penalties, including general penalties for offences under the Act.\n\nNote: The response does not provide a complete figure (e.g., amount of the fine or prison term), and the answer is cut off. Therefore, the exact figure cannot be fully determined from the available Ledger entry. However, the answer is anchored in the **Data Protection Act, 2019 (Cap. 411C)**, specifically in **Part 8 (Enforcement)**.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2375,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1918,
+  "seconds": 4.5
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you search your vault for relevant notes or files related to your first question. Let me know how you'd like to proceed!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 4.0
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have a record of previous interactions with \"another assistant\" or any prior answers to your first question in this conversation. My responses are generated based on the current context and the content of your vault, not on past interactions with other assistants.\n\nTo answer your question directly: I cannot retrieve or provide the figure and file from a prior interaction with another assistant, as such records are not stored or accessible in this system.\n\nIf you'd like, I can search your vault for the original question and its answer based on the Data Protection Act, 2019, using the current content. Would you like me to do that?",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2381,
+  "seconds": 2.04
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking for is **twenty-one (21) days**. This answer came from the file **Law/act-part-08-enforcement.md**, specifically Section 58(2)(c) of the Data Protection Act, 2019.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3873,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3675,
+  "seconds": 2.27
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-007",
+  "right": false,
+  "used_memory": true,
+  "answer": "The shortest period an enforcement notice may give a person to implement the measures it specifies, under Kenya's Data Protection Act, 2019, is **twenty-one (21) days**.\n\nThis answer came from the file: **Law/act-part-08-enforcement.md**.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2360,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1861,
+  "seconds": 1.53
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your second question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 2.97
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": true,
+  "used_memory": false,
+  "answer": "The assistant answered that the RPC which every server must implement to advertise its supported protocol versions, capabilities, and identity is **`server/discover`**.\n\nThis answer is sourced from the file: `Software/mcp-2026-07-28-server-discover.md`. \n\nMultiple excerpts in that file confirm this, including the section titled \"Discovery\" which states: \"Servers **MUST** implement `server/discover`.\" The file also details the response structure and use cases for this RPC.",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "which RPC must every server implement to advertise its supported protocol versions, capabilities and identity",
+     "folder": "Software"
+    },
+    "failed": false,
+    "characters": 15450,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6044,
+  "seconds": 6.32
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking for is **twenty-one (21) days**. This answer came from the file **Law/act-part-08-enforcement.md**, specifically Section 58(2)(c) of the Data Protection Act, 2019.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3873,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3675,
+  "seconds": 4.5
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-008",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking about is **twenty-one (21) days**.\n\nThis answer came from the following file:  \n**Law/act-part-08-enforcement.md**\n\nIt was part of the third turn in the conversation, where the question was:  \n*Under Kenya's Data Protection Act, 2019, what is the shortest period an enforcement notice may give a person to implement the measures it specifies?*  \n\nThe response cited the Data Protection Act, 2019, stating that the period must not be less than 21 days.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2360,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1861,
+  "seconds": 2.23
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past interactions or conversations with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your third question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 2.98
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": false,
+  "used_memory": false,
+  "answer": "I did not answer your third question in a prior conversation with another assistant. My responses are generated based on the current context and the content of your vault, and I do not retain or reference past interactions with other assistants.\n\nHowever, to directly answer your third question as it was asked:\n\nUnder Kenya's Data Protection Act, 2019, the shortest period an enforcement notice may give a person to implement the measures it specifies is **twenty-one (21) days**.\n\nThis is specified in **Section 58(2)(c)** of the Act, found in the file: `Law/act-part-08-enforcement.md`.\n\nIf you are asking about a specific prior interaction with another assistant, I cannot access or retrieve that information because it is not stored in this system.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2381,
+  "seconds": 2.37
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking for is **twenty-one (21) days**. This answer came from the file **Law/act-part-08-enforcement.md**, specifically Section 58(2)(c) of the Data Protection Act, 2019.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 3873,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3675,
+  "seconds": 2.24
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-009",
+  "right": false,
+  "used_memory": true,
+  "answer": "The shortest period an enforcement notice may give a person to implement the measures it specifies, under Kenya's Data Protection Act, 2019, is **twenty-one (21) days**.\n\nThis answer comes from the file: **Law/act-part-08-enforcement.md**.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2360,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1861,
+  "seconds": 1.58
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you search your vault for relevant notes or files related to your first question. Let me know how you'd like to proceed!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 3.32
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": true,
+  "used_memory": false,
+  "answer": "The body that invites applications for the position of Data Commissioner when the office falls vacant is the **Public Service Commission**.\n\nIt must do so within **seven days** of being notified of the vacancy.\n\n**Source:**  \n*Law/act-part-02-office-of-the-data-commissioner.md*, lines 31\u201333 (Section 6, subsections (1) and (2)).",
+  "calls": [
+   {
+    "name": "vault_search",
+    "arguments": {
+     "query": "first question about Kenya's Data Protection Act 2019 and the body that invites applications for the Data Commissioner position and the number of days",
+     "folder": "Law"
+    },
+    "failed": false,
+    "characters": 16092,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 6360,
+  "seconds": 5.53
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure from the last conversation is **\"the Cabinet Secretary\"**, and it came from the file **Law/act-part-10-11-delegated-powers-and-miscellaneous.md**. \n\nThis answer was given in response to the question: *\"Under section 50 of Kenya's Data Protection Act, 2019, who may prescribe that certain processing shall only be effected through a server or data centre located in Kenya, and on what grounds?\"*",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 4131,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3764,
+  "seconds": 4.97
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-010",
+  "right": false,
+  "used_memory": true,
+  "answer": "The first question in the earlier conversation was:  \n\n**\"Under Kenya's Data Protection Act, 2019, which body invites applications for the position of Data Commissioner when the office falls vacant?\"**  \n\nThe answer provided was:  \n**The Public Service Commission** is the body responsible for initiating the recruitment process and inviting applications for the position of Data Commissioner when a vacancy arises.  \n\nThis answer is derived from the file:  \n**Law/act-part-04a-principles-and-rights.md**  \n\nThis file is cited in the ledger under the relevant section of the Data Protection Act, 2019.  \n\nThus, the figure (answer) is **Public Service Commission**, and it comes from **Law/act-part-04a-principles-and-rights.md**.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2354,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1861,
+  "seconds": 2.88
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your second question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 3.81
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to prior interactions with other assistants or previous responses in a conversation history outside of the current session. Therefore, I cannot retrieve or provide the figure and the file it came from for your second question when answered by another assistant.\n\nIf you'd like, I can answer your second question again based on the current knowledge in the vault, or I can help you locate the original response from your earlier session if it was stored in the vault. Let me know how you'd like to proceed.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2663,
+  "seconds": 1.83
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": true,
+  "used_memory": true,
+  "answer": "The figure from your second question in the last conversation was:\n\n- **Figure**: 2 fields:  \n  1. **Time-to-live (TTL) Field** (`ttlMs`)  \n  2. **Cache Scope Field** (`cacheScope`)\n\n- **File**: `Software/mcp-2026-07-28-caching.md`\n\nThis answer came from the response to your second question in the conversation that began with: *\"In the caching model of the 2026-07-28 Model Context Protocol specification, what are the names of the two fields that carry caching hints on cacheable results?\"*",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 4131,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3764,
+  "seconds": 3.33
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-011",
+  "right": false,
+  "used_memory": true,
+  "answer": "The second question in the earlier conversation was:\n\n**\"In the caching model of the 2026-07-28 Model Context Protocol specification, what are the names of the two fields that carry caching hints \u2026\"**\n\nMy answer was:\n\n> In the caching model of the 2026-07-28 Model Context Protocol (MCP) specification, the two fields that carry caching hints on cacheable results are:\n> 1. **Time-to-live (TTL) Field** (`ttlMs`): An integer value in milliseconds specifying how long a result should be cached.\n> 2. **Cache-ability Flag** (`cacheable`): A boolean field indicating whether a result is cacheable.\n\nThis answer was derived from the file: **Project/Sources/BurrowCore/Retrieval.swift**.\n\nNote: While the Ledger entry mentions the `ttlMs` field, it does not explicitly mention the `cacheable` field. However, based on the context of caching hints and standard protocol design, the `cacheable` flag is a logical and commonly used field. If the exact field names are strictly defined in a specific file, a more precise confirmation would require a direct read of that file. For now, this answer is based on the protocol structure and the information available in the vault.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2354,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1861,
+  "seconds": 4.04
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past interactions or conversations with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your third question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 2.99
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to a record of previous interactions with \"another assistant\" or any prior conversation history beyond what has been explicitly provided in this current session. Therefore, I cannot retrieve or confirm what the third question was answered as by a previous assistant.\n\nIf you are referring to the third question in this current conversation (which was about section 50 of Kenya's Data Protection Act, 2019), then my answer is:\n\n- **Figure**: The Cabinet Secretary may prescribe such processing.\n- **File**: Law/general-regs-part-04-obligations.md\n\nPlease clarify if you meant a different conversation or a different assistant, and I will be happy to assist further.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2663,
+  "seconds": 2.3
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure from your third question in the last conversation is: **the Cabinet Secretary**.\n\nThis answer came from the file: **Law/act-part-05-sensitive-personal-data.md**.\n\nThis is the response to your third question: *\"Under section 50 of Kenya's Data Protection Act, 2019, who may prescribe that certain processing shall only be effected through a server or data centre located in Kenya, and on what grounds?\"*",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 4131,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3764,
+  "seconds": 2.82
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-012",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure to your third question in the earlier conversation was:\n\n**The Cabinet Secretary** may prescribe that certain processing shall only be effected through a server or data centre located in Kenya.\n\nThis answer came from the file: **Law/act-part-10-11-delegated-powers-and-miscellaneous.md**. \n\nThis is based on the content of the Ledger entry under the \"last_conversation\" branch, which records the response to your third question.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2354,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1861,
+  "seconds": 1.94
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you search your vault for relevant notes or files related to your first question. Let me know how you'd like to proceed!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 3.67
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have a record of prior interactions with the user or previous answers from an assistant. The conversation history you provided is the most recent one, and I do not store or retain past interactions between users and assistants.\n\nTherefore, I cannot retrieve or provide the figure and the file it came from for your first question from a prior interaction.\n\nIf you'd like, I can help you find the answer to your original question from the current vault content. Would you like me to do that?",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2306,
+  "seconds": 1.66
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking for is **not explicitly stated** in the provided excerpt. However, the answer to your first question in the conversation \u2014 which was: *\"Under Kenya's Data Protection (General) Regulations, 2021, within how many days must a data controller or data processor comply with a data subject's request?\"* \u2014 is **not directly given** in the text.\n\nBut in the context of the conversation, the assistant did not provide a numerical figure for the maximum fine or prison term for unauthorized commercial use of personal data. The response was cut off mid-sentence.\n\nTherefore, based on the content of the session, **no specific figure** (such as a maximum fine or prison term) was fully provided in the answer to your first question.\n\nThe file it came from is: **Law/general-regs-part-03-commercial-use.md**.\n\nIf you need a more complete answer, I can retrieve the full content of that file. Would you like me to do that?",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 4382,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3857,
+  "seconds": 4.37
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "first",
+  "task": "law-s-013",
+  "right": true,
+  "used_memory": true,
+  "answer": "The first question in the earlier conversation was:  \n\n**\"Under Kenya's Data Protection (General) Regulations, 2021, within how many days must a data controller or data processor comply with a data subject's request to access their personal data?\"**  \n\nThe answer provided was: **seven days**.  \n\nThis answer is sourced from the file: **Law/general-regs-part-01-02-rights-of-a-data-subject.md**.  \n\n(Note: The full response in the ledger is cut off, but the key detail\u2014seven days\u2014is clearly stated in the context of Regulation 9 of the Data Protection (General) Regulations, 2021.)",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2357,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1882,
+  "seconds": 2.58
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past conversations or interactions with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your second question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 4.35
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": true,
+  "used_memory": false,
+  "answer": "I did not answer your second question in a prior conversation with another assistant. The response I provided to your second question\u2014about the stdio transport of the 2026-07-28 Model Context Protocol specification\u2014was generated by me based on the information available in your vault, specifically from the **mcp 2026 07 28 caching** folder.\n\nThe figure (the notification name) is **`notifications/cancelled`**, and it comes from the file:\n\n**mcp 2026 07 28 caching / stdio transport / notifications.md**\n\nThis file is part of the software folder and contains the specification for the stdio transport, including the cancellation mechanism.\n\nIf you are asking about a prior interaction with a different assistant, I cannot access or retrieve that history, as it is not stored in this system. My responses are generated based on the current vault and the conversation history within this session.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2306,
+  "seconds": 2.77
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking for is the **maximum fine** and **maximum prison term** for a data controller convicted of using personal data for commercial purposes without the data subject's consent.\n\nFrom the conversation, the answer provided is:\n\n- **Maximum Fine:** Not fully specified in the excerpt, but it is mentioned that the fine is under the Data Protection Act, 2019.\n- **Maximum Prison Term:** Not explicitly stated in the excerpt.\n\nThe file that contains this information is: **Law/act-part-04b-obligations-and-breach.md**.\n\nThus, the figure and the file are:\n- **Figure:** Maximum fine and maximum prison term are not fully specified in the provided excerpt.\n- **File:** Law/act-part-04b-obligations-and-breach.md\n\nNote: The full details of the fine and prison term would require further reading from the file.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 4382,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3857,
+  "seconds": 4.06
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "second",
+  "task": "sw-s-014",
+  "right": true,
+  "used_memory": true,
+  "answer": "The second question in the last conversation was:\n\n**\"In the stdio transport of the 2026-07-28 Model Context Protocol specification, which notification must a client send to cancel an in-flight\u2026?\"**\n\nMy answer was:  \nA client must send a **`notifications/cancelled`** notification to cancel an in-flight request. This notification must reference the specific request's ID.\n\nThe file it came from is: **Software/mcp-2026-07-28-stdio-transport.md**.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2357,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1882,
+  "seconds": 2.18
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "fresh",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": false,
+  "answer": "I don't have access to past interactions or conversations with previous assistants. My responses are generated based on the current context and the information available in your vault. To find out what I answered to your third question earlier, you would need to check your session logs or conversation history directly.\n\nIf you'd like, I can help you retrieve relevant information from your vault or assist with any new questions you have. Let me know how I can assist!",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 1836,
+  "seconds": 3.11
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "paste",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": false,
+  "answer": "I did not answer your third question in a prior conversation with another assistant. My responses are generated based on the current context and the content of your vault, which includes the relevant legal provisions from the Data Protection Act, 2019 (Cap. 411C), and the Data Protection (General) Regulations, 2021.\n\nTo confirm, your third question was:\n\n> \"Under Kenya's Data Protection (General) Regulations, 2021, what is the maximum fine and the maximum prison term for a data controller convicted of using personal data for commercial purposes without the data subject's consent?\"\n\nMy answer, based on the vault content, is:\n\n- **Maximum Fine:** Three million shillings  \n- **Maximum Prison Term:** Ten years  \n\nThis information comes from **Section 73 (General penalty)** of the **Data Protection Act, 2019 (Cap. 411C)**, which is referenced in the vault under the \"Law\" folder.\n\nIf you are asking about a specific prior interaction with another assistant, I cannot access or retrieve that history, as it is not stored in this system. The vault only contains the current user's notes and files, and I do not retain or recall past conversations with other assistants.\n\nThus, the figure and file are:\n\n- **Figure:** Maximum fine = 3 million shillings; Maximum prison term = 10 years  \n- **File:** `Law/Act Part 01 Preliminary` or `Law/Data Protection Act 2019` (specifically Section 73)  \n\nLet me know if you'd like me to verify this with a vault_read or vault_search call.",
+  "calls": [],
+  "rounds": 1,
+  "prompt_tokens": 2306,
+  "seconds": 4.58
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "sessions",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": true,
+  "answer": "The figure you are asking for is the **maximum fine** and **maximum prison term** for a data controller convicted of using personal data for commercial purposes without the data subject's consent.\n\nFrom the conversation, the answer provided is:\n\n- **Maximum Fine:** Not fully specified in the excerpt, but it is mentioned that the fine is under the Data Protection Act, 2019.\n- **Maximum Prison Term:** Not explicitly stated in the excerpt.\n\nThe file that contains this information is: **Law/act-part-04b-obligations-and-breach.md**.\n\nThus, the maximum fine and prison term are referenced in that file, but the exact figures are not fully provided in the excerpt. For a complete answer, further reading of that file would be required.",
+  "calls": [
+   {
+    "name": "vault_session_list",
+    "arguments": {},
+    "failed": false,
+    "characters": 4382,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 3857,
+  "seconds": 3.71
+ },
+ {
+  "from": "burrow-gemma4-12b-16k",
+  "to": "burrow-qwen3-4b-16k",
+  "arm": "ledger",
+  "probe": "third",
+  "task": "law-s-015",
+  "right": false,
+  "used_memory": true,
+  "answer": "The third question in the earlier conversation was:\n\n**\"Under Kenya's Data Protection (General) Regulations, 2021, what is the maximum fine and the maximum prison term for a data controller convicted of an offence?\"**\n\nMy answer was:\n\n> Under the **Data Protection Act, 2019 (Cap. 411C)** (which provides the legal framework for the 2021 Regulations), a person who commits an offence for which no specific penalty is provided\u2014which includes the unauthorized commercial use of personal data\u2014may be liable to a fine of up to **KSh 10 million** and/or imprisonment for up to **10 years**.\n\nThis answer was derived from the file: **Law/general-regs-part-03-commercial-use.md**.\n\nNote: The full details of the fine and prison term are not explicitly stated in the provided Ledger excerpt, and the answer is inferred based on the context of the regulations and related legal frameworks. For a definitive answer, the actual content of the file **Law/general-regs-part-03-commercial-use.md** should be consulted.",
+  "calls": [
+   {
+    "name": "burrow_resume",
+    "arguments": {
+     "branch": "last_conversation"
+    },
+    "failed": false,
+    "characters": 2357,
+    "ledger_notes": false
+   }
+  ],
+  "rounds": 2,
+  "prompt_tokens": 1882,
+  "seconds": 3.74
+ }
+]

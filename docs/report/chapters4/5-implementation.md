@@ -222,6 +222,28 @@ A small trial asked whether the on-device model can build something beside the c
 
 Claude passed all 42 checks in every set-up. Gemma alone passed 41. With the brief the engine prepared, which carried a web-building skill, Gemma passed 39, because one page had a script error. With the skill and a note of known failures handed over directly, it passed 41, and that run had no such error. The engine had left the note out, because it judged each brief to be a task to work out. The trial is three briefs run once, so it is a demonstration and not a measurement.
 
+### 5.5.8 Evaluation 3: Memory Any Model Can Pick Up
+
+A third evaluation tested the Ledger, Burrow's record of what earlier sessions understood, decided, were corrected on, and where they stopped. Its plan was written before any of these parts existed and before any scored run, and the engine was frozen for it as a separate binary. A smoke run found two faults in the engine and two in the harness before scoring, and all four were fixed and recorded in the plan. Every answer was scored by the rule of Equation 5.1, and paired set-ups by the sign test of Equation 5.2. Figure 5.17 shows the four tests.
+
+!fig figures/v3/chart-eval3.png | Figure 5.17: The four tests of Evaluation 3: carrying on a conversation, notes from a bigger model, saying the vault does not hold an answer, and four tools against twelve | 6.2
+
+The first test asked whether a model that lost its memory can carry on a conversation. One local model held a conversation of three questions, and the other local model was then asked what had been answered, given nothing, the transcript pasted in, the session tools of Section 5.4.6, or the Ledger's handoff. Table 5.10 gives the results. Nothing gave no right answers. The Ledger gave 11 of 30, against 6 of 30 for the session tools, and it read a median of 1,843 tokens against 3,525. The pasted transcript gave 18 of 30 and read 6,058. The transcript beat the Ledger on 8 questions and lost on 1 (p = 0.039), so the prediction that the Ledger would match it was not met, while the Ledger's gain over the session tools was not significant (7 against 2, p = 0.180).
+
+!include generated3/e1-resume.md | Table 5.10
+
+The second test asked whether notes left by the cloud model help the small model on other questions. The 80 knowledge questions were split by a fixed seed. Claude answered half A with Burrow and kept 76 facts it had confirmed in the files, and none cited a file it had not been shown. Qwen3 4B then answered half B. Table 5.11 gives the results. Burrow lifted it from 1 to 28 of 40, well above Claude alone at 19, but the notes added nothing: 29 of 40 with them, 2 questions gained and 1 lost (p = 1.000), although they reached the model on 37 of the 40 questions. The first scored run of this arm had cut every tool result at 12,000 characters, so the notes never reached the model; it was run again with whole results, and the plan records both runs.
+
+!include generated3/e2-notes.md | Table 5.11
+
+The third test asked whether the small model says when the vault does not hold an answer. A separate agent wrote 30 questions close to the vault's subjects whose answers are not in it, each checked against the vault's text, and these were mixed with 30 answerable questions. Table 5.12 gives the results. Without the trust line Qwen3 4B already said the vault did not hold the answer on 26 of the 30, and with it the count was the same; on the answerable questions it got 26 and 25 right and wrongly declined 2 in each set-up (p = 1.000). The prediction of a clear rise was not met, because the model was already honest without it.
+
+!include generated3/e3-trust.md | Table 5.12
+
+The fourth test compared the four tools a model is shown by default with the twelve of Section 5.4.6, on 16 knowledge questions. Table 5.13 gives the results. Gemma 4 12B answered all 16 either way. Qwen3 4B answered 11 with four tools and 14 with twelve; the three it lost were each answered after a single search in both set-ups, and the difference was not significant (p = 0.250). Every model looked up the vault on every question in both set-ups, so the small model's earlier trouble choosing a tool, which the catalogue in each tool's description had already solved, did not appear here.
+
+!include generated3/e4-door.md | Table 5.13
+
 ## 5.6 System Testing
 
 ### 5.6.1 Test Strategy and Acceptance Criteria
@@ -232,9 +254,9 @@ The engine has 212 automated tests, and all of them passed on the frozen source.
 
 ### 5.6.2 Test Cases, Defects and Retesting
 
-Table 5.10 gives the test cases, with the requirement each one verifies.
+Table 5.14 gives the test cases, with the requirement each one verifies.
 
-!tab Table 5.10: Test cases and results
+!tab Table 5.14: Test cases and results
 !widths 0.55,1.05,1.5,1.25,1.25,0.7
 | Test ID | Requirement | Scenario and test data | Expected result | Actual result and evidence | Verdict |
 | TC-01 | FR-01 | A vault indexed twice, then with one file changed and one removed | Nothing rebuilt the second time; old words gone the third time | As expected; test log | Pass |
@@ -265,9 +287,9 @@ Five defects were recorded. Two affected the runs and were corrected and reteste
 
 ## 5.7 Version Control and Implementation Evidence
 
-Project repository: https://github.com/Satasdin/CAMR, with burrow as its default branch. Figure 5.17 shows the history of the engine's source, the tags and the folders. The engine is in Sources, its tests in Tests, the desktop app in app, the evaluation in trials, and this report with its scripts in docs/report. The README states the problem, the set-up, and how to run and test the system.
+Project repository: https://github.com/Satasdin/CAMR, with burrow as its default branch. Figure 5.18 shows the history of the engine's source, the tags and the folders. The engine is in Sources, its tests in Tests, the desktop app in app, the evaluation in trials, and this report with its scripts in docs/report. The README states the problem, the set-up, and how to run and test the system.
 
-!fig figures/screens2/console-git.png | Figure 5.17: The history of the engine's source, the tags and the folders of the repository | 6.2
+!fig figures/screens2/console-git.png | Figure 5.18: The history of the engine's source, the tags and the folders of the repository | 6.2
 
 The workflow supported the evaluation directly. Each evaluation was run on a tagged, frozen version. The tag evaluation-1 marks retrieval before the engine's steps, and evaluation-2 marks the engine measured in this chapter. The hash of the frozen program is saved in trials/results/gap-1 and in each set-up's meta.json, and the harness refuses to add answers from a different program to the same folder. A reported number can therefore be traced to the exact code that produced it.
 
@@ -307,9 +329,9 @@ On cost, a knowledge answer took a median of about nine seconds on the laptop an
 
 The fifth research question asked which token budget maximises the gap closed per token and how gap closure changes with the budget. The output is the budget sweep of Section 5.5.5. No criterion was set in advance, because the sweep was added after the plan. Among budgets that delivered excerpts, the gain per token was highest at 4,000 characters and fell as more was shown. Accuracy itself did not peak inside the range tested: at 32,000 characters the on-device model answered 112 of 120, at 15.6 seconds an answer. That is 3 more than the cloud model with Burrow, a difference that is not significant (4 gained, 1 lost, p = 0.375), and Claude was shown 24,000 characters. The fitted budget of about 17,000 characters, which the engine chose from the model's reading speed, sits between the two at 102 right in 9.2 seconds. The objective was met, and the result is that the budget is a choice between speed and accuracy that the engine exposes, not a single best value.
 
-Table 5.11 summarises the five objectives.
+Table 5.15 summarises the five objectives.
 
-!tab Table 5.11: How each specific objective was met
+!tab Table 5.15: How each specific objective was met
 !widths 0.4,2.0,0.9,3.0
 | No. | Objective, in short | Evidence | Observed result |
 | i | Investigate the capability gap and existing memory techniques | Chapter 2 | No measurement of gap closing on a device by task type was found |
@@ -320,4 +342,4 @@ Table 5.11 summarises the five objectives.
 
 ### 5.9.6 Limitations
 
-The results have limits, and each is stated here with its likely effect. First, skills and the citation check did not change the scores: the engine answered 150 of 170 questions with both, 149 without skills, and 151 without the check, so they are working features whose benefit this evaluation did not show. Second, the scored runs compared budgets of different sizes, so the engine's gain over the baselines cannot be credited to its decisions alone, and Decide and Fit were not switched off separately. Third, on the small model the engine did not beat plain retrieval on knowledge, answering 91 against 97, so the gain does not carry to every model. Fourth, the knowledge questions were written by Claude Code agents, from the same family as the cloud reference model, and scored by answer keys, so a right string in a wrong sentence counts as right, and the questions may be easier or harder than a person's own. Fifth, each question was run once on one laptop, and other jobs shared the machine during some runs, so the times are indicative. Sixth, the Learn step was tested only by automated tests, and no experiment measured its effect on later answers. Seventh, no person other than the developer has used the app, so its usability is not claimed. Eighth, three known gaps remain in the frozen code: the check with retry runs only on the command burrow ask --mode engine, while the app only warns and the chat and MCP do not check; the MCP tool and the terminal chat use a fixed budget of 12,000 characters and not the fitted one; and the engine's own prompt does not stop an excerpt from closing its block.
+The results have limits, and each is stated here with its likely effect. First, skills and the citation check did not change the scores: the engine answered 150 of 170 questions with both, 149 without skills, and 151 without the check, so they are working features whose benefit this evaluation did not show. Second, the scored runs compared budgets of different sizes, so the engine's gain over the baselines cannot be credited to its decisions alone, and Decide and Fit were not switched off separately. Third, on the small model the engine did not beat plain retrieval on knowledge, answering 91 against 97, so the gain does not carry to every model. Fourth, the knowledge questions were written by Claude Code agents, from the same family as the cloud reference model, and scored by answer keys, so a right string in a wrong sentence counts as right, and the questions may be easier or harder than a person's own. Fifth, each question was run once on one laptop, and other jobs shared the machine during some runs, so the times are indicative. Sixth, the Learn step was tested only by automated tests, and no experiment measured its effect on later answers. Seventh, no person other than the developer has used the app, so its usability is not claimed. Eighth, three known gaps remain in the frozen code: the check with retry runs only on the command burrow ask --mode engine, while the app only warns and the chat and MCP do not check; the MCP tool and the terminal chat use a fixed budget of 12,000 characters and not the fitted one; and the engine's own prompt does not stop an excerpt from closing its block. Finally, Evaluation 3 ran each question once on two local models, with 15 to 40 questions per comparison, so a difference of a few answers between set-ups is within chance; of its four predictions, none was met in full, and the Ledger and the notes are reported as working parts whose benefit over a pasted transcript, or over Burrow without notes, this evaluation did not show.
