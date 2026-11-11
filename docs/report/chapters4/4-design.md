@@ -133,7 +133,7 @@ Objective ii names three mechanisms: a write policy, a retrieval policy, and a t
 
 !fig figures/v2/engine_steps.png | Figure 4.7: The five steps of the engine and the mechanisms of the proposal | 6.2
 
-Learn is the write policy, Decide and the retrieval behind it are the retrieval policy, and Fit is the token budgeting mechanism. Check was added in this study. The recency and importance scores of the proposal were not built, and ranking is by words, meaning, and links, as Section 5.4.7 records.
+Learn is the write policy, Decide and the retrieval behind it are the retrieval policy, and Fit is the token budgeting mechanism. Check was added in this study. Ranking is by words, meaning, and links, and the recency and importance scores of the proposal decide between files that match a question equally well, so they never overrule relevance.
 
 Retrieval ranks each piece twice, by word match with BM25 (Robertson & Zaragoza, 2009) and by meaning. Meaning is the cosine between the vector of the question, q, and the vector of a piece, v, as in Equation 4.1.
 

@@ -87,6 +87,8 @@ For every question the engine runs one fast search and reads its signal. It then
 
 !fig figures/screens2/console-engine.png | Figure 5.3: The engine answering a question about code and reporting its decision, the skill used, the files read and the citation check | 6.2
 
+Candidates are ranked by their words and meaning together. Recency, taken from a note's date or the file's last change, and importance, taken from how many files link to it and whether it records a decision, then break ties between equally relevant files (decision D-67 in the repository).
+
 Figure 5.4 shows the opposite decision in the desktop app. The question is a sum, so the engine left the vault out and gave the model the skill for working a calculation. The line under the answer says so.
 
 !fig figures/screens3/ask-sum.png | Figure 5.4: A sum in the desktop app, answered with the vault left out | 6.2
@@ -133,7 +135,7 @@ Figure 5.11 shows Burrow used as the retriever inside a LangChain pipeline, in t
 
 ### 5.4.7 Deviations from the Approved Design
 
-Four parts of the build differ from the proposal. The memory became a vault of files that a person writes instead of a stream of notes from each interaction, because the Sprint II review asked for something a person can see and use. Ranking by recency and importance was therefore not built, and ranking uses what the files provide, namely their words, their meaning, and the links between them; the effect of recency and importance was not measured. The Check step was added during the study, because a small model's citations can be compared directly with what it was shown. The engine was also written in Swift in place of Python, so that it runs as one compiled program on the target platform.
+Four parts of the build differ from the proposal. The memory became a vault of files that a person writes instead of a stream of notes from each interaction, because the Sprint II review asked for something a person can see and use. Recency and importance were therefore taken from the files themselves, and they were built after the engine was frozen for Evaluation 2, so its scores do not include them. The Check step was added during the study, because a small model's citations can be compared directly with what it was shown. The engine was also written in Swift in place of Python, so that it runs as one compiled program on the target platform.
 
 ## 5.5 Model Selection and Evaluation
 
@@ -307,7 +309,7 @@ The first research question asked what the capability gaps are and how far exist
 
 ### 5.9.2 Objective ii: The Design of the Engine
 
-The second research question asked how the engine can be designed in terms of its write policy, retrieval policy, and token budgeting mechanism. The output is the design in Chapter 4, and the criterion was a designed component for each of the three mechanisms. Learn is the write policy, Decide with ranking by words, meaning, and links is the retrieval policy, and Fit is the token budgeting mechanism (Figure 4.7). The objective was met with one departure: the ranking by recency and importance that the objective names was not built, as Section 5.4.7 records, so the study cannot say what those two scores would have added.
+The second research question asked how the engine can be designed in terms of its write policy, retrieval policy, and token budgeting mechanism. The output is the design in Chapter 4, and the criterion was a designed component for each of the three mechanisms. Learn is the write policy, Decide with ranking by words, meaning, and links is the retrieval policy, and Fit is the token budgeting mechanism (Figure 4.7). The objective was met. Recency and importance were added as tie-breakers after Evaluation 2 was frozen, so its scores do not include them; on its 120 questions with evidence, search found the evidence for 105 both before and after, so on this material they neither helped nor harmed, and their benefit on a vault where notes go out of date was not measured.
 
 ### 5.9.3 Objective iii: The Development of the Engine
 
@@ -335,7 +337,7 @@ Table 5.15 summarises the five objectives.
 !widths 0.4,2.0,0.9,3.0
 | No. | Objective, in short | Evidence | Observed result |
 | i | Investigate the capability gap and existing memory techniques | Chapter 2 | No measurement of gap closing on a device by task type was found |
-| ii | Design the memory engine | Chapter 4 | Write policy, retrieval policy and token budget designed; ranking by recency and importance not built |
+| ii | Design the memory engine | Chapter 4 | Write policy, retrieval policy (words, meaning, links, then recency and importance) and token budget designed and built |
 | iii | Develop the engine on a consumer laptop | Sections 5.4, 5.6 | Swift with an embedded SQLite index; 212 automated tests and 23 test cases passed |
 | iv | Measure the fraction of the gap closed, by task type, with cost | Section 5.5.3 | 9 to 102 of 120 on knowledge, 47 to 48 of 50 on reasoning, with a median of about 9 seconds and 6,100 tokens for a knowledge answer |
 | v | Determine the token budget | Section 5.5.5 | Gain per token highest at 4,000 characters among budgets that delivered excerpts; accuracy rose up to the largest budget tested |
