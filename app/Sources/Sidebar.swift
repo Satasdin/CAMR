@@ -259,7 +259,7 @@ struct SearchPanel: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            TextField("Search vault", text: $workspace.searchText)
+            TextField("Search  ·  path: file: tag: ext:", text: $workspace.searchText)
                 .textFieldStyle(.roundedBorder).focused($focused)
                 .onChange(of: workspace.searchText) { _, _ in workspace.runSearch() }
                 .padding(.horizontal, 10)

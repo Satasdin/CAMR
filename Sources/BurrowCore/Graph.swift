@@ -53,6 +53,12 @@ public struct FoundLine: Sendable, Hashable, Identifiable {
     public let path: String
     public let line: Int
     public let text: String
+
+    public init(path: String, line: Int, text: String) {
+        self.path = path
+        self.line = line
+        self.text = text
+    }
 }
 
 /// What the app, the terminal and the MCP server need to show a vault and keep its notes.

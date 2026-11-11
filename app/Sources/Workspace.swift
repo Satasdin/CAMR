@@ -635,7 +635,17 @@ final class Workspace {
         searchTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(160))
             guard !Task.isCancelled, let self else { return }
-            let found = query.trimmingCharacters(in: .whitespaces).isEmpty ? [] : await self.engine.search(query, scope: scope)
+            // Obsidian's operators: path:, file:, tag: and ext: narrow the results; the rest is the search itself.
+            let parsed = SearchQuery(query)
+            var found: [FoundLine] = []
+            if !parsed.words.isEmpty {
+                found = await self.engine.search(parsed.words, scope: scope)
+            } else if parsed.hasFilters {
+                // Filters alone list the matching files, one line each.
+                found = self.map.files.map { FoundLine(path: $0.path, line: 1, text: $0.path.title) }
+            }
+            let tagged = parsed.tags.isEmpty ? nil : Set(parsed.tags.flatMap { self.tags[$0] ?? self.tags["#" + $0] ?? [] })
+            found = found.filter { parsed.keeps($0.path, tagged: tagged) }
             guard !Task.isCancelled else { return }
             self.results = found
         }
@@ -852,5 +862,39 @@ final class Library {
         if let words = environment["BURROW_TYPE"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { typeIntoEditor(words) }
         }
+    }
+}
+
+/// A search box's text split into Obsidian's operators and the words to search for.
+struct SearchQuery {
+    var words = ""
+    var paths: [String] = []
+    var files: [String] = []
+    var tags: [String] = []
+    var extensions: [String] = []
+
+    init(_ text: String) {
+        var rest: [String] = []
+        for part in text.split(separator: " ") {
+            let token = String(part)
+            let lower = token.lowercased()
+            if lower.hasPrefix("path:"), token.count > 5 { paths.append(String(lower.dropFirst(5))) }
+            else if lower.hasPrefix("file:"), token.count > 5 { files.append(String(lower.dropFirst(5))) }
+            else if lower.hasPrefix("tag:"), token.count > 4 { tags.append(String(token.dropFirst(4)).trimmingCharacters(in: CharacterSet(charactersIn: "#"))) }
+            else if lower.hasPrefix("ext:"), token.count > 4 { extensions.append(String(lower.dropFirst(4)).trimmingCharacters(in: CharacterSet(charactersIn: "."))) }
+            else { rest.append(token) }
+        }
+        words = rest.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+    }
+
+    var hasFilters: Bool { !(paths.isEmpty && files.isEmpty && tags.isEmpty && extensions.isEmpty) }
+
+    func keeps(_ path: String, tagged: Set<String>?) -> Bool {
+        let lower = path.lowercased()
+        if !paths.allSatisfy({ lower.contains($0) }) { return false }
+        if !files.allSatisfy({ (lower as NSString).lastPathComponent.contains($0) }) { return false }
+        if !extensions.isEmpty, !extensions.contains((lower as NSString).pathExtension) { return false }
+        if let tagged, !tagged.contains(path) { return false }
+        return true
     }
 }
