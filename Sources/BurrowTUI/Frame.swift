@@ -1,7 +1,9 @@
 import Foundation
 
 /// What a colour means. There are only a few: gold for notes, blue for code, red for trouble.
-enum Ink: Equatable { case plain, note, code, alert }
+/// Colour means one thing each, as in the Mac app: gold for Burrow's own marks, blue for code, amber for documents read
+/// into the vault, cyan for conversations, violet for saved model memory, red for what is wrong or stale.
+enum Ink: Equatable { case plain, note, code, alert, doc, talk, cache }
 
 struct Style: Equatable {
     var ink: Ink = .plain
@@ -107,6 +109,12 @@ struct Frame {
         case (.note, .full): parts.append("38;5;178")
         case (.code, .full): parts.append("38;5;74")
         case (.alert, .full): parts.append("38;5;167")
+        case (.doc, .full): parts.append("38;5;214")
+        case (.talk, .full): parts.append("38;5;81")
+        case (.cache, .full): parts.append("38;5;141")
+        case (.doc, .sixteen): parts.append("33")
+        case (.talk, .sixteen): parts.append("36")
+        case (.cache, .sixteen): parts.append("35")
         case (.note, .sixteen): parts.append("33")
         case (.code, .sixteen): parts.append("36")
         case (.alert, .sixteen): parts.append("31")

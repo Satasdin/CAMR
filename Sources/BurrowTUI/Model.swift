@@ -2,7 +2,7 @@ import BurrowCore
 import BurrowTools
 import Foundation
 
-enum Page: Equatable { case vault, star, ask, ledger }
+enum Page: Equatable { case vault, star, ask, ledger, conversations, shelf, programs }
 enum Focus: Equatable { case tree, reader, links }
 enum Overlay: Equatable { case none, quickOpen, search, help }
 
@@ -139,6 +139,7 @@ final class Model {
     var search = SearchState()
     var ask = AskState()
     var ledgerView = LedgerViewState()
+    var places = PlacesState()
     var star = StarState()
 
     var status: String?
@@ -159,6 +160,7 @@ final class Model {
         linkedNames = Set(vault.linkedFolders().map(\.name))
         folders = vault.folders()
         stats = try? vault.stats()
+        loadPlaces()
         if !hasOpenedFolders, !files.isEmpty {
             hasOpenedFolders = true
             if files.count <= 60 { expanded = Set(allFolders) }

@@ -21,6 +21,9 @@ extension Model {
             case .star: effects = handleStar(key)
             case .ask: effects = handleAsk(key)
             case .ledger: effects = handleLedger(key) ?? globalKey(key) ?? []
+            case .conversations: effects = handleConversations(key) ?? globalKey(key) ?? []
+            case .shelf: effects = handleShelf(key) ?? globalKey(key) ?? []
+            case .programs: effects = handlePrograms(key) ?? globalKey(key) ?? []
             }
         }
         syncDocument()
@@ -75,8 +78,9 @@ extension Model {
             overlay = .quickOpen
             updateQuickResults()
         case .character("L"):
-            loadLedger()
-            page = .ledger
+            go(.ledger)
+        case let .character(digit) where ("1"..."5").contains(digit):
+            if let place = Place(rawValue: Int(String(digit))!) { go(place) }
         case .character("a"):
             page = .ask
         case .character("*"), .character("s"):

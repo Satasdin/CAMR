@@ -20,6 +20,9 @@ enum View {
         case .star: StarMap.draw(&frame, model, in: body)
         case .ask: drawAsk(&frame, model, in: body)
         case .ledger: LedgerScreen.draw(&frame, model, in: body)
+        case .conversations: PlacesScreen.drawConversations(&frame, model, in: body)
+        case .shelf: PlacesScreen.drawShelf(&frame, model, in: body)
+        case .programs: PlacesScreen.drawPrograms(&frame, model, in: body)
         }
         drawStatus(&frame, model)
         drawHints(&frame, model)
@@ -34,7 +37,40 @@ enum View {
 
     // MARK: Top and bottom
 
+    /// The places, one row under the title: the same five as the Mac app, each with what it holds.
+    private static func drawPlaces(_ frame: inout Frame, _ model: Model) {
+        guard Layout.bodyTop(height: model.height) >= 2 else { return }
+        let current = Place.of(model.page)
+        let ledger = model.ledgerView
+        let flagged = ledger.all.filter { ledger.reverted.contains($0.id) || ledger.stale[$0.id] != nil }.count
+        let staleCaches = model.places.shelf.filter { $0.stale != nil }.count
+        var x = 1
+        for place in Place.allCases {
+            let count: (String, Style)?
+            switch place {
+            case .library: count = (model.files.count.description, .quiet)
+            case .conversations: count = model.places.sessions.isEmpty ? nil : (model.places.sessions.count.description, Style(ink: .talk))
+            case .ledger: count = ledger.all.isEmpty ? nil : flagged > 0 ? ("\(ledger.all.count) · \(flagged)!", .alert) : (ledger.all.count.description, .quiet)
+            case .shelf: count = model.places.shelf.isEmpty ? nil : staleCaches > 0 ? ("\(model.places.shelf.count) · \(staleCaches)!", .alert) : (model.places.shelf.count.description, Style(ink: .cache))
+            case .programs: count = nil
+            }
+            let label = " \(place.rawValue) \(place.title) "
+            let cost = Cells.width(of: label) + (count.map { Cells.width(of: $0.0) + 1 } ?? 0) + 1
+            if x + cost > model.width - 1 { break }
+            if place == current {
+                x = frame.put(x, 1, label, Style(ink: .note, bold: true, reverse: true))
+            } else {
+                x = frame.put(x, 1, " ", .plain)
+                x = frame.put(x, 1, "\(place.rawValue)", .quiet)
+                x = frame.put(x + 1, 1, place.title + " ", .plain)
+            }
+            if let count { x = frame.put(x + 1, 1, count.0, count.1) }
+            x += 2
+        }
+    }
+
     private static func drawTitle(_ frame: inout Frame, _ model: Model) {
+        drawPlaces(&frame, model)
         var x = frame.put(1, 0, "✦ burrow", Style(ink: .note, bold: true))
         x = frame.put(x, 0, "  " + model.vault.root.lastPathComponent, .quiet)
         var right: String
@@ -84,9 +120,15 @@ enum View {
             if model.askBusy { return [("↑↓", "scroll"), ("esc", "stop")] }
             return [("⏎", "ask"), ("tab", "folder"), ("↑↓", "scroll"), ("^N ^P", "pick source"), ("^O", "open source"), ("esc", "back")]
         case .ledger:
-            return [("↑↓", "pick"), ("tab", "branch"), ("⏎", "open its file"), ("r", "resume"), ("esc", "back"), ("?", "keys")]
+            return [("↑↓", "pick"), ("tab", "branch"), ("⏎", "open its file"), ("r", "resume"), ("1-5", "places"), ("?", "keys")]
+        case .conversations:
+            return [("↑↓", "pick"), ("tab", "program"), ("⏎", "open a file it read"), ("1-5", "places"), ("?", "keys"), ("q", "quit")]
+        case .shelf:
+            return [("↑↓", "pick"), ("⏎", "open its file"), ("1-5", "places"), ("?", "keys"), ("q", "quit")]
+        case .programs:
+            return [("↑↓", "pick"), ("⏎", "its conversations"), ("1-5", "places"), ("?", "keys"), ("q", "quit")]
         case .vault:
-            let common = [("/", "search"), ("o", "open"), ("a", "ask"), ("s", "star"), ("L", "ledger"), ("?", "keys"), ("q", "quit")]
+            let common = [("/", "search"), ("o", "open"), ("1-5", "places"), ("s", "star"), ("?", "keys"), ("q", "quit")]
             switch model.focus {
             case .tree: return [("↑↓", "move"), ("→", "open"), ("←", "fold")] + common
             case .reader: return [("↑↓", "scroll"), ("tab", "next link"), ("⏎", "follow"), ("[", "back"), ("←", "files")] + common
@@ -142,11 +184,11 @@ enum View {
                 style.bold = row.depth == 0
             } else {
                 glyph = row.isNote ? "•" : "·"
-                style.ink = row.isNote ? .plain : .code
+                style.ink = Model.ink(for: row.path)
             }
             if model.document?.path == row.path {
                 style.bold = true
-                style.ink = row.isNote ? .note : .code
+                style.ink = row.isNote ? .note : Model.ink(for: row.path)
             }
             let suffix = row.isLinked ? " ⇄" : ""
             let text = indent + glyph + " " + Cells.truncate(row.name, to: max(4, area.width - 3 - Cells.width(of: indent) - Cells.width(of: suffix))) + suffix
@@ -160,8 +202,11 @@ enum View {
 
     private static func drawReader(_ frame: inout Frame, _ model: Model, in area: Rect) {
         guard let document = model.document else {
-            let message = model.rows.isEmpty ? "This vault has nothing to read yet." : "Pick a note on the left, or press o to open one by name."
-            frame.put(area.x + 2, area.y + 1, Cells.truncate(message, to: area.width - 2), .quiet)
+            if model.rows.isEmpty {
+                frame.put(area.x + 2, area.y + 1, Cells.truncate("This vault has nothing to read yet.", to: area.width - 2), .quiet)
+            } else {
+                PlacesScreen.drawLibraryGlance(&frame, model, in: area)
+            }
             return
         }
         let textX = area.x + max(1, (area.width - document.renderedWidth) / 2)
@@ -427,10 +472,10 @@ enum View {
     }
 
     private static let helpSections: [(String, [(String, String)])] = [
-        ("Anywhere", [("/", "search every line"), ("o  ^P", "open by name"), ("a", "ask the local model"), ("s  *", "star view"), ("L", "the Ledger"), ("R", "re-index, with meaning if Ollama is up"), ("?", "these keys"), ("q  ^C", "quit"), ("^Z", "suspend")]),
+        ("Anywhere", [("/", "search every line"), ("o  ^P", "open by name"), ("1 – 5", "Library, Conversations, Ledger, Shelf, Programs"), ("s  *", "star view"), ("R", "re-index, with meaning if Ollama is up"), ("?", "these keys"), ("q  ^C", "quit"), ("^Z", "suspend")]),
         ("Files", [("↑↓ j k", "move"), ("→ l ⏎", "open or unfold"), ("← h", "fold or go up"), ("tab", "to the reader")]),
         ("Reader", [("↑↓ j k", "scroll"), ("space b", "page"), ("g G", "top, end"), ("tab n", "next link"), ("⇧tab N", "last link"), ("⏎", "follow the link"), ("[  ]", "back, forward"), ("← →", "files, links"), ("i", "hide or show links")]),
-        ("Ask", [("⏎", "ask"), ("tab", "limit to a folder"), ("^N ^P", "pick a source"), ("^O", "open the source"), ("esc", "stop or go back")]),
+        ("Conversations", [("↑↓", "pick one"), ("tab", "one program"), ("⏎", "open a file it read")]),
         ("Ledger", [("↑↓ j k", "pick a commit"), ("tab", "next branch"), ("⏎", "open the file it rests on"), ("r", "what the next model is handed")]),
         ("Star", [("←→ ↑↓", "pick a star"), ("⏎", "centre on it"), ("space", "open it"), ("c", "open the centre")]),
     ]
