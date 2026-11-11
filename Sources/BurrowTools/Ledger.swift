@@ -86,7 +86,8 @@ public struct Ledger: Sendable {
         let linked = vault.linkedFolders()
         self.init(folder: vault.store.appendingPathComponent("ledger", isDirectory: true),
                   read: { vault.text(of: $0) },
-                  modified: { path in
+                  modified: { given in
+                      guard let path = Ledger.vaultPath(given) else { return nil }
                       var url = root.appendingPathComponent(path)
                       for folder in linked where path == folder.name || path.hasPrefix(folder.name + "/") {
                           url = folder.url.appendingPathComponent(String(path.dropFirst(folder.name.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
@@ -134,11 +135,20 @@ public struct Ledger: Sendable {
     public func hashes(_ paths: [String]) -> [String: String] {
         var out: [String: String] = [:]
         for path in paths {
-            let file = path.components(separatedBy: ":").first ?? path
-            guard !file.isEmpty else { continue }
+            guard let file = Self.vaultPath(path.components(separatedBy: ":").first ?? path) else { continue }
             out[file] = read(file).map(Self.digest) ?? ""
         }
         return out
+    }
+
+    /// A cited path as a plain vault path, or nil: never absolute, never climbing out with "..", no control characters.
+    /// What a commit cites is only ever looked up inside the vault.
+    public static func vaultPath(_ given: String) -> String? {
+        let path = given.trimmingCharacters(in: .whitespaces)
+        guard !path.isEmpty, path.count <= 512, !path.hasPrefix("/"), !path.hasPrefix("~"),
+              !path.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
+              !path.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) else { return nil }
+        return path
     }
 
     static func digest(_ text: String) -> String {
@@ -350,7 +360,7 @@ public struct Ledger: Sendable {
                             at: at, reverts: fields["reverts"] as? String, sha: fields["sha"] as? String, session: fields["session"] as? String)
     }
 
-    static func when(_ date: Date) -> String {
+    public static func when(_ date: Date) -> String {
         let format = DateFormatter()
         format.locale = Locale(identifier: "en_US_POSIX")
         format.dateFormat = "d MMM HH:mm"

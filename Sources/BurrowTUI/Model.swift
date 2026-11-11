@@ -2,7 +2,7 @@ import BurrowCore
 import BurrowTools
 import Foundation
 
-enum Page: Equatable { case vault, star, ask }
+enum Page: Equatable { case vault, star, ask, ledger }
 enum Focus: Equatable { case tree, reader, links }
 enum Overlay: Equatable { case none, quickOpen, search, help }
 
@@ -138,6 +138,7 @@ final class Model {
     var quick = QuickOpenState()
     var search = SearchState()
     var ask = AskState()
+    var ledgerView = LedgerViewState()
     var star = StarState()
 
     var status: String?

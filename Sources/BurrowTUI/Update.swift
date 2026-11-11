@@ -20,6 +20,7 @@ extension Model {
             case .vault: effects = handleVault(key)
             case .star: effects = handleStar(key)
             case .ask: effects = handleAsk(key)
+            case .ledger: effects = handleLedger(key) ?? globalKey(key) ?? []
             }
         }
         syncDocument()
@@ -62,7 +63,7 @@ extension Model {
         }
     }
 
-    private func globalKey(_ key: Key) -> [Effect]? {
+    func globalKey(_ key: Key) -> [Effect]? {
         switch key {
         case .character("q"): return [.quit]
         case .character("?"): overlay = .help
@@ -73,6 +74,9 @@ extension Model {
             quick = QuickOpenState()
             overlay = .quickOpen
             updateQuickResults()
+        case .character("L"):
+            loadLedger()
+            page = .ledger
         case .character("a"):
             page = .ask
         case .character("*"), .character("s"):

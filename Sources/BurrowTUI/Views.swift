@@ -19,6 +19,7 @@ enum View {
         case .vault: drawVault(&frame, model)
         case .star: StarMap.draw(&frame, model, in: body)
         case .ask: drawAsk(&frame, model, in: body)
+        case .ledger: LedgerScreen.draw(&frame, model, in: body)
         }
         drawStatus(&frame, model)
         drawHints(&frame, model)
@@ -82,8 +83,10 @@ enum View {
         case .ask:
             if model.askBusy { return [("↑↓", "scroll"), ("esc", "stop")] }
             return [("⏎", "ask"), ("tab", "folder"), ("↑↓", "scroll"), ("^N ^P", "pick source"), ("^O", "open source"), ("esc", "back")]
+        case .ledger:
+            return [("↑↓", "pick"), ("tab", "branch"), ("⏎", "open its file"), ("r", "resume"), ("esc", "back"), ("?", "keys")]
         case .vault:
-            let common = [("/", "search"), ("o", "open"), ("a", "ask"), ("s", "star"), ("?", "keys"), ("q", "quit")]
+            let common = [("/", "search"), ("o", "open"), ("a", "ask"), ("s", "star"), ("L", "ledger"), ("?", "keys"), ("q", "quit")]
             switch model.focus {
             case .tree: return [("↑↓", "move"), ("→", "open"), ("←", "fold")] + common
             case .reader: return [("↑↓", "scroll"), ("tab", "next link"), ("⏎", "follow"), ("[", "back"), ("←", "files")] + common
@@ -424,10 +427,11 @@ enum View {
     }
 
     private static let helpSections: [(String, [(String, String)])] = [
-        ("Anywhere", [("/", "search every line"), ("o  ^P", "open by name"), ("a", "ask the local model"), ("s  *", "star view"), ("R", "re-index, with meaning if Ollama is up"), ("?", "these keys"), ("q  ^C", "quit"), ("^Z", "suspend")]),
+        ("Anywhere", [("/", "search every line"), ("o  ^P", "open by name"), ("a", "ask the local model"), ("s  *", "star view"), ("L", "the Ledger"), ("R", "re-index, with meaning if Ollama is up"), ("?", "these keys"), ("q  ^C", "quit"), ("^Z", "suspend")]),
         ("Files", [("↑↓ j k", "move"), ("→ l ⏎", "open or unfold"), ("← h", "fold or go up"), ("tab", "to the reader")]),
         ("Reader", [("↑↓ j k", "scroll"), ("space b", "page"), ("g G", "top, end"), ("tab n", "next link"), ("⇧tab N", "last link"), ("⏎", "follow the link"), ("[  ]", "back, forward"), ("← →", "files, links"), ("i", "hide or show links")]),
         ("Ask", [("⏎", "ask"), ("tab", "limit to a folder"), ("^N ^P", "pick a source"), ("^O", "open the source"), ("esc", "stop or go back")]),
+        ("Ledger", [("↑↓ j k", "pick a commit"), ("tab", "next branch"), ("⏎", "open the file it rests on"), ("r", "what the next model is handed")]),
         ("Star", [("←→ ↑↓", "pick a star"), ("⏎", "centre on it"), ("space", "open it"), ("c", "open the centre")]),
     ]
 
