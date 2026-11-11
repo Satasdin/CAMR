@@ -15,9 +15,9 @@ final class ToolsTests: XCTestCase {
 
     func testTheToolsAreDefinedOnce() {
         let names = VaultTools.definitions.map(\.name)
-        XCTAssertEqual(names, ["vault_search", "vault_read", "vault_links", "vault_list", "vault_folders", "vault_remember", "vault_ask", "vault_prepare"])
+        XCTAssertEqual(names, ["vault_search", "vault_read", "vault_links", "vault_list", "vault_folders", "vault_remember", "vault_ask", "vault_prepare", "vault_pack", "vault_session_list", "vault_session_resume", "vault_session_log"])
         XCTAssertEqual(Set(names).count, names.count)
-        XCTAssertEqual(VaultTools.definitions.filter { !$0.readOnly }.map(\.name), ["vault_remember"])
+        XCTAssertEqual(VaultTools.definitions.filter { !$0.readOnly }.map(\.name), ["vault_remember", "vault_session_log"])
         let schema = VaultTools.definitions[0].inputSchema
         XCTAssertEqual(schema["required"] as? [String], ["query"])
         XCTAssertEqual(schema["type"] as? String, "object")

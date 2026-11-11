@@ -29,7 +29,7 @@ struct Scanner {
         guard let name = parts.last else { return false }
         if parts.dropLast().contains(where: { skippedFolders.contains($0) || $0.hasPrefix(".") }) { return false }
         if namedTextFiles.contains(name) { return true }
-        return textExtensions.contains((name as NSString).pathExtension.lowercased())
+        return textExtensions.contains((name as NSString).pathExtension.lowercased()) || Extractor.handles(name)
     }
 
     /// Relative paths of every candidate file, sorted so that an index built twice comes out the same.
@@ -79,6 +79,12 @@ struct Scanner {
         // A shortcut inside the folder must not be a way to read something outside it.
         let home = root.resolvingSymlinksInPath().path + "/"
         guard url.resolvingSymlinksInPath().path.hasPrefix(home) else { return nil }
+        if Extractor.handles(path) {
+            guard let data = try? Data(contentsOf: url), data.count <= Extractor.largest else { return nil }
+            let hash = digest(data)
+            guard let text = Extractor.markdown(of: data, path: path, hash: hash) else { return nil }
+            return Found(path: path, text: text, hash: hash)
+        }
         let limit = dataExtensions.contains(url.pathExtension.lowercased()) ? largestDataFile : largestFile
         guard let data = try? Data(contentsOf: url), data.count <= limit, !data.contains(0),
               let text = String(data: data, encoding: .utf8) else { return nil }

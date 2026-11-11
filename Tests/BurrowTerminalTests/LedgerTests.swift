@@ -102,6 +102,28 @@ private func makeLedger() -> (Ledger, FakeFiles, URL) {
         #expect(try ledger.handoff(from: SessionRecord(id: "empty")) == nil)
     }
 
+    @Test func aHandoffKeepsWhatWasAnswered() throws {
+        let (ledger, _, _) = makeLedger()
+        var record = SessionRecord(id: "s2")
+        record.client = "opencode"
+        record.turns = [SessionTurn(question: "How long to report a breach?", answer: "72 hours, per Notes/plan.md.", model: "qwen3:4b", server: "mcp", sources: ["Notes/plan.md"])]
+        let made = try #require(try ledger.handoff(from: record))
+        #expect(made.body.contains("Turn 1. Asked: How long to report a breach? Answered (qwen3:4b): 72 hours"))
+    }
+
+    @Test func notesMatchByWordsAndSkipWrongOrStaleOnes() throws {
+        let (ledger, files, _) = makeLedger()
+        let good = try ledger.commit(.fact, "The shelf limit is twelve gigabytes", files: ["Sources/Shelf.swift"], author: "a")
+        let wrong = try ledger.commit(.fact, "The shelf limit is unlimited gigabytes", author: "b")
+        try ledger.revert(wrong.id, why: "No.", author: "c")
+        try ledger.commit(.plan, "Shelf limit plan gigabytes", author: "d")
+        #expect(ledger.notes(for: "what is the shelf limit in gigabytes").first?.id == good.id)
+        #expect(!ledger.notes(for: "shelf limit gigabytes").contains { $0.id == wrong.id })
+        #expect(ledger.notes(for: "the").isEmpty)
+        files.texts["Sources/Shelf.swift"] = "changed"
+        #expect(!ledger.notes(for: "shelf limit gigabytes").contains { $0.id == good.id })
+    }
+
     @Test func branchNamesAreKeptToPlainCharacters() throws {
         #expect(try Ledger.branchName("Shelf Packs!") == "shelf-packs")
         #expect(throws: LedgerProblem.self) { try Ledger.branchName("../") }

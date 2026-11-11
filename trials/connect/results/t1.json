@@ -1,0 +1,55 @@
+{
+ "tools": [
+  "vault_search",
+  "vault_read",
+  "vault_links",
+  "vault_list",
+  "vault_folders",
+  "vault_remember",
+  "vault_ask",
+  "vault_prepare",
+  "vault_session_list",
+  "vault_session_resume",
+  "vault_session_log"
+ ],
+ "routes": [
+  {
+   "route": "ollama",
+   "model": "burrow-qwen3-4b-16k",
+   "tool_called": true,
+   "answer": "Under the Data Protection (General) Regulations, 2021, a data controller must notify the Data Commissioner of a notifiable data breach within a specified timeframe, including details such as the circumstances of the breach, the affected data subjects, the personal data involved, and potential harm, as well as steps taken to mitigate the risk.",
+   "calls": [
+    {
+     "name": "vault_search",
+     "arguments": {
+      "query": "breach notification"
+     },
+     "failed": false,
+     "characters": 13603
+    }
+   ],
+   "rounds": 2,
+   "prompt_tokens": 4850,
+   "seconds": 3.74
+  },
+  {
+   "route": "openai",
+   "model": "burrow-qwen3-4b-16k",
+   "tool_called": true,
+   "answer": "Under the Data Protection (General) Regulations, 2021, a data controller must notify the Data Commissioner of a notifiable data breach within a specified timeframe, including details such as the circumstances of the breach, the affected data subjects, the personal data involved, and potential harm, as well as steps taken to mitigate the risk.",
+   "calls": [
+    {
+     "name": "vault_search",
+     "arguments": {
+      "query": "breach notification"
+     },
+     "failed": false,
+     "characters": 13603
+    }
+   ],
+   "rounds": 2,
+   "prompt_tokens": 4850,
+   "seconds": 3.66
+  }
+ ]
+}

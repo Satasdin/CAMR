@@ -7,7 +7,8 @@ burrow: private project memory for local models
   burrow                            full-screen terminal view of the last vault, or this folder if it is one
   burrow tui   <vault-folder> [--model NAME] [--store DIR]
   burrow chat  <vault-folder> [--model NAME] [--folder F] [--tools-only]
-  burrow mcp   <vault-folder>       MCP server on stdin and stdout
+  burrow mcp   <vault-folder> [--no-sessions] [--llama URL] [--tools door|full|classic]   MCP server on stdin and stdout; each connection is kept as a session.
+               With --llama, what lookups return is also read into that llama.cpp server's cache, in the background
   burrow link  <vault-folder> <code-folder>
 
   burrow index <project> [--no-embed] [--vault]
@@ -20,6 +21,12 @@ burrow: private project memory for local models
   burrow note  <project> "text" [--kind decision|rejected|bug|convention|note]
   burrow links <project> <file>
   burrow stats <project>
+  burrow kv <vault> list|save|ask [files...] ["question"] [--server URL] [--cold]   model working memory kept on disk (llama.cpp)
+  burrow kv <vault> pack <folder> [--part N] [--window TOKENS]    print one part of a folder read whole, to use as a system message
+  burrow kv <vault> warm <folder> [--server URL]                  read every part of a folder into the model's cache and keep it
+
+The Ledger, a git for what AIs understood:
+\(ledgerUsage)
 
 Add --store DIR to keep the memory somewhere other than <project>/.burrow.
 Add --vault to index a whole vault, where every Markdown file is a note.
@@ -31,7 +38,7 @@ struct Options {
     var values: [String: String] = [:]
 
     init(_ arguments: [String]) throws {
-        let takesValue: Set<String> = ["--mode", "--model", "--kind", "--store", "--folder", "--characters"]
+        let takesValue: Set<String> = ["--mode", "--model", "--kind", "--store", "--folder", "--characters", "--server", "--llama", "--part", "--window", "--tools"]
         var index = 0
         while index < arguments.count {
             let word = arguments[index]
@@ -76,6 +83,7 @@ func embedderIfIndexed(_ vault: Vault, _ ollama: Ollama) throws -> Embedder? {
 func run() async throws {
     let arguments = Array(CommandLine.arguments.dropFirst())
     if try await runTerminalCommand(arguments) { return }
+    if try await runLedgerCommand(arguments) { return }
     guard let command = arguments.first, !["help", "--help", "-h"].contains(command) else {
         print(usage)
         return
@@ -223,6 +231,65 @@ func run() async throws {
     case "stats":
         let stats = try vault.stats()
         print("\(stats.files) files, \(stats.notes) notes, \(stats.clusters) clusters, \(stats.chunks) chunks, \(stats.links) links, \(stats.vectors) vectors, index \(stats.indexBytes / 1024) KB")
+
+    case "kv":
+        // burrow kv <vault> save|ask|list [files...] [--server URL] ["question"]
+        let shelf = KVShelf(vault: vault)
+        let server = URL(string: options.values["--server"] ?? "http://127.0.0.1:8080")!
+        let action = options.positional.dropFirst().first ?? "list"
+        var rest = Array(options.positional.dropFirst(2))
+        switch action {
+        case "list":
+            for entry in shelf.entries() {
+                print("\(entry.key)  \(entry.model)  \(entry.tokens) tokens  \(entry.bytes / 1_048_576) MB  built in \(String(format: "%.1f", entry.buildSeconds)) s  \(entry.sources.keys.sorted().joined(separator: ", "))")
+            }
+            print("kept in \(shelf.folder.path). Start llama.cpp with --slot-save-path \(shelf.folder.path) to use them.")
+        case "save":
+            guard !rest.isEmpty else { throw Failure("kv save needs one or more vault paths") }
+            let (entry, built) = try await shelf.save(rest, server: server)
+            print("saved \(entry.key) for \(entry.model): \(built.promptTokens) tokens read in \(String(format: "%.2f", built.promptSeconds)) s, \(entry.bytes / 1_048_576) MB on disk")
+        case "ask":
+            guard rest.count >= 2 else { throw Failure("kv ask needs vault paths and then a question") }
+            let question = rest.removeLast()
+            let out = try await shelf.ask(rest, question: question, server: server, cold: options.flags.contains("--cold"))
+            let how = out.used.map { "loaded the saved cache (\($0.tokens) tokens) in \(String(format: "%.2f", out.loaded)) s" } ?? "read everything from the start"
+            if options.flags.contains("--json") {
+                print(try jsonLine(["loaded_seconds": out.loaded, "prompt_tokens": out.timing.promptTokens, "prompt_seconds": out.timing.promptSeconds,
+                                    "total_seconds": out.timing.answerSeconds + out.loaded, "used_cache": out.used != nil, "answer": out.timing.answer]))
+            } else {
+                print("\(how); then read \(out.timing.promptTokens) tokens in \(String(format: "%.2f", out.timing.promptSeconds)) s\n\n\(out.timing.answer)")
+            }
+        case "pack", "warm":
+            // A folder read whole, in parts sized to the model's window (D-59).
+            guard let scope = rest.first else { throw Failure("kv \(action) needs a vault folder") }
+            var window = Int(options.values["--window"] ?? "") ?? KVShelf.defaultPackWindow
+            var spare: Int?
+            if action == "warm" || options.values["--window"] == nil {
+                let warmer = KVWarmer(settings: KVWarmer.Settings(server: server), open: { vault })
+                if case let .ready(_, slot, tokens) = await warmer.connect() {
+                    window = tokens
+                    spare = slot
+                } else if action == "warm" {
+                    throw Failure("kv warm needs a llama.cpp server with two or more slots at \(server.absoluteString)")
+                }
+            }
+            let plan = try shelf.plan(scope: scope, budgetCharacters: KVShelf.packCharacters(windowTokens: window))
+            if action == "pack" {
+                let part = Int(options.values["--part"] ?? "1") ?? 1
+                guard let pack = plan.packs.first(where: { $0.part == part }) else { throw Failure("\(scope) has \(plan.packs.count) parts") }
+                FileHandle.standardError.write(Data("part \(part) of \(plan.packs.count), sized for \(window) tokens\n".utf8))
+                print(shelf.text(of: pack, in: plan), terminator: "")
+            } else {
+                let started = Date()
+                for item in try await shelf.build(plan, server: server, slot: spare!) {
+                    let entry = item.entry
+                    print("part \(entry.part ?? 0) of \(entry.parts ?? 0): \(entry.tokens) tokens, " + (item.skipped ? "already on the shelf" :
+                        "\(item.readTokens) read in \(String(format: "%.1f", item.readSeconds)) s, \(entry.bytes / 1_048_576) MB"))
+                }
+                print("done in \(String(format: "%.1f", Date().timeIntervalSince(started))) s")
+            }
+        default: throw Failure("kv takes list, save, ask, pack or warm")
+        }
 
     default:
         throw Failure("unknown command \(command)\n\n\(usage)")

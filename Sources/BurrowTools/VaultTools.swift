@@ -93,12 +93,29 @@ public final class VaultTools {
     private let defaultModel: String
     /// Set for a chat that is limited to one folder. It overrides any folder a model asks for.
     public var fixedFolder: String?
+    /// This connection's own session, kept by the MCP server so every lookup leaves a trace another program can pick up. Nil for the terminal chat and tests.
+    public var connection: SessionRecord?
+    /// True when this connection's session was started by it. A session carried on from an earlier connection of the same
+    /// program is the conversation the user means, so it stays visible to list and resume.
+    public var connectionIsNew = true
+    var hiddenSession: String? { connectionIsNew ? connection?.id : nil }
+    /// The program on the other end, as it named itself.
+    public var connectionClient: String?
+    /// True where the Ledger's write tools may run: a program connected over MCP. Off for Burrow's own chat and tests.
+    public var ledgerWrites = false
+    /// The trust line on every search (D-66). Off only for an evaluation's baseline arm.
+    public var trustLinesOn = true
+    /// Matching Ledger notes at the end of every search. Off only for an evaluation's baseline arm.
+    public var ledgerNotesOn = true
     public var searchCharacters: Int
     private let refreshEvery: TimeInterval
     private var lastRefresh: Date?
     private let log: (String) -> Void
 
     public static let longestRead = 400
+    /// The window `vault_pack` sizes its parts for. Set from the llama.cpp server when Burrow keeps its caches (D-59),
+    /// so the text a client reads is the text that was cached.
+    public var packWindow = KVShelf.defaultPackWindow
     public static let longestReadCharacters = 40_000
     public static let longestNote = 20_000
     public static let longestListing = 300
@@ -127,19 +144,24 @@ public final class VaultTools {
 
     /// Runs one tool. Throws only when the call itself doesn't fit the tool's definition. Anything else comes back as a result the caller can read.
     public func call(_ name: String, arguments: [String: Any]) async throws -> ToolResult {
+        if let result = try await ledgerCall(name, arguments: arguments) { return result }
         guard let tool = Self.definitions.first(where: { $0.name == name }) else { throw ToolCallProblem(description: "Unknown tool: \(name)") }
         let given = try ToolArguments(arguments, for: tool)
         await freshen()
         do {
             switch name {
-            case "vault_search": return try await search(given)
-            case "vault_read": return try await read(given)
-            case "vault_links": return try await links(given)
-            case "vault_list": return try await list(given)
+            case "vault_search": return remembered(name, given, try await search(given))
+            case "vault_read": return remembered(name, given, try await read(given))
+            case "vault_links": return remembered(name, given, try await links(given))
+            case "vault_list": return remembered(name, given, try await list(given))
             case "vault_folders": return try folders()
-            case "vault_remember": return try await remember(given)
-            case "vault_ask": return try await ask(given)
-            case "vault_prepare": return try await prepare(given)
+            case "vault_remember": return remembered(name, given, try await remember(given))
+            case "vault_ask": return remembered(name, given, try await ask(given))
+            case "vault_prepare": return remembered(name, given, try await prepare(given))
+            case "vault_pack": return remembered(name, given, try await pack(given))
+            case "vault_session_list": return sessionList()
+            case "vault_session_resume": return sessionResume(given)
+            case "vault_session_log": return try sessionLog(given)
             default: throw ToolCallProblem(description: "Unknown tool: \(name)")
             }
         } catch let problem as ToolCallProblem {
@@ -284,7 +306,7 @@ public final class VaultTools {
         found.excerpts.map { ToolResult.Source(path: $0.path, startLine: $0.startLine, endLine: $0.endLine, reason: $0.reason.label) }
     }
 
-    private func scope(_ asked: String?) throws -> String? {
+    func scope(_ asked: String?) throws -> String? {
         if let fixedFolder { return fixedFolder }
         guard let asked else { return nil }
         let clean = Self.tidy(asked)
@@ -296,7 +318,7 @@ public final class VaultTools {
         return clean
     }
 
-    private struct ToolProblem: Error, CustomStringConvertible {
+    struct ToolProblem: Error, CustomStringConvertible {
         let description: String
         init(_ description: String) { self.description = description }
     }
@@ -368,10 +390,12 @@ public final class VaultTools {
         let excerpts = found.retrieved.excerpts
         let inFolder = folder.map { " in \($0)" } ?? ""
         guard !excerpts.isEmpty else {
-            return ToolResult(text: "Nothing in the vault\(inFolder) matches \"\(query)\". \(found.how)", summary: "nothing found\(inFolder)")
+            let trust = trustLine(found)
+            return ToolResult(text: "\(trust.isEmpty ? "" : trust + "\n")Nothing in the vault\(inFolder) matches \"\(query)\". \(found.how)\(ledgerNotes(for: query))", summary: "nothing found\(inFolder)")
         }
         let body = excerpts.map(ProjectContent.block).joined(separator: "\n\n")
-        return ToolResult(text: "\(ProjectContent.notice)\n\(excerpts.count) excerpts for \"\(query)\"\(inFolder). \(found.how)\n\n\(body)",
+        let trust = trustLine(found)
+        return ToolResult(text: "\(ProjectContent.notice)\n\(trust.isEmpty ? "" : trust + "\n")\(excerpts.count) excerpts for \"\(query)\"\(inFolder). \(found.how)\n\n\(body)\(ledgerNotes(for: query))",
                           sources: sources(found.retrieved),
                           summary: "\(excerpts.count) excerpts from \(found.retrieved.paths.count) files, \(found.retrieved.characters) characters")
     }
@@ -396,7 +420,7 @@ public final class VaultTools {
         let last = start + kept.count - 1
         let more = last < all.count ? " Continue with start_line \(last + 1)." : ""
         let isNote = (try? vault.projectMap().files.first { $0.path == path }?.isNote) ?? nil ?? false
-        let body = ProjectContent.block(path: path, lines: "\(start)-\(last)", kind: isNote ? "note" : "code", why: nil, body: kept.joined(separator: "\n"))
+        let body = ProjectContent.block(path: path, lines: "\(start)-\(last)", kind: isNote ? "note" : Extractor.handles(path) ? "document" : "code", why: nil, body: kept.joined(separator: "\n"))
         return ToolResult(text: "\(ProjectContent.notice)\n\(path) has \(all.count) lines. Showing \(start) to \(last).\(more)\n\n\(body)",
                           sources: [ToolResult.Source(path: path, startLine: start, endLine: last, reason: "read")],
                           summary: "\(path) lines \(start) to \(last) of \(all.count)")
@@ -488,5 +512,103 @@ public final class VaultTools {
         """
         return ToolResult(text: text, sources: sources(outcome.found.retrieved),
                           summary: String(format: "answered in %.1f s from %d files", outcome.result.totalSeconds, outcome.found.retrieved.paths.count))
+    }
+}
+
+// MARK: Sessions
+
+extension VaultTools {
+    public var sessions: SessionStore { SessionStore(vault: vault) }
+
+    func sessionList() -> ToolResult {
+        let all = sessions.list()
+        guard !all.isEmpty else { return ToolResult(text: "No conversations have been saved in this vault yet.", summary: "no sessions") }
+        // The caller's own session is not one to pick up, and a conversation with answers matters more than a trail of lookups.
+        let shown = all.filter { !$0.isEmpty && $0.id != hiddenSession }
+        let ordered = shown.filter { !$0.turns.isEmpty } + shown.filter { $0.turns.isEmpty }
+        guard !ordered.isEmpty else { return ToolResult(text: "No other conversations have been saved in this vault yet.", summary: "no sessions") }
+        let lines = ordered.prefix(15).map { record -> String in
+            let trail = record.trail.map { ", \($0.count) lookups" } ?? ""
+            let first = record.turns.first.map { ProjectContent.defanged(String($0.question.prefix(90))) }
+                ?? record.trail?.first.map { "looked up " + ProjectContent.defanged(String($0.asked.prefix(80))) } ?? "(empty)"
+            return "  \(record.id)  \(record.turns.isEmpty ? "lookups only" : "\(record.turns.count) turns")\(trail), in \(record.client ?? "unknown"), by \(record.models.isEmpty ? record.client ?? "unknown" : record.models.joined(separator: ", "))\n      began: \(first)"
+        }
+        // Small models often stop after one call, so the newest conversation comes whole: listing is enough to carry it on.
+        let newest = ordered[0]
+        let handoff = Handoff.text(newest, characters: 2_000)
+        return ToolResult(text: "Saved conversations, those with answers first, newest first within each:\n" + lines.joined(separator: "\n")
+                            + "\n\nThe newest, \(newest.id), in full:\n<excerpt path=\"sessions/\(newest.id)\">\n\(handoff)\n</excerpt>"
+                            + "\nFor any other one, call vault_session_resume with its id.",
+                          summary: "\(ordered.count) sessions, newest handed over")
+    }
+
+    func sessionResume(_ given: ToolArguments) -> ToolResult {
+        let id = given.text("session")!.trimmingCharacters(in: .whitespaces)
+        guard let record = sessions.load(id, excluding: hiddenSession) else { return .failure("There is no saved conversation called \(id). vault_session_list shows them.") }
+        let text = Handoff.text(record)
+        return ToolResult(text: "<excerpt path=\"sessions/\(record.id)\">\n\(text)\n</excerpt>\nTo keep adding to this conversation, call vault_session_log with session \(record.id).",
+                          summary: "handed over \(record.id), \(record.turns.count) turns, \(text.count) characters")
+    }
+
+    /// Adds a lookup to this connection's own session, when the server keeps one. Returns the result unchanged.
+    func remembered(_ name: String, _ given: ToolArguments, _ result: ToolResult) -> ToolResult {
+        guard var record = connection, !result.isError else { return result }
+        // A note kept during the conversation is part of it: often it is the answer itself.
+        let asked = name == "vault_remember" ? "kept a note: " + String((given.text("text") ?? "").prefix(400))
+            : given.text("query") ?? given.text("question") ?? given.text("task") ?? given.text("path") ?? given.text("folder") ?? ""
+        let files = result.sources.map { "\($0.path):\($0.startLine)-\($0.endLine)" }
+        record.trail = (record.trail ?? []) + [TrailStep(tool: name, asked: asked, files: Array(files.prefix(6)))]
+        record.client = record.client ?? connectionClient
+        connection = record
+        try? sessions.save(record)
+        return result
+    }
+
+    func sessionLog(_ given: ToolArguments) throws -> ToolResult {
+        var id = given.text("session")!.trimmingCharacters(in: .whitespaces)
+        // "new" from a program that already has a session on this connection means that one: a model need not keep track of ids.
+        if id == "new", let connection { id = connection.id }
+        var record: SessionRecord
+        if id == "new" { record = SessionRecord() } else if id == connection?.id, let connection { record = connection } else {
+            guard let found = sessions.load(id) else { return .failure("There is no saved conversation called \(id). Use new to start one.") }
+            record = found
+        }
+        let files = (given.text("files") ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        record.turns.append(SessionTurn(question: given.text("question")!, answer: given.text("answer")!, model: given.text("model") ?? "unnamed", server: "mcp", sources: files))
+        try sessions.save(record)
+        if record.id == connection?.id { connection = record }
+        return ToolResult(text: "Added to session \(record.id), which now has \(record.turns.count) turns.", summary: "logged to \(record.id)")
+    }
+}
+
+// MARK: What the vault holds
+
+extension VaultTools {
+    /// One plain line saying what is in the vault: each top folder, how many files, and a few of their names.
+    /// Clients pass tool descriptions to every model, so this is how a model learns that the user's question is one the vault can answer.
+    /// File names are written by whoever made the files, so only letters, digits and spaces survive, and each is cut short.
+    public func catalogue(most: Int = 700) -> String {
+        guard let files = try? vault.projectMap().files, !files.isEmpty else { return "nothing yet" }
+        var groups: [String: [String]] = [:]
+        for file in files {
+            let parts = file.path.split(separator: "/")
+            groups[parts.count > 1 ? String(parts[0]) : "top level", default: []].append(String(parts.last ?? ""))
+        }
+        func plain(_ text: String, _ longest: Int) -> String {
+            let stem = (text as NSString).deletingPathExtension
+            let kept = stem.map { $0.isLetter || $0.isNumber ? $0 : " " }
+            return String(String(kept).split(separator: " ").joined(separator: " ").prefix(longest))
+        }
+        var line = ""
+        for (folder, names) in groups.sorted(by: { $0.value.count > $1.value.count }) {
+            // Spread across the folder, so a folder of "part 1, part 2, ..." shows its range and not its first three.
+            let sorted = names.sorted()
+            let picks = sorted.count <= 3 ? sorted : [sorted[0], sorted[sorted.count / 2], sorted[sorted.count - 1]]
+            let examples = picks.map { plain($0, 36) }.joined(separator: "; ")
+            let piece = "\(plain(folder, 30)) (\(names.count) files, such as \(examples))"
+            if line.count + piece.count + 2 > most { break }
+            line += line.isEmpty ? piece : ". " + piece
+        }
+        return line
     }
 }

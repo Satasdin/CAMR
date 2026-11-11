@@ -103,7 +103,9 @@ public struct Ollama: Sendable {
 
     fileprivate func embed(model: String, inputs: [String]) async throws -> [[Float]] {
         // Every question needs the embedding model and it is small, so it is kept loaded between questions.
-        let call = try request("api/embed", ["model": model, "input": inputs, "keep_alive": "30m"])
+        // A piece is at most about 2,000 characters, so a 2,048-token window is enough. Left alone, Ollama loads
+        // qwen3-embedding with 32,768 tokens and 4.8 GB, memory a chat model on the same Mac needs.
+        let call = try request("api/embed", ["model": model, "input": inputs, "keep_alive": "30m", "options": ["num_ctx": 2048], "truncate": true])
         let (data, response) = try await Self.session().data(for: call)
         try check(response, data)
         let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]

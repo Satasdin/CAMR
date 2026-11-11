@@ -229,6 +229,29 @@ public struct Ledger: Sendable {
     /// Commits that were later marked wrong, by id.
     public func reverted() -> Set<String> { Set(all().compactMap(\.reverts)) }
 
+    /// Commits whose words match a question, best first: checked facts, decisions and corrections an earlier session
+    /// left, so a later model finds them while searching. Wrong and stale commits are left out; so are handoffs and plans.
+    public func notes(for question: String, limit: Int = 3) -> [LedgerCommit] {
+        let words = Self.words(question)
+        guard !words.isEmpty else { return [] }
+        let wrong = reverted()
+        let scored = all().compactMap { commit -> (LedgerCommit, Int)? in
+            guard [.fact, .decision, .correction].contains(commit.kind), !wrong.contains(commit.id), changed(commit).isEmpty else { return nil }
+            let shared = words.intersection(Self.words(commit.message + " " + commit.body)).count
+            // At least two shared words, or one when the question is that short, so a lone common word does not match.
+            return shared >= min(2, words.count) ? (commit, shared) : nil
+        }
+        return scored.sorted { $0.1 == $1.1 ? $0.0.at > $1.0.at : $0.1 > $1.1 }.prefix(limit).map(\.0)
+    }
+
+    static let stopWords: Set<String> = ["the", "and", "for", "that", "this", "with", "from", "what", "which", "when", "how", "does",
+                                          "under", "into", "within", "must", "shall", "should", "can", "are", "was", "were", "has",
+                                          "have", "its", "their", "there", "about", "after", "before", "many", "much", "long", "who"]
+
+    static func words(_ text: String) -> Set<String> {
+        Set(text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init).filter { $0.count >= 3 && !stopWords.contains($0) })
+    }
+
     /// Who explained or changed a file, newest first, with what they concluded.
     public func blame(_ file: String, limit: Int = 20) -> [LedgerCommit] { log(file: file, limit: limit) }
 
@@ -306,7 +329,10 @@ public struct Ledger: Sendable {
         let last = questions.last.map { cut($0, 200) } ?? "a lookup"
         let message = "\(record.client ?? "A program") stopped after \(trail.count) lookup\(trail.count == 1 ? "" : "s")\(record.turns.isEmpty ? "" : " and \(record.turns.count) answered turn\(record.turns.count == 1 ? "" : "s")"). Last: \(last)"
         var body: [String] = []
-        if !record.turns.isEmpty { body.append("Questions answered: " + record.turns.suffix(5).map { cut($0.question, 140) }.joined(separator: "; ")) }
+        // What was concluded matters as much as what was asked: each answered turn keeps its question and the start of its answer.
+        for (number, turn) in record.turns.enumerated().suffix(5) {
+            body.append("Turn \(number + 1). Asked: \(cut(turn.question, 160)) Answered (\(turn.model)): \(cut(turn.answer, 360))")
+        }
         let looked = trail.suffix(8).map { cut($0.asked, 100) }
         if !looked.isEmpty { body.append("Looked up: " + looked.joined(separator: "; ")) }
         var files: [String] = []

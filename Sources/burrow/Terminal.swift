@@ -73,8 +73,28 @@ func runTerminalCommand(_ arguments: [String]) async throws -> Bool {
     case "mcp":
         let output = ProtocolOutput()
         let tools = VaultTools.onThisMac(vault: vault, model: options.values["--model"] ?? Ollama.defaultModel, log: logToStandardError)
-        logToStandardError("MCP server for \(vault.root.path), \(VaultTools.definitions.count) tools")
-        await MCPServer(tools: tools, log: logToStandardError).serve(readLine: { Swift.readLine() }, write: output.write)
+        logToStandardError("MCP server for \(vault.root.path)")
+        let server = MCPServer(tools: tools, keepsSessions: !options.flags.contains("--no-sessions"), log: logToStandardError)
+        guard let set = ToolSet(rawValue: options.values["--tools"] ?? "door") else { throw Failure("--tools takes door, full or classic") }
+        server.toolSet = set
+        // Baseline arms of Evaluation 3 only: the search without the trust line, or without Ledger notes.
+        if options.flags.contains("--no-trust") { tools.trustLinesOn = false }
+        if options.flags.contains("--no-ledger-notes") { tools.ledgerNotesOn = false }
+        if let address = options.values["--llama"], let url = URL(string: address) {
+            // Whatever a lookup returns is also read into the model's cache on a spare slot, after the reply (D-60).
+            let store = options.values["--store"]
+            let warmer = KVWarmer(settings: KVWarmer.Settings(server: url), open: { try openVault(folder, store: store) }, log: logToStandardError)
+            if case let .ready(_, _, window) = await warmer.connect() { tools.packWindow = window }
+            server.afterCall = { name, arguments, result in
+                if name == "vault_pack" {
+                    let part = (arguments["part"] as? NSNumber)?.intValue ?? Int("\(arguments["part"] ?? 1)") ?? 1
+                    warmer.asked(scope: (arguments["folder"] as? String) ?? "", part: part)
+                } else {
+                    warmer.noticed(result.sources.map(\.path))
+                }
+            }
+        }
+        await server.serve(readLine: { Swift.readLine() }, write: output.write)
     case "chat":
         let model = options.values["--model"] ?? Ollama.defaultModel
         // Half the usual search allowance, so two searches and a read still fit in the model's context.

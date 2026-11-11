@@ -23,7 +23,7 @@ public struct ToolDefinition: Sendable {
     public let name: String
     public let description: String
     public let parameters: [ToolParameter]
-    /// False only for the one tool that adds to the vault.
+    /// False for the tools that write: a new note, or a turn added to a saved conversation.
     public let readOnly: Bool
 
     /// The JSON Schema for the arguments, which MCP and Ollama both use.
@@ -74,7 +74,7 @@ extension VaultTools {
             readOnly: true),
         ToolDefinition(
             name: "vault_remember",
-            description: "Keep something as a new Markdown note in the vault. Only use it when the user asks to remember something or states a decision worth keeping. It only ever creates a new note.",
+            description: "Keep a fact or decision as a new Markdown note in the vault. Only use it when the user asks you to remember a fact or states a decision worth keeping. It is not for saving the conversation: use vault_session_log for that. It only ever creates a new note.",
             parameters: [
                 ToolParameter("text", .string, "What to keep, in full sentences. Name the files it is about.", required: true),
                 ToolParameter("kind", .string, "What sort of note this is.", required: true, choices: ["decision", "rejected", "bug", "convention", "note"]),
@@ -97,5 +97,38 @@ extension VaultTools {
                 ToolParameter("folder", .string, "Only use this vault folder or linked folder. Leave it out to use everything."),
             ],
             readOnly: true),
+        ToolDefinition(
+            name: "vault_pack",
+            description: "Read a whole folder or module of the vault at once, in parts that each fit your context: a map of the folder, its main notes, then every file with line numbers. Use it to go through a codebase or a set of documents end to end. The same folder always gives the same text, so a model server that saved it can load it instead of reading it again.",
+            parameters: [
+                ToolParameter("folder", .string, "The vault folder or linked folder, as vault_folders or vault_list gave it.", required: true),
+                ToolParameter("part", .integer, "Which part to read, from 1. Defaults to 1; the text says how many parts there are."),
+            ],
+            readOnly: true),
+        ToolDefinition(
+            name: "vault_session_list",
+            description: "List the saved conversations in this vault, newest first: their ids, which models answered, and how they began. Use it to find a conversation to pick up.",
+            parameters: [],
+            readOnly: true),
+        ToolDefinition(
+            name: "vault_session_resume",
+            description: "Pick up a saved conversation that another model or program started. Returns what was asked and settled, the files already read, and the last turns. Call it when the user asks to continue, resume or carry on an earlier conversation.",
+            parameters: [ToolParameter("session", .string, "The session id from vault_session_list, or last for the most recent one.", required: true)],
+            readOnly: true),
+        ToolDefinition(
+            name: "vault_session_log",
+            description: "Save this conversation: add one question and your answer to it, so another model or program can carry it on later. This is the tool for 'save', 'log' or 'keep' this conversation or this answer. Use new as the session the first time. Call it after each answer when the user wants the conversation kept.",
+            parameters: [
+                ToolParameter("session", .string, "The session id, or new to start one.", required: true),
+                ToolParameter("question", .string, "What the user asked, in their words.", required: true),
+                ToolParameter("answer", .string, "Your answer, in full or closely summarised.", required: true),
+                ToolParameter("model", .string, "Your model name, so the next model knows who answered."),
+                ToolParameter("files", .string, "Vault paths you read for this answer, separated by commas."),
+            ],
+            readOnly: false),
     ]
+
+    /// The tools a chat model is offered: everything but the session tools, which the chat handles itself, and
+    /// `vault_pack`, whose parts are sized for a whole window and would crowd out a chat's small search allowance.
+    public static var forChat: [ToolDefinition] { definitions.filter { !$0.name.hasPrefix("vault_session") && $0.name != "vault_pack" } }
 }

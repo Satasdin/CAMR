@@ -13,6 +13,11 @@ public struct Budget: Sendable {
     public var entryFiles = 4
     public var hops = 2
     public var longestExcerpt = 3_000
+    /// A Markdown excerpt is cut down to its densest part for the question, so more separate passages fit and the
+    /// answer sits nearer the top. Code is never cut: half a function misleads.
+    public var focusedExcerpt = 1_400
+    /// How many pieces of one file may open the search. One was too few: the clause and its neighbour often both matter.
+    public var perFile = 2
     public init() {}
 }
 
@@ -36,6 +41,8 @@ public struct Excerpt: Sendable, Equatable {
     public let text: String
     public let reason: Reason
     public let isNote: Bool
+    /// The heading path of a Markdown excerpt, or empty.
+    public var section = ""
 }
 
 /// How well the vault matched a question, before anything is shown to a model.
@@ -87,7 +94,7 @@ extension Vault {
         let words = try wordMatches(question)
         var signal = Signal(wordMatches: words.ranked.count)
         let hits = try fused(question, vector: queryVector, limit: 60, scope: scope, shelf: shelf, words: words, signal: &signal)
-        let excerpts = mode == .search ? try searchOnly(hits, budget)
+        let excerpts = mode == .search ? try searchOnly(hits, budget, terms: Self.terms(of: question))
             : try walking(question, hits, budget, scope: scope, shelf: shelf, words: words)
         return Retrieved(mode: mode, excerpts: excerpts, seconds: Date().timeIntervalSince(started), signal: signal)
     }
@@ -170,19 +177,79 @@ extension Vault {
         return path == scope || path.hasPrefix(scope + "/")
     }
 
-    private func excerpt(chunk: Int, reason: Reason, budget: Budget) throws -> Excerpt? {
+    private func excerpt(chunk: Int, reason: Reason, budget: Budget, terms: Set<String> = []) throws -> Excerpt? {
         guard let row = try database.rows("""
-            SELECT f.path, c.start_line, c.end_line, c.body, f.is_note FROM chunks c JOIN files f ON f.id = c.file_id WHERE c.id = ?
+            SELECT f.path, c.start_line, c.end_line, c.body, f.is_note, c.section FROM chunks c JOIN files f ON f.id = c.file_id WHERE c.id = ?
             """, [.int(Int64(chunk))]).first else { return nil }
-        return Excerpt(path: row[0].text!, startLine: row[1].int!, endLine: row[2].int!,
-                       text: String(row[3].text!.prefix(budget.longestExcerpt)), reason: reason, isNote: row[4].int == 1)
+        let path = row[0].text!, start = row[1].int!, body = row[3].text!
+        if Vault.readsAsDocument(path), body.count > budget.focusedExcerpt, !terms.isEmpty {
+            let (offset, kept) = Self.focus(body, on: terms, most: budget.focusedExcerpt)
+            return Excerpt(path: path, startLine: start + offset, endLine: start + offset + kept.count - 1, text: kept.joined(separator: "\n"),
+                           reason: reason, isNote: row[4].int == 1, section: row[5].text ?? "")
+        }
+        return Excerpt(path: path, startLine: start, endLine: row[2].int!,
+                       text: String(body.prefix(budget.longestExcerpt)), reason: reason, isNote: row[4].int == 1, section: row[5].text ?? "")
     }
 
-    private func searchOnly(_ hits: [Hit], _ budget: Budget) throws -> [Excerpt] {
+    /// The run of lines, at most `most` characters, holding the most of the question's words. Ties go to the earlier run.
+    static func focus(_ body: String, on terms: Set<String>, most: Int) -> (offset: Int, lines: [String]) {
+        let lines = body.components(separatedBy: "\n")
+        let weight = lines.map { line -> Int in
+            let words = Set(Words.identifiers(in: line).map { $0.lowercased() })
+            return words.intersection(terms).count
+        }
+        var best = (score: -1, start: 0, end: 0)
+        var end = 0, size = 0, score = 0
+        for start in lines.indices {
+            if end < start { end = start; size = 0; score = 0 }
+            while end < lines.count, size + lines[end].count + 1 <= most || end == start {
+                size += lines[end].count + 1
+                score += weight[end]
+                end += 1
+            }
+            if score > best.score { best = (score, start, end) }
+            size -= lines[start].count + 1
+            score -= weight[start]
+        }
+        return (best.start, Array(lines[best.start..<max(best.end, best.start + 1)]))
+    }
+
+    /// The first hits, reordered so that together they cover more of the question: each next piece is the best-ranked
+    /// one among those that add a word the earlier pieces lack. A question that names two things gets both near the top.
+    private static func covering(_ hits: [Hit], terms: Set<String>, shelf words: [Int: Set<String>]) -> [Hit] {
+        guard terms.count > 1 else { return hits }
+        var head = Array(hits.prefix(16))
+        var ordered: [Hit] = []
+        var covered = Set<String>()
+        while !head.isEmpty {
+            // Rank order breaks ties, and a hit that adds nothing waits until every hit that adds something is placed.
+            let pick = head.indices.first { !(words[head[$0].chunk] ?? []).intersection(terms).subtracting(covered).isEmpty } ?? 0
+            let hit = head.remove(at: pick)
+            covered.formUnion((words[hit.chunk] ?? []).intersection(terms))
+            ordered.append(hit)
+        }
+        return ordered + hits.dropFirst(16)
+    }
+
+    private func chunkWords(_ ids: [Int]) throws -> [Int: Set<String>] {
+        var out: [Int: Set<String>] = [:]
+        for id in ids {
+            let row = try database.rows("SELECT body, section FROM chunks WHERE id = ?", [.int(Int64(id))]).first
+            let text = (row?[1].text ?? "") + "\n" + (row?[0].text ?? "")
+            out[id] = Set(Words.identifiers(in: text).map { $0.lowercased() })
+        }
+        return out
+    }
+
+    static func terms(of question: String) -> Set<String> {
+        Set(Words.identifiers(in: question).map { $0.lowercased() }.filter { $0.count > 2 && !Words.ignored.contains($0) })
+    }
+
+    private func searchOnly(_ hits: [Hit], _ budget: Budget, terms: Set<String>) throws -> [Excerpt] {
         var out: [Excerpt] = []
         var used = 0
         for hit in hits {
-            guard let piece = try excerpt(chunk: hit.chunk, reason: .search, budget: budget) else { continue }
+            guard let piece = try excerpt(chunk: hit.chunk, reason: .search, budget: budget, terms: terms) else { continue }
             if used + piece.text.count > budget.characters { break }
             out.append(piece)
             used += piece.text.count
@@ -199,9 +266,10 @@ extension Vault {
         var entries: [String] = []
         // Nothing useful is shorter than this, so once less is left the walk stops looking.
         let smallest = 200
+        let terms = Self.terms(of: question)
 
         func take(_ chunk: Int, _ reason: Reason) throws -> Bool {
-            guard !takenChunks.contains(chunk), let piece = try excerpt(chunk: chunk, reason: reason, budget: budget),
+            guard !takenChunks.contains(chunk), let piece = try excerpt(chunk: chunk, reason: reason, budget: budget, terms: terms),
                   used + piece.text.count <= budget.characters else { return false }
             taken.append(piece)
             takenChunks.insert(chunk)
@@ -209,10 +277,19 @@ extension Vault {
             return true
         }
 
-        // Start from the best chunk of the best few files, spending at most 60% of the budget there.
-        for hit in hits where entries.count < budget.entryFiles && !entries.contains(hit.path) {
+        // Start from the best pieces of the best few files, spending at most 60% of the budget there.
+        // A file may give two pieces, as long as its second one ranks among the first few hits.
+        var fromFile: [String: Int] = [:]
+        for (rank, hit) in Self.covering(hits, terms: terms, shelf: try chunkWords(hits.prefix(16).map(\.chunk))).enumerated() {
             if used > budget.characters * 6 / 10 { break }
-            if try take(hit.chunk, .search) { entries.append(hit.path) }
+            let seen = fromFile[hit.path, default: 0]
+            if seen == 0 && entries.count >= budget.entryFiles { continue }
+            if seen >= budget.perFile || (seen > 0 && rank >= budget.entryFiles * 2) { continue }
+            if try take(hit.chunk, .search) {
+                if seen == 0 { entries.append(hit.path) }
+                fromFile[hit.path] = seen + 1
+            }
+            if entries.count >= budget.entryFiles && rank >= budget.entryFiles * 2 { break }
         }
 
         // Then spread out. Candidates are ranked: a note about a file first, then what the question's words support.

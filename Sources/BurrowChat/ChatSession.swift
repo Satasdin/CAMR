@@ -64,7 +64,7 @@ public final class ChatSession {
     private let backend: ChatBackend
     public var settings: Settings
     private var history: [[String: Any]] = []
-    private let schemas = VaultTools.definitions.map(OllamaChat.schema)
+    private let schemas = VaultTools.forChat.map(OllamaChat.schema)
 
     public init(tools: VaultTools, backend: ChatBackend, settings: Settings = Settings()) {
         self.tools = tools

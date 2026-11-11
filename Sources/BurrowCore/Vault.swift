@@ -34,7 +34,7 @@ public final class Vault {
     let database: Database
 
     /// Raised when files must be cut into pieces differently, so an existing index rebuilds itself.
-    private static let indexVersion = 2
+    private static let indexVersion = 3
 
     private static let schema = """
     CREATE TABLE IF NOT EXISTS files(id INTEGER PRIMARY KEY, path TEXT UNIQUE NOT NULL, is_note INTEGER NOT NULL, cluster TEXT NOT NULL, hash TEXT NOT NULL);
@@ -57,6 +57,10 @@ public final class Vault {
         if !everything { try files.createDirectory(at: self.store.appendingPathComponent("notes"), withIntermediateDirectories: true) }
         database = try Database(path: self.store.appendingPathComponent("index.sqlite").path)
         try database.execute(Self.schema)
+        // Indexes from before version 3 have no section column. Adding it empty is enough: the version bump re-indexes every file.
+        if try !database.rows("PRAGMA table_info(chunks)").contains(where: { $0[1].text == "section" }) {
+            try database.execute("ALTER TABLE chunks ADD COLUMN section TEXT NOT NULL DEFAULT ''")
+        }
     }
 
     // MARK: Building the index
@@ -131,18 +135,21 @@ public final class Vault {
         try database.run("INSERT INTO files(path, is_note, cluster, hash) VALUES(?,?,?,?)",
                          [.text(file.path), .int(isNote ? 1 : 0), .text(isNote && !everything ? "notes" : clusterName(of: file.path)), .text(file.hash)])
         let fileID = database.lastInsertedRow
-        for chunk in Chunker.chunks(of: file.text) {
-            try database.run("INSERT INTO chunks(file_id, start_line, end_line, body) VALUES(?,?,?,?)",
-                             [.int(Int64(fileID)), .int(Int64(chunk.startLine)), .int(Int64(chunk.endLine)), .text(chunk.text)])
+        let pieces = Vault.readsAsDocument(file.path) ? Chunker.markdownChunks(of: file.text) : Chunker.chunks(of: file.text)
+        for chunk in pieces {
+            try database.run("INSERT INTO chunks(file_id, start_line, end_line, body, section) VALUES(?,?,?,?,?)",
+                             [.int(Int64(fileID)), .int(Int64(chunk.startLine)), .int(Int64(chunk.endLine)), .text(chunk.text), .text(chunk.section)])
             let chunkID = database.lastInsertedRow
+            // The heading path is searched with the body, so a clause is found by the heading that names it.
             try database.run("INSERT INTO chunks_fts(rowid, path, body) VALUES(?,?,?)",
-                             [.int(Int64(chunkID)), .text(Words.expanded(file.path.replacingOccurrences(of: "/", with: " "))), .text(Words.expanded(chunk.text))])
+                             [.int(Int64(chunkID)), .text(Words.expanded(file.path.replacingOccurrences(of: "/", with: " "))),
+                              .text(Words.expanded(chunk.section.isEmpty ? chunk.text : chunk.section + "\n" + chunk.text))])
         }
     }
 
     private func embedMissing(_ embedder: Embedder, onProgress: ((String) -> Void)?) async throws -> Int {
         let missing = try database.rows("""
-            SELECT c.id, f.path, c.body FROM chunks c JOIN files f ON f.id = c.file_id
+            SELECT c.id, f.path, c.body, c.section FROM chunks c JOIN files f ON f.id = c.file_id
             WHERE c.id NOT IN (SELECT chunk_id FROM vectors) ORDER BY c.id
             """)
         var done = 0
@@ -150,7 +157,10 @@ public final class Vault {
         while start < missing.count {
             let batch = Array(missing[start..<min(start + 32, missing.count)])
             // The path goes first because it often says more about a chunk than its first lines do.
-            let vectors = try await embedder.embed(batch.map { "\($0[1].text!)\n\(String($0[2].text!.prefix(1500)))" })
+            let vectors = try await embedder.embed(batch.map { row -> String in
+                let section = row[3].text ?? ""
+                return "\(row[1].text!)\n\(section.isEmpty ? "" : section + "\n")\(String(row[2].text!.prefix(1500)))"
+            })
             try database.transaction {
                 for (row, vector) in zip(batch, vectors) {
                     try database.run("INSERT OR REPLACE INTO vectors(chunk_id, vector) VALUES(?,?)", [row[0], .blob(Self.pack(vector))])
@@ -191,6 +201,8 @@ public final class Vault {
     }
 
     static func isMarkdown(_ path: String) -> Bool { ["md", "markdown"].contains((path as NSString).pathExtension.lowercased()) }
+    /// Markdown notes and documents read into Markdown (PDF, Word, images): cut at headings and focused when shown.
+    static func readsAsDocument(_ path: String) -> Bool { isMarkdown(path) || Extractor.handles(path) }
 
     /// Writes a Markdown note. Nothing about a note is hidden in the index: delete the file and it is gone.
     @discardableResult

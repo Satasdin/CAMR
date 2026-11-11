@@ -4,6 +4,8 @@ struct Chunk: Equatable {
     let startLine: Int  // 1-based, inclusive
     let endLine: Int
     let text: String
+    /// Where the chunk sits in its document: the title, then the headings above it. Empty for code.
+    var section = ""
 }
 
 /// Cuts a file into pieces a small model can read. A cut prefers the start of a declaration, then a blank line,
@@ -20,6 +22,95 @@ enum Chunker {
     static func startsDeclaration(_ line: String) -> Bool {
         let range = NSRange(line.startIndex..., in: line)
         return declaration.firstMatch(in: line, range: range) != nil
+    }
+
+    // MARK: Markdown
+
+    /// Sections smaller than this are joined to the next one, so a run of one-line clauses doesn't become a run of tiny pieces.
+    static let sectionAim = 1_500
+    private static let heading = try! NSRegularExpression(pattern: #"^(#{1,6})\s+(.+?)\s*#*\s*$"#)
+
+    /// A Markdown file is cut at its headings, so a clause stays with the heading that names it, and each piece carries its
+    /// heading path ("Title › Part II › 7. Qualifications"). The path is indexed with the piece, so a question about
+    /// "term of office" finds the clause under that heading even when the clause itself never says it.
+    static func markdownChunks(of text: String) -> [Chunk] {
+        var lines = text.components(separatedBy: "\n")
+        if lines.last == "" { lines.removeLast() }
+        guard !lines.isEmpty else { return [] }
+        var title = ""
+        var bodyStart = 0
+        if lines[0].trimmingCharacters(in: .whitespaces) == "---", let close = lines.dropFirst().firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "---" }) {
+            for line in lines[1..<close] where line.hasPrefix("title:") {
+                title = line.dropFirst(6).trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            }
+            bodyStart = close + 1
+        }
+        // Headings outside code fences, with their level.
+        var marks: [(line: Int, level: Int, text: String)] = []
+        var fenced = false
+        for index in bodyStart..<lines.count {
+            let line = lines[index]
+            if line.hasPrefix("```") || line.hasPrefix("~~~") { fenced.toggle(); continue }
+            guard !fenced, line.hasPrefix("#") else { continue }
+            let range = NSRange(line.startIndex..., in: line)
+            if let match = heading.firstMatch(in: line, range: range), let level = Range(match.range(at: 1), in: line), let name = Range(match.range(at: 2), in: line) {
+                marks.append((index, line[level].count, String(line[name])))
+            }
+        }
+        if title.isEmpty, let first = marks.first(where: { $0.level == 1 }) { title = first.text }
+        guard !marks.isEmpty else {
+            return chunks(of: text).map { Chunk(startLine: $0.startLine, endLine: $0.endLine, text: $0.text, section: title) }
+        }
+        // Sections: from each heading to the next. Anything before the first heading (front matter, a lead) is its own.
+        var bounds: [(start: Int, end: Int, path: String)] = []
+        var stack: [(level: Int, text: String)] = []
+        func path() -> String {
+            let names = stack.map(\.text).filter { $0 != title }
+            return ([title].filter { !$0.isEmpty } + names).joined(separator: " › ")
+        }
+        if marks[0].line > 0 { bounds.append((0, marks[0].line, title)) }
+        for (n, mark) in marks.enumerated() {
+            while let last = stack.last, last.level >= mark.level { stack.removeLast() }
+            stack.append((mark.level, mark.text))
+            bounds.append((mark.line, n + 1 < marks.count ? marks[n + 1].line : lines.count, path()))
+        }
+        // Join small neighbours, split big ones the usual way.
+        var out: [Chunk] = []
+        var pending: (start: Int, end: Int, paths: [String])?
+        func size(_ a: Int, _ b: Int) -> Int { lines[a..<b].reduce(0) { $0 + $1.count + 1 } }
+        func flush() {
+            guard let open = pending else { return }
+            pending = nil
+            let body = lines[open.start..<open.end].joined(separator: "\n")
+            guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+            var unique: [String] = []
+            for path in open.paths where !unique.contains(path) { unique.append(path) }
+            let section = unique.count == 1 ? unique[0] : unique[0] + "; " + unique.dropFirst().map { $0.components(separatedBy: " › ").last ?? $0 }.joined(separator: "; ")
+            out.append(Chunk(startLine: open.start + 1, endLine: open.end, text: body, section: String(section.prefix(300))))
+        }
+        for bound in bounds where bound.end > bound.start {
+            if size(bound.start, bound.end) > mostCharacters {
+                flush()
+                var start = bound.start
+                while start < bound.end {
+                    let end = min(cut(Array(lines[0..<bound.end]), from: start), bound.end)
+                    let body = lines[start..<end].joined(separator: "\n")
+                    if !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        out.append(Chunk(startLine: start + 1, endLine: end, text: body, section: bound.path))
+                    }
+                    start = end
+                }
+                continue
+            }
+            if let open = pending, size(open.start, bound.end) <= sectionAim {
+                pending = (open.start, bound.end, open.paths + [bound.path])
+            } else {
+                flush()
+                pending = (bound.start, bound.end, [bound.path])
+            }
+        }
+        flush()
+        return out
     }
 
     static func chunks(of text: String) -> [Chunk] {

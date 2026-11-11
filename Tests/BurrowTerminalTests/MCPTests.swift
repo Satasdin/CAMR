@@ -53,7 +53,7 @@ final class MCPTests: XCTestCase {
         try await start()
         let reply = try json(await server.handle(#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#))
         let tools = (reply["result"] as! [String: Any])["tools"] as! [[String: Any]]
-        XCTAssertEqual(tools.count, 8)
+        XCTAssertEqual(tools.count, 12)
         XCTAssertTrue(tools.allSatisfy { ($0["inputSchema"] as? [String: Any])?["type"] as? String == "object" })
         XCTAssertEqual((tools.first { $0["name"] as? String == "vault_remember" }?["annotations"] as? [String: Any])?["readOnlyHint"] as? Bool, false)
     }
