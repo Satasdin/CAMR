@@ -73,13 +73,13 @@ The engine is one Swift library with four surfaces over it: a command-line tool,
 
 ### 5.4.1 The Vault and Its Index
 
-The vault is an ordinary folder that the person chooses, which implements FR-01 and DR-01. Figure 5.1 shows the graph of a vault in the desktop app. Each dot is a note or a file, each line is a link, and the colours are folders. This is the evaluation vault of Section 5.3. It holds 59 notes and 37 code files, joined by 290 links.
+The vault is an ordinary folder that the person chooses, which implements FR-01 and DR-01. Figure 5.1 shows the map of a vault in the desktop app. Each dot is a note or a file, each line is a link, and the colours are folders. This is the evaluation vault of Section 5.3. It holds 59 notes and 37 code files, joined by 290 links.
 
-!fig figures/screens3/graph.png | Figure 5.1: The graph of a vault in the desktop app, coloured by folder | 6.2
+!fig figures/screens4/app-graph.png | Figure 5.1: The map of a vault in the desktop app, coloured by folder | 6.2
 
-Figure 5.2 shows a sample note being edited. The note is a plain Markdown file, and the panel on the right draws its neighbours and lists its properties.
+Figure 5.2 shows a note of the evaluation vault being edited. The note is a plain Markdown file, its properties are shown as fields above the text, and the panel on the right draws its neighbours and lists the notes that link to it.
 
-!fig figures/screens3/note.png | Figure 5.2: A note in the desktop app, with its links and properties | 6.2
+!fig figures/screens4/app-note.png | Figure 5.2: A note in the desktop app, with its properties and links | 6.2
 
 ### 5.4.2 Decide
 
@@ -89,9 +89,9 @@ For every question the engine runs one fast search and reads its signal. It then
 
 Candidates are ranked by their words and meaning together. Recency, taken from a note's date or the file's last change, and importance, taken from how many files link to it and whether it records a decision, then break ties between equally relevant files (decision D-67 in the repository).
 
-Figure 5.4 shows the opposite decision in the desktop app. The question is a sum, so the engine left the vault out and gave the model the skill for working a calculation. The line under the answer says so.
+Figure 5.4 shows the opposite decision. The question is a sum, so the engine left the vault out, because nothing in it was close enough, and gave the model the skill for working a calculation. The lines under the answer say so: nothing was read, and the model read 207 tokens.
 
-!fig figures/screens3/ask-sum.png | Figure 5.4: A sum in the desktop app, answered with the vault left out | 6.2
+!fig figures/screens4/console-sum.png | Figure 5.4: A sum answered with the vault left out, on the command line | 6.2
 
 ### 5.4.3 Fit
 
@@ -103,17 +103,17 @@ For the scored runs Gemma 4 12B was measured at about 670 tokens a second and wa
 
 ### 5.4.4 Answer and Check
 
-Figure 5.6 shows a question about a document answered in the desktop app, which implements FR-07 and IR-01. Under the answer the app states the decision, the skill and the files that were read, and each file opens at the lines that were read.
+In the desktop app the answer comes from the program the person already uses, and the app shows what that program read, which implements IR-01. Figure 5.6 shows Gemma 4 12B in OpenCode answering two questions from the vault through the MCP server: a question about breach notification under Kenyan law, which it answered with the seventy-two hours of the regulations, and a question about the project's code. The conversation page lists each lookup in the model's own words and a card for every file it read, and each card opens its file.
 
-!fig figures/screens3/ask-law.png | Figure 5.6: A question answered from the vault in the desktop app, with the engine's decision and the files read | 6.2
+!fig figures/screens4/app-session.png | Figure 5.6: A conversation Gemma 4 12B held with the vault through OpenCode, with each lookup and the files it read | 6.2
 
-Figure 5.7 shows the same moment from the graph. The files the model was shown light up while the answer is written, so the person can see what the model read.
+Figure 5.7 shows the Programs page, which answers the Sprint II request to see model activity. Each program that can use the vault is drawn with a line to it that brightens with use, and below are the lookups of the day and a Connect button for each program.
 
-!fig figures/screens3/graph-ask.png | Figure 5.7: The files read for an answer lighting up in the graph | 6.2
+!fig figures/screens4/app-programs.png | Figure 5.7: The programs that use the vault, and how much each one has read from it today | 6.2
 
-On the command line every file and line in the answer is compared with what the model was shown, and the model is asked once more if a citation was not among them, which implements FR-08. Figure 5.8 shows what happens when the excerpts do not hold the answer. The question is about Ugandan law, which the vault does not contain. The model says that it does not know, and the app still lists what was read.
+On the command line every file and line in the answer is compared with what the model was shown, and the model is asked once more if a citation was not among them, which implements FR-08. Figure 5.8 shows what happens when the excerpts do not hold the answer. The question is about Ugandan law, which the vault does not contain. The engine still searched, because the closest files are about data protection, and the model said that it did not know from what it was shown, while the lines below list the nine files it read.
 
-!fig figures/screens3/ask-miss.png | Figure 5.8: A question the excerpts could not answer, and the model saying so | 6.2
+!fig figures/screens4/console-miss.png | Figure 5.8: A question the excerpts could not answer, and the model saying so | 6.2
 
 ### 5.4.5 Skills and Learn
 
@@ -135,7 +135,7 @@ Figure 5.11 shows Burrow used as the retriever inside a LangChain pipeline, in t
 
 ### 5.4.7 Deviations from the Approved Design
 
-Several parts of the work differ from the approved proposal, and Table A2.2 lists each change with its reason. In the evaluation, the main model has 12 billion parameters where the proposal defined small models as one to three billion, the laptop has 24 GB of memory where the proposal named 16 GB, curated questions written by Claude Code agents replaced the public question-answering benchmarks, each question was run once rather than timed over repeated runs, and the budget sweep and the ten-point reporting rule of Table 5.6 were added after the evaluation plan. In the build, four parts differ. The memory became a vault of files that a person writes instead of a stream of notes from each interaction, because the Sprint II review asked for something a person can see and use. Recency and importance were therefore taken from the files themselves, and they were built after the engine was frozen for Evaluation 2, so its scores do not include them. The Check step was added during the study, because a small model's citations can be compared directly with what it was shown. The engine was also written in Swift in place of Python, so that it runs as one compiled program on the target platform.
+Several parts of the work differ from the approved proposal, and Table A2.2 lists each change with its reason. In the evaluation, the main model has 12 billion parameters where the proposal defined small models as one to three billion, the laptop has 24 GB of memory where the proposal named 16 GB, curated questions written by Claude Code agents replaced the public question-answering benchmarks, each question was run once rather than timed over repeated runs, and the budget sweep and the ten-point reporting rule of Table 5.6 were added after the evaluation plan. In the build, five parts differ. After Evaluation 2, the desktop app's own question box was removed, because the vault is the memory and the chat belongs to the programs that connect to it; the app now shows what those programs read (Figures 5.6 and 5.7), and the engine's decision is shown on the command line and in the terminal chat. The memory became a vault of files that a person writes instead of a stream of notes from each interaction, because the Sprint II review asked for something a person can see and use. Recency and importance were therefore taken from the files themselves, and they were built after the engine was frozen for Evaluation 2, so its scores do not include them. The Check step was added during the study, because a small model's citations can be compared directly with what it was shown. The engine was also written in Swift in place of Python, so that it runs as one compiled program on the target platform.
 
 ## 5.5 Model Selection and Evaluation
 
@@ -238,7 +238,7 @@ Table 5.10 gives the test cases, with the requirement each one verifies, and App
 | TC-05 | FR-04 | The 50 reasoning problems of Section 5.5, on the frozen program | The vault is left out | Left out on 50 of 50; saved results | Pass |
 | TC-06 | FR-05 | A sum, with a calculation skill and a documents skill in the vault | The calculation skill and no excerpts | As expected; test log | Pass |
 | TC-07 | FR-06 | A fast small model, a fast large model and a slow large model | 8,000, 24,000 and 6,400 characters | As expected; test log | Pass |
-| TC-08 | FR-07, IR-01 | A question about a regulation, in the desktop app | An answer with the decision line and the files read | As in Figure 5.6 | Pass |
+| TC-08 | FR-07, IR-01 | A question on the command line; a question about a regulation asked by Gemma 4 12B in OpenCode through MCP | An answer naming file and line, with the decision line; in the app, each lookup and the files read | As in Figures 5.3 and 5.6 | Pass |
 | TC-09 | FR-08 | An answer citing a file it was not shown, with a scripted model | One retry; the better grounded answer kept | As expected; test log | Pass |
 | TC-10 | FR-09, DR-03 | Three proposed notes, one quoting words the person never typed; a note kept with and without agreement | Only the two backed by the person's words offered; nothing written without agreement | As expected; test log | Pass |
 | TC-11 | FR-10, IR-03 | vault_prepare called through MCP; a tool called before initialising | The decision and excerpts, no chat model called; the early call refused | As in Figure 5.10; test log | Pass |
@@ -314,4 +314,4 @@ Table 5.11 summarises the five objectives.
 
 ### 5.9.6 Limitations
 
-The results have limits, and each is stated here with its likely effect. First, skills and the citation check did not change the scores: the engine answered 150 of 170 questions with both, 149 without skills, and 151 without the check, so they are working features whose benefit this evaluation did not show. Second, the scored runs compared budgets of different sizes, so the engine's gain over the baselines cannot be credited to its decisions alone, and Decide and Fit were not switched off separately. Third, on the small model the engine did not beat plain retrieval on knowledge, answering 91 against 97, so the gain does not carry to every model. Fourth, the knowledge questions were written by Claude Code agents, from the same family as the cloud reference model, and scored by answer keys, so a right string in a wrong sentence counts as right, and the questions may be easier or harder than a person's own. Fifth, each question was run once on one laptop, and other jobs shared the machine during some runs, so the times are indicative. Sixth, the Learn step was tested only by automated tests, and no experiment measured its effect on later answers. Seventh, no person other than the developer has used the app, so its usability is not claimed. Eighth, three known gaps remain in the frozen code: the check with retry runs only on the command burrow ask --mode engine, while the app only warns and the chat and MCP do not check; the MCP tool and the terminal chat use a fixed budget of 12,000 characters and not the fitted one; and the engine's own prompt does not stop an excerpt from closing its block. Ninth, two trials outside the objectives, a coding trial and a third evaluation of session memory, are reported in Appendix 3 and do not bear on the conclusions.
+The results have limits, and each is stated here with its likely effect. First, skills and the citation check did not change the scores: the engine answered 150 of 170 questions with both, 149 without skills, and 151 without the check, so they are working features whose benefit this evaluation did not show. Second, the scored runs compared budgets of different sizes, so the engine's gain over the baselines cannot be credited to its decisions alone, and Decide and Fit were not switched off separately. Third, on the small model the engine did not beat plain retrieval on knowledge, answering 91 against 97, so the gain does not carry to every model. Fourth, the knowledge questions were written by Claude Code agents, from the same family as the cloud reference model, and scored by answer keys, so a right string in a wrong sentence counts as right, and the questions may be easier or harder than a person's own. Fifth, each question was run once on one laptop, and other jobs shared the machine during some runs, so the times are indicative. Sixth, the Learn step was tested only by automated tests, and no experiment measured its effect on later answers. Seventh, no person other than the developer has used the app, so its usability is not claimed. Eighth, three known gaps remain in the frozen code: the check with retry runs only on the command burrow ask --mode engine, and the chat and MCP do not check; the MCP tool and the terminal chat use a fixed budget of 12,000 characters and not the fitted one; and the engine's own prompt does not stop an excerpt from closing its block. Ninth, two trials outside the objectives, a coding trial and a third evaluation of session memory, are reported in Appendix 3 and do not bear on the conclusions.

@@ -33,7 +33,7 @@ Table A2.1 records the feedback received and how each item was resolved. Table A
 | "Just a report of benchmarks" | Sprint II review | 1.6, 5.4 | A usable app, a terminal chat and an MCP server were built around the engine; the scope now includes them | Done |
 | Show it working with native Ollama models | Sprint II review | 5.2, 5.4 | Ollama is the only model runner; every local result was produced through it | Done |
 | The person cannot create or remove their own collections | Sprint II review | 4.4 | The memory is the person's own folder of files; nothing is seeded | Done |
-| Model activity should be visible | Sprint II review | 5.4.4 | The app states what the engine decided, the method used and the files read under each answer | Done |
+| Model activity should be visible | Sprint II review | 5.4.4 | The app shows every program that uses the vault, each conversation's lookups and the files read; the command line states what the engine decided | Done |
 | Can it generate reports natively? | Sprint II review | 5.4.5 | An answer can be kept as a note; no report format was built | Partly |
 | If it codes, let it code, with live previews | Sprint II review | 1.6 | The app proposes changes to files for acceptance; live previews were not built | Partly |
 | Keep each chapter to its own part, and follow the lecturer's guide for the structure of Chapters 1 to 6 and the references | Supervisor, November 2026 | Chapters 3 to 6 | Chapter 3 names the methods and points to Chapter 4; build detail moved to Chapter 5; side trials moved to Appendix 3; Chapter 6 added | Done |
@@ -92,7 +92,7 @@ Table A4.1 traces each requirement to the part that implements it and the test t
 | FR-04 | ii | Engine.brief | TC-04, TC-05 | Pass |
 | FR-05 | ii | Skills, Engine.brief | TC-06 | Pass |
 | FR-06 | ii, v | Fit | TC-07 | Pass |
-| FR-07 | iii | Engine.engage, Asking | TC-08 | Pass |
+| FR-07 | iii | Engine.engage | TC-08 | Pass |
 | FR-08 | ii | Engine.engage | TC-09 | Pass on the command line only |
 | FR-09 | ii | Engine.lessons, keep | TC-10 | Pass in the terminal chat |
 | FR-10 | iii | Engine.brief, BurrowMCP | TC-11 | Pass |
@@ -106,7 +106,7 @@ Table A4.1 traces each requirement to the part that implements it and the test t
 | DR-02 | iii | Database, Index | TC-19 | Pass |
 | DR-03 | ii | keep | TC-10 | Pass |
 | DR-04 | iv | Harness | TC-20 | Pass |
-| IR-01 | iii | Mac app | TC-08 | Pass |
+| IR-01 | iii | Mac app, conversation page | TC-08 | Pass |
 | IR-02 | iii | Ollama, VaultTools | TC-21 | Pass |
 | IR-03 | iii | BurrowMCP | TC-11 | Pass |
 | IR-04 | iii | Vault | TC-22 | Pass |
@@ -133,13 +133,13 @@ v) burrow resume <vault> prints where the last session stopped, for any model to
 
 **Using Burrow from another model or tool.** burrow brief <vault> "task" --json returns the prepared prompt for any model. For an MCP client, run burrow mcp <vault>; by default it offers burrow_find, burrow_read, burrow_resume and burrow_commit. A client that is a cloud service sends what it reads to that service.
 
-**Known limitations.** Burrow runs on macOS only. The check with retry runs only on burrow ask --mode engine; the app only warns, and the chat and MCP do not check.
+**Known limitations.** Burrow runs on macOS only. The check with retry runs only on burrow ask --mode engine; the chat and MCP do not check. The app does not ask questions itself; the program connected to the vault does.
 
 ## Appendix 6: More Screens of the System
 
 Figure A6.1 shows a note in the reading view of the Mac app, and Figure A6.2 shows the terminal view of the same vault.
 
-!fig figures/screens3/reading.png | Figure A6.1: A note in the reading view of the Mac app | 6.2
+!fig figures/screens4/app-reading.png | Figure A6.1: A note in the reading view of the Mac app | 6.2
 
 !fig figures/screens/terminal-star.png | Figure A6.2: The terminal view, with a note at the centre and its links around it | 6.2
 

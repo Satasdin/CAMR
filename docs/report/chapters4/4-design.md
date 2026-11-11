@@ -49,7 +49,7 @@ Table 4.3 lists the data requirements. They describe what the engine reads, what
 | ID | Requirement | Priority | Objective | Verified by |
 | DR-01 | The input shall be a folder of plain Markdown files and linked code folders. The engine shall read these files and shall not change them. | Must | iii | TC-18 |
 | DR-02 | For each piece of a file the index shall store its file, its first and last line, its text, and at most one embedding vector. | Must | iii | TC-19 |
-| DR-03 | In the chat and the app a note shall be written only when the person accepts it, as a readable Markdown file in the Memory folder. No write shall overwrite a note. Other writes are limited to the starter skills on request, accepted file changes, and notes added by burrow note, burrow learn, or an MCP client. | Must | ii | TC-10 |
+| DR-03 | In the chat a note, and in the app a Ledger commit, shall be written only when the person accepts it, as a readable Markdown file in the vault. No write shall overwrite a note. Other writes are limited to the starter skills on request, accepted file changes, and notes added by burrow note, burrow learn, or an MCP client. | Must | ii | TC-10 |
 | DR-04 | The evaluation questions and their answer keys shall be kept outside the vault, and the vault shall be built from the source documents only. | Must | iv | TC-20 |
 
 ### 4.2.4 Interface and Integration Requirements
@@ -59,7 +59,7 @@ Table 4.4 lists the interface and integration requirements. They describe how a 
 !tab Table 4.4: Interface and integration requirements
 !widths 0.75,3.2,0.75,0.9,0.7
 | ID | Requirement | Priority | Objective | Verified by |
-| IR-01 | Under each answer the application shall show what the engine decided, the skill it used, and the files it read, and shall open a file at the cited line. | Must | Sprint II | TC-08 |
+| IR-01 | The application shall show, for each conversation a connected program holds with the vault, every lookup and the files it read, each opening its file; the command line shall show under each answer what the engine decided, the skill it used, and the files it read. | Must | Sprint II | TC-08 |
 | IR-02 | If the Ollama service cannot embed a question, the search shall continue on words alone. If it cannot answer, the failure shall be reported and no answer shown. | Must | iii | TC-21 |
 | IR-03 | The MCP server shall exchange JSON-RPC messages over standard input and output, and shall offer its tools only after the client has initialised the session. | Should | iii | TC-11 |
 | IR-04 | The vault shall stay a folder that Obsidian can open: plain Markdown with links written between double square brackets. | Should | iii | TC-22 |
@@ -157,19 +157,19 @@ A file is cut into pieces stored as chunks, and a piece has at most one vector, 
 
 ### 4.4.4 Wireframes
 
-The wireframes planned where the engine's decisions would be shown to the person, which addresses IR-01 and the Sprint II request for something a person can see and use. Figure 4.9 is the main window of the desktop application with the Ask panel open.
+The wireframes plan where the person sees what the engine and the models that use it did, which addresses IR-01 and the Sprint II request for something a person can see and use. They follow the application as built after 11 November 2026, when its own question box gave way to the programs that connect to the vault, because the vault is the memory and the chat belongs to those programs. Figure 4.9 is the main window on a conversation that a connected program held with the vault.
 
-!fig figures/v2/wire_main.png | Figure 4.9: Wireframe of the main window with the Ask panel | 6.0
+!fig figures/v4/wire_main.png | Figure 4.9: Wireframe of the main window on a conversation a connected program held with the vault | 6.0
 
-The decision line sits directly under the answer and says whether the vault was read, why, and which skill was handed to the model. A warning line appears only when the answer cites a place the model was not shown. Figure 4.10 is the note editor, where a note is a plain Markdown file and a link to another note is written between double square brackets.
+Each step on the trail is one lookup the model made, in the model's own words, followed by a card for every file it read, and each card opens its file. The narrow strip on the left switches between the pages of the vault, and the status bar counts the notes, files, links, conversations and Ledger commits. Figure 4.10 is the note editor, where a note is a plain Markdown file, its properties are shown as fields, and a link to another note is written between double square brackets.
 
-!fig figures/v3/wire_editor.png | Figure 4.10: Wireframe of the note editor with its links | 6.0
+!fig figures/v4/wire_editor.png | Figure 4.10: Wireframe of the note editor with its properties and links | 6.0
 
-The panel on the right shows the note's neighbours as a small graph and lists the notes that link to it and the files it links to. These links are the ones the engine follows in FR-03. Figure 4.11 is the step where the person agrees to what is kept, which addresses FR-09 and DR-03. The engine offers at most three notes, each with its kind and one sentence.
+The panel on the right shows the note's neighbours as a small graph and lists the notes that link to it, the notes that name it without a link, its outline, and what models have understood about it. These links are the ones the engine follows in FR-03. Figure 4.11 is the step where the person keeps a decision from a conversation in the Ledger, which addresses DR-03 in the application.
 
-!fig figures/v3/wire_keep.png | Figure 4.11: Wireframe of the step where the person keeps what was decided | 6.0
+!fig figures/v4/wire_keep.png | Figure 4.11: Wireframe of keeping a decision from a conversation in the Ledger | 6.0
 
-Each note has its own Keep button, so in the app a proposed note is written only by an act of the person, and a kept note appears as a new file in the Memory folder. Figure 4.12 is the terminal chat, which shows the same two moments as the window.
+Nothing is kept unless the person writes the sentence and presses Keep, and the kept commit cites the files the conversation read, so it goes stale when one of them changes. Figure 4.12 is the terminal chat, which shows the engine's decision under each question and proposes notes through Learn.
 
 !fig figures/v2/wire_terminal.png | Figure 4.12: Wireframe of the terminal chat | 6.0
 
