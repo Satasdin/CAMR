@@ -61,6 +61,16 @@ struct MainWindow: View {
             GraphPage(workspace: workspace)
         case .ask:
             AskPage(workspace: workspace)
+        case let .library(kind):
+            LibraryPage(workspace: workspace, kind: kind)
+        case let .conversations(program):
+            ConversationsPage(workspace: workspace, program: program)
+        case let .session(id):
+            SessionPage(workspace: workspace, id: id)
+        case .shelf:
+            ShelfPage(workspace: workspace)
+        case .programs:
+            ProgramsPage(workspace: workspace)
         case nil:
             EmptyPage(workspace: workspace)
         }
@@ -119,6 +129,10 @@ struct TabButton: View {
         case let .file(path): return path.isMarkdownPath ? "doc.text" : "chevron.left.forwardslash.chevron.right"
         case .graph: return "circle.hexagongrid"
         case .ask: return "bubble.left.and.text.bubble.right"
+        case let .library(kind): return kind.symbol
+        case .conversations, .session: return "point.3.connected.trianglepath.dotted"
+        case .shelf: return "memorychip"
+        case .programs: return "app.connected.to.app.below.fill"
         }
     }
 
@@ -154,7 +168,7 @@ struct EmptyPage: View {
                 HStack(spacing: 10) {
                     Button("New Note") { Task { await workspace.newNote() } }
                     Button("Quick Open") { workspace.paletteOpen = true }
-                    Button("Graph") { workspace.go(.graph) }
+                    Button("Library") { workspace.go(.library(.all)) }
                 }
             }
         }

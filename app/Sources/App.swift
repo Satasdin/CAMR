@@ -34,8 +34,11 @@ struct BurrowApp: App {
         CommandGroup(after: .toolbar) {
             Button(workspace?.isReading == true ? "Edit Note" : "Read Note") { workspace?.isReading.toggle() }.keyboardShortcut("e").disabled(workspace?.currentPath == nil)
             Divider()
-            Button("Graph") { workspace?.go(.graph) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(workspace == nil)
-            Button("Ask") { workspace?.go(.ask) }.keyboardShortcut("l").disabled(workspace == nil)
+            Button("Library") { workspace?.go(.library(.all)) }.keyboardShortcut("1").disabled(workspace == nil)
+            Button("Conversations") { workspace?.go(.conversations(nil)) }.keyboardShortcut("2").disabled(workspace == nil)
+            Button("Shelf") { workspace?.go(.shelf) }.keyboardShortcut("3").disabled(workspace == nil)
+            Button("Programs") { workspace?.go(.programs) }.keyboardShortcut("4").disabled(workspace == nil)
+            Button("Map") { workspace?.go(.graph) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(workspace == nil)
             Divider()
         }
         CommandMenu("Go") {

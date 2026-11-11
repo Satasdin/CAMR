@@ -1,5 +1,6 @@
 import BurrowCore
 import BurrowTrial
+import BurrowTools
 import Foundation
 import Observation
 import AppKit
@@ -17,6 +18,11 @@ actor Engine {
     }
 
     func map() throws -> ProjectMap { try vault.projectMap() }
+    func sessions() -> [VaultSession] { SessionStore(vault: vault).list().filter { !$0.isEmpty } }
+    func shelf() -> [ShelfItem] {
+        let shelf = KVShelf(vault: vault)
+        return shelf.entries().map { ShelfItem(entry: $0, stale: shelf.stale($0, model: $0.model)) }
+    }
     func stats() throws -> VaultStats { try vault.stats() }
     func folders() -> [String] { vault.folders() }
     func linked() -> [LinkedFolder] { vault.linkedFolders() }
@@ -145,6 +151,11 @@ enum TabContent: Hashable {
     case file(String)
     case graph
     case ask
+    case library(LibraryKind)
+    case conversations(Program?)
+    case session(String)
+    case shelf
+    case programs
 }
 
 struct Tab: Identifiable, Hashable {
@@ -170,11 +181,16 @@ final class Workspace {
     var linked: [LinkedFolder] = []
     var tags: [String: [String]] = [:]
     var stats: VaultStats?
+    var sessions: [VaultSession] = []
+    var shelf: [ShelfItem] = []
+    var librarySelection: String?
+    /// Runs once the files are known, before meanings are learned, so layout checks need not wait for Ollama.
+    var afterFirstRead: (() -> Void)?
     let sim = GraphSim()
     var simVersion = 0
 
     // The window.
-    var tabs: [Tab] = [Tab(content: .graph)]
+    var tabs: [Tab] = [Tab(content: .library(.all))]
     var activeTab: UUID?
     var documents: [String: Document] = [:]
     var sidebarMode = SidebarMode.files
@@ -217,6 +233,8 @@ final class Workspace {
         do {
             try await engine.index()
             await reload()
+            afterFirstRead?()
+            afterFirstRead = nil
         } catch {
             warning = "Burrow could not read this folder. \(error)"
             progress = nil
@@ -269,6 +287,8 @@ final class Workspace {
         tree = Self.buildTree(files: newMap.files, folders: foldersNow, linked: Set(linked.map(\.name)))
         tags = await engine.tags()
         stats = try? await engine.stats()
+        sessions = await engine.sessions()
+        shelf = await engine.shelf()
         let sim = self.sim
         let linkedNames = Set(linked.map(\.name))
         await Task.detached { sim.load(newMap, linked: linkedNames) }.value
@@ -322,8 +342,13 @@ final class Workspace {
     func tabTitle(_ tab: Tab) -> String {
         switch tab.content {
         case let .file(path): return path.title
-        case .graph: return "Graph"
+        case .graph: return "Map"
         case .ask: return "Ask"
+        case let .library(kind): return kind.title
+        case let .conversations(program): return program?.name ?? "Conversations"
+        case let .session(id): return sessions.first { $0.id == id }.map { Program(client: $0.client).name } ?? "Conversation"
+        case .shelf: return "Shelf"
+        case .programs: return "Programs"
         }
     }
 
@@ -381,6 +406,9 @@ final class Workspace {
     }
 
     // MARK: Documents
+
+    /// A file's text as the vault reads it, for covers and previews. Documents come back as their extracted Markdown.
+    func text(of path: String) async -> String? { await engine.text(of: path) }
 
     func document(_ path: String) -> Document {
         if let found = documents[path] { return found }
@@ -708,10 +736,8 @@ final class Library {
             workspace = opened
             recents = [folder.path] + recents.filter { $0 != folder.path }
             UserDefaults.standard.set(Array(recents.prefix(8)), forKey: "recentVaults")
-            Task {
-                await opened.open()
-                Self.applyCheckHooks(opened, environment)
-            }
+            opened.afterFirstRead = { Self.applyCheckHooks(opened, environment) }
+            Task { await opened.open() }
         } catch {
             failure = "\(error)"
         }
@@ -723,6 +749,15 @@ final class Library {
         if environment["BURROW_READING"] != nil { workspace.isReading = true }
         if environment["BURROW_TAB"] == "ask" { workspace.go(.ask) }
         if environment["BURROW_TAB"] == "graph" { workspace.go(.graph) }
+        switch environment["BURROW_TAB"] {
+        case "conversations": workspace.go(.conversations(nil))
+        case "session": if let first = workspace.sessions.first { workspace.go(.session(first.id)) }
+        case "shelf": workspace.go(.shelf)
+        case "programs": workspace.go(.programs)
+        case "documents": workspace.go(.library(.documents))
+        default: break
+        }
+        if let pick = environment["BURROW_SELECT"] { workspace.librarySelection = pick }
         if environment["BURROW_PALETTE"] != nil { workspace.paletteOpen = true }
         if let query = environment["BURROW_SEARCH"] {
             workspace.sidebarMode = .search

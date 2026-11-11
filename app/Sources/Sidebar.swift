@@ -8,11 +8,7 @@ struct Sidebar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 2) {
-                PlaceRow(title: "Graph", icon: "circle.hexagongrid", active: workspace.currentTab?.content == .graph) { workspace.go(.graph) }
-                PlaceRow(title: "Ask", icon: "bubble.left.and.text.bubble.right", active: workspace.currentTab?.content == .ask) { workspace.go(.ask) }
-            }
-            .padding(.horizontal, 10).padding(.bottom, 8)
+            Places(workspace: workspace).padding(.horizontal, 10).padding(.bottom, 8)
             Picker("Show", selection: $workspace.sidebarMode) {
                 Label("Files", systemImage: "folder").tag(SidebarMode.files)
                 Label("Search", systemImage: "magnifyingglass").tag(SidebarMode.search)
@@ -49,16 +45,67 @@ struct Sidebar: View {
     }
 }
 
+/// The places of the Night Library: what the vault holds, what programs did with it, and its saved model memory.
+struct Places: View {
+    let workspace: Workspace
+
+    private var content: TabContent? { workspace.currentTab?.content }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            heading("Library")
+            ForEach(LibraryKind.allCases, id: \.self) { kind in
+                let count = kind == .all ? workspace.map.files.count : workspace.count(kind)
+                if kind == .all || count > 0 {
+                    PlaceRow(title: kind.title, icon: kind.symbol, active: content == .library(kind), count: count,
+                             dot: kind == .notes ? Night.note : (kind == .documents || kind == .images) ? Night.document : nil) {
+                        workspace.go(.library(kind))
+                    }
+                }
+            }
+            heading("Conversations")
+            PlaceRow(title: "All", icon: "point.3.connected.trianglepath.dotted", active: content == .conversations(nil), count: workspace.sessions.count, dot: Night.conversation) {
+                workspace.go(.conversations(nil))
+            }
+            ForEach(Program.allCases) { program in
+                let count = workspace.sessions(for: program).count
+                if count > 0 {
+                    PlaceRow(title: program.name, icon: program.symbol, active: content == .conversations(program), count: count, dot: nil) {
+                        workspace.go(.conversations(program))
+                    }
+                }
+            }
+            heading("Memory")
+            PlaceRow(title: "Shelf", icon: "memorychip", active: content == .shelf, count: workspace.shelf.count,
+                     dot: workspace.shelf.contains { $0.stale != nil } ? Night.stale : Night.cache) { workspace.go(.shelf) }
+            PlaceRow(title: "Programs", icon: "app.connected.to.app.below.fill", active: content == .programs, count: nil, dot: nil) { workspace.go(.programs) }
+            PlaceRow(title: "Map", icon: "circle.hexagongrid", active: content == .graph, count: nil, dot: nil) { workspace.go(.graph) }
+        }
+    }
+
+    private func heading(_ text: String) -> some View {
+        Text(text).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.top, 10).padding(.bottom, 2)
+    }
+}
+
 struct PlaceRow: View {
     let title: String
     let icon: String
     let active: Bool
+    var count: Int? = nil
+    var dot: Color? = nil
     let action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            Label(title, systemImage: icon).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8).frame(height: 28).contentShape(Rectangle())
+            HStack(spacing: 6) {
+                Label(title, systemImage: icon)
+                Spacer()
+                if let dot { Circle().fill(dot).frame(width: 6, height: 6).shadow(color: dot, radius: 3) }
+                if let count { Text("\(count)").foregroundStyle(.secondary).monospacedDigit().font(.system(size: 11.5)) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8).frame(height: 26).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(active ? Color.primary.opacity(0.12) : hovering ? Color.primary.opacity(0.05) : .clear, in: .rect(cornerRadius: 7))
@@ -132,10 +179,6 @@ struct FileTree: View {
 
     @ViewBuilder private func menu(_ node: FileNode, insideLinked: Bool) -> some View {
         if node.isFolder {
-            Button("Ask About This Folder") {
-                workspace.askScope = node.path
-                workspace.go(.ask)
-            }
             Button("Search in This Folder") {
                 workspace.searchScope = node.path
                 workspace.sidebarMode = .search

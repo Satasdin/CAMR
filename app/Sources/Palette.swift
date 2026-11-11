@@ -23,17 +23,15 @@ struct Palette: View {
             Item(id: "c-day", title: "Today's Note", detail: "⇧⌘D", icon: "calendar") { Task { await w.dailyNote() } },
             Item(id: "c-folder", title: "New Folder", detail: "⇧⌘N", icon: "folder.badge.plus") { Task { await w.newFolder() } },
             Item(id: "c-link", title: "Link a Folder…", detail: "", icon: "link") { pickLinkedFolder(w) },
-            Item(id: "c-graph", title: "Open Graph", detail: "⇧⌘G", icon: "circle.hexagongrid") { w.go(.graph) },
-            Item(id: "c-ask", title: "Ask Your Vault", detail: "⌘L", icon: "bubble.left.and.text.bubble.right") { w.go(.ask) },
+            Item(id: "c-library", title: "Library", detail: "⌘1", icon: "square.grid.2x2") { w.go(.library(.all)) },
+            Item(id: "c-documents", title: "Documents", detail: "", icon: "doc.richtext") { w.go(.library(.documents)) },
+            Item(id: "c-conversations", title: "Conversations", detail: "⌘2", icon: "point.3.connected.trianglepath.dotted") { w.go(.conversations(nil)) },
+            Item(id: "c-shelf", title: "Shelf", detail: "⌘3", icon: "memorychip") { w.go(.shelf) },
+            Item(id: "c-programs", title: "Programs", detail: "⌘4", icon: "app.connected.to.app.below.fill") { w.go(.programs) },
+            Item(id: "c-graph", title: "Map", detail: "⇧⌘G", icon: "circle.hexagongrid") { w.go(.graph) },
             Item(id: "c-search", title: "Search Vault", detail: "⇧⌘F", icon: "magnifyingglass") { w.sidebarMode = .search },
             Item(id: "c-read", title: "Read Vault Again", detail: "⌘R", icon: "arrow.clockwise") { Task { await w.readAgain() } },
         ]
-        for scope in w.scopes {
-            out.append(Item(id: "c-ask-\(scope)", title: "Ask About \(scope)", detail: "", icon: "scope") {
-                w.askScope = scope
-                w.go(.ask)
-            })
-        }
         return out
     }
 

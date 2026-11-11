@@ -13,6 +13,7 @@ struct InspectorPane: View {
         switch workspace.currentTab?.content {
         case let .file(path): FileInspector(workspace: workspace, path: path, document: workspace.document(path))
         case .ask: AskInspector(workspace: workspace)
+        case .library: LibraryInspector(workspace: workspace, path: workspace.librarySelection)
         default: OverviewInspector(workspace: workspace)
         }
     }
@@ -187,11 +188,8 @@ struct OverviewInspector: View {
             Section("Linked folders") {
                 if workspace.linked.isEmpty { Text("None yet").foregroundStyle(.secondary) }
                 ForEach(workspace.linked) { folder in
-                    Button(folder.name) {
-                        workspace.askScope = folder.name
-                        workspace.go(.ask)
-                    }
-                    .buttonStyle(.plain).help("Ask about \(folder.path)")
+                    Button(folder.name) { workspace.go(.library(.all)) }
+                    .buttonStyle(.plain).help(folder.path)
                 }
                 Button("Link a Folder…") { pickLinkedFolder(workspace) }
             }

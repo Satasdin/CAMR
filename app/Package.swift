@@ -8,7 +8,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "Burrow",
-            dependencies: [.product(name: "BurrowCore", package: "Burrow"), .product(name: "BurrowTrial", package: "Burrow")],
+            dependencies: [.product(name: "BurrowCore", package: "Burrow"), .product(name: "BurrowTrial", package: "Burrow"), .product(name: "BurrowTools", package: "Burrow")],
             path: "Sources",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

@@ -247,17 +247,11 @@ final class GraphSim: @unchecked Sendable {
 
 struct GraphPage: View {
     @Bindable var workspace: Workspace
-    @State private var question = ""
 
+    // Burrow is the database, not a chat: the Map shows the vault, and conversations happen in the programs that connect to it.
     var body: some View {
         ZStack(alignment: .bottom) {
             GraphCanvas(workspace: workspace, compact: false)
-            VStack(spacing: 10) {
-                if !workspace.lit.isEmpty { ReadingStrip(workspace: workspace) }
-                AskField(workspace: workspace, text: $question, prompt: "Ask your vault", wantsChange: nil, staysHere: true)
-            }
-            .frame(maxWidth: 620)
-            .padding(18)
         }
         .overlay(alignment: .topLeading) { GraphControls(workspace: workspace).padding(12) }
         .background(Color.black)
