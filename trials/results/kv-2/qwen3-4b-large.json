@@ -1,0 +1,1436 @@
+{
+  "model": "qwen3-4b-instruct",
+  "base": "http://127.0.0.1:8091/v1",
+  "files": [
+    "Chunker.swift",
+    "Database.swift",
+    "Links.swift",
+    "Scanner.swift",
+    "Standing.swift",
+    "Ask.swift",
+    "Ollama.swift",
+    "Retrieval.swift",
+    "Vault.swift"
+  ],
+  "questions": [
+    {
+      "name": "reasons",
+      "file": "Project/Sources/BurrowCore/Ask.swift",
+      "line": 5,
+      "text": "public static let reasons = \"\"\""
+    },
+    {
+      "name": "withMemory",
+      "file": "Project/Sources/BurrowCore/Ask.swift",
+      "line": 12,
+      "text": "public static let withMemory = \"\"\""
+    },
+    {
+      "name": "numbered",
+      "file": "Project/Sources/BurrowCore/Ask.swift",
+      "line": 30,
+      "text": "let numbered = piece.text.components(separatedBy: \"\\n\").enumerated()"
+    },
+    {
+      "name": "Answer",
+      "file": "Project/Sources/BurrowCore/Ask.swift",
+      "line": 38,
+      "text": "public struct Answer: Sendable {"
+    },
+    {
+      "name": "declaration",
+      "file": "Project/Sources/BurrowCore/Chunker.swift",
+      "line": 17,
+      "text": "private static let declaration = try! NSRegularExpression("
+    },
+    {
+      "name": "startsDeclaration",
+      "file": "Project/Sources/BurrowCore/Chunker.swift",
+      "line": 20,
+      "text": "static func startsDeclaration(_ line: String) -> Bool {"
+    },
+    {
+      "name": "lines",
+      "file": "Project/Sources/BurrowCore/Chunker.swift",
+      "line": 26,
+      "text": "var lines = text.components(separatedBy: \"\\n\")"
+    },
+    {
+      "name": "blank",
+      "file": "Project/Sources/BurrowCore/Chunker.swift",
+      "line": 62,
+      "text": "var blank: Int?"
+    },
+    {
+      "name": "lock",
+      "file": "Project/Sources/BurrowCore/Database.swift",
+      "line": 31,
+      "text": "private let lock = NSRecursiveLock()"
+    },
+    {
+      "name": "column",
+      "file": "Project/Sources/BurrowCore/Database.swift",
+      "line": 115,
+      "text": "private func column(_ statement: OpaquePointer, _ index: Int32) -> Value {"
+    },
+    {
+      "name": "SQLITE_FLOAT",
+      "file": "Project/Sources/BurrowCore/Database.swift",
+      "line": 118,
+      "text": "case SQLITE_FLOAT: return .real(sqlite3_column_double(statement, index))"
+    },
+    {
+      "name": "SQLITE_BLOB",
+      "file": "Project/Sources/BurrowCore/Database.swift",
+      "line": 120,
+      "text": "case SQLITE_BLOB:"
+    },
+    {
+      "name": "transaction",
+      "file": "Project/Sources/BurrowCore/Database.swift",
+      "line": 130,
+      "text": "func transaction(_ work: () throws -> Void) throws {"
+    },
+    {
+      "name": "imports",
+      "file": "Project/Sources/BurrowCore/Links.swift",
+      "line": 4,
+      "text": "case imports  // this file imports that one"
+    },
+    {
+      "name": "LinkFinder",
+      "file": "Project/Sources/BurrowCore/Links.swift",
+      "line": 17,
+      "text": "enum LinkFinder {"
+    },
+    {
+      "name": "definedIn",
+      "file": "Project/Sources/BurrowCore/Links.swift",
+      "line": 58,
+      "text": "var definedIn: [String: [String]] = [:]"
+    },
+    {
+      "name": "resolveNamed",
+      "file": "Project/Sources/BurrowCore/Links.swift",
+      "line": 115,
+      "text": "private static func resolveNamed(_ target: String, known: Set<String>, byName: [String: [String]]) -> [String] {"
+    },
+    {
+      "name": "dotted",
+      "file": "Project/Sources/BurrowCore/Links.swift",
+      "line": 147,
+      "text": "let dotted = String(module.dropFirst(dots)).replacingOccurrences(of: \".\", with: \"/\")"
+    },
+    {
+      "name": "Embedder",
+      "file": "Project/Sources/BurrowCore/Ollama.swift",
+      "line": 16,
+      "text": "public protocol Embedder: Sendable {"
+    },
+    {
+      "name": "session",
+      "file": "Project/Sources/BurrowCore/Ollama.swift",
+      "line": 48,
+      "text": "private static func session() -> URLSession {"
+    },
+    {
+      "name": "embedder",
+      "file": "Project/Sources/BurrowCore/Ollama.swift",
+      "line": 69,
+      "text": "public func embedder(model: String = Ollama.embeddingModel) -> some Embedder { OllamaEmbedder(ollama: self, model: model) }"
+    },
+    {
+      "name": "longestExcerpt",
+      "file": "Project/Sources/BurrowCore/Retrieval.swift",
+      "line": 15,
+      "text": "public var longestExcerpt = 3_000"
+    },
+    {
+      "name": "defining",
+      "file": "Project/Sources/BurrowCore/Retrieval.swift",
+      "line": 87,
+      "text": "var defining: [Int] = []"
+    },
+    {
+      "name": "reach",
+      "file": "Project/Sources/BurrowCore/Retrieval.swift",
+      "line": 121,
+      "text": "let reach = scope == nil ? limit : max(limit, 4000)"
+    },
+    {
+      "name": "searchOnly",
+      "file": "Project/Sources/BurrowCore/Retrieval.swift",
+      "line": 161,
+      "text": "private func searchOnly(_ hits: [Hit], _ budget: Budget) throws -> [Excerpt] {"
+    },
+    {
+      "name": "taken",
+      "file": "Project/Sources/BurrowCore/Retrieval.swift",
+      "line": 176,
+      "text": "var taken: [Excerpt] = []"
+    },
+    {
+      "name": "textExtensions",
+      "file": "Project/Sources/BurrowCore/Scanner.swift",
+      "line": 10,
+      "text": "static let textExtensions: Set<String> = ["
+    },
+    {
+      "name": "largestFile",
+      "file": "Project/Sources/BurrowCore/Scanner.swift",
+      "line": 16,
+      "text": "static let largestFile = 1_000_000"
+    },
+    {
+      "name": "largestDataFile",
+      "file": "Project/Sources/BurrowCore/Scanner.swift",
+      "line": 19,
+      "text": "static let largestDataFile = 32_000"
+    },
+    {
+      "name": "Found",
+      "file": "Project/Sources/BurrowCore/Scanner.swift",
+      "line": 21,
+      "text": "struct Found {"
+    },
+    {
+      "name": "digest",
+      "file": "Project/Sources/BurrowCore/Scanner.swift",
+      "line": 85,
+      "text": "static func digest(_ data: Data) -> String {"
+    },
+    {
+      "name": "main",
+      "file": "Project/Sources/BurrowCore/Standing.swift",
+      "line": 6,
+      "text": "case main"
+    },
+    {
+      "name": "test",
+      "file": "Project/Sources/BurrowCore/Standing.swift",
+      "line": 7,
+      "text": "case test"
+    },
+    {
+      "name": "outputFolders",
+      "file": "Project/Sources/BurrowCore/Standing.swift",
+      "line": 10,
+      "text": "private static let outputFolders: Set<String> = ["
+    },
+    {
+      "name": "aboutTests",
+      "file": "Project/Sources/BurrowCore/Standing.swift",
+      "line": 34,
+      "text": "private static let aboutTests: Set<String> = [\"test\", \"tests\", \"testing\", \"spec\", \"specs\"]"
+    },
+    {
+      "name": "NoteKind",
+      "file": "Project/Sources/BurrowCore/Vault.swift",
+      "line": 22,
+      "text": "public enum NoteKind: String, CaseIterable, Sendable {"
+    },
+    {
+      "name": "decision",
+      "file": "Project/Sources/BurrowCore/Vault.swift",
+      "line": 23,
+      "text": "case decision, rejected, bug, convention, note"
+    },
+    {
+      "name": "store",
+      "file": "Project/Sources/BurrowCore/Vault.swift",
+      "line": 30,
+      "text": "public let store: URL"
+    },
+    {
+      "name": "refresh",
+      "file": "Project/Sources/BurrowCore/Vault.swift",
+      "line": 65,
+      "text": "public func refresh(embedder: Embedder? = nil, onProgress: ((String) -> Void)? = nil) async throws -> IndexReport {"
+    },
+    {
+      "name": "loadVectors",
+      "file": "Project/Sources/BurrowCore/Vault.swift",
+      "line": 174,
+      "text": "func loadVectors() throws -> (ids: [Int], vectors: [[Float]]) {"
+    }
+  ],
+  "forms": {
+    "full": {
+      "characters": 72551,
+      "first": {
+        "prompt_tokens": 20989,
+        "prompt_ms": 17224.471,
+        "wall_s": 17.404404878616333
+      },
+      "exact": 27,
+      "within1": 33,
+      "within3": 34,
+      "answered": 40,
+      "rows": [
+        {
+          "name": "reasons",
+          "truth": 5,
+          "cited": 5,
+          "off": 0,
+          "answer": "Ask.swift:5"
+        },
+        {
+          "name": "withMemory",
+          "truth": 12,
+          "cited": 21,
+          "off": 9,
+          "answer": "Ask.swift:21"
+        },
+        {
+          "name": "numbered",
+          "truth": 30,
+          "cited": 30,
+          "off": 0,
+          "answer": "Ask.swift:30"
+        },
+        {
+          "name": "Answer",
+          "truth": 38,
+          "cited": 38,
+          "off": 0,
+          "answer": "Ask.swift:38"
+        },
+        {
+          "name": "declaration",
+          "truth": 17,
+          "cited": 17,
+          "off": 0,
+          "answer": "Chunker.swift:17"
+        },
+        {
+          "name": "startsDeclaration",
+          "truth": 20,
+          "cited": 20,
+          "off": 0,
+          "answer": "Chunker.swift:20"
+        },
+        {
+          "name": "lines",
+          "truth": 26,
+          "cited": 26,
+          "off": 0,
+          "answer": "Chunker.swift:26"
+        },
+        {
+          "name": "blank",
+          "truth": 62,
+          "cited": 62,
+          "off": 0,
+          "answer": "Chunker.swift:62"
+        },
+        {
+          "name": "lock",
+          "truth": 31,
+          "cited": 31,
+          "off": 0,
+          "answer": "Database.swift:31"
+        },
+        {
+          "name": "column",
+          "truth": 115,
+          "cited": 115,
+          "off": 0,
+          "answer": "Database.swift:115"
+        },
+        {
+          "name": "SQLITE_FLOAT",
+          "truth": 118,
+          "cited": 116,
+          "off": -2,
+          "answer": "Database.swift:116"
+        },
+        {
+          "name": "SQLITE_BLOB",
+          "truth": 120,
+          "cited": 121,
+          "off": 1,
+          "answer": "Database.swift:121"
+        },
+        {
+          "name": "transaction",
+          "truth": 130,
+          "cited": 130,
+          "off": 0,
+          "answer": "Database.swift:130"
+        },
+        {
+          "name": "imports",
+          "truth": 4,
+          "cited": 3,
+          "off": -1,
+          "answer": "3: public enum LinkKind: String, Sendable {\n4:     case imports  // this file imports that one\n5:     case uses     // t"
+        },
+        {
+          "name": "LinkFinder",
+          "truth": 17,
+          "cited": 17,
+          "off": 0,
+          "answer": "Links.swift:17"
+        },
+        {
+          "name": "definedIn",
+          "truth": 58,
+          "cited": 67,
+          "off": 9,
+          "answer": "Links.swift:67"
+        },
+        {
+          "name": "resolveNamed",
+          "truth": 115,
+          "cited": 115,
+          "off": 0,
+          "answer": "Links.swift:115"
+        },
+        {
+          "name": "dotted",
+          "truth": 147,
+          "cited": 147,
+          "off": 0,
+          "answer": "Links.swift:147"
+        },
+        {
+          "name": "Embedder",
+          "truth": 16,
+          "cited": 16,
+          "off": 0,
+          "answer": "Ollama:16"
+        },
+        {
+          "name": "session",
+          "truth": 48,
+          "cited": 48,
+          "off": 0,
+          "answer": "Ollama:48"
+        },
+        {
+          "name": "embedder",
+          "truth": 69,
+          "cited": 133,
+          "off": 64,
+          "answer": "Ollama:133"
+        },
+        {
+          "name": "longestExcerpt",
+          "truth": 15,
+          "cited": 15,
+          "off": 0,
+          "answer": "Retrieval.swift:15"
+        },
+        {
+          "name": "defining",
+          "truth": 87,
+          "cited": 87,
+          "off": 0,
+          "answer": "Retrieval.swift:87"
+        },
+        {
+          "name": "reach",
+          "truth": 121,
+          "cited": 121,
+          "off": 0,
+          "answer": "Retrieval.swift:121"
+        },
+        {
+          "name": "searchOnly",
+          "truth": 161,
+          "cited": 161,
+          "off": 0,
+          "answer": "Retrieval.swift:161"
+        },
+        {
+          "name": "taken",
+          "truth": 176,
+          "cited": 176,
+          "off": 0,
+          "answer": "Retrieval.swift:176"
+        },
+        {
+          "name": "textExtensions",
+          "truth": 10,
+          "cited": 15,
+          "off": 5,
+          "answer": "Scanner.swift:15"
+        },
+        {
+          "name": "largestFile",
+          "truth": 16,
+          "cited": 16,
+          "off": 0,
+          "answer": "Scanner.swift:16"
+        },
+        {
+          "name": "largestDataFile",
+          "truth": 19,
+          "cited": 19,
+          "off": 0,
+          "answer": "Scanner.swift:19"
+        },
+        {
+          "name": "Found",
+          "truth": 21,
+          "cited": 22,
+          "off": 1,
+          "answer": "Scanner.swift:22"
+        },
+        {
+          "name": "digest",
+          "truth": 85,
+          "cited": 86,
+          "off": 1,
+          "answer": "Scanner.swift:86"
+        },
+        {
+          "name": "main",
+          "truth": 6,
+          "cited": 16,
+          "off": 10,
+          "answer": "Standing.swift:16"
+        },
+        {
+          "name": "test",
+          "truth": 7,
+          "cited": 13,
+          "off": 6,
+          "answer": "Standing.swift:13"
+        },
+        {
+          "name": "outputFolders",
+          "truth": 10,
+          "cited": 10,
+          "off": 0,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:10"
+        },
+        {
+          "name": "aboutTests",
+          "truth": 34,
+          "cited": 34,
+          "off": 0,
+          "answer": "Standalone:34"
+        },
+        {
+          "name": "NoteKind",
+          "truth": 22,
+          "cited": 23,
+          "off": 1,
+          "answer": "Project/Sources/BurrowCore/Vault.swift:23"
+        },
+        {
+          "name": "decision",
+          "truth": 23,
+          "cited": 23,
+          "off": 0,
+          "answer": "23:"
+        },
+        {
+          "name": "store",
+          "truth": 30,
+          "cited": 31,
+          "off": 1,
+          "answer": "Vault.swift:31"
+        },
+        {
+          "name": "refresh",
+          "truth": 65,
+          "cited": 65,
+          "off": 0,
+          "answer": "Vault.swift:65"
+        },
+        {
+          "name": "loadVectors",
+          "truth": 174,
+          "cited": 174,
+          "off": 0,
+          "answer": "Vault.swift:174"
+        }
+      ]
+    },
+    "every5": {
+      "characters": 67996,
+      "first": {
+        "prompt_tokens": 17320,
+        "prompt_ms": 12636.48,
+        "wall_s": 12.91795301437378
+      },
+      "exact": 8,
+      "within1": 17,
+      "within3": 27,
+      "answered": 40,
+      "rows": [
+        {
+          "name": "reasons",
+          "truth": 5,
+          "cited": 5,
+          "off": 0,
+          "answer": "Ask.swift:5"
+        },
+        {
+          "name": "withMemory",
+          "truth": 12,
+          "cited": 20,
+          "off": 8,
+          "answer": "Ask.swift:20"
+        },
+        {
+          "name": "numbered",
+          "truth": 30,
+          "cited": 30,
+          "off": 0,
+          "answer": "Ask.swift:30"
+        },
+        {
+          "name": "Answer",
+          "truth": 38,
+          "cited": 40,
+          "off": 2,
+          "answer": "Project/Sources/BurrowCore/Ask.swift:40"
+        },
+        {
+          "name": "declaration",
+          "truth": 17,
+          "cited": 20,
+          "off": 3,
+          "answer": "Chunker.swift:20"
+        },
+        {
+          "name": "startsDeclaration",
+          "truth": 20,
+          "cited": 20,
+          "off": 0,
+          "answer": "Chunker.swift:20"
+        },
+        {
+          "name": "lines",
+          "truth": 26,
+          "cited": 30,
+          "off": 4,
+          "answer": "Chunker.swift:30"
+        },
+        {
+          "name": "blank",
+          "truth": 62,
+          "cited": 60,
+          "off": -2,
+          "answer": "Chunker.swift:60"
+        },
+        {
+          "name": "lock",
+          "truth": 31,
+          "cited": 30,
+          "off": -1,
+          "answer": "Database.swift:30"
+        },
+        {
+          "name": "column",
+          "truth": 115,
+          "cited": 124,
+          "off": 9,
+          "answer": "Database.swift:124"
+        },
+        {
+          "name": "SQLITE_FLOAT",
+          "truth": 118,
+          "cited": 120,
+          "off": 2,
+          "answer": "Database.swift:120"
+        },
+        {
+          "name": "SQLITE_BLOB",
+          "truth": 120,
+          "cited": 120,
+          "off": 0,
+          "answer": "Database.swift:120"
+        },
+        {
+          "name": "transaction",
+          "truth": 130,
+          "cited": 135,
+          "off": 5,
+          "answer": "Database.swift:135"
+        },
+        {
+          "name": "imports",
+          "truth": 4,
+          "cited": 5,
+          "off": 1,
+          "answer": "LinkFinder.swift:5"
+        },
+        {
+          "name": "LinkFinder",
+          "truth": 17,
+          "cited": 15,
+          "off": -2,
+          "answer": "Links.swift:15"
+        },
+        {
+          "name": "definedIn",
+          "truth": 58,
+          "cited": 60,
+          "off": 2,
+          "answer": "Links.swift:60"
+        },
+        {
+          "name": "resolveNamed",
+          "truth": 115,
+          "cited": 119,
+          "off": 4,
+          "answer": "Links.swift:119"
+        },
+        {
+          "name": "dotted",
+          "truth": 147,
+          "cited": 149,
+          "off": 2,
+          "answer": "Links.swift:149"
+        },
+        {
+          "name": "Embedder",
+          "truth": 16,
+          "cited": 15,
+          "off": -1,
+          "answer": "Ollama.swift:15"
+        },
+        {
+          "name": "session",
+          "truth": 48,
+          "cited": 50,
+          "off": 2,
+          "answer": "Ollama.swift:50"
+        },
+        {
+          "name": "embedder",
+          "truth": 69,
+          "cited": 135,
+          "off": 66,
+          "answer": "Ollama.swift:135"
+        },
+        {
+          "name": "longestExcerpt",
+          "truth": 15,
+          "cited": 15,
+          "off": 0,
+          "answer": "Retrieval.swift:15"
+        },
+        {
+          "name": "defining",
+          "truth": 87,
+          "cited": 89,
+          "off": 2,
+          "answer": "Retrieval.swift:89"
+        },
+        {
+          "name": "reach",
+          "truth": 121,
+          "cited": 120,
+          "off": -1,
+          "answer": "Retrieval.swift:120"
+        },
+        {
+          "name": "searchOnly",
+          "truth": 161,
+          "cited": 160,
+          "off": -1,
+          "answer": "Retrieval.swift:160"
+        },
+        {
+          "name": "taken",
+          "truth": 176,
+          "cited": 180,
+          "off": 4,
+          "answer": "Retrieval.swift:180"
+        },
+        {
+          "name": "textExtensions",
+          "truth": 10,
+          "cited": 15,
+          "off": 5,
+          "answer": "Scanner.swift:15"
+        },
+        {
+          "name": "largestFile",
+          "truth": 16,
+          "cited": 20,
+          "off": 4,
+          "answer": "Scanner.swift:20"
+        },
+        {
+          "name": "largestDataFile",
+          "truth": 19,
+          "cited": 20,
+          "off": 1,
+          "answer": "Scanner.swift:20"
+        },
+        {
+          "name": "Found",
+          "truth": 21,
+          "cited": 25,
+          "off": 4,
+          "answer": "Scanner.swift:25"
+        },
+        {
+          "name": "digest",
+          "truth": 85,
+          "cited": 85,
+          "off": 0,
+          "answer": "Scanner.swift:85"
+        },
+        {
+          "name": "main",
+          "truth": 6,
+          "cited": 10,
+          "off": 4,
+          "answer": "Standing.swift:10"
+        },
+        {
+          "name": "test",
+          "truth": 7,
+          "cited": 15,
+          "off": 8,
+          "answer": "Standing.swift:15"
+        },
+        {
+          "name": "outputFolders",
+          "truth": 10,
+          "cited": 15,
+          "off": 5,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:15"
+        },
+        {
+          "name": "aboutTests",
+          "truth": 34,
+          "cited": 33,
+          "off": -1,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:33"
+        },
+        {
+          "name": "NoteKind",
+          "truth": 22,
+          "cited": 25,
+          "off": 3,
+          "answer": "Project/Sources/BurrowCore/Vault.swift:25"
+        },
+        {
+          "name": "decision",
+          "truth": 23,
+          "cited": 24,
+          "off": 1,
+          "answer": "Project/Sources/BurrowCore/Vault.swift:24"
+        },
+        {
+          "name": "store",
+          "truth": 30,
+          "cited": 30,
+          "off": 0,
+          "answer": "Vault.swift:30"
+        },
+        {
+          "name": "refresh",
+          "truth": 65,
+          "cited": 65,
+          "off": 0,
+          "answer": "Vault.swift:65"
+        },
+        {
+          "name": "loadVectors",
+          "truth": 174,
+          "cited": 173,
+          "off": -1,
+          "answer": "Vault.swift:173"
+        }
+      ]
+    },
+    "every10": {
+      "characters": 67411,
+      "first": {
+        "prompt_tokens": 16856,
+        "prompt_ms": 12209.868,
+        "wall_s": 12.528292179107666
+      },
+      "exact": 7,
+      "within1": 12,
+      "within3": 22,
+      "answered": 40,
+      "rows": [
+        {
+          "name": "reasons",
+          "truth": 5,
+          "cited": 10,
+          "off": 5,
+          "answer": "Ask.swift:10"
+        },
+        {
+          "name": "withMemory",
+          "truth": 12,
+          "cited": 20,
+          "off": 8,
+          "answer": "Ask.swift:20"
+        },
+        {
+          "name": "numbered",
+          "truth": 30,
+          "cited": 30,
+          "off": 0,
+          "answer": "Ask.swift:30"
+        },
+        {
+          "name": "Answer",
+          "truth": 38,
+          "cited": 40,
+          "off": 2,
+          "answer": "Ask.swift:40"
+        },
+        {
+          "name": "declaration",
+          "truth": 17,
+          "cited": 20,
+          "off": 3,
+          "answer": "Chunker.swift:20"
+        },
+        {
+          "name": "startsDeclaration",
+          "truth": 20,
+          "cited": 20,
+          "off": 0,
+          "answer": "Chunker.swift:20"
+        },
+        {
+          "name": "lines",
+          "truth": 26,
+          "cited": 30,
+          "off": 4,
+          "answer": "Chunker.swift:30"
+        },
+        {
+          "name": "blank",
+          "truth": 62,
+          "cited": 60,
+          "off": -2,
+          "answer": "Chunker.swift:60"
+        },
+        {
+          "name": "lock",
+          "truth": 31,
+          "cited": 30,
+          "off": -1,
+          "answer": "Database.swift:30"
+        },
+        {
+          "name": "column",
+          "truth": 115,
+          "cited": 120,
+          "off": 5,
+          "answer": "Database.swift:120"
+        },
+        {
+          "name": "SQLITE_FLOAT",
+          "truth": 118,
+          "cited": 20,
+          "off": -98,
+          "answer": "Database.swift:20"
+        },
+        {
+          "name": "SQLITE_BLOB",
+          "truth": 120,
+          "cited": 120,
+          "off": 0,
+          "answer": "Database.swift:120"
+        },
+        {
+          "name": "transaction",
+          "truth": 130,
+          "cited": 130,
+          "off": 0,
+          "answer": "Database.swift:130"
+        },
+        {
+          "name": "imports",
+          "truth": 4,
+          "cited": 20,
+          "off": 16,
+          "answer": "Links.swift:20"
+        },
+        {
+          "name": "LinkFinder",
+          "truth": 17,
+          "cited": 20,
+          "off": 3,
+          "answer": "Links.swift:20"
+        },
+        {
+          "name": "definedIn",
+          "truth": 58,
+          "cited": 60,
+          "off": 2,
+          "answer": "Links.swift:60"
+        },
+        {
+          "name": "resolveNamed",
+          "truth": 115,
+          "cited": 120,
+          "off": 5,
+          "answer": "Links.swift:120"
+        },
+        {
+          "name": "dotted",
+          "truth": 147,
+          "cited": 149,
+          "off": 2,
+          "answer": "Links.swift:149"
+        },
+        {
+          "name": "Embedder",
+          "truth": 16,
+          "cited": 20,
+          "off": 4,
+          "answer": "Ollama.swift:20"
+        },
+        {
+          "name": "session",
+          "truth": 48,
+          "cited": 50,
+          "off": 2,
+          "answer": "Ollama.swift:50"
+        },
+        {
+          "name": "embedder",
+          "truth": 69,
+          "cited": 70,
+          "off": 1,
+          "answer": "Ollama.swift:70"
+        },
+        {
+          "name": "longestExcerpt",
+          "truth": 15,
+          "cited": 40,
+          "off": 25,
+          "answer": "Retrieval.swift:40"
+        },
+        {
+          "name": "defining",
+          "truth": 87,
+          "cited": 90,
+          "off": 3,
+          "answer": "Retrieval.swift:90"
+        },
+        {
+          "name": "reach",
+          "truth": 121,
+          "cited": 120,
+          "off": -1,
+          "answer": "Retrieval.swift:120"
+        },
+        {
+          "name": "searchOnly",
+          "truth": 161,
+          "cited": 160,
+          "off": -1,
+          "answer": "Retrieval.swift:160"
+        },
+        {
+          "name": "taken",
+          "truth": 176,
+          "cited": 180,
+          "off": 4,
+          "answer": "Retrieval.swift:180"
+        },
+        {
+          "name": "textExtensions",
+          "truth": 10,
+          "cited": 10,
+          "off": 0,
+          "answer": "Scanner.swift:10"
+        },
+        {
+          "name": "largestFile",
+          "truth": 16,
+          "cited": 20,
+          "off": 4,
+          "answer": "Scanner.swift:20"
+        },
+        {
+          "name": "largestDataFile",
+          "truth": 19,
+          "cited": 20,
+          "off": 1,
+          "answer": "Scanner.swift:20"
+        },
+        {
+          "name": "Found",
+          "truth": 21,
+          "cited": 30,
+          "off": 9,
+          "answer": "Scanner.swift:30"
+        },
+        {
+          "name": "digest",
+          "truth": 85,
+          "cited": 90,
+          "off": 5,
+          "answer": "Scanner.swift:90"
+        },
+        {
+          "name": "main",
+          "truth": 6,
+          "cited": 10,
+          "off": 4,
+          "answer": "Standing.swift:10"
+        },
+        {
+          "name": "test",
+          "truth": 7,
+          "cited": 10,
+          "off": 3,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:10"
+        },
+        {
+          "name": "outputFolders",
+          "truth": 10,
+          "cited": 10,
+          "off": 0,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:10"
+        },
+        {
+          "name": "aboutTests",
+          "truth": 34,
+          "cited": 40,
+          "off": 6,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:40"
+        },
+        {
+          "name": "NoteKind",
+          "truth": 22,
+          "cited": 19,
+          "off": -3,
+          "answer": "Project/Sources/BurrowCore/Vault.swift:19"
+        },
+        {
+          "name": "decision",
+          "truth": 23,
+          "cited": 190,
+          "off": 167,
+          "answer": "Vault.swift:190"
+        },
+        {
+          "name": "store",
+          "truth": 30,
+          "cited": 30,
+          "off": 0,
+          "answer": "Vault.swift:30"
+        },
+        {
+          "name": "refresh",
+          "truth": 65,
+          "cited": 60,
+          "off": -5,
+          "answer": "Vault.swift:60"
+        },
+        {
+          "name": "loadVectors",
+          "truth": 174,
+          "cited": 179,
+          "off": 5,
+          "answer": "Vault.swift:179"
+        }
+      ]
+    },
+    "none": {
+      "characters": 66826,
+      "first": {
+        "prompt_tokens": 16392,
+        "prompt_ms": 15073.154,
+        "wall_s": 15.940337181091309
+      },
+      "exact": 1,
+      "within1": 2,
+      "within3": 6,
+      "answered": 40,
+      "rows": [
+        {
+          "name": "reasons",
+          "truth": 5,
+          "cited": 18,
+          "off": 13,
+          "answer": "Ask.swift:18"
+        },
+        {
+          "name": "withMemory",
+          "truth": 12,
+          "cited": 28,
+          "off": 16,
+          "answer": "Ask.swift:28"
+        },
+        {
+          "name": "numbered",
+          "truth": 30,
+          "cited": 33,
+          "off": 3,
+          "answer": "Ask.swift:33"
+        },
+        {
+          "name": "Answer",
+          "truth": 38,
+          "cited": 23,
+          "off": -15,
+          "answer": "Ask.swift:23"
+        },
+        {
+          "name": "declaration",
+          "truth": 17,
+          "cited": 23,
+          "off": 6,
+          "answer": "Chunker.swift:23"
+        },
+        {
+          "name": "startsDeclaration",
+          "truth": 20,
+          "cited": 33,
+          "off": 13,
+          "answer": "Chunker.swift:33"
+        },
+        {
+          "name": "lines",
+          "truth": 26,
+          "cited": 23,
+          "off": -3,
+          "answer": "Chunker.swift:23"
+        },
+        {
+          "name": "blank",
+          "truth": 62,
+          "cited": 53,
+          "off": -9,
+          "answer": "Chunker.swift:53"
+        },
+        {
+          "name": "lock",
+          "truth": 31,
+          "cited": 38,
+          "off": 7,
+          "answer": "Database.swift:38"
+        },
+        {
+          "name": "column",
+          "truth": 115,
+          "cited": 68,
+          "off": -47,
+          "answer": "Database.swift:68"
+        },
+        {
+          "name": "SQLITE_FLOAT",
+          "truth": 118,
+          "cited": 36,
+          "off": -82,
+          "answer": "Database.swift:36"
+        },
+        {
+          "name": "SQLITE_BLOB",
+          "truth": 120,
+          "cited": 36,
+          "off": -84,
+          "answer": "Database.swift:36"
+        },
+        {
+          "name": "transaction",
+          "truth": 130,
+          "cited": 68,
+          "off": -62,
+          "answer": "Database.swift:68"
+        },
+        {
+          "name": "imports",
+          "truth": 4,
+          "cited": 13,
+          "off": 9,
+          "answer": "Links.swift:13"
+        },
+        {
+          "name": "LinkFinder",
+          "truth": 17,
+          "cited": 16,
+          "off": -1,
+          "answer": "Links.swift:16"
+        },
+        {
+          "name": "definedIn",
+          "truth": 58,
+          "cited": 58,
+          "off": 0,
+          "answer": "Links.swift:58"
+        },
+        {
+          "name": "resolveNamed",
+          "truth": 115,
+          "cited": 53,
+          "off": -62,
+          "answer": "Links.swift:53"
+        },
+        {
+          "name": "dotted",
+          "truth": 147,
+          "cited": 53,
+          "off": -94,
+          "answer": "Links.swift:53"
+        },
+        {
+          "name": "Embedder",
+          "truth": 16,
+          "cited": 24,
+          "off": 8,
+          "answer": "Ollama.swift:24"
+        },
+        {
+          "name": "session",
+          "truth": 48,
+          "cited": 33,
+          "off": -15,
+          "answer": "Ollama.swift:33"
+        },
+        {
+          "name": "embedder",
+          "truth": 69,
+          "cited": 146,
+          "off": 77,
+          "answer": "Ollama.swift:146"
+        },
+        {
+          "name": "longestExcerpt",
+          "truth": 15,
+          "cited": 38,
+          "off": 23,
+          "answer": "Retrieval.swift:38"
+        },
+        {
+          "name": "defining",
+          "truth": 87,
+          "cited": 58,
+          "off": -29,
+          "answer": "Retrieval.swift:58"
+        },
+        {
+          "name": "reach",
+          "truth": 121,
+          "cited": 58,
+          "off": -63,
+          "answer": "Retrieval.swift:58"
+        },
+        {
+          "name": "searchOnly",
+          "truth": 161,
+          "cited": 68,
+          "off": -93,
+          "answer": "Retrieval.swift:68"
+        },
+        {
+          "name": "taken",
+          "truth": 176,
+          "cited": 103,
+          "off": -73,
+          "answer": "Retrieval.swift:103"
+        },
+        {
+          "name": "textExtensions",
+          "truth": 10,
+          "cited": 33,
+          "off": 23,
+          "answer": "Scanner.swift:33"
+        },
+        {
+          "name": "largestFile",
+          "truth": 16,
+          "cited": 33,
+          "off": 17,
+          "answer": "Scanner.swift:33"
+        },
+        {
+          "name": "largestDataFile",
+          "truth": 19,
+          "cited": 34,
+          "off": 15,
+          "answer": "Scanner.swift:34"
+        },
+        {
+          "name": "Found",
+          "truth": 21,
+          "cited": 18,
+          "off": -3,
+          "answer": "Scanner.swift:18"
+        },
+        {
+          "name": "digest",
+          "truth": 85,
+          "cited": 38,
+          "off": -47,
+          "answer": "Scanner.swift:38"
+        },
+        {
+          "name": "main",
+          "truth": 6,
+          "cited": 16,
+          "off": 10,
+          "answer": "Standing.swift:16"
+        },
+        {
+          "name": "test",
+          "truth": 7,
+          "cited": 23,
+          "off": 16,
+          "answer": "Standing.swift:23"
+        },
+        {
+          "name": "outputFolders",
+          "truth": 10,
+          "cited": 23,
+          "off": 13,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:23"
+        },
+        {
+          "name": "aboutTests",
+          "truth": 34,
+          "cited": 23,
+          "off": -11,
+          "answer": "Project/Sources/BurrowCore/Standing.swift:23"
+        },
+        {
+          "name": "NoteKind",
+          "truth": 22,
+          "cited": 33,
+          "off": 11,
+          "answer": "Vault.swift:33"
+        },
+        {
+          "name": "decision",
+          "truth": 23,
+          "cited": 43,
+          "off": 20,
+          "answer": "Vault.swift:43"
+        },
+        {
+          "name": "store",
+          "truth": 30,
+          "cited": 36,
+          "off": 6,
+          "answer": "Vault.swift:36"
+        },
+        {
+          "name": "refresh",
+          "truth": 65,
+          "cited": 63,
+          "off": -2,
+          "answer": "Vault.swift:63"
+        },
+        {
+          "name": "loadVectors",
+          "truth": 174,
+          "cited": 78,
+          "off": -96,
+          "answer": "Vault.swift:78"
+        }
+      ]
+    }
+  },
+  "when": "2026-11-11 21:29"
+}
