@@ -526,10 +526,10 @@ struct ProgramRow: View {
             }
             if showSetup {
                 HStack {
-                    Text(program.setup.replacingOccurrences(of: "<vault>", with: workspace.folder.path))
+                    Text(program.setup(vault: workspace.folder.path))
                         .font(.system(size: 11.5, design: .monospaced)).textSelection(.enabled).foregroundStyle(Night.note.opacity(0.85))
                     Spacer()
-                    Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(program.setup.replacingOccurrences(of: "<vault>", with: workspace.folder.path), forType: .string) } label: {
+                    Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(program.setup(vault: workspace.folder.path), forType: .string) } label: {
                         Label("Copy", systemImage: "doc.on.doc")
                     }
                     .controlSize(.small)

@@ -106,8 +106,19 @@ enum Program: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
+    /// The setup line with the vault's path filled in safely: shell-quoted in commands, JSON-escaped in config files,
+    /// so a folder name with spaces or quotes can't break the line or run anything when pasted.
+    func setup(vault path: String) -> String {
+        let shell = "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes
+        let json = String(String(data: (try? encoder.encode(path)) ?? Data(), encoding: .utf8)?.dropFirst().dropLast() ?? "")
+        let isConfig = self == .openCode || self == .lmStudio
+        return setup.replacingOccurrences(of: "<vault>", with: isConfig ? json : shell)
+    }
+
     /// How a person wires this program to the vault. Matches docs/connect.md.
-    var setup: String {
+    private var setup: String {
         switch self {
         case .claudeCode: return "claude mcp add burrow -- burrow mcp <vault>"
         case .openCode: return "opencode.json → \"mcp\": { \"burrow\": { \"type\": \"local\", \"command\": [\"burrow\", \"mcp\", \"<vault>\"] } }"
