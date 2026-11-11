@@ -271,7 +271,14 @@ public struct Ledger: Sendable {
     /// What a model that lost its memory is given to carry on: the plan, the last commits, corrections and stale beliefs
     /// on the files in play, held to `characters`.
     public func resume(branch: String? = nil, characters: Int = 2_400) -> String {
-        let name = (try? Self.branchName(branch ?? current)) ?? Self.defaultBranch
+        var name = (try? Self.branchName(branch ?? current)) ?? Self.defaultBranch
+        var note = ""
+        // Small models invent branch names ("last-conversation"). A branch that does not exist falls back to the
+        // current one, and the reply says so, rather than answering that nothing was kept.
+        if log(branch: name, limit: 1).isEmpty, branch != nil, !log(branch: current, limit: 1).isEmpty {
+            note = "There is no branch \(name); this is the current branch, \(current). "
+            name = current
+        }
         let commits = log(branch: name, limit: 200)
         guard !commits.isEmpty else {
             let others = branches().filter { $0 != name }
@@ -285,12 +292,13 @@ public struct Ledger: Sendable {
             if !stale.isEmpty { text += " CHECK AGAIN: \(stale.prefix(3).joined(separator: ", ")) changed since" }
             return text
         }
-        var parts = ["Ledger branch \(name): \(commits.count) commit\(commits.count == 1 ? "" : "s"), newest \(Self.when(commits[0].at)). This is what earlier sessions understood; it is not the code. Commits marked CHECK AGAIN rest on files that changed since."]
+        var parts = [note + "Ledger branch \(name): \(commits.count) commit\(commits.count == 1 ? "" : "s"), newest \(Self.when(commits[0].at)). This is what earlier sessions understood; it is not the code. Commits marked CHECK AGAIN rest on files that changed since."]
         if let plan = commits.first(where: { $0.kind == .plan && !wrong.contains($0.id) }) {
             parts.append("Plan: " + cut(plan.message + (plan.body.isEmpty ? "" : "\n" + plan.body), 700))
         }
         if let stop = commits.first(where: { $0.kind == .handoff }) {
-            parts.append("Where the last session stopped: " + cut(stop.message + (stop.body.isEmpty ? "" : "\n" + stop.body), 700))
+            // The handoff is what a model that lost its memory needs most, so it gets most of the room.
+            parts.append("Where the last session stopped: " + cut(stop.message + (stop.body.isEmpty ? "" : "\n" + stop.body), 1_500))
         }
         let inPlay = Set(commits.prefix(12).flatMap(\.cites.keys))
         let corrections = all().filter { $0.kind == .correction && !$0.cites.keys.filter(inPlay.contains).isEmpty }
@@ -331,7 +339,7 @@ public struct Ledger: Sendable {
         var body: [String] = []
         // What was concluded matters as much as what was asked: each answered turn keeps its question and the start of its answer.
         for (number, turn) in record.turns.enumerated().suffix(5) {
-            body.append("Turn \(number + 1). Asked: \(cut(turn.question, 160)) Answered (\(turn.model)): \(cut(turn.answer, 360))")
+            body.append("Turn \(number + 1). Asked: \(cut(turn.question, 140)) Answered (\(turn.model)): \(cut(turn.answer, 240))")
         }
         let looked = trail.suffix(8).map { cut($0.asked, 100) }
         if !looked.isEmpty { body.append("Looked up: " + looked.joined(separator: "; ")) }

@@ -82,7 +82,11 @@ class Burrow:
                 return message["result"]
 
     def call(self, name, arguments):
-        result = self.request("tools/call", {"name": name, "arguments": arguments})
+        # A refused call (an unknown tool, bad arguments) goes back to the model as an error, as a chat program shows it.
+        try:
+            result = self.request("tools/call", {"name": name, "arguments": arguments})
+        except RuntimeError as problem:
+            return f"Error: {problem}", True
         return "".join(part.get("text", "") for part in result.get("content", [])), bool(result.get("isError"))
 
     def close(self):
@@ -264,10 +268,12 @@ def e1():
     pairs = [(Local(SMALL), Local(LARGE)), (Local(LARGE), Local(SMALL))]
     rows = []
     for a, b in pairs:
-        for conversation in conversations:
+        for number, conversation in enumerate(conversations):
             # Model A talks in its own connection; the chat program keeps each turn in Burrow. Closing the connection
             # is where Burrow writes the Ledger handoff, as it would when a real program quits.
-            talk = Burrow(vault, "--tools", "classic", client=a.label)
+            # A program that reconnects within 30 minutes carries on its last session, so each test conversation
+            # names itself apart; otherwise five separate conversations would merge into one.
+            talk = Burrow(vault, "--tools", "classic", client=f"{a.label} conversation {number + 1}")
             session, transcript, history = "new", [], []
             for task in conversation:
                 out = a.run(system_for(talk), task["question"], burrow=talk, history=history)

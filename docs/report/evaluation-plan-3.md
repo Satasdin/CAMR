@@ -46,3 +46,11 @@ Qwen3 4B (small, local), Gemma 4 12B (main, local), Claude (cloud). Temperature 
 - Notes from the bigger model raise the 4B on multi-fact questions more than on single-fact ones.
 - The trust line raises honest "not in the vault" answers well above today's level and costs at most a few answerable questions.
 - One door matches or beats twelve tools on the 4B, and the difference shrinks on Gemma 4 12B.
+
+## Changes after the smoke run, before any scored run (11 November 2026)
+
+A smoke run (`--quick`, four questions per test, results discarded) checked that every test runs end to end. It found two faults in the engine and one in the harness. All were fixed and the binary was frozen again before the first scored run. No threshold or wording was tuned on what the smoke run's answers said.
+
+1. `burrow resume` cut "where the last session stopped" to 700 characters, so a handoff kept only its first answered turn. It now gets up to 1,500 characters, and each turn's answer is kept to 240 characters.
+2. Qwen3 4B called `burrow_resume` with a branch it made up ("last_conversation") and was told nothing had been kept. An unknown branch now falls back to the current one, and the reply says so.
+3. Harness: a program that reconnects within 30 minutes carries on its earlier session (D-45 era behaviour, by design), so the five test conversations merged into one session. Each test conversation now names itself apart. The harness also hands a refused tool call back to the model as an error instead of stopping.

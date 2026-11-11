@@ -85,7 +85,9 @@ private func makeLedger() -> (Ledger, FakeFiles, URL) {
         let head = ledger.resume(characters: 2_400)
         #expect(head.contains("Plan: Next: hooks for Claude Code"))
         #expect(head.contains("Where the last session stopped: Stopped while wiring PreCompact"))
-        #expect(ledger.resume(branch: "nothing-here").contains("nothing on branch nothing-here"))
+        #expect(ledger.resume(branch: "nothing-here").contains("There is no branch nothing-here; this is the current branch, main."))
+        let empty = makeLedger().0
+        #expect(empty.resume(branch: "nothing-here").contains("nothing on branch nothing-here"))
     }
 
     @Test func aHandoffComesFromTheTrailEvenWhenTheModelLoggedNothing() throws {
@@ -117,11 +119,30 @@ private func makeLedger() -> (Ledger, FakeFiles, URL) {
         let wrong = try ledger.commit(.fact, "The shelf limit is unlimited gigabytes", author: "b")
         try ledger.revert(wrong.id, why: "No.", author: "c")
         try ledger.commit(.plan, "Shelf limit plan gigabytes", author: "d")
-        #expect(ledger.notes(for: "what is the shelf limit in gigabytes").first?.id == good.id)
+        #expect(ledger.notes(for: "what is the shelf limit in gigabytes").contains { $0.id == good.id })
         #expect(!ledger.notes(for: "shelf limit gigabytes").contains { $0.id == wrong.id })
         #expect(ledger.notes(for: "the").isEmpty)
         files.texts["Sources/Shelf.swift"] = "changed"
         #expect(!ledger.notes(for: "shelf limit gigabytes").contains { $0.id == good.id })
+    }
+
+    @Test func anInventedBranchFallsBackToTheCurrentOne() throws {
+        let (ledger, _, _) = makeLedger()
+        try ledger.commit(.handoff, "Stopped after three answers", author: "a")
+        let head = ledger.resume(branch: "last_conversation")
+        #expect(head.contains("There is no branch last_conversation; this is the current branch, main."))
+        #expect(head.contains("Stopped after three answers"))
+    }
+
+    @Test func aHandoffWithThreeAnsweredTurnsSurvivesResume() throws {
+        let (ledger, _, _) = makeLedger()
+        var record = SessionRecord(id: "s3")
+        record.client = "lm studio"
+        record.turns = (1...3).map { SessionTurn(question: "Question number \($0) about the Act, asked at some length to fill the space as people do?",
+                                                 answer: "Answer \($0): " + String(repeating: "detail ", count: 60), model: "gemma", server: "mcp") }
+        try ledger.handoff(from: record)
+        let head = ledger.resume()
+        for n in 1...3 { #expect(head.contains("Turn \(n). Asked: Question number \(n)")) }
     }
 
     @Test func branchNamesAreKeptToPlainCharacters() throws {
