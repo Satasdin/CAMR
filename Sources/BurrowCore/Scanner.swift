@@ -54,7 +54,10 @@ struct Scanner {
         return data.split(separator: 0).map { String(decoding: $0, as: UTF8.self) }
     }
 
-    private static func walk(_ root: URL) -> [String] {
+    private static func walk(_ given: URL) -> [String] {
+        // The enumerator treats a starting folder that is a symbolic link as the link itself and finds nothing inside,
+        // so a vault opened through a link (or a link to a code folder) is walked at its real location.
+        let root = given.resolvingSymlinksInPath()
         let base = root.standardizedFileURL.path + "/"
         guard let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey]) else { return [] }
         var out: [String] = []
