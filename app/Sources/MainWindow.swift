@@ -59,7 +59,29 @@ struct MainWindow: View {
     @ViewBuilder private var content: some View {
         switch workspace.currentTab?.content {
         case let .file(path):
-            FilePage(workspace: workspace, document: workspace.document(path)).id(path)
+            if let tab = workspace.activeTab, let right = workspace.sideBySide[tab] {
+                // Obsidian's split: a second file beside the first, each with its own scroll, both editable.
+                HSplitView {
+                    FilePage(workspace: workspace, document: workspace.document(path)).id(path).frame(minWidth: 320)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            Image(systemName: LibraryKind.of(right).symbol).foregroundStyle(.secondary)
+                            Text(right.title).font(.system(size: 12.5, weight: .medium)).lineLimit(1)
+                            Spacer()
+                            Button { workspace.go(.file(right)) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
+                                .buttonStyle(.plain).foregroundStyle(.secondary).help("Open it on its own")
+                            Button { workspace.sideBySide[tab] = nil } label: { Image(systemName: "xmark") }
+                                .buttonStyle(.plain).foregroundStyle(.secondary).help("Close the right side")
+                        }
+                        .padding(.horizontal, 12).frame(height: 30).background(.bar)
+                        .overlay(alignment: .bottom) { Divider() }
+                        FilePage(workspace: workspace, document: workspace.document(right)).id(right)
+                    }
+                    .frame(minWidth: 320)
+                }
+            } else {
+                FilePage(workspace: workspace, document: workspace.document(path)).id(path)
+            }
         case .graph:
             GraphPage(workspace: workspace)
         case .ask:

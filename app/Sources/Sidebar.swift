@@ -225,6 +225,7 @@ struct FileTree: View {
             }
         } else {
             Button("Open in New Tab") { workspace.go(.file(node.path), newTab: true) }
+            Button("Open to the Right") { workspace.openToTheRight(node.path) }
             Button(workspace.isBookmarked(node.path) ? "Remove Bookmark" : "Bookmark") { Task { await workspace.toggleBookmark(node.path) } }
             Divider()
         }

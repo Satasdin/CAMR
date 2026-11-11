@@ -208,6 +208,8 @@ final class Workspace {
     var shelf: [ShelfItem] = []
     var ledger = LedgerState()
     var bookmarks: [String] = []
+    /// A file shown to the right of a tab's own file, by tab: Obsidian's split view.
+    var sideBySide: [UUID: String] = [:]
     var librarySelection: String?
     /// Runs once the files are known, before meanings are learned, so layout checks need not wait for Ollama.
     var afterFirstRead: (() -> Void)?
@@ -368,7 +370,7 @@ final class Workspace {
 
     func tabTitle(_ tab: Tab) -> String {
         switch tab.content {
-        case let .file(path): return path.title
+        case let .file(path): return sideBySide[tab.id].map { "\(path.title) | \($0.title)" } ?? path.title
         case .graph: return "Map"
         case .ask: return "Ask"
         case let .library(kind): return kind.title
@@ -453,6 +455,12 @@ final class Workspace {
     func resumeText(_ branch: String?) async -> String { await engine.resumeText(branch) }
 
     func isBookmarked(_ path: String) -> Bool { bookmarks.contains(path) }
+
+    /// Shows a file to the right of the current one. With no file open, it simply opens.
+    func openToTheRight(_ path: String) {
+        guard currentPath != nil, let tab = activeTab, currentPath != path else { return go(.file(path)) }
+        sideBySide[tab] = path
+    }
 
     func toggleBookmark(_ path: String) async {
         var next = bookmarks
