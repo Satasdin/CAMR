@@ -112,6 +112,9 @@ extension Vault {
     // MARK: Reading
 
     /// Where a vault path really lives. Nil for anything that would leave the vault or a linked folder.
+    /// Where a vault path is on disk, for reading its modified date.
+    func locationForSalience(_ path: String) -> URL? { location(of: path)?.url }
+
     private func location(of path: String) -> (url: URL, root: URL, relative: String, linked: Bool)? {
         guard !path.isEmpty, !path.hasPrefix("/"), !path.split(separator: "/", omittingEmptySubsequences: false).contains("..") else { return nil }
         if let first = path.split(separator: "/").first, let folder = linkedFolders().first(where: { $0.name == first }) {

@@ -18,6 +18,11 @@ public struct Budget: Sendable {
     public var focusedExcerpt = 1_400
     /// How many pieces of one file may open the search. One was too few: the clause and its neighbour often both matter.
     public var perFile = 2
+    /// How much recency and importance may lift a candidate, as a share of its score (Salience.swift). Zero turns one off.
+    /// Kept below the gap between two neighbouring places in the top 60 (1/61 of a score), so they decide only among
+    /// files that match the question equally well and never lift a weaker match over a better one.
+    public var recencyWeight = 0.004
+    public var importanceWeight = 0.004
     public init() {}
 }
 
@@ -93,7 +98,7 @@ extension Vault {
         let shelf = try catalogue()
         let words = try wordMatches(question)
         var signal = Signal(wordMatches: words.ranked.count)
-        let hits = try fused(question, vector: queryVector, limit: 60, scope: scope, shelf: shelf, words: words, signal: &signal)
+        let hits = try fused(question, vector: queryVector, limit: 60, scope: scope, shelf: shelf, words: words, signal: &signal, budget: budget)
         let excerpts = mode == .search ? try searchOnly(hits, budget, terms: Self.terms(of: question))
             : try walking(question, hits, budget, scope: scope, shelf: shelf, words: words)
         return Retrieved(mode: mode, excerpts: excerpts, seconds: Date().timeIntervalSince(started), signal: signal)
@@ -135,7 +140,7 @@ extension Vault {
 
     /// Merges the word and meaning rankings. Reciprocal rank fusion needs no tuning between two unlike scores.
     private func fused(_ question: String, vector: [Float]?, limit: Int, scope: String?, shelf: Catalogue, words: WordMatches,
-                       signal: inout Signal) throws -> [Hit] {
+                       signal: inout Signal, budget: Budget = Budget()) throws -> [Hit] {
         var score: [Int: Double] = [:]
         // A narrow folder can sit far down the whole vault's ranking, so look further before narrowing.
         let reach = scope == nil ? limit : max(limit, 4000)
@@ -148,12 +153,19 @@ extension Vault {
                 signal.nearest = index.similarity(of: first, to: vector)
             }
         }
-        for ranking in [Array(words.ranked.prefix(reach)), byMeaning] {
-            for (rank, id) in ranking.enumerated() { score[id, default: 0] += 1.0 / Double(60 + rank + 1) }
+        // Pieces with the same word score share a place, so the index's own order does not decide between equals;
+        // recency and importance do, below.
+        var place = 0
+        for (rank, id) in words.ranked.prefix(reach).enumerated() {
+            if rank > 0, words.score[id] != words.score[words.ranked[rank - 1]] { place = rank }
+            score[id, default: 0] += 1.0 / Double(60 + place + 1)
         }
+        for (rank, id) in byMeaning.enumerated() { score[id, default: 0] += 1.0 / Double(60 + rank + 1) }
         let asked = Asked(question)
         let fileOf = shelf.fileOf
         for id in Array(score.keys) { score[id]! *= asked.weight(of: fileOf[id]?.path ?? "") }
+        // Then recency and importance, as small nudges on what already matches (objective ii).
+        applySalience(to: &score, fileOf: fileOf, budget: budget)
 
         // Someone who types an exact name means that name, so those chunks go ahead of the merged ranking.
         var seen = Set<Int>()
