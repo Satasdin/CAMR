@@ -74,6 +74,9 @@ struct VaultTextView: NSViewRepresentable {
         context.coordinator.attach(text, scroll)
         text.string = context.coordinator.shown(document.text)
         context.coordinator.restyleAll()
+        if let target = ProcessInfo.processInfo.environment["BURROW_PREVIEW"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak text] in text?.previewForCheck(target) }
+        }
         return scroll
     }
 
@@ -240,6 +243,92 @@ struct VaultTextView: NSViewRepresentable {
 
 final class VaultNSTextView: NSTextView {
     weak var coordinator: VaultTextView.Coordinator?
+    /// Obsidian's page preview: hold ⌘ over a [[link]] to see the note without leaving this one.
+    private var preview: NSPopover?
+    private var previewTarget: String?
+
+    private var hoverArea: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverArea { removeTrackingArea(hoverArea) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil)
+        addTrackingArea(area)
+        hoverArea = area
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        guard event.modifierFlags.contains(.command) else { return closePreview() }
+        showPreview(at: convert(event.locationInWindow, from: nil))
+    }
+
+    override func flagsChanged(with event: NSEvent) {
+        super.flagsChanged(with: event)
+        if event.modifierFlags.contains(.command), let window {
+            showPreview(at: convert(window.mouseLocationOutsideOfEventStream, from: nil))
+        } else {
+            closePreview()
+        }
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        closePreview()
+    }
+
+    private func showPreview(at point: NSPoint) {
+        guard let layout = layoutManager, let container = textContainer, let storage = textStorage, storage.length > 0 else { return closePreview() }
+        let inContainer = NSPoint(x: point.x - textContainerOrigin.x, y: point.y - textContainerOrigin.y)
+        var fraction: CGFloat = 0
+        let glyph = layout.glyphIndex(for: inContainer, in: container, fractionOfDistanceThroughGlyph: &fraction)
+        let index = layout.characterIndexForGlyph(at: glyph)
+        guard index < storage.length,
+              layout.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: container).insetBy(dx: -2, dy: -2).contains(inContainer),
+              let url = storage.attribute(.link, at: index, effectiveRange: nil) as? URL, url.scheme == "burrow", url.host == "note",
+              let workspace = coordinator?.parent.workspace else { return closePreview() }
+        let target = String(url.path.dropFirst()).removingPercentEncoding ?? String(url.path.dropFirst())
+        guard target != previewTarget || preview?.isShown != true else { return }
+        closePreview()
+        guard let path = workspace.resolve(target) else { return }
+        var linkRange = NSRange()
+        _ = storage.attribute(.link, at: index, effectiveRange: &linkRange)
+        let glyphs = layout.glyphRange(forCharacterRange: linkRange, actualCharacterRange: nil)
+        var anchor = layout.boundingRect(forGlyphRange: glyphs, in: container)
+        anchor.origin.x += textContainerOrigin.x
+        anchor.origin.y += textContainerOrigin.y
+        let popover = NSPopover()
+        popover.behavior = .semitransient
+        popover.animates = false
+        popover.contentViewController = NSHostingController(rootView: LinkPreview(workspace: workspace, path: path) { [weak self] in
+            self?.closePreview()
+            workspace.go(.file(path))
+        })
+        popover.show(relativeTo: anchor, of: self, preferredEdge: .maxY)
+        if ProcessInfo.processInfo.environment["BURROW_PREVIEW"] != nil {
+            FileHandle.standardError.write(Data("preview shown: \(path), \(popover.isShown ? "visible" : "not visible"), \(Int(popover.contentSize.width))×\(Int(popover.contentSize.height))\n".utf8))
+        }
+        preview = popover
+        previewTarget = target
+    }
+
+    /// For checking the preview without a person at the screen: BURROW_PREVIEW=<link target> shows it over that link.
+    func previewForCheck(_ target: String) {
+        guard let layout = layoutManager, let container = textContainer, let storage = textStorage else { return }
+        var found: NSRange?
+        storage.enumerateAttribute(.link, in: NSRange(location: 0, length: storage.length)) { value, range, stop in
+            if let url = value as? URL, url.host == "note", (url.path.dropFirst().removingPercentEncoding ?? "") == target { found = range; stop.pointee = true }
+        }
+        guard let found else { return }
+        let rect = layout.boundingRect(forGlyphRange: layout.glyphRange(forCharacterRange: found, actualCharacterRange: nil), in: container)
+        showPreview(at: NSPoint(x: rect.midX + textContainerOrigin.x, y: rect.midY + textContainerOrigin.y))
+    }
+
+    private func closePreview() {
+        preview?.close()
+        preview = nil
+        previewTarget = nil
+    }
 
     /// The text after an unclosed [[ on this line, if the caret is in one.
     var openLinkRange: NSRange? {

@@ -343,3 +343,37 @@ struct WrapLayout: Layout {
         }
     }
 }
+
+/// What a ⌘-hover over a link shows: the note's title and folder, then its picture or its opening lines.
+struct LinkPreview: View {
+    let workspace: Workspace
+    let path: String
+    let open: () -> Void
+    @State private var text: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(path.title).font(.system(size: 14, weight: .semibold)).lineLimit(1)
+                    Text(path.folderPath.isEmpty ? "In the vault" : path.folderPath).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer()
+                Button("Open", action: open).controlSize(.small)
+            }
+            if LibraryKind.of(path) == .notes {
+                ScrollView {
+                    Text(text.map { FrontMatter.split($0).body } ?? "").font(.system(size: 12.5)).frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                .frame(maxHeight: 260)
+            } else {
+                CoverImage(workspace: workspace, path: path, size: CGSize(width: 700, height: 520))
+                    .aspectRatio(4 / 3, contentMode: .fit).clipShape(.rect(cornerRadius: 6))
+            }
+        }
+        .padding(12)
+        .frame(width: 380)
+        .task(id: path) { text = await workspace.text(of: path) }
+    }
+}
