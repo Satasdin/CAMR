@@ -157,9 +157,11 @@ private func git(_ arguments: [String], in directory: URL) -> String {
 /// Claude Code's settings are the person's own file, so Burrow prints what to add rather than editing it.
 /// The git hook is written only into the repository this is run in, and an existing hook is never replaced.
 private func installHook(_ kind: String, vault folder: String) throws {
-    let vault = URL(fileURLWithPath: folder).standardizedFileURL.path
-    let quoted = "'" + vault.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    let burrow = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL.path
+    func shellQuoted(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+    let quoted = shellQuoted(URL(fileURLWithPath: folder).standardizedFileURL.resolvingSymlinksInPath().path)
+    // The running executable itself, resolved to a real absolute path, so the hook never runs whatever `burrow` a PATH finds.
+    guard let running = Bundle.main.executablePath, running.hasPrefix("/") else { throw Failure("could not tell where this burrow binary is") }
+    let burrow = shellQuoted(URL(fileURLWithPath: running).resolvingSymlinksInPath().path)
     switch kind {
     case "claude":
         let command = "\(burrow) hook claude \(quoted)"
