@@ -10,7 +10,14 @@ struct FilePage: View {
         ZStack(alignment: .topTrailing) {
             Theme.page
             if document.loaded {
-                VaultTextView(workspace: workspace, document: document, reading: workspace.isReading || !document.editable)
+                VStack(spacing: 0) {
+                    // Obsidian shows front matter as properties above the page; the page itself is only the note's body.
+                    if document.path.isMarkdownPath, !FrontMatter.split(document.text).header.isEmpty {
+                        PropertiesPanel(workspace: workspace, document: document, editable: document.editable && !workspace.isReading)
+                            .frame(maxWidth: .infinity).padding(.horizontal, 36)
+                    }
+                    VaultTextView(workspace: workspace, document: document, reading: workspace.isReading || !document.editable)
+                }
             }
             if document.loaded, !document.editable {
                 Label("Read only", systemImage: "lock").font(.caption).foregroundStyle(Theme.inkSoft).padding(12)
@@ -65,7 +72,7 @@ struct VaultTextView: NSViewRepresentable {
         scroll.documentView = text
         scroll.contentView.postsFrameChangedNotifications = true
         context.coordinator.attach(text, scroll)
-        text.string = document.text
+        text.string = context.coordinator.shown(document.text)
         context.coordinator.restyleAll()
         return scroll
     }
@@ -75,8 +82,9 @@ struct VaultTextView: NSViewRepresentable {
         coordinator.parent = self
         guard let text = coordinator.text else { return }
         text.isEditable = !reading
-        if text.string != document.text, !coordinator.isTyping {
-            text.string = document.text
+        let shown = coordinator.shown(document.text)
+        if text.string != shown, !coordinator.isTyping {
+            text.string = shown
             coordinator.restyleAll()
         }
         if coordinator.wasReading != reading {
@@ -135,7 +143,7 @@ struct VaultTextView: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let text else { return }
             isTyping = true
-            parent.workspace.edited(parent.document, to: text.string)
+            parent.workspace.edited(parent.document, to: whole(text.string))
             restyleAll()
             isTyping = false
             if text.inWikiLink { DispatchQueue.main.async { text.complete(nil) } }
@@ -192,8 +200,29 @@ struct VaultTextView: NSViewRepresentable {
             return Array(hits.prefix(20))
         }
 
-        func jump(toLine line: Int) {
+        /// The page shows a note's body; its front matter lives in the properties panel. Code and other files show whole.
+        func shown(_ full: String) -> String {
+            parent.document.path.isMarkdownPath ? FrontMatter.split(full).body : full
+        }
+
+        /// The edited body put back under the note's current front matter.
+        func whole(_ body: String) -> String {
+            guard parent.document.path.isMarkdownPath else { return body }
+            var parts = FrontMatter.split(parent.document.text)
+            parts.body = body
+            return FrontMatter.join(parts)
+        }
+
+        /// Lines of the file that sit above the page, so a line number in the file lands on the right line of the page.
+        private var hiddenLines: Int {
+            guard parent.document.path.isMarkdownPath else { return 0 }
+            let parts = FrontMatter.split(parent.document.text)
+            return parts.header.isEmpty ? 0 : parts.header.components(separatedBy: "\n").count - 1 + parts.gap.count
+        }
+
+        func jump(toLine fileLine: Int) {
             guard let text else { return }
+            let line = max(1, fileLine - hiddenLines)
             let string = text.string as NSString
             var location = 0
             var current = 1
