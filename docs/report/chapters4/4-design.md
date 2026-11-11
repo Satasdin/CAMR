@@ -125,7 +125,7 @@ The architecture diagram shows the components of Burrow and which component depe
 
 !fig figures/v2/architecture.png | Figure 4.6: Architecture of Burrow | 6.2
 
-All memory logic is in BurrowCore, and every surface depends on it, so a change to the engine reaches the application, the terminal chat, and the MCP server at once. The Ollama client is the only part that leaves the process. Not every surface runs every step: the check with retry runs only on the command line, the app warns about an unverified citation, and the terminal chat and the MCP server use a fixed budget of 12,000 characters and not the fitted one.
+All memory logic is in BurrowCore, and every surface depends on it, so a change to the engine reaches the application, the terminal chat, and the MCP server at once. The Ollama client is the only part that leaves the process. Which steps each surface runs is recorded in Section 5.4.6.
 
 ### 4.4.2 Engine Steps and Retrieval Design
 
@@ -153,7 +153,7 @@ The index is the only database in the system, and it holds no original data. The
 
 !fig figures/v2/schema.png | Figure 4.8: Logical schema of the index | 6.2
 
-A file is cut into pieces stored as chunks, and a piece has at most one vector, because the index also works on words alone. The chunks_fts table is the full-text index, and the links table holds the links between files. Nothing in the schema is a source of truth: the whole index, with the memory-mapped copy of its vectors and two small settings files beside it, can be rebuilt from the Markdown files, which satisfies NFR-02.
+A file is cut into pieces stored as chunks, and a piece has at most one vector, because the index also works on words alone. The chunks_fts table is the full-text index, and the links table holds the links between files. Nothing in the schema is a source of truth: the whole index can be rebuilt from the Markdown files, which satisfies NFR-02.
 
 ### 4.4.4 Wireframes
 
@@ -183,4 +183,4 @@ The deployment diagram shows where each part runs and how a person obtains the s
 
 The application, the command-line tool, the vault, the index, and the local models are on the person's own computer, and the engine reaches the local model service only on the loopback address. Neither of the two outside connections is made by the engine. One is an MCP client that the person chooses to connect, and the other is the evaluation harness calling the cloud model.
 
-A person reaches the system through a landing page hosted on GitHub Pages. The page offers two downloads, both served from the project's GitHub Releases. The terminal version is installed by one curl command that fetches the program, verifies its checksum, and places it on the person's path. The desktop application is a single button that downloads the current release. Because each download comes from a tagged release, a person receives the same version that the repository records. The download happens once and carries no content from the vault, so after installation the engine works offline.
+A person obtains the system once, from a tagged release of the project's repository, so the version installed is the one the repository records; the steps are given in Section 5.2.3. The download carries no content from the vault, so after installation the engine works offline.

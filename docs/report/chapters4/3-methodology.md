@@ -40,15 +40,15 @@ Development proceeded in the five increments shown in Figure 3.1. The first incr
 
 ## 3.4 System Analysis
 
-The requirements for the engine were formulated by working backwards from the study objectives, the measurements the evaluation demands, and the Sprint II review, so that every capability maps to something the experiments or the person need. In functional terms, the engine must keep a vault of the person's notes, documents, and code with a rebuildable index, decide for each question whether the vault is needed and how to read it, retrieve and rank passages by words, meaning, and links, fit them to a token budget measured for the model, have the model answer with its sources, propose notes that are written only with the person's agreement, serve other tools through a standard protocol, and log the tokens, latency, and answer of every question so that each experiment can be examined. In non-functional terms, it must run entirely on the target consumer laptop with no dedicated graphics hardware and only the cloud reference model reached over a network, add a small fraction of the time of an answer, keep the vault as plain files beside a single local index with no server process, and retain all data on the device in every configuration except those that use the cloud model.
+The requirements were worked backwards from the study objectives, the measurements the evaluation needs, and the Sprint II review, so that each capability maps to an experiment or to the person using the system. Following OOAD, they were analysed with a use case diagram, sequence diagrams, an activity diagram and a class diagram, and stated as functional, non-functional, data and interface requirements with identifiers; Sections 4.2 and 4.3 present them.
 
 ## 3.5 System Design
 
-This section describes the design of the memory engine and, with equal weight, the design of the experiments that evaluated it.
+This section states how the engine and the experiments that evaluated it were designed.
 
 ### 3.5.1 Architectural Overview
 
-The engine consists of five steps arranged around a frozen local language model. Decide runs one search and judges whether the vault is needed, whether to search it or follow its links, and which skill fits the question. Fit limits what the model is shown to the amount measured for that model. Answer has the frozen model write the answer from the question, the skill, and the excerpts, naming a file and line for each statement. Check compares every cited place with what the model was shown and asks once more if it was not. Learn proposes notes for the person to keep. The store is a vault of plain Markdown files with a single embedded SQLite index beside it, which holds a word index, embedding vectors, and the links between files, and which can be rebuilt from the files at any time. The detailed component design is presented in Chapter 4.
+The engine was designed as a chain of steps around a frozen local model, with the memory kept as plain files beside one embedded index that can be rebuilt from them. The design was captured in a system architecture diagram, a diagram of the engine's steps, a logical database schema, wireframes and a deployment diagram, which Section 4.4 presents.
 
 ### 3.5.2 Experimental Design
 
@@ -116,7 +116,7 @@ The study produced the following deliverables, each described in its own subsect
 
 ### 3.7.1 The Burrow Memory Engine
 
-A Swift package that implements the vault, the index, and the five steps described in Section 3.5.1, with a command-line tool named burrow, running entirely on the target consumer laptop.
+A Swift package that implements the vault, the index, and the engine designed in Chapter 4, with a command-line tool named burrow, running entirely on the target consumer laptop.
 
 ### 3.7.2 The Desktop Application, Terminal Chat, and Protocol Server
 

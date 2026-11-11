@@ -125,7 +125,7 @@ After a conversation the engine can propose up to three notes of what the person
 
 ### 5.4.6 Serving Other Models and Tools
 
-The engine is not tied to the model it hosts, which implements FR-10 and IR-03. Figure 5.10 shows an outside client asking Burrow to prepare a task through the Model Context Protocol. Burrow returns its decision and the excerpts without calling a chat model.
+The engine is not tied to the model it hosts, which implements FR-10 and IR-03. Not every surface runs every step: the check with a retry runs only on the command line, the application warns about an unverified citation, and the terminal chat and the MCP server use a fixed budget of 12,000 characters rather than the fitted one. Figure 5.10 shows an outside client asking Burrow to prepare a task through the Model Context Protocol. Burrow returns its decision and the excerpts without calling a chat model.
 
 !fig figures/screens2/console-mcp.png | Figure 5.10: An outside client calling the tool vault_prepare through the Model Context Protocol | 6.2
 
