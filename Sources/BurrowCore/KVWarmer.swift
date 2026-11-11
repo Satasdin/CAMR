@@ -145,8 +145,17 @@ public actor KVWarmer {
         // Which parts: the ones asked for, or the ones holding the files that were looked up, or all of a small folder.
         let touched = touchedFiles[scope] ?? []
         // A file in the spine is in every part, so the first part stands for it.
-        var parts = asked ?? Set(plan.packs.filter { pack in pack.pieces.contains { touched.contains($0.path) } }.map(\.part))
-        if parts.isEmpty { parts = [1] }
+        // A lookup builds one part at most: the one holding most of the files it returned. A part can be gigabytes, so
+        // a broad search must not fill the shelf with folders nobody asked to read.
+        var parts: Set<Int>
+        if let asked {
+            parts = asked
+        } else {
+            let best = plan.packs.max { a, b in
+                a.pieces.filter { touched.contains($0.path) }.count < b.pieces.filter { touched.contains($0.path) }.count
+            }
+            parts = [best.flatMap { pack in pack.pieces.contains { touched.contains($0.path) } ? pack.part : nil } ?? 1]
+        }
         let keys = plan.packs.filter { parts.contains($0.part) }.map { KVShelf.key(for: $0, in: plan) }
         let fresh = keys.allSatisfy { key in shelf.entries().contains { $0.key == key && $0.model == model && shelf.stale($0, model: model) == nil } }
 

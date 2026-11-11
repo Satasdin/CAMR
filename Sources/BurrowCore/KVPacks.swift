@@ -316,11 +316,31 @@ extension LlamaServer {
     }
 
     /// Reads a prompt into the slot without writing anything. Returns the prompt's whole length and how much was read now.
-    func prefill(_ prompt: String) async throws -> (total: Int, read: Int, seconds: Double) {
-        let out = try await call("/completion", ["prompt": prompt, "n_predict": 0, "cache_prompt": true, "id_slot": slotID])
-        let timings = out["timings"] as? [String: Any] ?? [:]
-        let read = timings["prompt_n"] as? Int ?? 0
-        let total = out["tokens_evaluated"] as? Int ?? read
-        return (total, read, (timings["prompt_ms"] as? Double ?? 0) / 1000)
+    ///
+    /// The prompt is read in steps of about `step` characters, each starting from what the slot already holds, and
+    /// between steps Burrow waits while any other slot is working. A client that arrives during a build shares the
+    /// server with one step at most, a few seconds, instead of the whole read (D-60).
+    func prefill(_ prompt: String, step: Int = 14_000, yieldFor wait: TimeInterval = 600) async throws -> (total: Int, read: Int, seconds: Double) {
+        var total = 0, read = 0, seconds = 0.0
+        var end = prompt.startIndex
+        repeat {
+            end = prompt.index(end, offsetBy: step, limitedBy: prompt.endIndex) ?? prompt.endIndex
+            if step < prompt.count { try await waitWhileOthersWork(upTo: wait) }
+            let out = try await call("/completion", ["prompt": String(prompt[..<end]), "n_predict": 0, "cache_prompt": true, "id_slot": slotID])
+            let timings = out["timings"] as? [String: Any] ?? [:]
+            let now = timings["prompt_n"] as? Int ?? 0
+            read += now
+            total = out["tokens_evaluated"] as? Int ?? total + now
+            seconds += (timings["prompt_ms"] as? Double ?? 0) / 1000
+        } while end < prompt.endIndex
+        return (total, read, seconds)
+    }
+
+    func waitWhileOthersWork(upTo wait: TimeInterval) async throws {
+        let deadline = Date().addingTimeInterval(wait)
+        while let slots = try? await slots(), slots.contains(where: { $0.busy && $0.id != slotID }) {
+            guard Date() < deadline else { throw KVProblem(description: "a client kept the server busy, so the build was left for later") }
+            try await Task.sleep(nanoseconds: 500_000_000)
+        }
     }
 }

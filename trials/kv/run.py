@@ -45,6 +45,7 @@ def get(path):
 
 class Server:
     def __init__(self, vault, log, extra=()):
+        os.makedirs(os.path.join(vault, ".burrow", "kv"), exist_ok=True)  # llama.cpp refuses a save path that isn't there
         self.proc = subprocess.Popen(["llama-server", "-m", MODEL, "-a", "qwen3-4b-instruct", "--jinja", "-c", "65536", "-np", "2",
                                       "--port", str(PORT), "--slot-save-path", os.path.join(vault, ".burrow", "kv"), *extra],
                                      stdout=open(log, "w"), stderr=subprocess.STDOUT)
@@ -138,9 +139,11 @@ def warm(vault, out):
         answer, calls, used = chat(burrow, [{"role": "system", "content": system}, {"role": "user", "content": question}])
         sessions.append({"question": question, "tools": used, "calls": calls, "answer": answer[:600]})
         print(f"warm: {question[:50]}... tools {[u['tool'] for u in used]}", flush=True)
+    # The program keeps the folder it worked in, as a person or a model would by reading it whole.
+    burrow.call("vault_pack", {"folder": FOLDER, "part": 1})
     # Burrow warms after the replies, once the server is idle. Wait for it, with a limit.
     deadline = time.time() + 600
-    while time.time() < deadline and not any((e.get("scope") == FOLDER and (e.get("part") or 0) > 0) for e in shelf(vault)):
+    while time.time() < deadline and not any((e.get("scope") == FOLDER and e.get("part") == 1) for e in shelf(vault)):
         time.sleep(3)
     time.sleep(5)
     burrow.close()
@@ -153,7 +156,13 @@ def opening(vault, out, label, llama, extra=()):
     """A new conversation that opens with the folder's pack, the way a program would after `vault_pack`."""
     server = Server(vault, os.path.join(out, f"server-{label}.log"), extra)
     burrow = Burrow(vault, os.path.join(out, f"burrow-{label}.log"), llama=llama)
-    pack, seconds = burrow.call("vault_pack", {"folder": FOLDER, "part": 1})
+    if llama:
+        pack, seconds = burrow.call("vault_pack", {"folder": FOLDER, "part": 1})
+    else:  # the same text, sized for the same window, with nothing loaded
+        started = time.time()
+        pack = subprocess.run([BURROW, "kv", vault, "pack", FOLDER, "--part", "1", "--window", "32768", "--vault"],
+                              capture_output=True, text=True, check=True).stdout
+        seconds = time.time() - started
     time.sleep(3)  # the person types the question; Burrow loads the cache meanwhile, without holding anything up
     answer, calls, used = chat(burrow, [{"role": "system", "content": pack}, {"role": "user", "content": REUSE_QUESTION}])
     slots = get("/slots")
@@ -162,13 +171,33 @@ def opening(vault, out, label, llama, extra=()):
     first = calls[0]
     print(f"{label}: first call read {first['prompt_n']} tokens in {first['prompt_ms'] / 1000:.2f} s, "
           f"cached {first['cache_n']}, tg {first['tg_per_s']:.1f}/s, tools {[u['tool'] for u in used]}", flush=True)
-    return {"pack_characters": len(pack), "vault_pack_seconds": seconds, "calls": calls, "tools": used, "answer": answer[:800],
+    return {"pack_characters": len(pack), "pack_sha": __import__("hashlib").sha256(pack.encode()).hexdigest()[:12], "vault_pack_seconds": seconds, "calls": calls, "tools": used, "answer": answer[:800],
             "slots": [{"id": s["id"], "n_ctx": s["n_ctx"]} for s in slots]}
+
+
+def collide(vault, out):
+    """A client asks a plain question while Burrow builds another folder's pack, against the same question on an idle server."""
+    server = Server(vault, os.path.join(out, "server-collide.log"))
+    burrow = Burrow(vault, os.path.join(out, "burrow-collide.log"))
+    question = [{"role": "user", "content": "In two sentences, what is a vault in Burrow?"}]
+    post("/v1/chat/completions", {"messages": question, "max_tokens": 8})  # load the model
+    quiet = post("/v1/chat/completions", {"messages": question, "max_tokens": 200, "temperature": 0, "seed": 7, "cache_prompt": False})["timings"]
+    burrow.call("vault_pack", {"folder": "Law", "part": 1})   # Burrow starts building Law in the background
+    time.sleep(2)
+    busy = post("/v1/chat/completions", {"messages": question, "max_tokens": 200, "temperature": 0, "seed": 7, "cache_prompt": False})["timings"]
+    deadline = time.time() + 300
+    while time.time() < deadline and not any(e.get("scope") == "Law" and e.get("part") == 1 for e in shelf(vault)):
+        time.sleep(2)
+    burrow.close()
+    server.stop()
+    pick = lambda t: {"prompt_ms": t["prompt_ms"], "tg_per_s": t["predicted_per_second"], "predicted_ms": t["predicted_ms"]}
+    print(f"collide: idle tg {quiet['predicted_per_second']:.1f}/s, during a build {busy['predicted_per_second']:.1f}/s", flush=True)
+    return {"idle": pick(quiet), "during_build": pick(busy)}
 
 
 def main():
     vault = os.path.abspath(sys.argv[1])
-    wanted = [a for a in sys.argv[2:] if not a.startswith("--") and not os.sep in a] or ["warm", "reuse", "cold"]
+    wanted = [a for a in sys.argv[2:] if not a.startswith("--") and not os.sep in a] or ["warm", "reuse", "cold", "collide"]
     out = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else os.path.join(REPO, "trials", "results", "kv-1")
     os.makedirs(out, exist_ok=True)
     results = {"model": "qwen3:4b-instruct-2507-q4_K_M", "server": "llama-server -c 65536 -np 2 (32,768 tokens a slot)",
@@ -179,6 +208,8 @@ def main():
         results["reuse"] = opening(vault, out, "reuse", llama=True)
     if "cold" in wanted:
         results["cold"] = opening(vault, out, "cold", llama=False)
+    if "collide" in wanted:
+        results["collide"] = collide(vault, out)
     path = os.path.join(out, "client.json")
     json.dump(results, open(path, "w"), indent=2)
     print("saved", path)

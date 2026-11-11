@@ -10,9 +10,12 @@ background, folders are read whole in parts sized to the model's window, and the
 ## Set up (llama.cpp)
 
 ```
-llama-server -m model.gguf --jinja -c 65536 -np 2 --slot-save-path ~/Notes/.burrow/kv
+llama-server -m model.gguf --jinja -c 65536 -np 2 -fa on -ctk q8_0 -ctv q8_0 --slot-save-path ~/Notes/.burrow/kv
 burrow mcp ~/Notes --llama http://127.0.0.1:8080
 ```
+
+`-ctk q8_0 -ctv q8_0` keeps the cache in 8 bits: half the disk (1.6 GB against 3.1 GB for 21,000 tokens), a third of
+the load time, and the same answers in the trial (D-62).
 
 `-np 2` gives the server two slots. Burrow only ever builds in the last one, so the conversation a client has in the
 other is never erased. With one slot Burrow does nothing and says so once. `-c 65536` is shared by the slots, so each has
@@ -20,9 +23,11 @@ other is never erased. With one slot Burrow does nothing and says so once. `-c 6
 
 ## What happens
 
-1. A client calls `vault_search`, `vault_read` or `vault_prepare`. The reply goes out as text, as always.
+1. A client calls `burrow_find`, `burrow_read` or another lookup (`vault_search`, `vault_read`, `vault_prepare`). The reply goes out as text, as always.
 2. After the reply, Burrow notes the folders the files came from. When a folder has come up in two lookups, it is worth
-   keeping: once no slot is working, Burrow reads that folder's pack into the spare slot and saves the cache.
+   keeping: once no slot is working, Burrow reads the one part holding most of the files into the spare slot and saves
+   it. `vault_pack` says the same thing directly, for the part it returned. A build reads a step at a time and waits
+   whenever a client is working, so a client waits a few seconds at most.
 3. When the folder comes up again and its cache is fresh, Burrow loads it into the spare slot (about 0.4 s for 20,000
    tokens) instead of building it.
 4. A conversation that opens with the pack as its system message is sent to that slot by llama.cpp, which matches the
@@ -56,4 +61,8 @@ Each entry in `shelf.json` keeps the fields it always had (`key`, `model`, `file
 f16, so a 21,000-token part is 3 GB. The shelf keeps itself under 12 GB by clearing the least recently used caches;
 the text they came from is never touched.
 
-See `trials/results/kv-1/REPORT.md` for the measurements.
+## What it gave
+
+Through MCP with llama-server and Qwen3 4B, a conversation that opened with a 24,240-token pack started answering in
+5.3 s with the saved cache, against 37.7 s without it. No speculative decoding (n-gram lookup, a lookup table from the
+vault, a draft model) made writing faster on this Mac. See `trials/results/kv-1/REPORT.md` for the measurements.
