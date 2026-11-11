@@ -271,23 +271,32 @@ def main():
         "Table A3.2: Answers right by subject, Gemma 4 12B and the cloud model", [1.1, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
         ["Subject", "Alone", "Plain retrieval", "Chroma", "Engine", "Cloud alone", "Cloud with Burrow"], rows))
 
-    # Gap closed.
+    # Gap closed. The cloud model given the same vault is the ceiling that compares like with like; the cloud model alone
+    # could not have seen most of this material, so against it the fraction passes 100% and says little.
     rows = []
     gaps = {}
-    for folder, label in ((MAIN, "Gemma 4 12B"), (SMALL, "Qwen3.5 4B")):
-        local = data[folder]
-        if not local["local_engine"] or not cloud_alone:
+    for ceiling_name, ceiling in (("Cloud with Burrow", cloud_engine), ("Cloud alone", cloud_alone)):
+        if not ceiling:
             continue
-        for name, keep in GROUPS + [("All knowledge", knowledge)]:
-            for setup in ("local_database", "chroma", "local_engine"):
-                value = gap(local[setup], local["local_alone"], cloud_alone, keep)
-                gaps[f"{folder}|{name}|{setup}"] = value
-            rows.append([label, name, percent(right(local["local_alone"], keep)), percent(right(cloud_alone, keep))] + [
-                "not reported" if gaps[f"{folder}|{name}|{s}"] is None else f"{100 * gaps[f'{folder}|{name}|{s}']:.0f}%"
-                for s in ("local_database", "chroma", "local_engine")])
+        for folder, label in ((MAIN, "Gemma 4 12B"), (SMALL, "Qwen3.5 4B")):
+            local = data[folder]
+            if not local["local_engine"]:
+                continue
+            for name, keep in GROUPS + [("All knowledge", knowledge)]:
+                if name == "Reasoning" and ceiling is cloud_alone:
+                    continue  # the same 49 of 50 as the cloud model with Burrow, so the row would repeat
+                for setup in ("local_database", "chroma", "local_engine"):
+                    value = gap(local[setup], local["local_alone"], ceiling, keep)
+                    gaps[f"{ceiling_name}|{folder}|{name}|{setup}"] = value
+                    if ceiling is cloud_alone:
+                        gaps[f"{folder}|{name}|{setup}"] = value
+                rows.append([ceiling_name, label, name, percent(right(local["local_alone"], keep)), percent(right(ceiling, keep))] + [
+                    "not reported" if gaps[f"{ceiling_name}|{folder}|{name}|{s}"] is None else f"{100 * gaps[f'{ceiling_name}|{folder}|{name}|{s}']:.0f}%"
+                    for s in ("local_database", "chroma", "local_engine")])
     (OUT / "gap.md").write_text(table(
-        "Table 5.5: Fraction of the capability gap closed (Equation 3.1), against the cloud model alone", [0.9, 1.2, 1.0, 1.0, 0.8, 0.7, 0.7],
-        ["Local model", "Task type", "Floor: model alone", "Ceiling: cloud alone", "Plain retrieval", "Chroma", "Engine"], rows))
+        "Table 5.6: Fraction of the capability gap closed (Equation 3.1), against the cloud model with the same vault and against the cloud model alone",
+        [0.95, 0.85, 1.05, 0.95, 0.95, 0.7, 0.65, 0.65],
+        ["Ceiling", "Local model", "Task type", "Floor: model alone", "Ceiling score", "Plain retrieval", "Chroma", "Engine"], rows))
     numbers["gap"] = gaps
 
     # Cost.
@@ -379,7 +388,7 @@ def main():
         budget = statistics.median([(r.get("extra") or r).get("budget_characters", 0) for r in fitted.values()])
         sweep.append((int(budget), fitted))
         sweep.sort(key=lambda pair: pair[0])
-        alone, ceiling = data[MAIN]["local_alone"], cloud_alone
+        alone, ceiling = data[MAIN]["local_alone"], cloud_engine or cloud_alone
         rows = []
         curve = []
         for size, rows_ in sweep:
@@ -394,7 +403,7 @@ def main():
                          "-" if value is None else f"{100 * value:.0f}%", f"{per_thousand:.1f}", f"{median(rows_, 'seconds', knowledge):.1f}"])
         (OUT / "sweep.md").write_text(table(
             "Table 5.7: How much of the vault the model is shown, against what it gains, Gemma 4 12B, knowledge questions", [1.3, 1.3, 0.9, 0.9, 1.2, 0.8],
-            ["Characters shown", "Answers right", "Median tokens read", "Gap closed", "Points gained per 1,000 tokens", "Median seconds"], rows))
+            ["Characters shown", "Answers right", "Median tokens read", "Gap closed, against cloud with Burrow", "Points gained per 1,000 tokens", "Median seconds"], rows))
         numbers["sweep"] = curve
 
     extras(data, numbers)

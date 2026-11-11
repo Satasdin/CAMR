@@ -107,7 +107,7 @@ Source: `Research Writing for CS 2 Projects - 2026 (1).pdf` (194 pages), read in
 
 ## Decisions taken with the student for this report
 
-- No Chapter 6 yet. Chapter 5 is the last chapter and closes with results, discussion and limitations.
+- Chapter 6 (conclusions, recommendations, future works) added 12 November 2026 after an independent review against the guide.
 - The title, objectives and research questions are those of the approved June proposal, word for word.
 - Simulated developer agents are never called participants.
 
@@ -144,6 +144,6 @@ Checked on the PDF that Word exported from the document (`check-word.pdf`, 109 p
 | Version control, AI declaration, discussion and limitations | Met: Sections 5.7 to 5.9. Limits stated once in 5.7.5. |
 | M1 to M8 | Met. Not met in full: M7 asks for repeated runs, and each question was run once. This is stated as a limit. |
 | B1 to B6 | Met, with B5 resting on the repository as the other session left it. |
-| Chapter 6 | Left out on the student's decision. The guide expects it in the final submission. |
+| Chapter 6 | Added 12 November 2026; not yet checked in Word. |
 
 Layout points still open: Table A4.1 and Table A7.1 each spill one row onto a following page.

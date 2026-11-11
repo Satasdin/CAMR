@@ -1,12 +1,12 @@
-!tab Table A2.2: Changes to Chapters 1 to 3 since the approved proposal
+!tab Table A2.2: Changes since the approved proposal
 !widths 0.9,3.0,2.4
 | Section | What changed | Why |
 | Title, 1.3 | No change. The title and the objectives are those of the approved proposal, word for word, in the past tense where they describe the work. | Approved wording kept. Where the build departs from an objective, Sections 4.4.2 and 5.4.7 say so. |
-| 1.4 | The research questions were reworded so that each follows from the objective of the same number. | Course guide: research questions are derived from the objectives. |
+| 1.4 | The proposal's five research questions (techniques; how much of the gap; knowledge against reasoning; budget; cost) were reworded so that each follows from the objective of the same number. Section 1.4 states the change. | Course guide: research questions are derived from the objectives. |
 | Whole document | The engine is named Burrow. The earlier working name, CAMR, appears once in the text, in Section 3.3, and in the repository's address in Section 5.7. | The engine was rebuilt and renamed after the Sprint II review of 5 November 2026. |
 | Abstract and keywords | Rewritten last, with the method as carried out and the measured results. "Prompt compression" became "token budget". | Course guide: the abstract reflects the finished work. |
 | 1.1, 1.2 | Small models are no longer defined as one to three billion parameters. The solution is named as Burrow and described as a vault of the person's own files. | The models hosted are 12 and 4 billion parameters, and the memory is the person's files. |
-| 1.6 | The laptop is a MacBook Pro M5 Pro with 24 GB (was 16 GB). The models are named. Three curated subjects and GSM8K replace the public question-answering benchmarks. The Mac app, terminal chat and MCP server are in scope. | As built. The surfaces were added after the Sprint II review. |
+| 1.6 | The laptop is a MacBook Pro M5 Pro with 24 GB (was 16 GB). The models are named, and the main one has 12 billion parameters (small models were one to three billion). Three curated subjects and GSM8K replace the public question-answering benchmarks. The Mac app, terminal chat and MCP server are in scope. | As built. The surfaces were added after the Sprint II review. |
 | 1.7 | The third limitation states that the curated questions were written by a language model. Each delimitation answers the limitation of the same number. Link following is reported as built in a light form. | As run. |
 | 2.2, 2.3 | Newer models and sources were added, with word and meaning ranking, agent memory, and deciding when to retrieve. Some 2.3 sources were replaced by a stronger survey. | Models and techniques the engine uses. |
 | 2.4 | One related work added: Chroma, with its figure. A source is named in every figure caption. | Chroma is the baseline of the evaluation. |
@@ -14,6 +14,8 @@
 | 3.2 | PopQA, HotpotQA and 2WikiMultiHopQA were replaced by three curated subjects: Kenyan data protection law, software documentation of 2026, and a private project. GSM8K was kept. Three conditions became six set-ups. | The memory is a personal vault, which an encyclopaedia corpus does not represent. |
 | 3.3 | Four increments and one optional increment became the five increments as built. OOAD and a source for the methodology were added. | As built. Course guide: the paradigm is stated and the justification cites literature. |
 | 3.4 | The functions and qualities were updated in the same single paragraph. | As built; the supervisor's June comment kept this section short. |
-| 3.5 | The architecture is the engine's five steps. Benchmark metrics became accuracy by answer key. Bootstrap intervals became an exact sign test. The engine was frozen before scoring. | As run. |
+| 3.5 | The architecture is the engine's five steps. Benchmark metrics became accuracy by answer key. Bootstrap intervals became an exact sign test. The engine was frozen before scoring. The gap is reported against the cloud model with the same vault as well as alone. The budget sweep and the ten-point reporting rule were added after the evaluation plan, and each question was run once rather than timed over repeated runs. | As run. The plan had named the cloud model with memory as the ceiling for the private project. |
 | 3.6, 3.7 | The tools are Swift, SQLite with FTS5, Ollama with Gemma 4 and Qwen3.5, the Claude API, Qwen3 Embedding, Chroma, LangChain, the Model Context Protocol, Python for the harness, and Git. A deliverable was added for the app, the terminal chat and the MCP server. | As built. |
 | References | Rebuilt in APA 7th with Mendeley Cite, with full author lists and DOIs. Sources without a date were removed. | Course guide. |
+| Chapter 6 | Added: conclusions, recommendations and future works. | Course guide. |
+| 5.5, Appendix 3 | A coding trial and a third evaluation of session memory, which serve no objective, are reported in Appendix 3 and not in Chapter 5. | Supervisor's guidance to keep each chapter to its own part. |
