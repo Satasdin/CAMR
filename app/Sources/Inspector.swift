@@ -25,6 +25,7 @@ struct FileInspector: View {
     let document: Document
     @State private var mentions: [FoundLine] = []
     @State private var neighbours: [Vault.Neighbour] = []
+    @State private var unlinked: [FoundLine] = []
     /// Obsidian's right sidebar: one panel at a time, picked by icon.
     @State private var pane = Pane.links
     enum Pane: String, CaseIterable { case links, outline, history }
@@ -93,6 +94,20 @@ struct FileInspector: View {
                         .buttonStyle(.plain)
                     }
                 }
+                if !unlinked.isEmpty {
+                    Section("Unlinked mentions") {
+                        ForEach(unlinked.prefix(30)) { mention in
+                            Button { workspace.go(.file(mention.path), line: mention.line) } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mention.path.title).fontWeight(.medium).lineLimit(1)
+                                    Text(mention.text).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
                 if !outgoing.isEmpty {
                     Section("Links to") { ForEach(outgoing.prefix(60), id: \.rowID) { row($0) } }
                 }
@@ -106,6 +121,7 @@ struct FileInspector: View {
         .task(id: "\(path)|\(workspace.stats?.links ?? 0)") {
             neighbours = await workspace.neighbours(of: path)
             mentions = await workspace.mentions(of: path)
+            unlinked = await workspace.unlinkedMentions(of: path, linked: Set(mentions.map(\.path)))
         }
     }
 

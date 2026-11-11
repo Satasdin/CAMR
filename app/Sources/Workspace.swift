@@ -602,6 +602,22 @@ final class Workspace {
     func neighbours(of path: String) async -> [Vault.Neighbour] { await engine.neighbours(of: path) }
     func mentions(of path: String) async -> [FoundLine] { await engine.mentions(of: path) }
 
+    /// Obsidian's unlinked mentions: notes that name this file in plain words without linking to it.
+    func unlinkedMentions(of path: String, linked: Set<String>) async -> [FoundLine] {
+        let name = path.title
+        guard name.count >= 3 else { return [] }
+        let lower = name.lowercased()
+        let found = await engine.search(name, scope: nil)
+        var seen = Set<String>()
+        return found.filter { line in
+            guard line.path != path, line.path.isMarkdownPath, !linked.contains(line.path), !seen.contains(line.path) else { return false }
+            let text = line.text.lowercased()
+            guard text.contains(lower), !text.contains("[[" + lower) else { return false }
+            seen.insert(line.path)
+            return true
+        }
+    }
+
     // MARK: Search
 
     func runSearch() {
