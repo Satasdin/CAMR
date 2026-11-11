@@ -144,6 +144,7 @@ struct SessionPage: View {
                                 .foregroundStyle(Night.dim).font(.system(size: 12.5)).monospacedDigit()
                         }
                     }
+                    SessionActions(workspace: workspace, record: record)
                     if let from = record.resumedFrom {
                         Button { workspace.go(.session(from)) } label: { Label("Carried on from an earlier conversation", systemImage: "arrow.turn.left.up") }
                             .buttonStyle(.link)
@@ -162,6 +163,51 @@ struct SessionPage: View {
         .frame(maxWidth: .infinity)
         .background(Night.ground)
         .environment(\.colorScheme, .dark)
+    }
+}
+
+/// Hand this conversation to another model, or keep something from it in the Ledger.
+struct SessionActions: View {
+    let workspace: Workspace
+    let record: VaultSession
+    @State private var keeping = false
+    @State private var words = ""
+    @State private var kind = LedgerCommit.Kind.decision
+    @State private var copied = false
+
+    private var files: [String] {
+        record.filesInPlay.map { $0.components(separatedBy: ":").first ?? $0 }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(Handoff.text(record), forType: .string); copied = true } label: {
+                    Label(copied ? "Copied" : "Copy Handoff", systemImage: "arrow.right.circle")
+                }
+                .help("The short handoff any model can carry this conversation on from")
+                Button { keeping.toggle() } label: { Label("Keep in Ledger", systemImage: "books.vertical") }
+                    .help("Keep a decision, fact or plan from this conversation, resting on the files it read")
+            }
+            .controlSize(.small)
+            if keeping {
+                HStack(spacing: 8) {
+                    Picker("", selection: $kind) {
+                        ForEach([LedgerCommit.Kind.decision, .fact, .plan], id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden().frame(width: 110)
+                    TextField("What to keep, in a sentence", text: $words).textFieldStyle(.roundedBorder)
+                    Button("Keep") {
+                        let message = words, chosen = kind
+                        Task { await workspace.keep(chosen, message, files: Array(files.prefix(12)), session: record.id) }
+                        words = ""
+                        keeping = false
+                    }
+                    .disabled(words.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                .controlSize(.small)
+            }
+        }
     }
 }
 

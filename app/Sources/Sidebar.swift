@@ -76,6 +76,9 @@ struct Places: View {
                 }
             }
             heading("Memory")
+            PlaceRow(title: "Ledger", icon: "books.vertical", active: { if case .ledger = content { return true } else { return false } }(),
+                     count: workspace.ledger.commits.count,
+                     dot: workspace.ledger.stale.isEmpty && workspace.ledger.reverted.isEmpty ? nil : Night.stale) { workspace.go(.ledger(nil)) }
             PlaceRow(title: "Shelf", icon: "memorychip", active: content == .shelf, count: workspace.shelf.count,
                      dot: workspace.shelf.contains { $0.stale != nil } ? Night.stale : Night.cache) { workspace.go(.shelf) }
             PlaceRow(title: "Programs", icon: "app.connected.to.app.below.fill", active: content == .programs, count: nil, dot: nil) { workspace.go(.programs) }

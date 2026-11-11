@@ -71,6 +71,8 @@ struct MainWindow: View {
             ShelfPage(workspace: workspace)
         case .programs:
             ProgramsPage(workspace: workspace)
+        case let .ledger(branch):
+            LedgerPage(workspace: workspace, branch: branch)
         case nil:
             EmptyPage(workspace: workspace)
         }
@@ -133,6 +135,7 @@ struct TabButton: View {
         case .conversations, .session: return "point.3.connected.trianglepath.dotted"
         case .shelf: return "memorychip"
         case .programs: return "app.connected.to.app.below.fill"
+        case .ledger: return "books.vertical"
         }
     }
 

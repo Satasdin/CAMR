@@ -28,6 +28,7 @@ struct Palette: View {
             Item(id: "c-conversations", title: "Conversations", detail: "⌘2", icon: "point.3.connected.trianglepath.dotted") { w.go(.conversations(nil)) },
             Item(id: "c-shelf", title: "Shelf", detail: "⌘3", icon: "memorychip") { w.go(.shelf) },
             Item(id: "c-programs", title: "Programs", detail: "⌘4", icon: "app.connected.to.app.below.fill") { w.go(.programs) },
+            Item(id: "c-ledger", title: "Ledger", detail: "⌘5", icon: "books.vertical") { w.go(.ledger(nil)) },
             Item(id: "c-graph", title: "Map", detail: "⇧⌘G", icon: "circle.hexagongrid") { w.go(.graph) },
             Item(id: "c-search", title: "Search Vault", detail: "⇧⌘F", icon: "magnifyingglass") { w.sidebarMode = .search },
             Item(id: "c-read", title: "Read Vault Again", detail: "⌘R", icon: "arrow.clockwise") { Task { await w.readAgain() } },

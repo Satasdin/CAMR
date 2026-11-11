@@ -38,6 +38,7 @@ struct BurrowApp: App {
             Button("Conversations") { workspace?.go(.conversations(nil)) }.keyboardShortcut("2").disabled(workspace == nil)
             Button("Shelf") { workspace?.go(.shelf) }.keyboardShortcut("3").disabled(workspace == nil)
             Button("Programs") { workspace?.go(.programs) }.keyboardShortcut("4").disabled(workspace == nil)
+            Button("Ledger") { workspace?.go(.ledger(nil)) }.keyboardShortcut("5").disabled(workspace == nil)
             Button("Map") { workspace?.go(.graph) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(workspace == nil)
             Divider()
         }

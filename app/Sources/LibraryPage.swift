@@ -198,6 +198,7 @@ struct LibraryInspector: View {
                     if LibraryKind.of(path) == .documents || LibraryKind.of(path) == .images { ReadInFacts(workspace: workspace, path: path) }
                     if (path as NSString).pathExtension.lowercased() == "pdf" { PageStrip(url: workspace.fileURL(path)) }
                     ReadBy(workspace: workspace, path: path)
+                    LedgerAboutFile(workspace: workspace, path: path)
                 }
                 .padding(16)
             }

@@ -18,6 +18,18 @@ actor Engine {
     }
 
     func map() throws -> ProjectMap { try vault.projectMap() }
+    func ledger() -> LedgerState {
+        let ledger = Ledger(vault: vault)
+        let commits = ledger.log(limit: 2_000)
+        var stale: [String: [String]] = [:]
+        for commit in commits { let changed = ledger.changed(commit); if !changed.isEmpty { stale[commit.id] = changed } }
+        return LedgerState(commits: commits, reverted: ledger.reverted(), stale: stale, current: ledger.current)
+    }
+    func commit(_ kind: LedgerCommit.Kind, _ message: String, files: [String], branch: String?, session: String?) throws -> LedgerCommit {
+        try Ledger(vault: vault).commit(kind, message, files: files, author: "person", client: "Burrow app", branch: branch, session: session)
+    }
+    func revert(_ id: String, why: String) throws { try Ledger(vault: vault).revert(id, why: why, author: "person", client: "Burrow app") }
+    func resumeText(_ branch: String?) -> String { Ledger(vault: vault).resume(branch: branch) }
     func sessions() -> [VaultSession] { SessionStore(vault: vault).list().filter { !$0.isEmpty } }
     func shelf() -> [ShelfItem] {
         let shelf = KVShelf(vault: vault)
@@ -156,6 +168,7 @@ enum TabContent: Hashable {
     case session(String)
     case shelf
     case programs
+    case ledger(String?)
 }
 
 struct Tab: Identifiable, Hashable {
@@ -183,6 +196,7 @@ final class Workspace {
     var stats: VaultStats?
     var sessions: [VaultSession] = []
     var shelf: [ShelfItem] = []
+    var ledger = LedgerState()
     var librarySelection: String?
     /// Runs once the files are known, before meanings are learned, so layout checks need not wait for Ollama.
     var afterFirstRead: (() -> Void)?
@@ -289,6 +303,7 @@ final class Workspace {
         stats = try? await engine.stats()
         sessions = await engine.sessions()
         shelf = await engine.shelf()
+        ledger = await engine.ledger()
         let sim = self.sim
         let linkedNames = Set(linked.map(\.name))
         await Task.detached { sim.load(newMap, linked: linkedNames) }.value
@@ -349,6 +364,7 @@ final class Workspace {
         case let .session(id): return sessions.first { $0.id == id }.map { Program(client: $0.client).name } ?? "Conversation"
         case .shelf: return "Shelf"
         case .programs: return "Programs"
+        case let .ledger(branch): return branch.map { "Ledger · \($0)" } ?? "Ledger"
         }
     }
 
@@ -406,6 +422,23 @@ final class Workspace {
     }
 
     // MARK: Documents
+
+    /// Keeps something in the Ledger from the app, then reads the Ledger again.
+    func keep(_ kind: LedgerCommit.Kind, _ message: String, files: [String], branch: String? = nil, session: String? = nil) async {
+        do {
+            _ = try await engine.commit(kind, message, files: files, branch: branch, session: session)
+            ledger = await engine.ledger()
+        } catch { warning = "Could not keep that: \(error)" }
+    }
+
+    func markWrong(_ id: String, why: String) async {
+        do {
+            try await engine.revert(id, why: why)
+            ledger = await engine.ledger()
+        } catch { warning = "Could not mark that wrong: \(error)" }
+    }
+
+    func resumeText(_ branch: String?) async -> String { await engine.resumeText(branch) }
 
     /// A file's text as the vault reads it, for covers and previews. Documents come back as their extracted Markdown.
     func text(of path: String) async -> String? { await engine.text(of: path) }
@@ -754,6 +787,7 @@ final class Library {
         case "session": if let first = workspace.sessions.first { workspace.go(.session(first.id)) }
         case "shelf": workspace.go(.shelf)
         case "programs": workspace.go(.programs)
+        case "ledger": workspace.go(.ledger(nil))
         case "documents": workspace.go(.library(.documents))
         default: break
         }
