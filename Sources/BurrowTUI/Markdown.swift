@@ -91,15 +91,58 @@ struct DocumentRenderer {
 
     // MARK: Notes
 
+    /// Front matter as properties: `key: value`, `key: [a, b]`, and `- item` lines under a key.
+    static func properties(_ yaml: [String]) -> [(key: String, items: [String])] {
+        var out: [(key: String, items: [String])] = []
+        func unquote(_ text: String) -> String {
+            let trimmed = text.trimmingCharacters(in: .whitespaces)
+            if trimmed.count >= 2, let first = trimmed.first, first == trimmed.last, first == "\"" || first == "'" { return String(trimmed.dropFirst().dropLast()) }
+            return trimmed
+        }
+        for raw in yaml {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty || line.hasPrefix("#") { continue }
+            if line.hasPrefix("- "), !out.isEmpty {
+                let item = unquote(String(line.dropFirst(2)))
+                if out[out.count - 1].items == [""] { out[out.count - 1].items = [item] } else { out[out.count - 1].items.append(item) }
+                continue
+            }
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            let key = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+            let value = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+            if value.hasPrefix("["), value.hasSuffix("]") {
+                out.append((key, value.dropFirst().dropLast().split(separator: ",").map { unquote(String($0)) }.filter { !$0.isEmpty }))
+            } else {
+                out.append((key, [unquote(value)]))
+            }
+        }
+        return out
+    }
+
     func renderNote(_ text: String) -> RenderedDocument {
         let out = Builder()
         var lines = text.components(separatedBy: "\n")
         var index = 0
         if text.hasPrefix("---\n"), let close = lines.dropFirst().firstIndex(of: "---") {
-            let fields = NoteFile.split(text).fields
-            let meta = [fields["kind"], fields["date"]].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "  ·  ")
-            if !meta.isEmpty {
-                out.document.lines.append(DocLine(spans: [DocSpan(text: meta, style: Style(ink: .note, dim: true))], source: 1))
+            // Obsidian's properties: the front matter as named rows above the page, never as raw YAML.
+            let properties = Self.properties(Array(lines[1..<close]))
+            if !properties.isEmpty {
+                let keyWidth = min(16, (properties.map { Cells.width(of: $0.key) }.max() ?? 4) + 2)
+                for (number, property) in properties.enumerated() {
+                    var spans = [DocSpan(text: Cells.pad(Cells.truncate(property.key, to: keyWidth - 2), to: keyWidth), style: .quiet)]
+                    if property.items.count > 1 || property.key.lowercased().contains("tag") {
+                        let tags = property.key.lowercased().contains("tag")
+                        for (offset, item) in property.items.enumerated() {
+                            if offset > 0 { spans.append(DocSpan(text: "  ", style: .plain)) }
+                            spans.append(DocSpan(text: tags && !item.hasPrefix("#") ? "#" + item : item, style: Style(ink: tags ? .code : .plain)))
+                        }
+                    } else {
+                        let value = property.items.first ?? ""
+                        let ink: Ink = value.hasPrefix("http") || value.hasPrefix("[[") ? .code : .plain
+                        spans.append(DocSpan(text: value.isEmpty ? "—" : value, style: value.isEmpty ? .quiet : Style(ink: ink)))
+                    }
+                    out.document.lines.append(DocLine(spans: spans, source: 2 + number))
+                }
                 out.document.lines.append(DocLine(spans: [], source: 1))
             }
             index = close + 1

@@ -206,7 +206,8 @@ final class MarkdownTests: XCTestCase {
     }
 
     func testFrontMatterBecomesAQuietLine() {
-        XCTAssertEqual(plain(render("---\nkind: bug\ndate: 2026-01-02\n---\n\nHello")), ["bug  ·  2026-01-02", "", "Hello"])
+        XCTAssertEqual(plain(render("---\nkind: bug\ndate: 2026-01-02\n---\n\nHello")), ["kind  bug", "date  2026-01-02", "", "Hello"])
+        XCTAssertEqual(plain(render("---\ntags:\n  - a\n  - b\nsource: https://x.org\n---\nHi")), ["tags    #a  #b", "source  https://x.org", "", "Hi"])
     }
 
     func testSourceLinesCountFromTheFile() {
