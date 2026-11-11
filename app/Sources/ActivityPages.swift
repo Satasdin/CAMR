@@ -290,17 +290,35 @@ struct ShelfPage: View {
                         }
                     }
                     buildStrip
+                    ForEach(packs, id: \.title) { pack in
+                        PackCard(workspace: workspace, title: pack.title, items: pack.items, largest: largest)
+                    }
                     VStack(spacing: 10) {
-                        ForEach(workspace.shelf.sorted { $0.entry.created > $1.entry.created }) { item in
-                            ShelfRow(workspace: workspace, item: item, largest: workspace.shelf.map(\.entry.bytes).max() ?? 1)
+                        ForEach(workspace.shelf.filter { !$0.isPack }.sorted { $0.touched > $1.touched }) { item in
+                            ShelfRow(workspace: workspace, item: item, largest: largest)
                         }
                     }
+                    Text("The shelf keeps up to 12 GB and clears the caches used longest ago, so a cache can leave between visits. The files themselves always stay.")
+                        .font(.system(size: 11.5)).foregroundStyle(Night.faint)
                 }
             }
             .padding(.horizontal, 28).padding(.vertical, 22)
         }
         .background(Night.ground)
         .environment(\.colorScheme, .dark)
+    }
+
+    private var largest: Int { workspace.shelf.map(\.entry.bytes).max() ?? 1 }
+
+    /// Packs grouped by folder and model, most recently used first; parts in order with the shared start first.
+    private var packs: [(title: String, items: [ShelfItem])] {
+        let grouped = Dictionary(grouping: workspace.shelf.filter(\.isPack)) { "\($0.entry.scope ?? "")|\($0.entry.model)" }
+        return grouped.values.map { items in
+            let sorted = items.sorted { ($0.entry.part ?? 0) < ($1.entry.part ?? 0) }
+            let scope = sorted.first?.entry.scope ?? ""
+            return (scope.isEmpty ? "Whole vault" : scope, sorted)
+        }
+        .sorted { ($0.items.map(\.touched).max() ?? .distantPast) > ($1.items.map(\.touched).max() ?? .distantPast) }
     }
 
     private func shade(_ model: String) -> Double {
@@ -331,8 +349,8 @@ struct ShelfPage: View {
     private var buildStrip: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Reading each cache saves the next question").font(.system(size: 12, weight: .semibold)).foregroundStyle(Night.dim)
-            Chart(workspace.shelf.sorted { $0.entry.buildSeconds > $1.entry.buildSeconds }) { item in
-                BarMark(x: .value("Seconds", item.entry.buildSeconds), y: .value("Cache", item.files.first?.title ?? item.entry.key))
+            Chart(workspace.shelf.filter { !$0.isSpine }.sorted { $0.entry.buildSeconds > $1.entry.buildSeconds }.prefix(12).map { $0 }) { item in
+                BarMark(x: .value("Seconds", item.entry.buildSeconds), y: .value("Cache", item.label))
                     .foregroundStyle(item.stale == nil ? Night.cache : Night.stale)
                     .annotation(position: .trailing) {
                         Text(String(format: "%.1f s · %@ tokens", item.entry.buildSeconds, item.entry.tokens.formatted()))
@@ -344,9 +362,58 @@ struct ShelfPage: View {
                 AxisValueLabel { if let v = value.as(Double.self) { Text(String(format: "%.0f s", v)) } }
             } }
             .chartYAxis { AxisMarks { _ in AxisValueLabel().foregroundStyle(Night.dim) } }
-            .frame(height: CGFloat(max(workspace.shelf.count, 1)) * 26 + 24)
+            .frame(height: CGFloat(min(max(workspace.shelf.filter { !$0.isSpine }.count, 1), 12)) * 26 + 24)
         }
         .padding(14).background(Night.card, in: .rect(cornerRadius: 12))
+    }
+}
+
+/// A folder read as a pack: a shared start (dimmed, since every part loads it) and parts stacked on it, shown as one bar.
+struct PackCard: View {
+    let workspace: Workspace
+    let title: String
+    let items: [ShelfItem]
+    let largest: Int
+
+    private var total: Int { items.reduce(0) { $0 + $1.entry.bytes } }
+    private var stale: Int { items.filter { $0.stale != nil }.count }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "square.stack.3d.up.fill").foregroundStyle(Night.cache)
+                Text(title).font(.system(size: 14, weight: .semibold))
+                Text(ModelName.display(items.first?.entry.model ?? "")).font(.system(size: 12)).foregroundStyle(Night.dim).lineLimit(1)
+                if stale > 0 { Label("\(stale) stale", systemImage: "exclamationmark.circle.fill").foregroundStyle(Night.stale).font(.system(size: 11.5, weight: .medium)) }
+                Spacer()
+                Text("\(items.filter { !$0.isSpine }.count.counted("part")) · \(total.bytesText)").font(.system(size: 12.5, weight: .medium)).monospacedDigit()
+            }
+            GeometryReader { box in
+                HStack(spacing: 2) {
+                    ForEach(items) { item in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(item.stale != nil ? Night.stale : Night.cache.opacity(item.isSpine ? 0.35 : 0.9))
+                            .frame(width: max(3, (box.size.width - CGFloat(items.count) * 2) * CGFloat(item.entry.bytes) / CGFloat(max(total, 1))))
+                            .help("\(item.label) · \(item.entry.tokens.formatted()) tokens · \(item.entry.bytes.bytesText)\(item.stale.map { " · " + $0 } ?? "")")
+                    }
+                }
+            }
+            .frame(height: 10)
+            .shadow(color: Night.cache.opacity(0.45), radius: 6)
+            HStack(spacing: 6) {
+                ForEach(items.filter { !$0.isSpine }.flatMap(\.files).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }.prefix(8), id: \.self) { path in
+                    CoverImage(workspace: workspace, path: path, size: CGSize(width: 160, height: 120), compact: true)
+                        .frame(width: 52, height: 39).clipShape(.rect(cornerRadius: 4)).help(path)
+                }
+                Spacer()
+                if let used = items.map(\.touched).max() {
+                    Text("used \(used.formatted(.relative(presentation: .named)))").font(.system(size: 11.5)).foregroundStyle(Night.faint)
+                }
+            }
+        }
+        .padding(12)
+        .background(Night.card, in: .rect(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder((stale > 0 ? Night.stale : Night.cache).opacity(0.22)) }
     }
 }
 

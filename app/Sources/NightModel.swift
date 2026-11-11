@@ -136,6 +136,17 @@ struct ShelfItem: Identifiable, Sendable {
     let stale: String?
     var id: String { entry.key + entry.model }
     var files: [String] { entry.sources.keys.sorted() }
+    /// A pack covers a whole folder in parts stacked on a shared spine; anything else is a single `kv save`.
+    var isPack: Bool { entry.key.hasPrefix("pack-") }
+    /// Part 0 of a pack: the folder's shared start that every part is stacked on.
+    var isSpine: Bool { isPack && entry.part == 0 }
+    /// When it was last loaded or built. The shelf clears the least recently used above its limit.
+    var touched: Date { entry.lastUsed ?? entry.created }
+    var label: String {
+        guard isPack, let part = entry.part else { return files.first?.title ?? entry.key }
+        let folder = entry.scope.map { $0.isEmpty ? "Whole vault" : $0 } ?? "Pack"
+        return part == 0 ? "\(folder) · shared start" : "\(folder) · part \(part) of \(entry.parts ?? part)"
+    }
 }
 
 typealias VaultSession = BurrowTools.SessionRecord
