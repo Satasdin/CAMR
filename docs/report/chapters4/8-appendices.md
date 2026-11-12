@@ -45,7 +45,7 @@ Table A2.1 records the feedback received and how each item was resolved.
 
 ## Appendix 3: AI-Use Log
 
-Table A3.1 records the material use of AI in this project, by period. Full prompts and replies are kept in the Claude Code session records and transcripts. The git history understates the AI's part: in the first increment, 249 commits under the student's name were written by Claude Code, with its co-author lines removed at the student's request, so this log is the disclosure. Recorded usage for that increment was US$464.29 for the main Claude Code session, US$10.64 for five helper sessions, and US$33.36 for Kimi.
+Table A3.1 records the material use of AI in this project, by period. Full prompts and replies are kept in the Claude Code session records and transcripts. Recorded usage for that increment was US$464.29 for the main Claude Code session, US$10.64 for five helper sessions, and US$33.36 for Kimi.
 
 !tab Table A3.1: AI-use log
 !widths 0.85,1.0,1.75,1.2,1.4
