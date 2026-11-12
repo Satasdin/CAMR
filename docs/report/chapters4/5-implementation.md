@@ -107,9 +107,9 @@ In the desktop app the answer comes from the program the person already uses, an
 
 !fig figures/screens4/app-session.png | Figure 5.6: A conversation Gemma 4 12B held with the vault through OpenCode, with each lookup and the files it read | 6.2
 
-Figure 5.7 shows the Programs page, which answers the Sprint II request to see model activity. Each program that can use the vault is drawn with a line to it that brightens with use, and below are the lookups of the day and a Connect button for each program.
+Figure 5.7 shows the Programs page, which answers the Sprint II request to see model activity. Each program that can use the vault is drawn as a line running into it, bright when the program has read from the vault that day and dashed when it is not set up. The page reads each program's own settings to say whether it starts Burrow on this vault. Pointing at a line shows that program's last question and the files it read most, and clicking it opens its conversations; below are the lookups of the day and the setup for each program.
 
-!fig figures/screens4/app-programs.png | Figure 5.7: The programs that use the vault, and how much each one has read from it today | 6.2
+!fig figures/screens4/app-programs.png | Figure 5.7: The programs that use the vault, with the files OpenCode read most today | 6.2
 
 On the command line every file and line in the answer is compared with what the model was shown, and the model is asked once more if a citation was not among them, which implements FR-08. Figure 5.8 shows what happens when the excerpts do not hold the answer. The question is about Ugandan law, which the vault does not contain. The engine still searched, because the closest files are about data protection, and the model said that it did not know from what it was shown, while the lines below list the nine files it read.
 

@@ -121,7 +121,7 @@ i) Choose a folder as the vault. An existing Obsidian vault works as it is.
 ii) Write notes in the centre pane and link notes with [[. A note's properties are shown as fields above its text, and holding Command over a link previews the note.
 iii) To add code, choose Add, then Link a Folder.
 iv) Open the graph to see how notes link, and search from the sidebar.
-v) Open Programs to connect a model or tool, such as Claude Code, LM Studio or Ollama, through the MCP server. Its conversations then appear under Conversations, and what it understood appears in the Ledger.
+v) Open Programs to connect a model or tool, such as Claude Code, LM Studio or Ollama, through the MCP server: press Connect, then Copy, or Add for Me to write the setting into the program. Its conversations then appear under Conversations as it works, and what it understood appears in the Ledger.
 
 **Using the terminal.**
 
