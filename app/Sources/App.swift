@@ -67,6 +67,23 @@ final class Delegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         if ProcessInfo.processInfo.environment["BURROW_SNAPSHOT"] == nil { NSApp.activate(ignoringOtherApps: true) }
         snapshotIfAsked()
+        recordIfAsked()
+    }
+
+    /// For a demonstration video without screen recording: BURROW_RECORD=folder saves the window as numbered frames,
+    /// ten a second, until the app quits; ffmpeg joins them. Frames come from the app's own drawing, like BURROW_SNAPSHOT.
+    private func recordIfAsked() {
+        guard let folder = ProcessInfo.processInfo.environment["BURROW_RECORD"] else { return }
+        try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+        var frame = 0
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            guard let view = NSApp.windows.first(where: \.isVisible)?.contentView?.superview,
+                  let picture = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+            view.cacheDisplay(in: view.bounds, to: picture)
+            guard let data = picture.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) else { return }
+            frame += 1
+            try? data.write(to: URL(fileURLWithPath: folder).appendingPathComponent(String(format: "f%05d.jpg", frame)))
+        }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 

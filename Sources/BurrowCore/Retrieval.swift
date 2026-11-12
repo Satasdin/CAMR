@@ -174,7 +174,7 @@ extension Vault {
         // The file or folder a question named may have missed both rankings, so its chunks are looked up directly.
         let named = asked.names.isEmpty ? [] : fileOf.keys.filter { asked.names(fileOf[$0]!.path) && Self.inside(scope, fileOf[$0]!.path) }
             .sorted { (score[$0] ?? 0, $1) > (score[$1] ?? 0, $0) }
-        let ordered = (try exactRanks(question, limit: front) + named.prefix(front) + merged).filter { seen.insert($0).inserted }
+        let ordered = (try exactRanks(question, limit: front) + Array(named.prefix(front)) + merged).filter { seen.insert($0).inserted }
         var hits: [Hit] = []
         for id in ordered where hits.count < limit {
             // A skill is a way of working, not a fact about the vault. It reaches the model by another road.
