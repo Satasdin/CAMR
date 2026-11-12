@@ -265,6 +265,8 @@ Project repository: https://github.com/Satasdin/CAMR, with burrow as its default
 
 The workflow supported the evaluation directly. Each evaluation was run on a tagged, frozen version. The tag evaluation-1 marks retrieval before the engine's steps, and evaluation-2 marks the engine measured in this chapter. The hash of the frozen program is saved in trials/results/gap-1 and in each set-up's meta.json, and the harness refuses to add answers from a different program to the same folder. A reported number can therefore be traced to the exact code that produced it.
 
+Every push to the repository also runs the automated tests on a hosted Apple silicon machine through GitHub Actions, and the log of each run is kept with its commit. The first run, on 12 November 2026, failed to compile: one line of the retrieval code used a form that the hosted Swift compiler did not accept, although the newer compiler on the development laptop did. The line was corrected, and the next run built the engine and passed every test. The release burrow-v1.1.0 was published from that tested commit.
+
 ## 5.8 Author Oversight and Use of AI-Assisted Tools
 
 Claude Code, a coding assistant from Anthropic, assisted with the system design, implementation, testing, and evaluation reported in Chapters 4 and 5, and with the drafting of those two chapters. Its output was checked against the automated tests, the saved results, and the cited sources. The author made the final decisions and takes full responsibility for the submitted work. Appendix 7 gives the AI-use log, and Appendix 5 a short user guide.
