@@ -195,7 +195,7 @@ struct FileTree: View {
         Label {
             Text(node.name).lineLimit(1)
         } icon: {
-            Image(systemName: icon(node)).foregroundStyle(node.isLinkedRoot ? Color.accentColor : .secondary)
+            Image(systemName: icon(node)).foregroundStyle(node.isLinkedRoot ? Color.accentColor : (workspace.folderColours[node.path] ?? .secondary))
         }
         .draggable(node.path)
         .dropDestination(for: String.self) { items, _ in

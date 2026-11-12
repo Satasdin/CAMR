@@ -183,6 +183,21 @@ extension Workspace {
         return folder.appendingPathComponent(path)
     }
 
+    /// Each top-level folder's colour on the map, so the sidebar and the map agree on which part of the vault is which.
+    /// Same order as the map: largest folder first.
+    var folderColours: [String: Color] {
+        let linkedNames = Set(linked.map(\.name))
+        var sizes: [String: Int] = [:]
+        for file in map.files {
+            let folders = file.path.split(separator: "/").dropLast().map(String.init)
+            guard let first = folders.first else { sizes["", default: 0] += 1; continue }
+            sizes[linkedNames.contains(first) ? folders.prefix(3).joined(separator: "/") : first, default: 0] += 1
+        }
+        let order = sizes.keys.sorted { (sizes[$0]!, $1) > (sizes[$1]!, $0) }
+        return Dictionary(order.enumerated().filter { !$0.element.isEmpty && !$0.element.contains("/") && !linkedNames.contains($0.element) }
+            .map { ($0.element, $0.offset < Theme.clusters.count ? Theme.clusters[$0.offset] : Theme.otherCluster) }, uniquingKeysWith: { a, _ in a })
+    }
+
     func count(_ kind: LibraryKind) -> Int { map.files.filter { kind.holds($0.path) }.count }
 
     func sessions(reading path: String) -> [VaultSession] {

@@ -228,7 +228,8 @@ struct OverviewInspector: View {
                     Button(folder.name) { workspace.go(.library(.all)) }
                     .buttonStyle(.plain).help(folder.path)
                 }
-                Button("Link a Folder…") { pickLinkedFolder(workspace) }
+                Button { pickLinkedFolder(workspace) } label: { Label("Link a Folder…", systemImage: "link") }
+                    .buttonStyle(.borderless).foregroundStyle(Night.conversation)
             }
         }
     }

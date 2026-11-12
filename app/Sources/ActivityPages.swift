@@ -28,7 +28,7 @@ struct ConversationsPage: View {
                     Chip(title: "All", count: workspace.sessions.count, dot: Night.conversation, selected: program == nil) { workspace.go(.conversations(nil)) }
                     ForEach(Program.allCases) { each in
                         let count = workspace.sessions(for: each).count
-                        if count > 0 { Chip(title: each.name, count: count, selected: program == each) { workspace.go(.conversations(each)) } }
+                        if count > 0 { Chip(title: each.name, count: count, dot: each.colour, selected: program == each) { workspace.go(.conversations(each)) } }
                     }
                 }
                 if days.isEmpty {
@@ -72,7 +72,7 @@ struct SessionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Image(systemName: record.program.symbol).foregroundStyle(Night.conversation).frame(width: 20)
+                Image(systemName: record.program.symbol).foregroundStyle(record.program.colour).frame(width: 20)
                 Text(record.program.name).font(.system(size: 13, weight: .semibold))
                 if let model = record.turns.last?.model, model != "unnamed", !model.isEmpty { Text(model).font(.system(size: 11.5)).foregroundStyle(Night.faint).lineLimit(1) }
                 Spacer()
@@ -103,7 +103,7 @@ struct SessionCard: View {
         }
         .padding(14)
         .background(hovering ? Night.cardHover : Night.card, in: .rect(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Night.conversation.opacity(hovering ? 0.55 : 0.18)) }
+        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(record.program.colour.opacity(hovering ? 0.55 : 0.18)) }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
     }
@@ -144,7 +144,7 @@ struct SessionPage: View {
             if let record {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 10) {
-                        Image(systemName: record.program.symbol).font(.system(size: 20)).foregroundStyle(Night.conversation)
+                        Image(systemName: record.program.symbol).font(.system(size: 20)).foregroundStyle(record.program.colour)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(record.program.name).font(.system(size: 24, weight: .bold)).tracking(-0.3)
                             Text("\(record.started.formatted(date: .abbreviated, time: .shortened)) · \(record.lookups.counted("lookup")) · \(Set(record.filesInPlay.map { $0.components(separatedBy: ":").first ?? $0 }).count.counted("file")) read\(record.models.isEmpty ? "" : " · " + record.models.joined(separator: ", "))")
@@ -158,7 +158,7 @@ struct SessionPage: View {
                     }
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                            TrailRow(workspace: workspace, step: step, last: index == steps.count - 1)
+                            TrailRow(workspace: workspace, step: step, last: index == steps.count - 1, tint: record.program.colour)
                         }
                     }
                 }
@@ -223,6 +223,8 @@ struct TrailRow: View {
     let workspace: Workspace
     let step: SessionPage.Step
     let last: Bool
+    /// The colour of the program that made this step.
+    var tint: Color = Night.conversation
     @State private var showAnswer = false
 
     var body: some View {
@@ -239,14 +241,14 @@ struct TrailRow: View {
     }
 
     private var isTurn: Bool { if case .turn = step { return true } else { return false } }
-    private var dot: Color { isTurn ? Night.note : Night.conversation }
+    private var dot: Color { isTurn ? Night.note : tint }
 
     @ViewBuilder private var content: some View {
         switch step {
         case let .lookup(trail):
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    Text(toolName(trail.tool)).font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(Night.conversation)
+                    Text(toolName(trail.tool)).font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(tint)
                     Text(trail.at.formatted(date: .omitted, time: .standard)).font(.system(size: 11)).foregroundStyle(Night.faint).monospacedDigit()
                 }
                 if !trail.asked.isEmpty { Text(trail.asked).font(.system(size: 13)).foregroundStyle(Night.note.opacity(0.85)).lineLimit(3) }
