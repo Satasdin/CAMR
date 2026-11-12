@@ -63,8 +63,11 @@ def page(name: str, title: str, intro: str, body_file: str) -> None:
 if __name__ == "__main__":
     page("test-cases.md", "Test cases and results",
          "The full test record behind Section 5.6 of the report. Each case names the requirement it verifies; "
-         "Appendix 3 of the report traces each requirement to its component.", "test-cases.md")
+         "[traceability.md](traceability.md) traces each requirement to its component.", "test-cases.md")
     page("further-results.md", "Further results",
          "Tables and trials that support Section 5.5 of the report but are not needed to follow it.", "further-results.md")
+    page("traceability.md", "Requirements traceability",
+         "Each requirement of Chapter 4 traced to the component that implements it and the test that verifies it.", "traceability.md")
+    page("user-guide.md", "User guide", "How to install and use Burrow: the app, the terminal, and other programs through MCP.", "user-guide.md")
     page("more-screens.md", "More screens of the system", "Screens of the Mac app and the terminal view beyond those in the report.",
          "more-screens.md")

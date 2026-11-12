@@ -250,7 +250,7 @@ The engine has 212 automated tests, and all of them passed on the frozen source.
 
 ### 5.6.2 Test Cases, Defects and Retesting
 
-Twenty-three test cases were run, one or more for every requirement, and all passed, three of them with a stated condition. Table 5.10 gives the ten that cover the core workflow and its failure conditions; the full record of all 23 is in the repository (https://github.com/Satasdin/CAMR/blob/burrow/docs/evaluation/test-cases.md), and Appendix 3 traces each requirement to the component and test that cover it.
+Twenty-three test cases were run, one or more for every requirement, and all passed, three of them with a stated condition. Table 5.10 gives the ten that cover the core workflow and its failure conditions; the full record of all 23 is in the repository (https://github.com/Satasdin/CAMR/blob/burrow/docs/evaluation/test-cases.md), with a table tracing each requirement to its component and test (https://github.com/Satasdin/CAMR/blob/burrow/docs/evaluation/traceability.md).
 
 !tab Table 5.10: Key test cases and results (all 23 are in the repository)
 !widths 0.55,1.05,1.5,1.25,1.25,0.7
@@ -280,7 +280,7 @@ Every push to the repository also runs the automated tests on a hosted Apple sil
 
 ## 5.8 Author Oversight and Use of AI-Assisted Tools
 
-Claude Code, a coding assistant from Anthropic, assisted with the system design, implementation, testing, and evaluation reported in Chapters 4 and 5, and with the drafting of those two chapters. Its output was checked against the automated tests, the saved results, and the cited sources. The author made the final decisions and takes full responsibility for the submitted work. Appendix 5 gives the AI-use log, and Appendix 4 a short user guide.
+Claude Code, a coding assistant from Anthropic running Claude Opus 5.5, wrote most of the code, tests and experiment scripts in both increments, ran the experiments, made the figures, and drafted the report from the saved results, at the author's direction and from the author's design. Kimi K3 from Moonshot AI was used in the first increment as a model under test and as a judge of answers, and Claude through its API was the cloud model in the experiments. Every output was checked against the automated tests, the saved results, and the cited sources. The author chose the experiments, made the final decisions, and takes full responsibility for the submitted work. Appendix 3 gives the AI-use log, and the user guide is in the repository (https://github.com/Satasdin/CAMR/blob/burrow/docs/evaluation/user-guide.md).
 
 ## 5.9 Evaluation Results, Discussion and Limitations
 

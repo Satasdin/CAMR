@@ -1,6 +1,6 @@
 # Test cases and results
 
-The full test record behind Section 5.6 of the report. Each case names the requirement it verifies; Appendix 3 of the report traces each requirement to its component.
+The full test record behind Section 5.6 of the report. Each case names the requirement it verifies; [traceability.md](traceability.md) traces each requirement to its component.
 
 
 **Table T1: Test cases and results**
