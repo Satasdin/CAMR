@@ -159,6 +159,9 @@ Table A7.1 is the AI-use log. Full prompts and replies are retained in the Claud
 | 10 Nov | Claude Code | The report laid out in Microsoft Word against the course guide; the conceptual framework redrawn; citations and the reference list placed as Mendeley Cite fields | Burrow_Report_Word.docx, guide-checklist.md | Every page of the exported PDF viewed; each section checked against the guide checklist |
 | 11 Nov | Claude Code | The Ledger, hooks, terminal views, and a third evaluation of session memory with its plan written before scoring | Source, tests, trials/ledger, evaluation-plan-3.md | swift test; frozen binary; faults found in scoring reported, not fixed |
 | 12 Nov | Claude Code | Recency and importance in the ranking; the report cut to each chapter's part; an independent review against the course guide; Chapter 6 and these appendices drafted | Source and tests; report text | 95 core tests; every figure in Chapter 6 traced to a section of Chapter 5; reviewed by the student |
+| 12 Nov | Claude Code | The flow of the report checked against the course guide; the built application benchmarked against what was planned for it; the Programs page redrawn with live activity; the final title, tenses and wording | Report text; app source; guide-checklist.md | Test build of the report; every changed screen captured from a real run |
+| 12 Nov | Claude Code | GitHub: a test workflow that runs every automated test on each push, a compiler fix it found, and the final release | .github/workflows/tests.yml; release on GitHub | The workflow's own run; tests passed locally and on GitHub |
+| 12 Nov | Claude Code | Demonstration clips recorded from the real application, terminal and models, for the student to edit | docs/demo/clips | Each clip from a real run on the evaluation vault; nothing staged |
 | [PENDING: date] | - | The student's own review and edits of this report | - | - |
 
 ## Appendix 8: Similarity Report
