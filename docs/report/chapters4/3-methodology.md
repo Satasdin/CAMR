@@ -2,11 +2,11 @@
 
 ## 3.1 Introduction
 
-This chapter describes how the study was carried out. It states the research paradigm that guided the work, the development approach that was followed, the analysis of what the system must do, the design of both the system and the experiments that evaluated it, the tools and techniques that were used, and the deliverables the study produced. The system was analysed and designed with Object-Oriented Analysis and Design (OOAD). Throughout the chapter, the guiding principle is that every claim about the engine was tested as a controlled experiment.
+This chapter describes how the study was carried out. It states the research paradigm that guided the work, the development approach that was followed, the analysis of what the system had to do, the design of both the system and the experiments that evaluated it, the tools and techniques that were used, and the deliverables the study produced. The system was analysed and designed with Object-Oriented Analysis and Design (OOAD). Throughout the chapter, the guiding principle is that every claim about the engine was tested as a controlled experiment.
 
 ## 3.2 Research Paradigm
 
-The study adopted a pragmatist research philosophy, combining design science research with controlled experimentation. Design science research is appropriate because the study created and evaluated a new artefact, the memory engine, and the discipline's guidelines require that such an artefact be evaluated rigorously against explicit measures of utility (Hevner et al., 2004). The study followed the design science research methodology of Peffers et al. (2007), proceeding through problem identification, definition of solution objectives, design and development, demonstration, evaluation, and communication. The evaluation took the form of controlled experiments organised as a research pipeline of four stages, described in the subsections that follow.
+The study adopted a pragmatist research philosophy, combining design science research with controlled experimentation. Design science research was appropriate because the study created and evaluated a new artefact, the memory engine, and the discipline's guidelines require that such an artefact be evaluated rigorously against explicit measures of utility (Hevner et al., 2004). The study followed the design science research methodology of Peffers et al. (2007), proceeding through problem identification, definition of solution objectives, design and development, demonstration, evaluation, and communication. The evaluation took the form of controlled experiments organised as a research pipeline of four stages, described in the subsections that follow.
 
 ### 3.2.1 Data Acquisition
 
@@ -34,13 +34,13 @@ Every question in every set-up logged the model used, the tokens read and writte
 
 The system was developed by incremental prototyping, in small working stages, each of which was checked before the next was begun. Iterative and incremental development grows a system in small steps in which the result of each step informs the next (Larman & Basili, 2003), and design science asks for the same cycle of building and evaluating (Hevner et al., 2004). This approach suited the study for two reasons. First, the requirements changed: the Sprint II review of 5 November 2026 asked for something a person can see and use, and an incremental plan could take that in without losing the work already done. Second, the engine is a chain of separable steps, so its parts could be built in turn and switched off when it was evaluated. The system was analysed and designed with OOAD, because the memory is naturally a set of objects that hold their own data and behaviour, and Chapter 4 therefore presents use case, sequence, activity, and class diagrams drawn in the Unified Modeling Language.
 
-Development proceeded in the five increments shown in Figure 3.1. The first increment built a memory engine and an evaluation harness in Python under the working name CAMR, from the approved proposal, and ended at the Sprint II review. The second increment rebuilt the memory in Swift as Burrow, with a vault of plain Markdown files, a rebuildable SQLite index, retrieval by words and by meaning, and a walk over the links between files. The third increment added the surfaces through which a person and other tools use the memory: a native desktop application, a terminal chat, and a Model Context Protocol server. The fourth increment froze the retrieval and tested it on 101 real bug fixes from public repositories and on three held-back synthetic projects worked by simulated developer agents; memory did not measurably help the small model write working code, which showed that finding the right text was not enough. The fifth increment built the engine around the model, namely the Decide, Fit, Check, and Learn steps and the skills, wrote the evaluation harness of Section 3.5, froze the program, and ran the evaluation.
+Development proceeded in the five increments shown in Figure 3.1. The first increment built a memory engine and an evaluation harness in Python under the working name CAMR and ended at the Sprint II review. The second increment rebuilt the memory in Swift as Burrow, with a vault of plain Markdown files, a rebuildable SQLite index, retrieval by words and by meaning, and a walk over the links between files. The third increment added the surfaces through which a person and other tools use the memory: a native desktop application, a terminal chat, and a Model Context Protocol server. The fourth increment froze the retrieval and tested it on 101 real bug fixes from public repositories and on three held-back synthetic projects worked by simulated developer agents; memory did not measurably help the small model write working code, which showed that finding the right text was not enough. The fifth increment built the engine around the model, namely the Decide, Fit, Check, and Learn steps and the skills, wrote the evaluation harness of Section 3.5, froze the program, and ran the evaluation.
 
 !fig figures/related/fig3-1-incremental.png | Figure 3.1: Incremental development approach for the Burrow engine, drawn by the author. | 6.2
 
 ## 3.4 System Analysis
 
-The requirements were worked backwards from the study objectives, the measurements the evaluation needs, and the Sprint II review, so that each capability maps to an experiment or to the person using the system. Following OOAD, they were analysed with a use case diagram, sequence diagrams, an activity diagram and a class diagram, and stated as functional, non-functional, data and interface requirements with identifiers; Sections 4.2 and 4.3 present them.
+The requirements were worked backwards from the study objectives, the measurements the evaluation needed, and the Sprint II review, so that each capability maps to an experiment or to the person using the system. Following OOAD, they were analysed with a use case diagram, sequence diagrams, an activity diagram and a class diagram, and stated as functional, non-functional, data and interface requirements with identifiers; Sections 4.2 and 4.3 present them.
 
 ## 3.5 System Design
 
@@ -56,7 +56,7 @@ The central quantity of the study is the fraction of the capability gap closed, 
 
 !eq gap | Equation 3.1: Fraction of the capability gap closed
 
-A value of zero means the engine added nothing, and a value of one means the on-device model with the engine matched the cloud model. Where the cloud model was not ahead of the on-device model alone, the measure is not defined. A rule added after the evaluation plan was written leaves the fraction out of Table 5.6 when the ceiling is less than ten percentage points above the floor, because one answer then moves it widely.
+A value of zero means the engine adds nothing, and a value of one means the on-device model with the engine matches the cloud model. Where the cloud model is not ahead of the on-device model alone, the measure is not defined. A rule added after the evaluation plan was written leaves the fraction out of Table 5.6 when the ceiling is less than ten percentage points above the floor, because one answer then moves it widely.
 
 ### 3.5.3 Datasets and Task Types
 
@@ -133,3 +133,5 @@ The measured gap closed per task type, the ablation and budget results, and the 
 ### 3.7.5 System Documentation
 
 This report, including the design, the experiments, and the findings, with the instructions, configuration files, and prompt templates needed to reproduce the results.
+
+Chapter 4 presents the analysis and design of the system.

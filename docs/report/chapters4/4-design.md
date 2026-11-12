@@ -131,9 +131,9 @@ All memory logic is in BurrowCore, and every surface depends on it, so a change 
 
 Objective ii names three mechanisms: a write policy, a retrieval policy, and a token budgeting mechanism. Figure 4.7 shows the five steps of the engine, what each reads and writes, and how the steps map to those mechanisms.
 
-!fig figures/v2/engine_steps.png | Figure 4.7: The five steps of the engine and the mechanisms of the proposal | 6.2
+!fig figures/v2/engine_steps.png | Figure 4.7: The five steps of the engine and the three mechanisms of objective ii | 6.2
 
-Learn is the write policy, Decide and the retrieval behind it are the retrieval policy, and Fit is the token budgeting mechanism. Check was added in this study. Ranking is by words, meaning, and links, and the recency and importance scores of the proposal decide between files that match a question equally well, so they never overrule relevance.
+Learn is the write policy, Decide and the retrieval behind it are the retrieval policy, and Fit is the token budgeting mechanism. Check was added in this study. Ranking is by words, meaning, and links, and the recency and importance scores named in objective ii decide between files that match a question equally well, so they never overrule relevance.
 
 Retrieval ranks each piece twice, by word match with BM25 (Robertson & Zaragoza, 2009) and by meaning. Meaning is the cosine between the vector of the question, q, and the vector of a piece, v, as in Equation 4.1.
 
@@ -184,3 +184,5 @@ The deployment diagram shows where each part runs and how a person obtains the s
 The application, the command-line tool, the vault, the index, and the local models are on the person's own computer, and the engine reaches the local model service only on the loopback address. Neither of the two outside connections is made by the engine. One is an MCP client that the person chooses to connect, and the other is the evaluation harness calling the cloud model.
 
 A person obtains the system once, from a tagged release of the project's repository, so the version installed is the one the repository records; the steps are given in Section 5.2.3. The download carries no content from the vault, so after installation the engine works offline.
+
+Chapter 5 describes how this design was implemented, tested, and evaluated.

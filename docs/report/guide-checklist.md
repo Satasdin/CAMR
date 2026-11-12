@@ -108,7 +108,7 @@ Source: `Research Writing for CS 2 Projects - 2026 (1).pdf` (194 pages), read in
 ## Decisions taken with the student for this report
 
 - Chapter 6 (conclusions, recommendations, future works) added 12 November 2026 after an independent review against the guide.
-- The title, objectives and research questions are those of the approved June proposal, word for word.
+- The objectives and research questions keep their June wording. The final title, set on 12 November, names the system and says "narrow" rather than "bridge", because the engine closed 93% of the gap, not all of it.
 - Simulated developer agents are never called participants.
 
 ## Check of `Burrow_Report_Word.docx` against this list (10 November 2026)
