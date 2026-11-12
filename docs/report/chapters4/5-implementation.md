@@ -133,7 +133,31 @@ Figure 5.11 shows Burrow used as the retriever inside a LangChain pipeline, in t
 
 !fig figures/screens2/console-langchain.png | Figure 5.11: Burrow as the retriever in a LangChain pipeline | 6.2
 
-### 5.4.7 Design Decisions Made During the Build
+### 5.4.7 Workflows with a Model
+
+Burrow is not used on its own. A person works in the program they already use, and that program reaches the vault through the Model Context Protocol server. The workflows below were run on 12 November 2026 on a copy of the evaluation vault, with Claude Code as the working program in Figures 5.12 to 5.14 and Qwen3 4B in llama.cpp in Figure 5.16; Figure 5.6 shows the same kind of session with Gemma 4 12B in OpenCode. Each figure is a frame of a screen recording made during the run, and the recordings are kept with the repository's demonstration material.
+
+Connecting a program takes one command. Figure 5.12 shows the server added to Claude Code, which then reports it as connected. OpenCode, LM Studio and llama.cpp connect in the same way, and the Programs page of the app writes the setting for each (Figure 5.7).
+
+!fig figures/workflow/connect.png | Figure 5.12: The vault connected to Claude Code through the Model Context Protocol | 6.2
+
+In a working session the program, not the person, asks Burrow. In Figure 5.13 a question about the breach-notice deadline was put to Claude Code, shortened on screen to c, a command that runs Claude Code allowed to use only Burrow's tools. Claude Code searched the vault through Burrow, answered 72 hours with the file and line, and, as asked, kept the team's 48-hour target as a decision in the Ledger, citing the file it rests on. The lines below the answer show the commit as Burrow stored it.
+
+!fig figures/workflow/session-one.png | Figure 5.13: A Claude Code session that fetched an answer through Burrow and kept a decision in the Ledger | 6.2
+
+Figure 5.14 shows the memory fetched again. A new Claude Code session, with no chat history, was asked what had been decided. It found the decision through Burrow, gave it with its reason, and said which part of the reasoning the record did not hold.
+
+!fig figures/workflow/session-two.png | Figure 5.14: A new session that recalled the decision from Burrow, with no chat history | 6.2
+
+Figure 5.15 shows what Burrow turns a question into before any model reads it: short rules, then excerpts marked with their file and line numbers, which is why an answer can name the line it rests on. Finding the excerpts took 0.05 seconds in the same run.
+
+!fig figures/workflow/what-the-model-reads.png | Figure 5.15: The text Burrow hands a model for a question: rules, then excerpts marked with file and line | 6.2
+
+The last workflow addresses the time a local model spends reading before its first word. Burrow can keep that reading, the model's working memory for a set of files, on the disk and load it back for a later question. In Figure 5.16 the same question was put to Qwen3 4B twice. Read from the start, the model processed 2,773 tokens and began to answer after 1.66 seconds. With the saved working memory, Burrow loaded it in 0.09 seconds, the model read only the 20 tokens of the question, and the answer began after 0.18 seconds. Both answers were the same.
+
+!fig figures/workflow/saved-cache.png | Figure 5.16: Time to the first word without and with the model's saved working memory | 6.2
+
+### 5.4.8 Design Decisions Made During the Build
 
 Several decisions were made as the work progressed, each for a stated reason. In the evaluation, the main model had 12 billion parameters, the largest that fit the 24 GB laptop with room for the vault; questions were curated from source documents that the models could not have memorised, because public question-answering benchmarks are likely to have been seen in training; each question was run once rather than timed over repeated runs; and the budget sweep and the ten-point reporting rule of Table 5.6 were added after the evaluation plan was set. In the build, five parts changed. After Evaluation 2, the desktop app's own question box was removed, because the vault is the memory and the chat belongs to the programs that connect to it; the app now shows what those programs read (Figures 5.6 and 5.7), and the engine's decision is shown on the command line and in the terminal chat. The memory became a vault of files that a person writes instead of a stream of notes from each interaction, because the Sprint II review asked for something a person can see and use. Recency and importance were therefore taken from the files themselves, and they were built after the engine was frozen for Evaluation 2, so its scores do not include them. The Check step was added during the study, because a small model's citations can be compared directly with what it was shown. The engine was also written in Swift in place of Python, so that it runs as one compiled program on the target platform.
 
@@ -143,7 +167,7 @@ Several decisions were made as the work progressed, each for a stated reason. In
 
 No model was trained or fine-tuned. The on-device models were selected because they are recent open-weight models sized for the laptop, and they were used as published. Local answers were generated at temperature 0 with a fixed seed, but repeated runs still differed: of 169 identical prompts run twice, 41 answers changed in wording and one changed in score. The cloud model does not accept a temperature setting.
 
-The same 170 questions were put to six set-ups, which Table 5.4 lists. Set-ups 1 to 4 were run with Gemma 4 12B and again with Qwen3.5 4B. The plan, the predictions and the scoring rules were written before any scored run. The budget sweep, the reporting threshold in Table 5.6 and the coding trial of Appendix 3 were added after the plan, and the cloud model could not be run at temperature 0 as planned.
+The same 170 questions were put to six set-ups, which Table 5.4 lists. Set-ups 1 to 4 were run with Gemma 4 12B and again with Qwen3.5 4B. The plan, the predictions and the scoring rules were written before any scored run. The budget sweep, the reporting threshold in Table 5.6 and the coding trial reported with the further results in the repository were added after the plan, and the cloud model could not be run at temperature 0 as planned.
 
 !tab Table 5.4: The six set-ups compared
 !widths 0.4,1.9,4.0
@@ -167,9 +191,9 @@ The fraction of the capability gap closed is Equation 3.1, where the floor is th
 
 ### 5.5.3 Results on the Main Model
 
-Figure 5.12 and Table 5.5 give the answers right for the main model. Alone, Gemma 4 12B answered 9 of the 120 knowledge questions (8%, with a 95% Wilson interval of 4% to 14%). With the engine it answered 102 (85%, 78% to 90%). The cloud model alone answered 40 (33%, 26% to 42%), and 109 (91%, 84% to 95%) when it was given the same vault, prepared by the engine with a limit of 24,000 characters.
+Figure 5.17 and Table 5.5 give the answers right for the main model. Alone, Gemma 4 12B answered 9 of the 120 knowledge questions (8%, with a 95% Wilson interval of 4% to 14%). With the engine it answered 102 (85%, 78% to 90%). The cloud model alone answered 40 (33%, 26% to 42%), and 109 (91%, 84% to 95%) when it was given the same vault, prepared by the engine with a limit of 24,000 characters.
 
-!fig figures/v2/chart-accuracy-main.png | Figure 5.12: Answers right by set-up and task type, Gemma 4 12B and the cloud model | 6.2
+!fig figures/v2/chart-accuracy-main.png | Figure 5.17: Answers right by set-up and task type, Gemma 4 12B and the cloud model | 6.2
 
 !include generated2/accuracy-gemma4-12b.md | Table 5.5
 
@@ -185,23 +209,23 @@ Table 5.7 gives the cost. The engine showed the main model more of the vault tha
 
 ### 5.5.4 Results on the Small Model
 
-The smaller model gave a mixed result, shown in Figure 5.13. Alone, Qwen3.5 4B answered 6 of the 120 knowledge questions. With plain retrieval it answered 97, with the Chroma baseline 75, and with the engine 91. On knowledge the engine therefore did not improve on plain retrieval for this model (1 question gained and 7 lost, p = 0.070). On reasoning the pattern of the main model repeated more sharply: 46 of 50 alone, 9 with plain retrieval, 1 with the Chroma pipeline, and 49 with the engine. Appendix 3 gives the full counts, the results by subject and every paired test.
+The smaller model gave a mixed result, shown in Figure 5.18. Alone, Qwen3.5 4B answered 6 of the 120 knowledge questions. With plain retrieval it answered 97, with the Chroma baseline 75, and with the engine 91. On knowledge the engine therefore did not improve on plain retrieval for this model (1 question gained and 7 lost, p = 0.070). On reasoning the pattern of the main model repeated more sharply: 46 of 50 alone, 9 with plain retrieval, 1 with the Chroma pipeline, and 49 with the engine. The repository's further results (https://github.com/Satasdin/CAMR/blob/burrow/docs/evaluation/further-results.md) give the full counts, the results by subject and every paired test.
 
-!fig figures/v2/chart-accuracy-small.png | Figure 5.13: Answers right by set-up and task type, Qwen3.5 4B and the cloud model | 6.2
+!fig figures/v2/chart-accuracy-small.png | Figure 5.18: Answers right by set-up and task type, Qwen3.5 4B and the cloud model | 6.2
 
 ### 5.5.5 Ablation, Budget and Speed
 
 Two parts of the engine were switched off in turn on the main model. With every part on, the engine answered 150 of the 170 questions. Without skills it answered 149, and without the citation check it answered 151. The check asked the model again on only 1 of the 170 questions, because only 1 of the 145 places the model cited was not among what it had been shown. Without skills the total moved by one: one knowledge answer gained and two reasoning answers net lost. The run without the check differs from the full run by one retry, and its one score change was variation between runs. Twelve of the 120 knowledge answers cited no place, so the check had nothing to test there.
 
-Figure 5.14 and Table 5.8 answer the question of how much to show. The engine was run again on the 120 knowledge questions with the amount shown fixed at four sizes, beside the fitted 17,417 characters. At 2,000 characters most questions received nothing, because the best piece did not fit, and 15 were answered. Accuracy then rose with every increase: 56 at 4,000 characters, 76 at 8,000, 102 at the fitted size and 112 at 32,000. The gain per token was highest at 2,000 characters (58.1 points for each 1,000 tokens), but only because 94 of the 120 questions there received nothing. Among budgets that delivered excerpts it fell from 27.9 at 4,000 characters to 7.8 at 32,000, and the time for an answer rose from 2.1 to 15.6 seconds.
+Figure 5.19 and Table 5.8 answer the question of how much to show. The engine was run again on the 120 knowledge questions with the amount shown fixed at four sizes, beside the fitted 17,417 characters. At 2,000 characters most questions received nothing, because the best piece did not fit, and 15 were answered. Accuracy then rose with every increase: 56 at 4,000 characters, 76 at 8,000, 102 at the fitted size and 112 at 32,000. The gain per token was highest at 2,000 characters (58.1 points for each 1,000 tokens), but only because 94 of the 120 questions there received nothing. Among budgets that delivered excerpts it fell from 27.9 at 4,000 characters to 7.8 at 32,000, and the time for an answer rose from 2.1 to 15.6 seconds.
 
-!fig figures/v2/chart-sweep.png | Figure 5.14: Knowledge answers right against tokens read, as the amount of the vault shown to Gemma 4 12B grows | 6.2
+!fig figures/v2/chart-sweep.png | Figure 5.19: Knowledge answers right against tokens read, as the amount of the vault shown to Gemma 4 12B grows | 6.2
 
 !include generated2/sweep.md | Table 5.8
 
-Figure 5.15 shows the speed of a lookup before and after the search was rebuilt, on an index of 11,710 pieces from the Django repository. Before the rebuild a lookup that followed links took a median of 2.87 seconds. After it the median was 0.18 seconds, about sixteen times faster. Plain search was already fast and stayed at about 0.15 seconds. On the 101 real bug fixes of the earlier evaluation the rebuilt search reached the same changed files as before on every question (59 by search, 72 by following links), although other files shown differed on 3 searches and 51 walks. That check used a build made just before the freeze.
+Figure 5.20 shows the speed of a lookup before and after the search was rebuilt, on an index of 11,710 pieces from the Django repository. Before the rebuild a lookup that followed links took a median of 2.87 seconds. After it the median was 0.18 seconds, about sixteen times faster. Plain search was already fast and stayed at about 0.15 seconds. On the 101 real bug fixes of the earlier evaluation the rebuilt search reached the same changed files as before on every question (59 by search, 72 by following links), although other files shown differed on 3 searches and 51 walks. That check used a build made just before the freeze.
 
-!fig figures/v2/chart-speed.png | Figure 5.15: Median time of one lookup on the Django index, before and after the search was rebuilt | 5.6
+!fig figures/v2/chart-speed.png | Figure 5.20: Median time of one lookup on the Django index, before and after the search was rebuilt | 5.6
 
 ### 5.5.6 Error Analysis
 
@@ -226,42 +250,29 @@ The engine has 212 automated tests, and all of them passed on the frozen source.
 
 ### 5.6.2 Test Cases, Defects and Retesting
 
-Table 5.10 gives the test cases, with the requirement each one verifies, and Appendix 4 traces each requirement to the component that implements it.
+Twenty-three test cases were run, one or more for every requirement, and all passed, three of them with a stated condition. Table 5.10 gives the ten that cover the core workflow and its failure conditions; the full record of all 23 is in the repository (https://github.com/Satasdin/CAMR/blob/burrow/docs/evaluation/test-cases.md), and Appendix 3 traces each requirement to the component and test that cover it.
 
-!tab Table 5.10: Test cases and results
+!tab Table 5.10: Key test cases and results (all 23 are in the repository)
 !widths 0.55,1.05,1.5,1.25,1.25,0.7
 | Test ID | Requirement | Scenario and test data | Expected result | Actual result and evidence | Verdict |
 | TC-01 | FR-01 | A vault indexed twice, then with one file changed and one removed | Nothing rebuilt the second time; old words gone the third time | As expected; test log | Pass |
-| TC-02 | FR-02 | A question whose words are absent from the right file | The file is found by meaning | As expected; test log | Pass |
-| TC-03 | FR-03 | A question naming only the first of three linked files | The third file is reached by following links | As expected; test log | Pass |
 | TC-04 | FR-04 | A question the vault knows nothing about | The vault is left out | Left out; the model received only the question; test log | Pass |
 | TC-05 | FR-04 | The 50 reasoning problems of Section 5.5, on the frozen program | The vault is left out | Left out on 50 of 50; saved results | Pass |
-| TC-06 | FR-05 | A sum, with a calculation skill and a documents skill in the vault | The calculation skill and no excerpts | As expected; test log | Pass |
-| TC-07 | FR-06 | A fast small model, a fast large model and a slow large model | 8,000, 24,000 and 6,400 characters | As expected; test log | Pass |
 | TC-08 | FR-07, IR-01 | A question on the command line; a question about a regulation asked by Gemma 4 12B in OpenCode through MCP | An answer naming file and line, with the decision line; in the app, each lookup and the files read | As in Figures 5.3 and 5.6 | Pass |
 | TC-09 | FR-08 | An answer citing a file it was not shown, with a scripted model | One retry; the better grounded answer kept | As expected; test log | Pass |
-| TC-10 | FR-09, DR-03 | Three proposed notes, one quoting words the person never typed; a note kept with and without agreement | Only the two backed by the person's words offered; nothing written without agreement | As expected; test log | Pass |
 | TC-11 | FR-10, IR-03 | vault_prepare called through MCP; a tool called before initialising | The decision and excerpts, no chat model called; the early call refused | As in Figure 5.10; test log | Pass |
 | TC-12 | NFR-02 | The index deleted and rebuilt | No note lost; same pieces and links | As expected; test log | Pass |
-| TC-13 | NFR-01 | Inspection of the model client's source | Local model calls go to 127.0.0.1 | Default address 127.0.0.1:11434 in the source | Pass |
-| TC-14 | NFR-03 | Excerpts returned by the search tool | Marked as material to read, with the notice | As expected on the tools path; test log | Pass on the tools path |
-| TC-15 | NFR-04 | The 2,520 saved answer records checked by script | Tokens read and written and seconds on every record | Present on all; retrieval time absent only on the 170 cloud-alone records, which retrieve nothing | Pass |
-| TC-16 | NFR-05 | Inspection of the storage code | One database file, a vector copy and two settings files; no server process | As expected | Pass |
 | TC-17 | NFR-06 | swift test on the frozen source; the package file inspected | 212 tests pass; no third-party package | As expected; test log | Pass on one machine |
-| TC-18 | DR-01 | A change attempted on a linked folder | The folder can be read and is not changed | As expected; test log | Pass |
-| TC-19 | DR-02 | Inspection of the index tables against Figure 4.8 | File, lines, text and at most one vector per piece | As expected | Pass |
-| TC-20 | DR-04 | The key-checking scripts; the location of the questions | Keys found in the source text and absent from their questions; questions outside the vault | As expected; key-checking script | Pass |
 | TC-21 | IR-02 | Ollama unreachable during a search and during an answer | Search continues on words; the failure is reported | As expected; test log | Pass |
-| TC-22 | IR-04 | A vault with links in double square brackets and Obsidian's own settings folder | The links join the notes; the settings are left out | As expected; test log. Not opened in Obsidian itself | Pass on format |
 | TC-23 | IR-05 | The published install command run into an empty folder with the application option; the landing page and its download link fetched | Program and application installed, checksums pass, the program indexes a vault; page and link return successfully | As expected. The browser download on a second computer was not tried | Pass on one machine |
 
 Five defects were recorded. Two affected the runs and were corrected and retested. The first cloud run was stopped after 35 questions because the harness cut answers at 600 tokens, and the limit was raised to 4,000. A budget sweep was stopped because it had begun while another run was using the machine. Both were restarted from the first question, and the partial runs are kept in the repository. Three are known gaps that remain in the frozen code and were left unfixed, so that the engine measured is the engine described. They are stated with the other limitations in Section 5.9.6.
 
 ## 5.7 Version Control and Implementation Evidence
 
-Project repository: https://github.com/Satasdin/CAMR, with burrow as its default branch. Figure 5.16 shows the history of the engine's source, the tags and the folders. The engine is in Sources, its tests in Tests, the desktop app in app, the evaluation in trials, and this report with its scripts in docs/report. The README states the problem, the set-up, and how to run and test the system.
+Project repository: https://github.com/Satasdin/CAMR, with burrow as its default branch. Figure 5.21 shows the history of the engine's source, the tags and the folders. The engine is in Sources, its tests in Tests, the desktop app in app, the evaluation in trials, and this report with its scripts in docs/report. The README states the problem, the set-up, and how to run and test the system.
 
-!fig figures/screens2/console-git.png | Figure 5.16: The history of the engine's source, the tags and the folders of the repository | 6.2
+!fig figures/screens2/console-git.png | Figure 5.21: The history of the engine's source, the tags and the folders of the repository | 6.2
 
 The workflow supported the evaluation directly. Each evaluation was run on a tagged, frozen version. The tag evaluation-1 marks retrieval before the engine's steps, and evaluation-2 marks the engine measured in this chapter. The hash of the frozen program is saved in trials/results/gap-1 and in each set-up's meta.json, and the harness refuses to add answers from a different program to the same folder. A reported number can therefore be traced to the exact code that produced it.
 
@@ -269,7 +280,7 @@ Every push to the repository also runs the automated tests on a hosted Apple sil
 
 ## 5.8 Author Oversight and Use of AI-Assisted Tools
 
-Claude Code, a coding assistant from Anthropic, assisted with the system design, implementation, testing, and evaluation reported in Chapters 4 and 5, and with the drafting of those two chapters. Its output was checked against the automated tests, the saved results, and the cited sources. The author made the final decisions and takes full responsibility for the submitted work. Appendix 7 gives the AI-use log, and Appendix 5 a short user guide.
+Claude Code, a coding assistant from Anthropic, assisted with the system design, implementation, testing, and evaluation reported in Chapters 4 and 5, and with the drafting of those two chapters. Its output was checked against the automated tests, the saved results, and the cited sources. The author made the final decisions and takes full responsibility for the submitted work. Appendix 5 gives the AI-use log, and Appendix 4 a short user guide.
 
 ## 5.9 Evaluation Results, Discussion and Limitations
 
@@ -291,7 +302,7 @@ The third research question asked how the engine can be developed on a consumer 
 
 The fourth research question asked what fraction of the gap the engine closes on each task type and at what cost. The output is the evaluation of Section 5.5, and the criteria were the predictions written before the runs: that the engine would close most of the gap on knowledge tasks, and little or none on reasoning tasks, and that it would read more tokens than plain retrieval on the main model. The first and third predictions held, and on reasoning the fraction is not reported because the gap was too small to measure.
 
-On knowledge, measured against the cloud model given the same vault (109 of 120), the engine closed 93% of the gap. It was 7 questions behind (0 gained, 7 lost, p = 0.016), with Claude shown more text. Against the cloud model alone (40 of 120) the fraction is 300%, which shows that the cloud model alone is a weak ceiling for this material, much of which it could not have seen: it scored 7 of 40 on the private project, 14 of 40 on the 2026 documents and 19 of 40 on the public Kenyan law. What the engine closed is therefore a gap in access to knowledge, which any retrieval narrows; plain retrieval alone reached 94 of 120. The result agrees with Mallen et al. (2023), who found that retrieval helps most on less popular facts. Narayan et al. (2025) measured a related quantity, the share of a cloud model's performance that a local-cloud protocol keeps (87%), by having the on-device model work with a cloud model. Burrow kept everything on the device.
+On knowledge, measured against the cloud model given the same vault (109 of 120), the engine closed 93% of the gap. It was 7 questions behind (0 gained, 7 lost, p = 0.016), with Claude shown more text. Against the cloud model alone (40 of 120) the fraction is 300%, which shows that the cloud model alone is a weak ceiling for this material, much of which it could not have seen (Section 5.5.3). What the engine closed is therefore a gap in access to knowledge, which any retrieval narrows; plain retrieval alone reached 94 of 120. The result agrees with Mallen et al. (2023), who found that retrieval helps most on less popular facts. Narayan et al. (2025) measured a related quantity, the share of a cloud model's performance that a local-cloud protocol keeps (87%), by having the on-device model work with a cloud model. Burrow kept everything on the device.
 
 Memory given to a reasoning task did harm: plain retrieval cut the model from 47 to 7 of 50 problems. The engine's first step removed that harm by deciding, on all 50 problems, that the vault was not needed. Shi et al. (2023) and Mirzadeh et al. (2025) showed that irrelevant sentences added to grade-school problems sharply reduce accuracy. Here the failure was mainly refusal: told to answer only from excerpts that did not hold the answer, the model said that it did not know. It varied by prompt and model, since Chroma's pipeline solved 42 on the main model and 1 on the small model. This is the clearest difference between an engine and a database. A database answers every query it is given, and an engine decides whether the query should be made.
 
@@ -316,6 +327,6 @@ Table 5.11 summarises the five objectives.
 
 ### 5.9.6 Limitations
 
-The results have limits, and each is stated here with its likely effect. First, skills and the citation check did not change the scores: the engine answered 150 of 170 questions with both, 149 without skills, and 151 without the check, so they are working features whose benefit this evaluation did not show. Second, the scored runs compared budgets of different sizes, so the engine's gain over the baselines cannot be credited to its decisions alone, and Decide and Fit were not switched off separately. Third, on the small model the engine did not beat plain retrieval on knowledge, answering 91 against 97, so the gain does not carry to every model. Fourth, the knowledge questions were written by Claude Code agents, from the same family as the cloud reference model, and scored by answer keys, so a right string in a wrong sentence counts as right, and the questions may be easier or harder than a person's own. Fifth, each question was run once on one laptop, and other jobs shared the machine during some runs, so the times are indicative. Sixth, the Learn step was tested only by automated tests, and no experiment measured its effect on later answers. Seventh, no person other than the developer has used the app, so its usability is not claimed. Eighth, three known gaps remain in the frozen code: the check with retry runs only on the command burrow ask --mode engine, and the chat and MCP do not check; the MCP tool and the terminal chat use a fixed budget of 12,000 characters and not the fitted one; and the engine's own prompt does not stop an excerpt from closing its block. Ninth, two trials outside the objectives, a coding trial and a third evaluation of session memory, are reported in Appendix 3 and do not bear on the conclusions.
+The results have limits, and each is stated here with its likely effect. First, skills and the citation check did not change the scores: the engine answered 150 of 170 questions with both, 149 without skills, and 151 without the check, so they are working features whose benefit this evaluation did not show. Second, the scored runs compared budgets of different sizes, so the engine's gain over the baselines cannot be credited to its decisions alone, and Decide and Fit were not switched off separately. Third, on the small model the engine did not beat plain retrieval on knowledge, answering 91 against 97, so the gain does not carry to every model. Fourth, the knowledge questions were written by Claude Code agents, from the same family as the cloud reference model, and scored by answer keys, so a right string in a wrong sentence counts as right, and the questions may be easier or harder than a person's own. Fifth, each question was run once on one laptop, and other jobs shared the machine during some runs, so the times are indicative. Sixth, the Learn step was tested only by automated tests, and no experiment measured its effect on later answers. Seventh, no person other than the developer has used the app, so its usability is not claimed. Eighth, three known gaps remain in the frozen code: the check with retry runs only on the command burrow ask --mode engine, and the chat and MCP do not check; the MCP tool and the terminal chat use a fixed budget of 12,000 characters and not the fitted one; and the engine's own prompt does not stop an excerpt from closing its block. Ninth, two trials outside the objectives, a coding trial and a third evaluation of session memory, are reported with the further results in the repository and do not bear on the conclusions.
 
 Chapter 6 draws the conclusions of the study from these results.

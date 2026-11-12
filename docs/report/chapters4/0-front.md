@@ -4,11 +4,11 @@ I thank God for the strength and good health that carried me through this work. 
 
 # Abstract
 
-Cloud language models are capable, but every question costs money, needs a connection, and sends personal data off the device. Models on a consumer laptop are private, offline, and free per question, but weaker on facts they have not memorised. Research indicates that this gap is largely missing knowledge, not missing reasoning ability.
+Cloud language models are capable, but each question costs money and sends personal data off the device. Models on a consumer laptop are private and free per question, but weaker on facts they have not memorised: a gap of knowledge more than of reasoning.
 
-This study designed, developed, and evaluated Burrow, a lightweight external memory engine that works beside a frozen on-device model. The memory is a vault of the person's own notes, documents, and code. On every question the engine decides whether the vault is needed, fits the amount of memory to the model within a token budget, and, on the command line, checks the sources an answer cites. Under the Design Science Research paradigm, the engine was built in Swift with an embedded database, a desktop application, a terminal chat, and a Model Context Protocol server. It was tested on 120 knowledge questions on three curated subjects and 50 reasoning questions from a public benchmark.
+This study designed, developed, and evaluated Burrow, an external memory engine that gives a frozen on-device model a vault of the person's own notes, documents, and code. For each question the engine decides whether the vault is needed, fits what it shows to the model's token budget, and checks an answer's citations. Following Design Science Research, it was built in Swift with an embedded database, reached through a desktop application and a Model Context Protocol server, and tested on 120 knowledge and 50 reasoning questions.
 
-On the knowledge questions the on-device model, Gemma 4 12B, answered 9 alone and 102 with Burrow, while the cloud model, Claude, answered 40 alone and 109 with the same vault. On the reasoning questions it answered 47 alone, 7 with plain retrieval pasted in, and 48 with the engine, which left the memory out of all 50. Given the same vault, an on-device model can therefore approach a large cloud model on knowledge-bound tasks, provided the memory is withheld from reasoning questions.
+On knowledge questions the on-device model, Gemma 4 12B, answered 9 alone and 102 with Burrow, against 109 for the cloud model, Claude, given the same vault. On reasoning questions plain retrieval cut it from 47 to 7 correct; the engine left the memory out, and it answered 48. A local model with a well-prepared memory can therefore approach a cloud model on private knowledge, if memory is withheld from reasoning.
 
 ***Keywords: on-device language models, external memory, retrieval-augmented generation, capability gap, token budget***
 
