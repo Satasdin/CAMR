@@ -10,7 +10,13 @@ actor Engine {
     private let vault: Vault
     private let ollama = Ollama()
 
-    init(folder: URL, store: URL?) throws { vault = try Vault(project: folder, store: store, everything: true) }
+    /// Where Burrow keeps its own files for this vault: the index, conversations and the Ledger.
+    nonisolated let store: URL
+
+    init(folder: URL, store: URL?) throws {
+        vault = try Vault(project: folder, store: store, everything: true)
+        self.store = vault.store
+    }
 
     func index() async throws { try await vault.refresh(embedder: nil) }
     func embed(onProgress: @escaping @Sendable (String) -> Void) async throws {
@@ -41,6 +47,7 @@ actor Engine {
         try encoder.encode(paths).write(to: vault.store.appendingPathComponent("bookmarks.json"), options: .atomic)
     }
     func sessions() -> [VaultSession] { SessionStore(vault: vault).list().filter { !$0.isEmpty } }
+
     func shelf() -> [ShelfItem] {
         let shelf = KVShelf(vault: vault)
         return shelf.entries().map { ShelfItem(entry: $0, stale: shelf.stale($0, model: $0.model)) }
@@ -246,6 +253,8 @@ final class Workspace {
 
     private var reindexTask: Task<Void, Never>?
     private var isIndexing = false
+    private var watchers: [DispatchSourceFileSystemObject] = []
+    private var activityTask: Task<Void, Never>?
 
     init(folder: URL, store: URL?) throws {
         self.folder = folder
@@ -260,6 +269,7 @@ final class Workspace {
         do {
             try await engine.index()
             await reload()
+            watchActivity()
             afterFirstRead?()
             afterFirstRead = nil
         } catch {
@@ -271,10 +281,10 @@ final class Workspace {
             let found = try await ollama.models().filter { !$0.lowercased().contains("embed") }.sorted()
             models = found
             if !found.contains(model), let first = found.first { model = first }
-            warning = found.isEmpty ? "Ollama has no chat models yet. Install one to use Ask." : nil
+            warning = nil
             try await embed()
         } catch {
-            warning = "Ollama isn't running, so Ask is off. Your notes, links and search still work."
+            warning = "Ollama isn't running, so search by meaning is off. Notes, links, word search and connected programs still work."
         }
         progress = nil
     }
@@ -284,6 +294,35 @@ final class Workspace {
             Task { @MainActor [weak self] in self?.progress = "Learning what things mean: \(line.replacingOccurrences(of: "embedded ", with: ""))" }
         }
         await reload()
+    }
+
+    /// Programs write their conversations and Ledger commits while the app is open. Watching those folders lets the
+    /// Programs, Conversations and Ledger pages move as a model works, instead of waiting for the app to be clicked.
+    private func watchActivity() {
+        watchers.forEach { $0.cancel() }
+        watchers = []
+        let store = engine.store
+        for folder in [store, store.appendingPathComponent("sessions"), store.appendingPathComponent("ledger")] {
+            let handle = Darwin.open(folder.path, O_EVTONLY)
+            guard handle >= 0 else { continue }
+            let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: handle, eventMask: [.write, .rename, .delete], queue: .main)
+            source.setEventHandler { [weak self] in Task { @MainActor in self?.activityChanged() } }
+            source.setCancelHandler { Darwin.close(handle) }
+            source.resume()
+            watchers.append(source)
+        }
+    }
+
+    private func activityChanged() {
+        activityTask?.cancel()
+        activityTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled, let self else { return }
+            self.sessions = await self.engine.sessions()
+            self.ledger = await self.engine.ledger()
+            // A folder made since the watch began (the first conversation, the first commit) gets its own watch.
+            if self.watchers.count < 3 { self.watchActivity() }
+        }
     }
 
     func readAgain() async {
