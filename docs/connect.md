@@ -17,6 +17,18 @@ minutes, as one-shot runs like `opencode run` and `claude -p` do for every messa
 
 To pick a conversation up anywhere, ask: *"Pick up my last conversation; it is saved in Burrow."*
 
+## From the app
+
+The Programs page (⌘4) shows each program as a line running into the vault. It reads each program's own settings and
+says whether it starts Burrow on this vault, on another vault, only from a project folder, or not at all. Hover a line
+to see the conversations, the last question and the files that program read most today; click it to open its
+conversations. **Connect** shows the setup line with this vault's path filled in, and for Claude Code, OpenCode and LM
+Studio, **Add for Me** writes it into the program's settings, keeping the old file beside it as `.before-burrow`.
+
+The lines the app gives use the full path of the `burrow` command. Programs opened from the Dock, such as LM Studio, do
+not get the shell's PATH, so a bare `burrow` would not start there. The app carries its own copy of the command, and
+**Install Command** links it into `~/.local/bin`.
+
 ## Claude Code
 
 ```

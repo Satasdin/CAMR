@@ -114,18 +114,33 @@ enum Program: String, CaseIterable, Hashable, Identifiable {
         encoder.outputFormatting = .withoutEscapingSlashes
         let json = String(String(data: (try? encoder.encode(path)) ?? Data(), encoding: .utf8)?.dropFirst().dropLast() ?? "")
         let isConfig = self == .openCode || self == .lmStudio
+        let burrow = Connections.command
+        let quotedCommand = isConfig ? burrow : (burrow.contains(" ") ? "'\(burrow)'" : burrow)
         return setup.replacingOccurrences(of: "<vault>", with: isConfig ? json : shell)
+            .replacingOccurrences(of: "<burrow>", with: quotedCommand)
+    }
+
+    /// Each program's own colour, used only where programs are told apart: the Programs page and its chart.
+    var colour: Color {
+        switch self {
+        case .claudeCode: return Color(red: 1.00, green: 0.55, blue: 0.42)
+        case .openCode: return Night.conversation
+        case .lmStudio: return Color(red: 0.62, green: 0.58, blue: 1.00)
+        case .llamaCpp: return Color(red: 0.48, green: 0.90, blue: 0.62)
+        case .ollama: return Color(red: 0.93, green: 0.93, blue: 0.88)
+        case .other: return Color(white: 0.6)
+        }
     }
 
     /// How a person wires this program to the vault. Matches docs/connect.md.
     private var setup: String {
         switch self {
-        case .claudeCode: return "claude mcp add burrow -- burrow mcp <vault>"
-        case .openCode: return "opencode.json → \"mcp\": { \"burrow\": { \"type\": \"local\", \"command\": [\"burrow\", \"mcp\", \"<vault>\"] } }"
-        case .lmStudio: return "~/.lmstudio/mcp.json → \"burrow\": { \"command\": \"burrow\", \"args\": [\"mcp\", \"<vault>\"] }"
+        case .claudeCode: return "claude mcp add --scope user burrow -- <burrow> mcp <vault>"
+        case .openCode: return "opencode.json → \"mcp\": { \"burrow\": { \"type\": \"local\", \"command\": [\"<burrow>\", \"mcp\", \"<vault>\"] } }"
+        case .lmStudio: return "~/.lmstudio/mcp.json → \"burrow\": { \"command\": \"<burrow>\", \"args\": [\"mcp\", \"<vault>\"] }"
         case .llamaCpp: return "llama-server -m model.gguf --jinja -c 32768 --slot-save-path <vault>/.burrow/kv, then OpenCode's llamacpp provider"
         case .ollama: return "ollama create qwen3-4b-16k -f Modelfile, then OpenCode's ollama provider (see docs/connect.md)"
-        case .other: return "burrow mcp <vault>"
+        case .other: return "<burrow> mcp <vault>"
         }
     }
 }
