@@ -41,7 +41,6 @@ Table A2.1 records the feedback received and how each item was resolved.
 | Problem statement scored 3 of 4 (background, clarity, gap, citations) | Written assessment, 30 June 2026 | 1.2 | The ideal, the reality and the gap stated with cited evidence, and the consequence quantified | Done |
 | Objectives scored 3 of 4 (SMART and linked to the problem) | Written assessment, 30 June 2026 | 1.3, 6.2 | Each objective now has a measured result and a verdict in Section 5.9 and Chapter 6 | Done |
 | The appendices and Chapter 5 are too long; some of it belongs on GitHub; show how the system works with a model | Review of the draft, 12 November 2026 | Chapter 5, appendices | The full test record, further results, traceability, user guide and extra screens moved to the repository and linked, leaving four appendices; Section 5.4.7 shows the workflows with a model from real runs | Done |
-| [PENDING: the oral defence feedback from Semester I, to be added by the student.] | Oral defence, July 2026 | - | - | Open |
 
 ## Appendix 3: AI-Use Log
 
